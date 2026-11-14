@@ -24,7 +24,7 @@ import net.minecraft.world.level.block.state.BlockState;
  */
 public final class Payloads {
 	/** Raised whenever a payload's layout changes; a client that sees another version turns Building Planner off. */
-	public static final int PROTOCOL_VERSION = 1;
+	public static final int PROTOCOL_VERSION = 2;
 	/** Marks an {@code applied} or {@code rejected} that answers no client edit (an undo, a redo, a subscribe). */
 	public static final int NO_CLIENT_SEQ = -1;
 	/** Room for {@link SyncLimits#WIRE_MAX_EDIT_BLOCKS} changes at their largest (a long and a three-byte id each). */
@@ -130,12 +130,18 @@ public final class Payloads {
 					b.writeBlockPos(region.min());
 					writeVector(b, region.dimensions());
 					writeList(b, region.palette(), Payloads::writeState);
-					b.writeLongArray(region.packed());
+					writeList(b, region.sections(), (bb, section) -> {
+						bb.writeVarInt(section.x());
+						bb.writeVarInt(section.y());
+						bb.writeVarInt(section.z());
+						bb.writeLongArray(section.packed());
+					});
 				});
 			},
 			buf -> new Snapshot(buf.readUUID(), buf.readVarInt(), readList(buf, b -> new RegionSnapshot(
 				b.readUtf(MAX_NAME_LENGTH), b.readBlockPos(), readVector(b), readList(b, Payloads::readState),
-				b.readLongArray()))));
+				readList(b, bb -> new RegionSnapshot.Section(bb.readVarInt(), bb.readVarInt(), bb.readVarInt(),
+					bb.readLongArray()))))));
 
 		public Snapshot {
 			regions = List.copyOf(regions);

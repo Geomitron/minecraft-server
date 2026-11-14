@@ -155,7 +155,8 @@ Payloads (namespace `buildingplanner`):
 - Client to server: `subscribe(plan)`, `unsubscribe(plan)`, `edit(plan, clientSeq, kind, changes)` where `kind` is
   shape, erase or Litematica and `changes` is a list of region, plan position and block state, `undo` and `redo`.
 - Server to client: `hello(protocolVersion, limits)` at join; `snapshot(plan, rev, regions)` with each region's
-  minimum corner, size, palette and packed blocks; `applied(plan, rev, author, clientSeq, growth, changes)`;
+  minimum corner, size, palette, and the packed blocks of each 16-block cube that holds a block other than the
+  palette's first entry, which fills the rest of the box; `applied(plan, rev, author, clientSeq, growth, changes)`;
   `rejected(plan, clientSeq, reason)`; `notice(key, args)` for messages players see.
 
 Block states travel as ids in the block-state registry (both sides run the same vanilla blocks); files store them by
@@ -183,8 +184,9 @@ Starting caps, in the server's config file `config/buildingplanner.properties` (
 edit grows; a plan shared already larger can still grow along its other sides. The server keeps a region's blocks in
 16-block cubes at two bytes a block, only where the region holds something other than air, so its memory follows the
 blocks a plan holds, not its box: a region at the cap on every side with one full floor (262,144 blocks) takes about
-8.5 MB, and the same region filled throughout about 270 MB. A snapshot still carries every position in the box, at two
-bits or more each, so one of a region at the cap is at least 34 MB, built for each player who loads the plan.
+8.5 MB, and the same region filled throughout about 270 MB. A snapshot carries only those cubes, at two bits or more a
+block: about 1 MiB for the full floor, and at least 32 MiB for the region filled throughout, built for each player who
+loads the plan.
 
 ### Players joining mid-edit
 

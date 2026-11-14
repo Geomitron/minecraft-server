@@ -98,12 +98,37 @@ class PayloadsTest {
 		assertEquals(12, read.rev());
 		RegionSnapshot region = read.regions().getFirst();
 		assertEquals("Hall", region.name());
-		assertArrayEquals(snapshot.regions().getFirst().packed(), region.packed());
+		// Only the two sections holding blocks travel.
+		assertEquals(2, region.sections().size());
+		for (int i = 0; i < 2; i++) {
+			assertArrayEquals(snapshot.regions().getFirst().sections().get(i).packed(), region.sections().get(i).packed());
+		}
 		Plan copy = Plan.fromSnapshot(read.regions());
 		assertEquals(new BlockPos(-2, 0, 5), copy.firstRegion().minCorner());
 		assertEquals(new Vec3i(5, 3, 4), copy.firstRegion().dimensions());
 		assertEquals(stairs, copy.firstRegion().get(new BlockPos(-2, 0, 5)));
 		assertEquals(Blocks.GLASS.defaultBlockState(), copy.firstRegion().get(new BlockPos(2, 2, 8)));
+	}
+
+	/**
+	 * A plan at the size cap on every side with one full floor: its snapshot carries the floor's sections, about 1 MiB,
+	 * where every position of the box took at least 32 MiB.
+	 */
+	@Test
+	void aSnapshotOfALargeMostlyEmptyPlanCarriesOnlyItsBlocks() {
+		Plan plan = Plan.create("Hall", "Alex", BlockPos.ZERO, new Vec3i(512, 512, 512), 0);
+		BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+		for (int x = 0; x < 512; x++) {
+			for (int z = 0; z < 512; z++) {
+				plan.firstRegion().set(pos.set(x, 0, z), stairs);
+			}
+		}
+		FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
+
+		Payloads.Snapshot.CODEC.encode(buf, new Payloads.Snapshot(UUID.randomUUID(), 1, plan.snapshot()));
+
+		int bytes = buf.readableBytes();
+		assertTrue(bytes > 1024 * 1024 && bytes < 1024 * 1024 + 16 * 1024, "the snapshot took " + bytes + " bytes");
 	}
 
 	/** Every message the add-on can send has its text in en_us.json, with one %s per argument, and nothing else is. */

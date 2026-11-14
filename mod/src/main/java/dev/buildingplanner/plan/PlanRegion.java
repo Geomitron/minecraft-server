@@ -1,11 +1,13 @@
 package dev.buildingplanner.plan;
 
+import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiConsumer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
 import net.minecraft.nbt.CompoundTag;
@@ -232,6 +234,80 @@ public final class PlanRegion {
 		return writer.longs();
 	}
 
+	/** The sections holding something other than palette index 0, each packed for a snapshot. */
+	List<RegionSnapshot.Section> snapshotSections() {
+		int bits = PackedBlocks.bitsFor(palette.size());
+		List<RegionSnapshot.Section> packed = new ArrayList<>(sections.size());
+		for (Long2ObjectMap.Entry<Section> entry : sections.long2ObjectEntrySet()) {
+			PackedBlocks.Writer writer = new PackedBlocks.Writer(SECTION_VOLUME, bits);
+			for (char id : entry.getValue().ids) {
+				writer.write(id);
+			}
+			long key = entry.getLongKey();
+			packed.add(new RegionSnapshot.Section(keyField(key, 2 * KEY_BITS) + anchorX, keyField(key, KEY_BITS) + anchorY,
+				keyField(key, 0) + anchorZ, writer.longs()));
+		}
+		return packed;
+	}
+
+	/**
+	 * A region holding a snapshot's sections. A section outside the box, or a block outside the box or past the
+	 * palette, is an error.
+	 */
+	static PlanRegion fromSections(String name, BlockPos min, Vec3i dimensions, List<BlockState> palette,
+		List<RegionSnapshot.Section> sections) {
+		PlanRegion region = new PlanRegion(name, min, dimensions, palette, new CompoundTag());
+		BlockPos max = region.maxCorner();
+		int bits = PackedBlocks.bitsFor(palette.size());
+		for (RegionSnapshot.Section packed : sections) {
+			if (packed.x() < min.getX() >> SECTION_SHIFT || packed.x() > max.getX() >> SECTION_SHIFT
+				|| packed.y() < min.getY() >> SECTION_SHIFT || packed.y() > max.getY() >> SECTION_SHIFT
+				|| packed.z() < min.getZ() >> SECTION_SHIFT || packed.z() > max.getZ() >> SECTION_SHIFT) {
+				throw new IllegalArgumentException("Region " + name + " has a section outside its box");
+			}
+			PackedBlocks.Reader reader = new PackedBlocks.Reader(packed.packed(), bits, SECTION_VOLUME);
+			int baseX = packed.x() << SECTION_SHIFT;
+			int baseY = packed.y() << SECTION_SHIFT;
+			int baseZ = packed.z() << SECTION_SHIFT;
+			Section section = null;
+			for (int index = 0; index < SECTION_VOLUME; index++) {
+				int id = reader.read();
+				if (id == 0) {
+					continue;
+				}
+				int x = baseX + (index & SECTION_MASK);
+				int y = baseY + (index >> 2 * SECTION_SHIFT);
+				int z = baseZ + (index >> SECTION_SHIFT & SECTION_MASK);
+				if (id >= palette.size() || x < min.getX() || x > max.getX() || y < min.getY() || y > max.getY()
+					|| z < min.getZ() || z > max.getZ()) {
+					throw new IllegalArgumentException("Region " + name + " has a block outside its box or palette");
+				}
+				if (section == null) {
+					section = region.sections.computeIfAbsent(region.sectionKey(x, y, z), key -> new Section());
+				}
+				section.set(index, id);
+			}
+		}
+		return region;
+	}
+
+	/** Calls {@code action} for each block whose palette index isn't 0; index 0 fills every other position. */
+	public void forEachSetBlock(BiConsumer<BlockPos, BlockState> action) {
+		for (Long2ObjectMap.Entry<Section> entry : sections.long2ObjectEntrySet()) {
+			long key = entry.getLongKey();
+			int baseX = keyField(key, 2 * KEY_BITS) + anchorX << SECTION_SHIFT;
+			int baseY = keyField(key, KEY_BITS) + anchorY << SECTION_SHIFT;
+			int baseZ = keyField(key, 0) + anchorZ << SECTION_SHIFT;
+			char[] ids = entry.getValue().ids;
+			for (int index = 0; index < SECTION_VOLUME; index++) {
+				if (ids[index] != 0) {
+					action.accept(new BlockPos(baseX + (index & SECTION_MASK), baseY + (index >> 2 * SECTION_SHIFT),
+						baseZ + (index >> SECTION_SHIFT & SECTION_MASK)), palette.get(ids[index]));
+				}
+			}
+		}
+	}
+
 	/**
 	 * Grows the box to take in {@code from} to {@code to} (any two opposite corners), keeping every block at its plan
 	 * coordinates. A grown region's position becomes its new minimum corner and its size turns positive. Block
@@ -313,6 +389,11 @@ public final class PlanRegion {
 		return ((long) ((x >> SECTION_SHIFT) - anchorX) & KEY_MASK) << (2 * KEY_BITS)
 			| ((long) ((y >> SECTION_SHIFT) - anchorY) & KEY_MASK) << KEY_BITS
 			| ((long) ((z >> SECTION_SHIFT) - anchorZ) & KEY_MASK);
+	}
+
+	/** One axis of a section key, sign-extended: the section's offset from the anchor along that axis. */
+	private static int keyField(long key, int shift) {
+		return (int) (key << (Long.SIZE - shift - KEY_BITS) >> (Long.SIZE - KEY_BITS));
 	}
 
 	private static int localIndex(int x, int y, int z) {

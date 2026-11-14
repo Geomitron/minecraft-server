@@ -9,8 +9,8 @@ import dev.buildingplanner.plan.PlanRegion;
 import dev.buildingplanner.sync.BlockChange;
 import dev.buildingplanner.sync.EditKind;
 import dev.buildingplanner.sync.Payloads;
+import dev.buildingplanner.sync.PlanReplicas;
 import dev.buildingplanner.sync.PlayerMessage;
-import dev.buildingplanner.sync.RegionBox;
 import dev.buildingplanner.sync.SyncLimits;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -69,56 +69,56 @@ final class SimulatedNetwork {
 		}
 	}
 
-	/** One player's game with the add-on: its copy of each subscribed plan, kept from snapshots and applied edits. */
+	/**
+	 * One player's game with the add-on: its {@link PlanReplicas}, as the game runs it, with the messages each way
+	 * queued so tests can order them.
+	 */
 	final class Client {
 		final UUID id = UUID.randomUUID();
 		final String name;
-		final Map<UUID, Plan> plans = new HashMap<>();
-		final Map<UUID, Integer> revisions = new HashMap<>();
 		final List<Payloads.Rejected> rejections = new ArrayList<>();
 		final List<PlayerMessage> notices = new ArrayList<>();
-		/** Revisions this client saw out of order (a gap makes it ask for a fresh snapshot). */
-		int gaps;
 		final Deque<CustomPacketPayload> inbox = new ArrayDeque<>();
 		private final Deque<CustomPacketPayload> outbox = new ArrayDeque<>();
-		private int nextSeq = 1;
+		private final PlanReplicas replicas = new PlanReplicas(outbox::add, new PlanReplicas.View() {
+		});
 
 		private Client(String name) {
 			this.name = name;
 		}
 
+		/** The client's copy of each subscribed plan that has had its snapshot. */
+		Map<UUID, Plan> plans() {
+			return replicas.plans();
+		}
+
+		int revision(UUID plan) {
+			return replicas.revision(plan);
+		}
+
+		/** Revisions this client saw out of order (a gap makes it ask for a fresh snapshot). */
+		int gaps() {
+			return replicas.gaps();
+		}
+
 		void subscribe(UUID plan) {
-			outbox.add(new Payloads.Subscribe(plan));
+			replicas.attach(plan);
 		}
 
 		void unsubscribe(UUID plan) {
-			plans.remove(plan);
-			revisions.remove(plan);
-			outbox.add(new Payloads.Unsubscribe(plan));
+			replicas.detach(plan);
 		}
 
-		/**
-		 * Sends an edit. A Litematica edit shows on this client at once, as Litematica writes it before the add-on sends
-		 * it; shapes show when the server's {@code applied} comes back.
-		 */
 		int edit(UUID plan, EditKind kind, List<BlockChange> changes) {
-			if (kind == EditKind.LITEMATICA && plans.containsKey(plan)) {
-				for (BlockChange change : changes) {
-					plans.get(plan).region(change.region()).filter(r -> r.contains(change.pos()))
-						.ifPresent(region -> region.set(change.pos(), change.state()));
-				}
-			}
-			int seq = nextSeq++;
-			outbox.add(new Payloads.Edit(plan, seq, kind, changes));
-			return seq;
+			return replicas.edit(plan, kind, changes);
 		}
 
 		void undo() {
-			outbox.add(new Payloads.Undo());
+			replicas.undo();
 		}
 
 		void redo() {
-			outbox.add(new Payloads.Redo());
+			replicas.redo();
 		}
 
 		/** The server reads this client's next message; false when there was none. */
@@ -145,46 +145,13 @@ final class SimulatedNetwork {
 				return false;
 			}
 			switch (payload) {
-				case Payloads.Snapshot p -> {
-					plans.put(p.plan(), Plan.fromSnapshot(p.regions()));
-					revisions.put(p.plan(), p.rev());
-				}
-				case Payloads.Applied p -> apply(p);
-				case Payloads.Rejected p -> {
-					rejections.add(p);
-					if (p.clientSeq() == Payloads.NO_CLIENT_SEQ) {
-						// The server doesn't have the plan.
-						plans.remove(p.plan());
-						revisions.remove(p.plan());
-					} else if (plans.containsKey(p.plan())) {
-						// Drop any early copy of the edit: take a fresh snapshot.
-						outbox.add(new Payloads.Subscribe(p.plan()));
-					}
-				}
+				case Payloads.Rejected p -> rejections.add(p);
 				case Payloads.Notice p -> notices.add(p.message());
-				default -> throw new IllegalStateException("Not a server payload: " + payload);
+				default -> {
+				}
 			}
+			replicas.receive(payload);
 			return true;
-		}
-
-		private void apply(Payloads.Applied applied) {
-			Plan plan = plans.get(applied.plan());
-			if (plan == null) {
-				return;
-			}
-			int expected = revisions.get(applied.plan()) + 1;
-			if (applied.rev() != expected) {
-				gaps++;
-				outbox.add(new Payloads.Subscribe(applied.plan()));
-				return;
-			}
-			for (RegionBox box : applied.growth()) {
-				plan.region(box.region()).orElseThrow().growToInclude(box.min(), box.max());
-			}
-			for (BlockChange change : applied.changes()) {
-				plan.region(change.region()).orElseThrow().set(change.pos(), change.state());
-			}
-			revisions.put(applied.plan(), applied.rev());
 		}
 
 		/** Messages still waiting on either side of this client's connection. */

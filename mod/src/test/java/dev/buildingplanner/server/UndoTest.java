@@ -84,8 +84,8 @@ class UndoTest {
 
 	private void assertEveryoneHasTheServersPlan() {
 		for (Client client : List.of(alex, blair)) {
-			assertSamePlan(network.server.plan(planId).orElseThrow(), client.plans.get(planId), client.name);
-			assertEquals(0, client.gaps, client.name + "'s revision gaps");
+			assertSamePlan(network.server.plan(planId).orElseThrow(), client.plans().get(planId), client.name);
+			assertEquals(0, client.gaps(), client.name + "'s revision gaps");
 		}
 		network.assertRevisionsInOrder();
 	}

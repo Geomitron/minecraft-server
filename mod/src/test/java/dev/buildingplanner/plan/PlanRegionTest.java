@@ -6,7 +6,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.management.ManagementFactory;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
@@ -110,8 +112,8 @@ class PlanRegionTest {
 
 	/**
 	 * A region at the size cap on every side with only a floor of blocks: memory follows the floor's 1,024 sections
-	 * (about 8 MiB), where one int per position of the box took 512 MiB. A snapshot carries every position, packed, and
-	 * the copy built from it takes the same few sections.
+	 * (about 8 MiB), where one int per position of the box took 512 MiB. A snapshot carries only those sections, packed,
+	 * and the copy built from it takes the same few sections.
 	 */
 	@Test
 	void aLargeMostlyEmptyRegionTakesMemoryForItsBlocksNotItsBox() {
@@ -133,8 +135,9 @@ class PlanRegionTest {
 		assertEquals(512 * 512, region.nonAirBlocks());
 
 		RegionSnapshot snapshot = RegionSnapshot.of(region);
-		// Two bits a block, for every position in the box.
-		assertEquals(512L * 512 * 512 * 2 / 64, snapshot.packed().length);
+		// The floor's sections only, at two bits a block: 1 MiB, where every position of the box took 32 MiB.
+		assertEquals(32 * 32, snapshot.sections().size());
+		assertEquals(32L * 32 * 4096 * 2 / 64, snapshot.sections().stream().mapToLong(s -> s.packed().length).sum());
 		before = threads.getCurrentThreadAllocatedBytes();
 		PlanRegion copy = snapshot.toRegion();
 		long copied = threads.getCurrentThreadAllocatedBytes() - before;
@@ -144,6 +147,27 @@ class PlanRegionTest {
 		assertEquals(stone, copy.get(new BlockPos(511, 0, 511)));
 		assertTrue(copy.get(new BlockPos(511, 1, 511)).isAir());
 		assertEquals(512 * 512, copy.nonAirBlocks());
+	}
+
+	@Test
+	void aSnapshotKeepsBlocksAcrossSectionsAndRefusesBlocksOutsideItsBox() {
+		PlanRegion region = PlanRegion.empty("Main", new BlockPos(-20, -3, 7), new Vec3i(40, 5, 3));
+		region.set(new BlockPos(-20, -3, 7), stone);
+		region.set(new BlockPos(-1, 0, 8), dirt);
+		region.set(new BlockPos(19, 1, 9), stone);
+
+		PlanRegion copy = RegionSnapshot.of(region).toRegion();
+
+		assertEquals(region.allocatedSections(), copy.allocatedSections());
+		Map<BlockPos, BlockState> blocks = new HashMap<>();
+		copy.forEachSetBlock(blocks::put);
+		assertEquals(Map.of(new BlockPos(-20, -3, 7), stone, new BlockPos(-1, 0, 8), dirt, new BlockPos(19, 1, 9), stone),
+			blocks);
+
+		RegionSnapshot.Section section = RegionSnapshot.of(region).sections().getFirst();
+		RegionSnapshot outside = new RegionSnapshot("Main", BlockPos.ZERO, new Vec3i(4, 4, 4), region.palette(),
+			List.of(section));
+		assertThrows(IllegalArgumentException.class, outside::toRegion);
 	}
 
 	@Test

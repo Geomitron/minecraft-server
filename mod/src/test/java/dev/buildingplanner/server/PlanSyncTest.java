@@ -78,9 +78,9 @@ class PlanSyncTest {
 
 	private void assertEveryoneHasTheServersPlan(Client... clients) {
 		for (Client client : clients) {
-			assertSamePlan(serverPlan(), client.plans.get(planId), client.name);
-			assertEquals(network.server.revision(planId), client.revisions.get(planId), client.name + "'s revision");
-			assertEquals(0, client.gaps, client.name + "'s revision gaps");
+			assertSamePlan(serverPlan(), client.plans().get(planId), client.name);
+			assertEquals(network.server.revision(planId), client.revision(planId), client.name + "'s revision");
+			assertEquals(0, client.gaps(), client.name + "'s revision gaps");
 		}
 		network.assertRevisionsInOrder();
 	}
@@ -97,8 +97,8 @@ class PlanSyncTest {
 		network.settle();
 
 		assertEquals(2, network.server.revision(planId));
-		assertEquals(2, blair.revisions.get(planId));
-		assertEquals(dirt, blair.plans.get(planId).firstRegion().get(new BlockPos(3, 1, 3)));
+		assertEquals(2, blair.revision(planId));
+		assertEquals(dirt, blair.plans().get(planId).firstRegion().get(new BlockPos(3, 1, 3)));
 		assertEveryoneHasTheServersPlan(alex, blair);
 	}
 
@@ -136,7 +136,7 @@ class PlanSyncTest {
 			assertTrue(alex.rejections.isEmpty() && blair.rejections.isEmpty(), "seed " + seed + ": no rejections");
 			assertTrue(serverPlan().firstRegion().volume() > 8 * 4 * 8, "seed " + seed + ": the plan grew");
 			assertEveryoneHasTheServersPlan(alex, blair);
-			assertSamePlan(alex.plans.get(planId), blair.plans.get(planId), "seed " + seed + ": Alex and Blair");
+			assertSamePlan(alex.plans().get(planId), blair.plans().get(planId), "seed " + seed + ": Alex and Blair");
 		}
 	}
 
@@ -147,7 +147,7 @@ class PlanSyncTest {
 		List<BlockChange> changes = new ArrayList<>();
 		int count = 1 + random.nextInt(6);
 		EditKind kind = EditKind.values()[random.nextInt(3)];
-		PlanRegion known = client.plans.get(planId).firstRegion();
+		PlanRegion known = client.plans().get(planId).firstRegion();
 		for (int i = 0; i < count; i++) {
 			BlockPos pos = kind == EditKind.LITEMATICA
 				? known.minCorner().offset(random.nextInt(known.dimensions().getX()), random.nextInt(known.dimensions().getY()),
@@ -165,12 +165,12 @@ class PlanSyncTest {
 		// Alex's Litematica write shows on Alex's screen at once; Blair's shape reaches the server first.
 		alex.edit(planId, EditKind.LITEMATICA, blocks(stone, pos));
 		blair.edit(planId, EditKind.SHAPE, blocks(dirt, pos));
-		assertEquals(stone, alex.plans.get(planId).firstRegion().get(pos));
+		assertEquals(stone, alex.plans().get(planId).firstRegion().get(pos));
 		blair.serverReadsOne();
 		alex.serverReadsOne();
 
 		alex.readsOne();
-		assertEquals(dirt, alex.plans.get(planId).firstRegion().get(pos), "Alex sees the block flip once");
+		assertEquals(dirt, alex.plans().get(planId).firstRegion().get(pos), "Alex sees the block flip once");
 		network.settle();
 
 		assertEquals(stone, serverPlan().firstRegion().get(pos));
@@ -256,7 +256,7 @@ class PlanSyncTest {
 		network.settle();
 		blair.edit(planId, EditKind.SHAPE, blocks(dirt, BlockPos.ZERO));
 		network.settle();
-		assertEquals(stone, alex.plans.get(planId).firstRegion().get(BlockPos.ZERO), "Alex got nothing after leaving");
+		assertEquals(stone, alex.plans().get(planId).firstRegion().get(BlockPos.ZERO), "Alex got nothing after leaving");
 	}
 
 	// Rejections.
@@ -278,7 +278,7 @@ class PlanSyncTest {
 		assertEquals(PlayerMessage.planGone(), rejected.reason());
 		// The fresh snapshot Alex asks for is refused too, so Alex drops the plan.
 		assertEquals(Payloads.NO_CLIENT_SEQ, alex.rejections.get(1).clientSeq());
-		assertTrue(alex.plans.isEmpty());
+		assertTrue(alex.plans().isEmpty());
 	}
 
 	@Test
@@ -314,14 +314,14 @@ class PlanSyncTest {
 			atCap.add(new BlockChange(REGION, pos.immutable(), stone));
 		}
 		alex.edit(planId, EditKind.LITEMATICA, atCap);
-		assertEquals(stone, alex.plans.get(planId).firstRegion().get(BlockPos.ZERO), "Litematica wrote it early");
+		assertEquals(stone, alex.plans().get(planId).firstRegion().get(BlockPos.ZERO), "Litematica wrote it early");
 		network.settle();
 
 		assertEquals(PlayerMessage.tooManyBlocks(50_001, 50_000), onlyRejection(alex).reason());
 		assertEquals(List.of("50001", "50000"), onlyRejection(alex).reason().args());
 		assertEquals(0, network.server.revision(planId));
 		assertEveryoneHasTheServersPlan(alex, blair);
-		assertTrue(alex.plans.get(planId).firstRegion().get(BlockPos.ZERO).isAir(), "the fresh snapshot dropped it");
+		assertTrue(alex.plans().get(planId).firstRegion().get(BlockPos.ZERO).isAir(), "the fresh snapshot dropped it");
 
 		blair.edit(planId, EditKind.LITEMATICA, atCap.subList(0, 50_000));
 		network.settle();
