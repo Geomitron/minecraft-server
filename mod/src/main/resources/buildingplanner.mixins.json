@@ -8,8 +8,14 @@
 		"syncmatica.ServerCommunicationManagerMixin"
 	],
 	"client": [
+		"effortless.BlockPreviewRendererMixin",
+		"effortless.BuildPipelineClientMixin",
+		"effortless.BuildPipelineMixin",
+		"effortless.ConstraintSystemMixin",
 		"effortless.PacketHandlerMixin",
+		"effortless.RandomizerSystemMixin",
 		"litematica.LitematicaSchematicAccessor",
+		"litematica.SchematicUtilsInvoker",
 		"litematica.SchematicUtilsMixin",
 		"syncmatica.LitematicManagerMixin"
 	],

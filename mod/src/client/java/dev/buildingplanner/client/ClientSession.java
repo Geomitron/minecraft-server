@@ -13,11 +13,13 @@ import dev.buildingplanner.sync.EditKind;
 import dev.buildingplanner.sync.PlanReplicas;
 import dev.buildingplanner.sync.PlayerMessage;
 import dev.buildingplanner.sync.SyncLimits;
+import fi.dy.masa.litematica.data.DataManager;
 import fi.dy.masa.litematica.schematic.container.LitematicaBlockStateContainer;
 import fi.dy.masa.litematica.schematic.placement.SchematicPlacement;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -33,6 +35,7 @@ import net.minecraft.world.level.block.state.BlockState;
 final class ClientSession {
 	private final SyncLimits limits;
 	private final EditGlow glow;
+	private final BlockMix mix;
 	private final LitematicaPlans plans;
 	private final PlanReplicas replicas;
 	/** Litematica writes to plans since the last tick, by plan, the newest state at each position. */
@@ -40,9 +43,10 @@ final class ClientSession {
 	/** Plans this session has loaded for the player already; a plan the player unloads stays unloaded until they rejoin. */
 	private final Set<UUID> autoLoaded = new HashSet<>();
 
-	ClientSession(SyncLimits limits, EditGlow glow) {
+	ClientSession(SyncLimits limits, EditGlow glow, BlockMix mix) {
 		this.limits = limits;
 		this.glow = glow;
+		this.mix = mix;
 		this.plans = new LitematicaPlans(glow);
 		this.replicas = new PlanReplicas(ClientPlayNetworking::send, plans);
 	}
@@ -67,15 +71,62 @@ final class ClientSession {
 		glow.clear();
 	}
 
-	/** Records a Litematica write about to happen, if it changes a plan's block. */
-	void captureWrite(LitematicaBlockStateContainer container, int x, int y, int z, BlockState state) {
+	/**
+	 * Records a Litematica write about to happen, if it changes a plan's block, and returns the state to write: while
+	 * the mix is on, a block placed in a plan becomes the mix's block at that position.
+	 */
+	BlockState captureWrite(LitematicaBlockStateContainer container, int x, int y, int z, BlockState state) {
 		LitematicaPlans.Target target = plans.target(container);
-		if (target == null || container.get(x, y, z) == state) {
-			return;
+		if (target == null) {
+			return state;
 		}
 		BlockPos pos = target.min().offset(x, y, z);
-		captured.computeIfAbsent(target.plan(), plan -> new LinkedHashMap<>())
-			.put(pos, new BlockChange(target.region(), pos, state));
+		if (mix.isOn() && !state.isAir()) {
+			state = mix.swap(pos, state);
+		}
+		if (container.get(x, y, z) != state) {
+			captured.computeIfAbsent(target.plan(), plan -> new LinkedHashMap<>())
+				.put(pos, new BlockChange(target.region(), pos, state));
+		}
+		return state;
+	}
+
+	/**
+	 * Sends a shape the player drew as one edit: into the plan whose box holds the first of {@code starts}, or else
+	 * the plan selected in Litematica. {@code blocks} are world positions and states, in the order drawn.
+	 */
+	void captureShape(EditKind kind, Map<BlockPos, BlockState> blocks, List<BlockPos> starts) {
+		LitematicaPlans.Located start = null;
+		for (BlockPos pos : starts) {
+			start = plans.locate(pos);
+			if (start != null) {
+				break;
+			}
+		}
+		UUID planId = start != null ? start.plan()
+			: plans.planOf(DataManager.getSchematicPlacementManager().getSelectedSchematicPlacement());
+		if (planId == null || replicas.plan(planId).isEmpty()) {
+			LitematicaPlans.showMessage(PlayerMessage.noPlanForShape());
+			return;
+		}
+		String fallback = start != null ? start.region() : replicas.plan(planId).orElseThrow().firstRegion().name();
+		Map<BlockPos, BlockChange> changes = new LinkedHashMap<>();
+		blocks.forEach((world, state) -> {
+			LitematicaPlans.Located at = plans.locateIn(planId, world, fallback);
+			if (at != null) {
+				changes.put(at.pos(), new BlockChange(at.region(), at.pos(),
+					plans.untransformed(planId, at.region(), state)));
+			}
+		});
+		if (changes.size() > limits.maxEditBlocks()) {
+			LitematicaPlans.showMessage(PlayerMessage.tooManyBlocks(changes.size(), limits.maxEditBlocks()));
+			return;
+		}
+		if (!changes.isEmpty()) {
+			// Litematica writes made earlier in this tick go first, so the server applies the player's edits in order.
+			sendCaptured();
+			replicas.edit(planId, kind, new ArrayList<>(changes.values()));
+		}
 	}
 
 	void undo() {

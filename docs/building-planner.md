@@ -70,9 +70,11 @@ menus, so it adds nothing to the registries Fabric API syncs at login, and playe
   place), starting a plan, the edit glow, the Effortless Building capture and the block-mix picker.
 
 They're built in the steps [plan.md](plan.md) lists. Step 6 built the client's Litematica bridge (hooks L1, L3, S2 and
-E4), starting a plan and the edit glow. Step 7 adds the Effortless Building capture (E1 to E3 and E5 to E9), the
+E4), starting a plan and the edit glow. Step 7 built the Effortless Building capture (E1 to E3 and E5 to E9), the
 block-mix picker with its inventory toggle, the mix's part of L1, and L2. Step 8 adds the client's notice when the
-server lacks the add-on.
+server lacks the add-on. The dev clients run Effortless Building 4.3 for Fabric 26.3 (Modrinth version `R8eAP63A`, set
+in `mod/gradle.properties`), the release built from the source the hooks were checked in; the dev server doesn't run
+it.
 
 `fabric.mod.json` depends on Fabric API and Syncmatica, which both sides run. Litematica, MaLiLib and Effortless
 Building run only on players' computers, so the add-on lists them under `suggests` (Fabric Loader warns at start about a missing `recommends`, not a missing `suggests`), puts every mixin into those mods
@@ -99,8 +101,8 @@ Effortless Building, under `common/src/main/java/nl/requios/effortlessbuilding/`
 | E5 | `buildpipeline/RandomizerSystem.java`, `processBlocks` | `@Inject` at head, cancellable | While a mix is on, give each entry its block from the mix (`entry.item`, `entry.blockState`), chosen by a fixed hash of the position so the preview and the result match. |
 | E6 | `buildpipeline/BuildPipeline.java` `isBuildTriggerItem`; `buildpipeline/BuildPipelineClient.java` `shouldInterceptPlacing`, `updateDisplayTrackers`; `render/BlockPreviewRenderer.java` `render` | `@ModifyExpressionValue` on `instanceof RandomizerToolItem` | While a mix is on, treat the held item as Effortless Building's Randomizer, so clicks start shapes and the preview draws each entry's own block. |
 | E7 | `buildpipeline/ConstraintSystem.java`, `processBlocks` | `@ModifyExpressionValue` on the `instabuild` read, and on `getProtectTileEntities()` | Skip the survival checks on real blocks (placed-by-player, hardness, tools) and the protected-block-entity check, which concern real blocks, not plans. World border, build height and the block cap still apply. |
-| E8 | `buildpipeline/BuildPipelineClient.java`, `updateDisplayTrackers` | `@WrapWithCondition` on `ItemUsageTracker.compute` | No red "missing items" tint: plans don't use up items. |
-| E9 | `buildpipeline/BuildPipelineClient.java`, `handleClick`, `getPreviewBlocks`, `resolveFirstClickPos` | `@WrapOperation` on `Level.clip` and on `Level.getBlockState` | Let shapes start on ghost blocks: aim at the nearer of the real block and Litematica's ghost block (`RayTraceUtils.traceToSchematicWorld`), and read the ghost block's state when picking the start position. |
+| E8 | `buildpipeline/BuildPipelineClient.java`, `updateDisplayTrackers` | `@WrapOperation` on both `ItemUsageTracker.compute` calls, clearing the tracker instead | No red "missing items" tint: plans don't use up items. |
+| E9 | `buildpipeline/BuildPipelineClient.java`, `handleClick` and `getPreviewBlocks`; `resolveFirstClickPos` | `@WrapOperation` on `ClientLevel.clip`; on `Level.getBlockState` | Let shapes start on ghost blocks: aim at the nearer of the real block and Litematica's ghost block (`RayTraceUtils.traceToSchematicWorld`), and read the ghost block's state, where the real block can be replaced, when picking the start position, so the shape goes beside it. |
 
 Effortless Building's limits come from its config on the player's computer (`config/ServerConfig.java`; survival
 defaults: reach 32, 2,000 blocks a shape, 64 a side). The server applies its own caps (below).
@@ -228,6 +230,15 @@ author is someone else, the changed blocks glow for 3 seconds, fading out: an ou
 block, or one translucent box around them for an edit of more than 512 blocks, with the editor's name (from the
 player list) above them. Messages from the server show in the player's chat.
 
+A finished shape (E1, E2) goes as one `edit` into the plan whose box holds the shape's first block, or else the block
+first clicked; when neither is in a plan, it goes into the plan selected in Litematica's placement list, and with no
+plan selected the player gets a message and nothing is sent. Each block goes into the plan region whose box holds it,
+or else the region the shape started in (the plan's first region when it started outside the plan), at its plan
+position from hook L2 and its state unrotated (`getUntransformedBlockState`). Its state is the one Effortless Building
+would place: the block's placement rules with the first click's face and the player's facing, then the shape's mirror
+and turn. Entries whose item isn't a block (a bucket, a tool) are left out. A shape over the server's block cap isn't
+sent, with the server's message; Litematica writes made earlier in the tick are sent first.
+
 Starting a plan: the key opens a screen asking for the plan's name, unless no area is marked, when the player gets a
 message instead. Litematica's Simple selection mode, its default, holds an unmarked area as one box with both corners
 at 0,0,0, so the add-on takes that box as no area. Create makes an empty schematic of the marked area (`createEmptySchematic`, with the player as
@@ -286,13 +297,20 @@ rule, and the player's next new edit clears the list.
 
 ### The block-mix picker
 
-The mix is a list of up to nine blocks with a weight each, kept on the player's computer. While it's on, hook E5 gives
-each shape position its block, chosen by a fixed hash of the position over the weights, so the preview and the plan
-agree; hook E6 makes Effortless Building start shapes and draw the preview from those blocks; and hook L1 swaps each
-block Litematica's place, fill and replace actions write for the mix's block at that position. Block states come from
-each block's placement rules with the first click's face and the player's facing, then the shape's mirror and turn.
-Without a mix, shapes use the held block, as in Effortless Building. The picker lists every block in the game, with
-search, and a toggle limits the list to the blocks in the player's inventory.
+The mix is a list of up to nine blocks with a weight each, kept on the player's computer while the game runs: it
+starts empty and off at each launch, and stays across servers. While it's on, hook E5 gives each shape position its
+block, chosen by a fixed hash of the world position over the weights, so the preview and the plan agree; hook E6 makes
+Effortless Building start shapes with any held item, or none, and draw the preview from those blocks; and hook L1
+swaps each block Litematica's place, fill and replace actions write into a plan for the mix's block at its plan
+position, keeping the properties both blocks have (a log's axis, a stair's facing). Without a mix, shapes use the held
+block, as in Effortless Building.
+
+The picker key (B unless the player changes it in Controls) opens the picker while the mix is off, and turns the mix
+off, with a message, while it's on. The picker lists every block that has an item of its own, in the game's order,
+with a search box (by name or id) and a toggle, "Only my inventory", that limits the list to the blocks in the
+player's inventory. Clicking a block adds it to the mix with a share of 1; under each block in the mix is its share,
+which the player types, and its percentage; clicking a block in the mix takes it out. "Use mix" turns the mix on, with
+a message naming the key; "Clear" empties the list; "Cancel" and Escape leave the mix as it was.
 
 ### When the server lacks the mod
 
@@ -327,9 +345,27 @@ checks, with Planner1 an operator and Planner2 not:
 - Syncmatica's Remove: refused, with the message, for a player removing someone else's plan; allowed for an operator
   and for the plan's owner.
 
+`step7.sh` draws shapes in Effortless Building's Single mode with its array modifier, clicking the real mouse buttons
+with the player looking straight down, and checks:
+
+- A shape goes into the plan it starts in, grows it where it crosses the edge, and reaches the other player at once,
+  glowing; no real blocks are placed.
+- A shape started on a ghost block goes on top of it, and the break click erases a ghost block, leaving the real ones.
+- A shape outside every plan gives the message with no plan selected, and goes into the selected plan otherwise.
+- The picker key opens the picker, listing every block; the toggle limits it to the inventory's two blocks; clicking
+  both, typing their shares and "Use mix" turns the mix on, with its message.
+- With the mix on, each block of a 20-block shape, and a Litematica place, is the mix's block at its position, on
+  both clients; the key turns the mix off, with its message.
+- A client without Effortless Building (its jar left off the classpath) loads without it or mixin errors, keeps
+  Litematica edits flowing both ways, and opens the picker.
+
 The results, the game logs and the screenshots go to a folder outside the repository.
 
 ## Unverified
 
 - Syncmatica's later moves on a grown plan, and how quickly growth redraws a large plan.
+- Shapes drawn with Effortless Building's multi-click modes (line, wall, floor, cube, slope, circle, cylinder, sphere)
+  and its mirror and radial mirror; the checks draw Single-mode shapes with the array, which take the same capture.
+- That the shape preview draws the mix's blocks, and how block states turn out for blocks whose placement depends on
+  their neighbours (stairs, fences, slabs).
 - Whether Litematica's edits aim from Freecam's camera.

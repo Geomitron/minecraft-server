@@ -4,6 +4,7 @@ import ch.endte.syncmatica.data.ServerPlacement;
 import ch.endte.syncmatica.litematica.LitematicManager;
 import dev.buildingplanner.BuildingPlanner;
 import dev.buildingplanner.mixin.litematica.LitematicaSchematicAccessor;
+import dev.buildingplanner.mixin.litematica.SchematicUtilsInvoker;
 import dev.buildingplanner.plan.Plan;
 import dev.buildingplanner.plan.PlanRegion;
 import dev.buildingplanner.sync.BlockChange;
@@ -16,6 +17,7 @@ import fi.dy.masa.litematica.schematic.container.LitematicaBlockStateContainer;
 import fi.dy.masa.litematica.schematic.placement.SchematicPlacement;
 import fi.dy.masa.litematica.schematic.placement.SubRegionPlacement;
 import fi.dy.masa.litematica.util.PositionUtils;
+import fi.dy.masa.litematica.util.SchematicUtils;
 import fi.dy.masa.malilib.util.data.tag.CompoundData;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -94,6 +96,71 @@ final class LitematicaPlans implements PlanReplicas.View {
 	/** The plan region {@code container} holds, or null when it holds none. */
 	Target target(LitematicaBlockStateContainer container) {
 		return containers.get(container);
+	}
+
+	/** A world position in a plan: the region it belongs to and its plan position. */
+	record Located(UUID plan, String region, BlockPos pos) {
+	}
+
+	/** The plan and region whose box holds a world position, or null when no plan's box does. */
+	Located locate(BlockPos world) {
+		for (UUID planId : attached.keySet()) {
+			Located located = locateIn(planId, world, null);
+			if (located != null) {
+				return located;
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * A world position in a plan: in the region whose box holds it, or else in {@code fallbackRegion}, outside that
+	 * region's box (hook L2). Null when the plan isn't kept live here, or the position is in none of its boxes and
+	 * there's no fallback.
+	 */
+	Located locateIn(UUID planId, BlockPos world, String fallbackRegion) {
+		Attached current = attached.get(planId);
+		if (current == null) {
+			return null;
+		}
+		SchematicPlacement placement = current.placement();
+		Located fallback = null;
+		for (Map.Entry<LitematicaBlockStateContainer, Target> entry : containers.entrySet()) {
+			Target target = entry.getValue();
+			if (!target.plan().equals(planId)) {
+				continue;
+			}
+			BlockPos rel = SchematicUtilsInvoker.buildingplanner$toContainer(world, placement.getSchematic(),
+				target.region(), placement, placement.getRelativeSubRegionPlacement(target.region()));
+			if (rel == null) {
+				continue;
+			}
+			Located located = new Located(planId, target.region(), target.min().offset(rel));
+			Vec3i size = entry.getKey().getSize();
+			if (rel.getX() >= 0 && rel.getY() >= 0 && rel.getZ() >= 0
+				&& rel.getX() < size.getX() && rel.getY() < size.getY() && rel.getZ() < size.getZ()) {
+				return located;
+			}
+			if (target.region().equals(fallbackRegion)) {
+				fallback = located;
+			}
+		}
+		return fallback;
+	}
+
+	/** The plan a placement shows, or null when it isn't a plan kept live here. */
+	UUID planOf(SchematicPlacement placement) {
+		for (Map.Entry<UUID, Attached> entry : attached.entrySet()) {
+			if (entry.getValue().placement() == placement && ownsContainers(entry.getKey())) {
+				return entry.getKey();
+			}
+		}
+		return null;
+	}
+
+	/** A block state as a plan stores it, before its placement's rotation and mirror. */
+	BlockState untransformed(UUID planId, String region, BlockState state) {
+		return SchematicUtils.getUntransformedBlockState(state, attached.get(planId).placement(), region);
 	}
 
 	@Override

@@ -33,6 +33,9 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
+import net.minecraft.client.tutorial.TutorialSteps;
+import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.commands.arguments.blocks.BlockStateParser;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -189,8 +192,78 @@ public final class Driver implements ClientModInitializer {
 				// open list, for a real click.
 				return button(mc, a[1], line.substring(a[0].length() + a[1].length() + 2));
 			}
+			case "ebmode" -> {
+				// ebmode <mode>: Effortless Building's build mode, as its radial menu sets it.
+				EffortlessDriver.mode(a[1]);
+				return "ok";
+			}
+			case "ebarray" -> {
+				// ebarray <count> [<dx> <dy> <dz>]: Effortless Building's array modifier alone; a count of 0 clears it.
+				int count = Integer.parseInt(a[1]);
+				EffortlessDriver.array(count, count > 0 ? Integer.parseInt(a[2]) : 0, count > 0 ? Integer.parseInt(a[3]) : 0,
+					count > 0 ? Integer.parseInt(a[4]) : 0);
+				return "ok";
+			}
+			case "selectplacement" -> {
+				// selectplacement [plan]: selects that plan in Litematica's placement list, or nothing.
+				DataManager.getSchematicPlacementManager().setSelectedSchematicPlacement(
+					a.length > 1 ? placement(a[1]) : null);
+				return "ok";
+			}
+			case "real" -> {
+				return realBlockId(pos(a, 1));
+			}
+			case "mix" -> {
+				// The player's mix: on or off, then each block and its weight.
+				BlockMix mix = mix();
+				List<String> parts = new ArrayList<>();
+				for (BlockMix.Part part : mix.parts()) {
+					parts.add(BuiltInRegistries.BLOCK.getKey(part.block()) + ":" + part.weight());
+				}
+				return (mix.isOn() ? "on " : "off ") + String.join(",", parts);
+			}
+			case "mixat" -> {
+				return BuiltInRegistries.BLOCK.getKey(mix().blockAt(pos(a, 1))).toString();
+			}
+			case "pickershown" -> {
+				Field shown = BlockMixScreen.class.getDeclaredField("shown");
+				shown.setAccessible(true);
+				return String.valueOf(((List<?>) shown.get(mc.gui.screen())).size());
+			}
+			case "gridcell" -> {
+				// gridcell <index>: the window position of the centre of that cell of the picker's block grid.
+				for (GuiEventListener child : mc.gui.screen().children()) {
+					if (child.getClass().getSimpleName().equals("BlockGrid")) {
+						Field columns = child.getClass().getDeclaredField("columns");
+						columns.setAccessible(true);
+						int n = Integer.parseInt(a[1]);
+						int perRow = (int) columns.get(child);
+						AbstractWidget grid = (AbstractWidget) child;
+						return scaled(mc, grid.getX() + 9 + 18 * (n % perRow), grid.getY() + 9 + 18 * (n / perRow));
+					}
+				}
+				return "none";
+			}
+			case "widget" -> {
+				// widget <n> <text>: the window position of the centre of the nth widget (from 0) on the open screen
+				// whose text starts with <text>.
+				int n = Integer.parseInt(a[1]);
+				String prefix = line.substring(a[0].length() + a[1].length() + 2);
+				for (GuiEventListener child : mc.gui.screen().children()) {
+					if (child instanceof AbstractWidget w && w.getMessage().getString().startsWith(prefix) && n-- == 0) {
+						return scaled(mc, w.getX() + w.getWidth() / 2.0, w.getY() + w.getHeight() / 2.0);
+					}
+				}
+				return "none";
+			}
 			case "close" -> {
 				mc.setScreenAndShow(null);
+				return "ok";
+			}
+			case "notoasts" -> {
+				// notoasts: clears the game's pop-ups (recipes, advancements, tips) and ends its tutorial, for screenshots.
+				mc.gui.toastManager().clear();
+				mc.getTutorial().setStep(TutorialSteps.NONE);
 				return "ok";
 			}
 			case "shot" -> {
@@ -217,7 +290,8 @@ public final class Driver implements ClientModInitializer {
 			case "noplacement" -> placement(a[1]) == null;
 			case "shared" -> sharedNames().contains(what.substring(7));
 			case "notshared" -> !sharedNames().contains(what.substring(10));
-			case "block" -> blockId(pos(a, 1)).equals(a[4]);
+			case "block" -> List.of(a[4].split("\\|")).contains(blockId(pos(a, 1)));
+			case "real" -> realBlockId(pos(a, 1)).equals(a[4]);
 			case "area" -> area(a[1]).equals(a[2]);
 			case "glow" -> glows().contains(what.substring(5));
 			case "noglow" -> glows().isEmpty();
@@ -230,6 +304,7 @@ public final class Driver implements ClientModInitializer {
 		try {
 			return switch (a[1]) {
 				case "block" -> blockId(pos(a, 2));
+				case "real" -> realBlockId(pos(a, 2));
 				case "area" -> area(a[2]);
 				case "glow" -> glows();
 				case "shared", "notshared" -> sharedNames().toString();
@@ -243,6 +318,11 @@ public final class Driver implements ClientModInitializer {
 
 	private static String blockId(BlockPos pos) {
 		BlockState state = SchematicWorldHandler.getSchematicWorld().getBlockState(pos);
+		return BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString();
+	}
+
+	private static String realBlockId(BlockPos pos) {
+		BlockState state = Minecraft.getInstance().level.getBlockState(pos);
 		return BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString();
 	}
 
@@ -323,6 +403,17 @@ public final class Driver implements ClientModInitializer {
 			}
 		}
 		return "none";
+	}
+
+	private static String scaled(Minecraft mc, double x, double y) {
+		double scale = mc.getWindow().getGuiScale();
+		return (int) (x * scale) + " " + (int) (y * scale);
+	}
+
+	private static BlockMix mix() throws Exception {
+		Field f = BuildingPlannerClient.class.getDeclaredField("MIX");
+		f.setAccessible(true);
+		return (BlockMix) f.get(null);
 	}
 
 	private static ClientSession session() throws Exception {

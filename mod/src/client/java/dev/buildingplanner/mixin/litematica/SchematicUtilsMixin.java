@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.injection.At;
 
 /**
  * Hook L1: the four writes Litematica's ten Edit Schematic actions make. A write to a plan's region is recorded for
- * the server before it happens.
+ * the server before it happens, and while the mix is on, a block placed in a plan becomes the mix's block there.
  */
 @Mixin(value = SchematicUtils.class, remap = false)
 abstract class SchematicUtilsMixin {
@@ -27,7 +27,6 @@ abstract class SchematicUtilsMixin {
 		require = 4)
 	private static void buildingplanner$capture(LitematicaBlockStateContainer container, int x, int y, int z,
 		BlockState state, Operation<Void> original) {
-		BuildingPlannerClient.captureWrite(container, x, y, z, state);
-		original.call(container, x, y, z, state);
+		original.call(container, x, y, z, BuildingPlannerClient.captureWrite(container, x, y, z, state));
 	}
 }

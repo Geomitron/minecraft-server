@@ -9,9 +9,22 @@
 	"buildingplanner.redo.nothing": "Nothing to redo.",
 	"buildingplanner.delete.not_yours": "Only %s, who shared this plan, can delete it.",
 	"buildingplanner.start.no_area": "Mark an area with Litematica's area tool first, then press this key again.",
+	"buildingplanner.shape.no_plan": "Start the shape inside a plan, or select a plan in Litematica first.",
+	"buildingplanner.mix.on": "Block mix on. Press %s to turn it off.",
+	"buildingplanner.mix.off": "Block mix off.",
 	"buildingplanner.ui.start_plan.title": "Start a plan",
 	"buildingplanner.ui.start_plan.name": "Plan name",
 	"buildingplanner.ui.start_plan.create": "Create",
+	"buildingplanner.ui.block_mix.title": "Block mix",
+	"buildingplanner.ui.block_mix.search": "Search blocks",
+	"buildingplanner.ui.block_mix.inventory_only": "Only my inventory",
+	"buildingplanner.ui.block_mix.none": "No blocks to show.",
+	"buildingplanner.ui.block_mix.empty": "Click blocks above to add them, up to nine.",
+	"buildingplanner.ui.block_mix.share": "Share",
+	"buildingplanner.ui.block_mix.remove": "Click to take it out of the mix",
+	"buildingplanner.ui.block_mix.use": "Use mix",
+	"buildingplanner.ui.block_mix.clear": "Clear",
 	"key.category.buildingplanner.main": "Building Planner",
-	"key.buildingplanner.start_plan": "Start a plan"
+	"key.buildingplanner.start_plan": "Start a plan",
+	"key.buildingplanner.block_mix": "Block mix"
 }

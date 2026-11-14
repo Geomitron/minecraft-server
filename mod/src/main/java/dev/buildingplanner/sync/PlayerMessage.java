@@ -52,6 +52,21 @@ public record PlayerMessage(String key, List<String> args) {
 		return new PlayerMessage(PREFIX + "start.no_area", List.of());
 	}
 
+	/** The player drew a shape outside every plan with no plan selected in Litematica. */
+	public static PlayerMessage noPlanForShape() {
+		return new PlayerMessage(PREFIX + "shape.no_plan", List.of());
+	}
+
+	/** The player turned the block mix on in the picker; {@code key} is the picker key's name. */
+	public static PlayerMessage mixOn(String key) {
+		return new PlayerMessage(PREFIX + "mix.on", List.of(key));
+	}
+
+	/** The player turned the block mix off with the picker key. */
+	public static PlayerMessage mixOff() {
+		return new PlayerMessage(PREFIX + "mix.off", List.of());
+	}
+
 	/** The delete check stopped a player deleting a plan someone else shared. */
 	public static PlayerMessage notYourPlan(String owner) {
 		return new PlayerMessage(PREFIX + "delete.not_yours", List.of(owner));

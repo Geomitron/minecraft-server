@@ -34,12 +34,23 @@ cat > run/server/ops.json << 'EOF'
 EOF
 
 # start <run> <folder> <log> [program args...]: starts a captured dev run in the background; its pid goes to
-# /tmp/<log>.pid.
+# /tmp/<log>.pid. With LEAVE_OUT set, the classpath leaves out each entry whose path contains it.
 start() {
 	local run=$1 dir=$2 log=$3
 	shift 3
-	local a
+	local a i entry entries kept
 	mapfile -t a < "/tmp/args/$run.args"
+	if [[ -n ${LEAVE_OUT:-} ]]; then
+		for i in "${!a[@]}"; do
+			[[ ${a[i]} == -cp ]] || continue
+			kept=()
+			IFS=: read -ra entries <<< "${a[i + 1]}"
+			for entry in "${entries[@]}"; do
+				[[ $entry == *"$LEAVE_OUT"* ]] || kept+=("$entry")
+			done
+			a[i + 1]=$(IFS=:; echo "${kept[*]}")
+		done
+	fi
 	# Each run unpacks LWJGL's native libraries into its own folder; two clients sharing one crash as they unpack.
 	(cd "run/$dir" && exec "${a[0]}" -Xmx3G "-Dorg.lwjgl.system.SharedLibraryExtractPath=/tmp/natives-$log" \
 		"${a[@]:1}" "$@" > "/out/$log.log" 2>&1) &
@@ -51,12 +62,14 @@ wait_for() {
 	timeout "${3:-300}" grep -q -m1 -F -- "$2" <(tail -n +1 -F "$1" 2> /dev/null)
 }
 
+# start_client <n> [left-out]: starts dev client n, playing as Planner<n>; the optional second argument leaves the
+# mod jars whose paths contain it off the classpath (effortless-building, say).
 start_client() {
 	local n=$1
 	mkdir -p "run/client$n"
 	: > "run/client$n/driver-in.txt"
 	: > "run/client$n/driver-out.txt"
-	DISPLAY=:$n start "runClient$([[ $n == 1 ]] || echo "$n")" "client$n" "client$n" \
+	LEAVE_OUT=${2:-} DISPLAY=:$n start "runClient$([[ $n == 1 ]] || echo "$n")" "client$n" "client$n" \
 		--username "Planner$n" --quickPlayMultiplayer localhost:25565
 }
 
@@ -127,6 +140,15 @@ keys() {
 # click <client> <x> <y>: a real left click at that window position.
 click() {
 	xdo "$1" mousemove --window %w "$2" "$3" click 1
+}
+
+# use_click <client> and attack_click <client>: the right (use) and left (attack) mouse buttons, held long enough for
+# a client tick to see them down, as Effortless Building checks.
+use_click() {
+	xdo "$1" mousedown 3 sleep 0.3 mouseup 3
+}
+attack_click() {
+	xdo "$1" mousedown 1 sleep 0.3 mouseup 1
 }
 
 # client_said <client> <text>: the client's chat showed the text.
