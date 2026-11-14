@@ -4,6 +4,7 @@
 	"version": "${version}",
 	"name": "Building Planner",
 	"description": "Plan builds together as shared Litematica plans, drawn with Effortless Building's shapes.",
+	"license": "MIT",
 	"environment": "*",
 	"entrypoints": {
 		"main": ["dev.buildingplanner.BuildingPlanner"],
