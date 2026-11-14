@@ -4,7 +4,8 @@ Building Planner is a Fabric add-on for Minecraft 26.3. With it, the group plans
 plans that everyone on the server sees and edits live, then builds them by hand. It hooks into unchanged copies of
 Effortless Building, Litematica and Syncmatica. Geo's decisions behind it are in [plan.md](plan.md) ("Decisions").
 
-Choices marked **Open** are player-experience decisions that wait on Geo. Each names the option the agent recommends;
+Choices marked **Open** are player-experience decisions that wait on Geo in inbox request 420, by its question
+numbers. Each names the option the agent recommends;
 the build keeps each one behind a single function or setting until Geo answers.
 
 ## What players get
@@ -53,7 +54,7 @@ the build keeps each one behind a single function or setting until Geo answers.
 | Plan room sizes and shapes before committing | Effortless Building's shapes drawn into plans; Litematica area boxes; plans grow to fit. | None. |
 | See and judge a build (free or fixed camera) | Litematica draws plans as ghost blocks; Freecam moves the camera away from the player. | Effortless Building aims from the player's eyes, not the camera, so shapes can't be drawn from a Freecam view. Litematica's edits aim from the camera entity; whether Freecam's camera counts is unverified. |
 | Lay out walls, shapes and components quickly | Effortless Building's eleven build modes, captured into plans. | None. |
-| Copy and paste | Effortless Building's array repeats while drawing. Litematica can copy a real area into a new plan (its clone action saves real blocks) and load any saved schematic as a new plan. | No tool copies part of a plan and pastes it elsewhere in a plan. |
+| Copy and paste | Effortless Building's array repeats while drawing. Litematica can copy a real area into a new plan (its clone action saves real blocks) and load any saved schematic as a new plan. | No tool copies part of a plan and pastes it elsewhere in a plan. **Open (Q8)**: whether Building Planner adds one, after the first version (recommended) or in it. |
 | Symmetry | Effortless Building's mirror and radial mirror. | None. |
 | Randomized block mixes | Building Planner's block-mix picker (Effortless Building's Randomizer needs the server copy, which Geo kept off the server). | None. |
 | A plan everyone on the server sees, built for real by hand | Syncmatica shares plans; Building Planner keeps their blocks live for everyone; Litematica's material list and ghost blocks guide the build. | None. |
@@ -216,8 +217,9 @@ players reconnect and take snapshots.
 Syncmatica's delete reaches the server as `REMOVE_SYNCMATIC` with the plan's id. Hook S1 reads the id without
 consuming it, looks up the placement, and compares its owner (the player who shared it, which Syncmatica records and
 saves in `placements.json`) with the sender (`getGameProfile(source)`). If they differ, the hook cancels the delete,
-so no one's copy is removed, and sends the sender a `notice`. Syncmatica's move and turn stay open to everyone. A plan
-whose creator never returns can't be deleted in the game.
+so no one's copy is removed, and sends the sender a `notice`. Syncmatica's move and turn stay open to everyone.
+**Open (Q9)**: whether server operators can also delete any plan (recommended), so a plan whose creator never
+returns can still be deleted in the game.
 
 ### Undo
 
@@ -250,7 +252,7 @@ Syncmatica alone they see each plan as it was first shared.
 
 ### The add-on's licence
 
-**Open (Q8).** Effortless Building and Litematica are LGPL-3.0 and Syncmatica is CC0. The add-on calls their code
+**Open (Q10).** Effortless Building and Litematica are LGPL-3.0 and Syncmatica is CC0. The add-on calls their code
 and copies none of it, so its own licence is free.
 
 ## Unverified

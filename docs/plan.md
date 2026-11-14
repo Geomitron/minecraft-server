@@ -74,13 +74,10 @@ The planning mod, from inbox request 411:
 
 ## Design work: Building Planner
 
-Geo's decisions from inbox request 411 are above. As 411 Q7 described it, the add-on takes each finished Effortless
-Building shape where Effortless Building would send it to the server and writes it into the plan instead; it sends
-Litematica's Edit Schematic writes live; it grows a plan by replacing its placement with a bigger schematic; and it
-sends live changes over its own connection, sharing the updated plan through Syncmatica for players who join later,
-with an owner check on Syncmatica's delete. How players use it (starting a plan, the block-mix picker, undo, menus
-and keys) and the add-on's licence are still open. The messages players see go to Geo for review once something is
-built.
+[building-planner.md](building-planner.md) is the spec: what players get, how each goal above is met, the technical
+design with every hook checked in the source, and what's unverified. Geo's decisions from inbox request 411 are above.
+How players use it and the add-on's licence wait on Geo in inbox request 420. The messages players see go to Geo for
+review once something is built.
 
 ### Source evidence (read 2026-11-13)
 
