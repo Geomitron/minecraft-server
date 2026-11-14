@@ -3,6 +3,7 @@ package dev.buildingplanner.plan;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
@@ -35,6 +36,20 @@ public final class Plan {
 		Plan plan = new Plan(metadata, Map.of(name, PlanRegion.empty(name, min, dimensions)));
 		plan.refreshMetadata(timeMillis);
 		return plan;
+	}
+
+	/** A plan holding a snapshot's regions, in order, with empty metadata. */
+	public static Plan fromSnapshot(List<RegionSnapshot> snapshot) {
+		Map<String, PlanRegion> regions = new LinkedHashMap<>();
+		for (RegionSnapshot region : snapshot) {
+			regions.put(region.name(), region.toRegion());
+		}
+		return new Plan(new CompoundTag(), regions);
+	}
+
+	/** Each region's snapshot, in order. */
+	public List<RegionSnapshot> snapshot() {
+		return regions.values().stream().map(RegionSnapshot::of).toList();
 	}
 
 	public String name() {

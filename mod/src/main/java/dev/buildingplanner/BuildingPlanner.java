@@ -1,6 +1,10 @@
 package dev.buildingplanner;
 
+import dev.buildingplanner.server.ServerSync;
+import dev.buildingplanner.sync.Payloads;
+import net.fabricmc.api.EnvType;
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.loader.api.FabricLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -10,6 +14,10 @@ public final class BuildingPlanner implements ModInitializer {
 
 	@Override
 	public void onInitialize() {
+		Payloads.register();
+		if (FabricLoader.getInstance().getEnvironmentType() == EnvType.SERVER) {
+			ServerSync.register();
+		}
 		LOGGER.info("Building Planner loaded");
 	}
 }

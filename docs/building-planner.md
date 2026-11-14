@@ -172,15 +172,20 @@ Order and conflicts:
 2. Each block takes the value of the last edit, in the server's order, that wrote it. There are no locks: several
    players can edit one plan, even the same blocks, and everyone ends with the same plan.
 3. A client applies `applied` messages in the order they arrive (one connection keeps them in order). A gap in
-   revisions makes it ask for a fresh snapshot.
+   revisions makes it ask for a fresh snapshot by sending `subscribe` again. A `rejected` with no `clientSeq` answers
+   a `subscribe` for a plan the server doesn't have, and the client drops that plan.
 4. Litematica edits show at once on the author's screen, since Litematica writes them before the add-on sends them;
    shapes show when the server's `applied` comes back. When someone else's edit to the same block lands between an
    author's write and its echo, the author sees that block flip once, then settle on the server's order.
-5. The server checks each edit: the plan exists, the player has it loaded, the batch is under the block cap, and growth
-   stays within the size cap. A failed check returns `rejected`, and the client takes a fresh snapshot to drop its own
-   early copy.
+5. The server checks each edit: the plan exists, the player has it loaded, the batch is within the block cap, every
+   region it names exists, a Litematica edit stays inside its region's box, and growth stays within the size cap. A
+   failed check changes nothing and returns `rejected`, and the client takes a fresh snapshot to drop its own early
+   copy. An erase skips positions outside its region's box, which are empty already, so it never grows the plan.
 
-Starting caps, in the server's config file: 50,000 blocks an edit, 512 blocks a side for a plan.
+Starting caps, in the server's config file `config/buildingplanner.properties` (`max-edit-blocks`, `max-plan-side`):
+50,000 blocks an edit, 512 blocks a side for a plan. The size cap applies to the plan's enclosing box, on each side an
+edit grows; a plan shared already larger can still grow along its other sides. A region at the cap on every side holds 134 million
+blocks, about 540 MB of the server's memory at four bytes a block.
 
 ### Players joining mid-edit
 
