@@ -41,12 +41,12 @@ From inbox requests 401 and 402 (revisions 1 to 4):
   402 r4 Q1).
 - Players run Litematica (with MaLiLib), Syncmatica and Freecam, with Fabric API; the server runs Fabric, Fabric API
   and Syncmatica. These are the mods 402 r2 to r4 proposed and 408 described when Geo approved the pack and the switch.
+- The player guide covers Prism Launcher only, with no steps for the official launcher (410, comment c1).
 
 ## Agent-ready work
 
 - **Player pack** (approved, 408 Q1 A): a packwiz pack of the player mods for 26.3 at a public web address, and a Prism
-  instance file that runs packwiz's installer before each launch. It includes steps for players on the official
-  launcher (install Fabric, copy the mods by hand, no automatic updates).
+  instance file that runs packwiz's installer before each launch, and a player guide for Prism Launcher only.
 
 ## Design work: the planning mod
 
