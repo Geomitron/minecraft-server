@@ -34,9 +34,8 @@ From inbox requests 401 and 402 (revisions 1 to 4):
 - The work runs as its own T3 project, "Minecraft Server", with a project thread of that name; its workspace is this
   repository, which becomes a public GitHub repository under Geo's account once there's code to publish (409, and
   402 r4 Q1).
-
-Proposed, not yet approved: players run Litematica (with MaLiLib), Syncmatica and Freecam; the server runs Fabric,
-Fabric API and Syncmatica (402 r2 to r4).
+- Players run Litematica (with MaLiLib), Syncmatica and Freecam, with Fabric API; the server runs Fabric, Fabric API
+  and Syncmatica. These are the mods 402 r2 to r4 proposed and 408 described when Geo approved the pack and the switch.
 
 ## Agent-ready work
 
@@ -49,19 +48,9 @@ Fabric API and Syncmatica (402 r2 to r4).
 
 ## Design work: the planning mod
 
-Geo decides these; the project thread turns them into a decision brief for review.
-
-1. Plan model: named plans (each a box that can be shown, hidden, moved and rotated as a whole, with its own material
-   list) or one shared ghost layer over the whole world.
-2. Growth: when a shape crosses a plan's edge, grow the plan or drop the blocks outside it.
-3. Permissions: who can change or delete a plan (anyone, or its creator and people they add).
-4. Undo: each player's own changes only, or any change in a plan.
-5. Whether Litematica's own Edit Schematic changes sync live too, not only Effortless Building's.
-6. Structure: one new add-on mod that hooks into unmodified Effortless Building, Litematica and Syncmatica, or changed
-   copies (forks) of Effortless Building and Syncmatica.
-7. Players without the pack: whether they must still be able to join (Effortless Building on the server adds an item,
-   which may stop unmodded players from joining; unverified).
-8. The mod's name and every message players see (Geo reviews all player-facing text).
+Geo decides these in inbox request 411, which holds the questions and their options: the plan model, growth past a
+plan's edge, permissions, undo, live sync for Litematica's own Edit Schematic tools, whether Effortless Building goes on
+the server, how the mod is built, and its name. The messages players see go to Geo for review once something is built.
 
 ### Source evidence (read 2026-11-13)
 
@@ -70,14 +59,38 @@ Geo decides these; the project thread turns them into a decision brief for revie
   modifiers, then constraints) and on the last click sends `PlaceBuildModePacket` with only the click positions and
   options; the server rebuilds the set itself (`BuildPipeline.SERVER.runServerPipeline`). The preview runs the same
   pipeline each frame. A plan mode can take the client's block set at that send and write it into a plan instead.
+  - On the server it turns away players without it: its Fabric entry point (`fabric/.../EffortlessBuilding.java`)
+    registers the item `effortlessbuilding:randomizer_tool` and a menu type in built-in registries, and Fabric API
+    disconnects a client that can't receive them (`FabricMC/fabric-api` branch `26.3` @ `b8eae12`,
+    `fabric-registry-sync-v0/.../RegistrySyncManager.java`, `configureClient`).
+  - Without the server copy, its client still previews but places nothing: `FabricNetworkHelper.sendToServer` sends
+    without checking the server can receive it, and the server drops the packet (issue #16, the owner's diagnosis:
+    https://github.com/Requios/effortless-building-multi/issues/16).
+  - The Randomizer works only while the main hand holds `RandomizerToolItem` (`common/.../RandomizerSystem.java`), an
+    item the server must register.
+  - Its server settings can turn off breaking (`survivalAllowBreaking`) but not placing (`common/.../ServerConfig.java`).
+  - Its undo runs on the server, per player, 50 steps, over real block changes only (`common/.../UndoManager.java`).
 - **Litematica**: `sakura-ryoko/litematica`, branch `26.3` (`eb15b39`), LGPL-3.0. `util/SchematicUtils.java`
   (private `setTargetedSchematicBlockState`) writes a block into a placement's sub-region container only inside the
   sub-region's box, then calls `markChunkForRebuild`; the pieces it uses (`getAllPlacementsTouchingChunk`,
   `getSchematicContainerPositionFromWorldPosition`, `getUntransformedBlockState`) are public.
   `LitematicaSchematic.createEmptySchematic(area, author)` makes an empty plan from an area selection.
+  - A plan's region can't grow in place: `schematic/LitematicaSchematic.java` keeps block containers and region sizes
+    in private final maps with no resize, and `SchematicPlacement` holds its schematic in a `final` field. Growing
+    means building a bigger schematic, copying the blocks in and replacing the placement, or a mixin into those maps.
+  - All ten Edit Schematic actions run from `event/InputHandler.java` into `util/SchematicUtils.java`, which writes
+    blocks only through four `container.set` calls, each also marking the plan modified: a hook point for live sync.
 - **Syncmatica**: `sakura-ryoko/syncmatica`, branch `26.3` (`37a969e`), CC0. `data/ServerPlacement` identifies a
   plan's contents by a fixed hash of its file (`hashValue`); `MODIFY` packets carry only placement values (origin,
   rotation, mirror, sub-regions). Block changes don't sync today; a changed plan must be shared again as a new file.
+  - Each downloaded file is checked against the plan's fixed `hashValue` (`communication/exchange/DownloadExchange.java`,
+    `data/FileStorage.java` `hashCompare`), so it can't carry a changed plan.
+  - It has no owner checks: any player can move or delete any shared plan, one move per plan at a time
+    (`communication/ServerCommunicationManager.java`, `communication/exchange/ModifyExchangeServer.java`).
+- **Upkeep** (GitHub API, commits on each default branch in the year to 2026-11-13): Effortless Building 80,
+  Litematica 100 or more (the API's page limit, translations included), Syncmatica 26. The files an add-on would hook
+  changed less: `BuildPipelineClient.java` 6 times, `SchematicUtils.java` 7. A changed copy of an LGPL-3.0 mod keeps
+  that licence and publishes its source; an add-on's licence is free; CC0 asks nothing.
 
-Unverified: whether Effortless Building's client works when the server lacks it, and how a placement's sub-region can
-grow in place.
+Unverified: how long a player's reload takes when a plan is replaced by a bigger one, and whether a Fabric player who
+lacks Effortless Building is turned away like an unmodded one (likely, from the registry code).
