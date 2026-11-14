@@ -16,6 +16,7 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.StringWidget;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 
@@ -40,7 +41,10 @@ final class StartPlanScreen extends Screen {
 	/** Opens the screen, or tells the player to mark an area first. */
 	static void open() {
 		AreaSelection area = DataManager.getSelectionManager().getCurrentSelection();
-		if (area == null || PositionUtils.getValidBoxes(area).isEmpty()) {
+		// Litematica's Simple mode keeps one box with both corners at 0,0,0 until the player marks an area
+		// (AreaSelectionSimple.createDefaultBoxIfNeeded), so a box like that is no area.
+		if (area == null || PositionUtils.getValidBoxes(area).stream()
+			.allMatch(box -> BlockPos.ZERO.equals(box.getPos1()) && BlockPos.ZERO.equals(box.getPos2()))) {
 			LitematicaPlans.showMessage(PlayerMessage.noAreaMarked());
 			return;
 		}

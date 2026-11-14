@@ -8,6 +8,13 @@ check "client 2 starts a session on hello" drv 2 "await session"
 # Both players stand south of the plan, looking at it.
 drv 1 "cmd tp @s 5 -60 -3 0 10" "cmd tp Planner2 6 -60 -3 0 10" "wait 40" > /dev/null
 
+# A fresh Litematica is in Simple mode with no area marked, so N gives a message instead of the start screen.
+check "a fresh Litematica is in Simple selection mode" eval '[[ $(val 1 "selmode") == SIMPLE ]]'
+keys 1 key n
+no_area="Mark an area with Litematica's area tool first, then press this key again."
+check "N with no area marked gives the message, not the start screen" \
+	eval 'client_said 1 "$no_area" && drv 1 "wait 20" "await noscreen"'
+
 # Starting a plan: mark an area, press N, type a name, press Enter.
 drv 1 "select 2 -60 2 8 -57 8" > /dev/null
 keys 1 key n

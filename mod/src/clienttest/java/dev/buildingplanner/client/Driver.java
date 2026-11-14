@@ -140,6 +140,9 @@ public final class Driver implements ClientModInitializer {
 				mc.player.connection.sendCommand(line.substring(4));
 				return "ok";
 			}
+			case "selmode" -> {
+				return DataManager.getSelectionManager().getSelectionMode().name();
+			}
 			case "select" -> {
 				AreaSelection area = DataManager.getSelectionManager().getCurrentSelection();
 				area.setSelectedSubRegionCornerPos(pos(a, 1), PositionUtils.Corner.CORNER_1);

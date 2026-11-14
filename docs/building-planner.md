@@ -229,7 +229,8 @@ block, or one translucent box around them for an edit of more than 512 blocks, w
 player list) above them. Messages from the server show in the player's chat.
 
 Starting a plan: the key opens a screen asking for the plan's name, unless no area is marked, when the player gets a
-message instead. Create makes an empty schematic of the marked area (`createEmptySchematic`, with the player as
+message instead. Litematica's Simple selection mode, its default, holds an unmarked area as one box with both corners
+at 0,0,0, so the add-on takes that box as no area. Create makes an empty schematic of the marked area (`createEmptySchematic`, with the player as
 author and the name as the schematic's name), saves it to `Building Planner/<name>.litematic` in Litematica's
 schematics folder (a number is added when the name is taken), places it at the area's origin, and shares it through
 Syncmatica as its Share button does.
@@ -316,7 +317,8 @@ actions, waits for a state, and screenshots. Key presses and clicks are real one
 checks, with Planner1 an operator and Planner2 not:
 
 - Each client starts a session on `hello`.
-- Starting a plan: N, typing a name and Enter create and share it, and the other player sees it at once.
+- Starting a plan: N in a fresh Litematica (Simple selection mode, no area marked) gives the message; with an area
+  marked, N, typing a name and Enter create and share the plan, and the other player sees it at once.
 - A Litematica fill and a single block reach the other client, glowing with the editor's name, and the glow fades.
 - An edit past the plan's box grows it in place on both clients.
 - Ctrl+Z and Ctrl+Y undo and redo the player's edit on both clients.
