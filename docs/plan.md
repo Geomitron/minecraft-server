@@ -18,7 +18,10 @@ The vanilla `server.jar` stays in place: to switch back, change the jar in `Exec
 container `minecraft-error-events` on the network of that name, no published port). It gives each error a short id and
 exports counts for Prometheus. The drop-in `/etc/systemd/system/minecraft.service.d/error-events.conf` records how the
 process ended at each stop. Its README holds the metrics, the alert expressions and the command that marks an error
-handled. The Grafana alerts that email Geo and notify the project thread are the remaining part of "Error alerts".
+handled. The VPS's Grafana alerts on it (deployed 10:53 PM ET, Nov 13): a new error, a known error's rate jump (able
+to fire once the watcher has 25 hours of history, from about 11:54 PM ET, Nov 14) and the watcher going quiet for 10
+minutes. Its contact point **Minecraft Server error events** emails Geo and sends each alert to the project thread as
+an inbox notice, carrying only the error's id, kind and source.
 
 **Players.** Unmodded today. Geo prefers Prism Launcher (Geo, inbox request 402). Geo is new to how Minecraft mods
 work (Geo, inbox request 408), so explanations start from what a mod, Fabric and an instance are.
@@ -68,9 +71,6 @@ The planning mod, from inbox request 411:
 
 - **Player pack** (approved, 408 Q1 A): a packwiz pack of the player mods for 26.3 at a public web address, and a Prism
   instance file that runs packwiz's installer before each launch, and a player guide for Prism Launcher only.
-- **Error alerts** (approved, 415): a watcher beside the server that gives each error a short id and exports counts
-  for Prometheus, a `minecraft.service` drop-in that records how the process ended, and the Grafana rules, contact
-  point and route, as inbox request 415 describes.
 - **Building Planner** (design approved, 411), built in this order, each step verified as
   [building-planner.md](building-planner.md) describes before the next: (1) the `mod/` scaffold with run setups for a
   server and two clients; (2) the plan model and `.litematic` storage; (3) the live-sync core on the server; (4) server
