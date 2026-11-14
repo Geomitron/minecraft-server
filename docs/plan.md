@@ -2,12 +2,17 @@
 
 ## Current setup
 
-**Server.** Vanilla Minecraft 26.3 on Geo's VPS, run by the systemd unit
-`minecraft.service` as root from `/home/minecraft`:
-`/usr/lib/jvm/java-25-openjdk-amd64/bin/java -Xmx6G -Xms1G -jar server.jar nogui`, port 25565. Survival, hard,
-whitelist enforced (11 players), online mode. The world (`world/`) is 1.9 GB. Earlier archives sit beside it:
-`minecraft-archive-2026-10-29-1.21.11.tar.gz` and `minecraft-backup-2025-12-12.tar.gz`. No mods or plugins. The VPS has
-30 GB of RAM (about 16 GB available) and 163 GB of free disk; it also hosts other services.
+**Server.** Minecraft 26.3 on Fabric (loader 0.20.1, server launcher 1.1.2) with Fabric API 0.166.2+26.3 and
+Syncmatica 0.3.20 (`/home/minecraft/mods/`), on Geo's VPS. The systemd unit
+`minecraft.service` runs it as root from `/home/minecraft`:
+`/usr/lib/jvm/java-25-openjdk-amd64/bin/java -Xmx6G -Xms1G -jar fabric-server-mc.26.3-loader.0.20.1-launcher.1.1.2.jar nogui`,
+port 25565. Survival, hard, whitelist enforced (11 players), online mode. Neither mod adds blocks or items, so players without
+mods should still be able to join (no unmodded client has joined yet to confirm it). The world (`world/`) is 1.9 GB.
+Archives sit beside it: `minecraft-backup-2026-11-14-pre-fabric.tar.gz` (the world just before the switch to Fabric,
+1.5 GB), `minecraft-archive-2026-10-29-1.21.11.tar.gz` and `minecraft-backup-2025-12-12.tar.gz`.
+The vanilla `server.jar` stays in place: to switch back, change the jar in `ExecStart` to `server.jar`, then run
+`systemctl daemon-reload` and `systemctl restart minecraft.service`. The VPS has 30 GB of RAM (about 16 GB available) and
+163 GB of free disk; it also hosts other services.
 
 **Players.** Unmodded today. Geo prefers Prism Launcher (Geo, inbox request 402). Geo is new to how Minecraft mods
 work (Geo, inbox request 408), so explanations start from what a mod, Fabric and an instance are.
@@ -39,9 +44,6 @@ From inbox requests 401 and 402 (revisions 1 to 4):
 
 ## Agent-ready work
 
-- **Server switch** (approved, 408 Q2 A): back up `world/`, replace `server.jar` in `minecraft.service` with Fabric's
-  server launcher for 26.3, add Fabric API and Syncmatica (26.3 builds), restart when no one is online, and check the
-  world loads. Players who install nothing can still join; switching back to `server.jar` stays possible.
 - **Player pack** (approved, 408 Q1 A): a packwiz pack of the player mods for 26.3 at a public web address, and a Prism
   instance file that runs packwiz's installer before each launch. It includes steps for players on the official
   launcher (install Fabric, copy the mods by hand, no automatic updates).
