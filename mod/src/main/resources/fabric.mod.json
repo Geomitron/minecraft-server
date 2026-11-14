@@ -17,7 +17,7 @@
 		"fabric-api": "*",
 		"syncmatica": "*"
 	},
-	"recommends": {
+	"suggests": {
 		"litematica": "*",
 		"malilib": "*",
 		"effortlessbuilding": "*"

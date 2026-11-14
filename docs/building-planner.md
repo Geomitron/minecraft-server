@@ -72,7 +72,7 @@ menus, so it adds nothing to the registries Fabric API syncs at login, and playe
   place), the Effortless Building capture, the block-mix picker and the plan keys.
 
 `fabric.mod.json` depends on Fabric API and Syncmatica, which both sides run. Litematica, MaLiLib and Effortless
-Building run only on players' computers, so the add-on lists them under `recommends`, puts every mixin into those mods
+Building run only on players' computers, so the add-on lists them under `suggests` (Fabric Loader warns at start about a missing `recommends`, not a missing `suggests`), puts every mixin into those mods
 in the `client` section of its mixin configs (as Syncmatica does for its Litematica mixins), and uses a mixin config
 plugin that skips the Effortless Building mixins when that mod is missing. Injectors use MixinExtras, which Fabric
 Loader 0.20.1 bundles (0.5.5).

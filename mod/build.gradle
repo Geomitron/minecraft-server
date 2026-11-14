@@ -107,13 +107,15 @@ def setKeys = { File settingsFile, String separator, Map<String, String> setting
 	settingsFile.text = lines.join('\n') + '\n'
 }
 
-// The dev server runs in offline mode without a whitelist so the dev clients (offline accounts) can join.
-// Accepting Mojang's EULA in run/server/eula.txt stays a manual step.
+// The dev server runs in offline mode without a whitelist so the dev clients (offline accounts) can join, and
+// accepts Mojang's EULA, without which it stops at start.
 tasks.register('prepareDevServer') {
 	def propertiesFile = file('run/server/server.properties')
+	def eulaFile = file('run/server/eula.txt')
 	doLast {
 		setKeys(propertiesFile, '=', ['online-mode': 'false', 'white-list': 'false', 'enforce-whitelist': 'false',
 			'server-port': '25565', 'spawn-protection': '0'])
+		setKeys(eulaFile, '=', ['eula': 'true'])
 	}
 }
 tasks.named('runServer') {
