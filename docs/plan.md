@@ -7,7 +7,7 @@ Syncmatica 0.3.20 (`/home/minecraft/mods/`), on Geo's VPS. The systemd unit
 `minecraft.service` runs it as root from `/home/minecraft`:
 `/usr/lib/jvm/java-25-openjdk-amd64/bin/java -Xmx6G -Xms1G -jar fabric-server-mc.26.3-loader.0.20.1-launcher.1.1.2.jar nogui`,
 port 25565. Survival, hard, whitelist enforced (11 players), online mode. Neither mod adds blocks or items, so players without
-mods should still be able to join (no unmodded client has joined yet to confirm it). The world (`world/`) is 1.9 GB.
+mods can join: an unmodded 26.3 client joined a dev server with the same mods plus Building Planner (`e93bfc5`). The world (`world/`) is 1.9 GB.
 Archives sit beside it: `minecraft-backup-2026-11-14-pre-fabric.tar.gz` (the world just before the switch to Fabric,
 1.5 GB), `minecraft-archive-2026-10-29-1.21.11.tar.gz` and `minecraft-backup-2025-12-12.tar.gz`.
 The vanilla `server.jar` stays in place: to switch back, change the jar in `ExecStart` to `server.jar`, then run
