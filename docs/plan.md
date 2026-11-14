@@ -71,6 +71,12 @@ The planning mod, from inbox request 411:
 - **Error alerts** (approved, 415): a watcher beside the server that gives each error a short id and exports counts
   for Prometheus, a `minecraft.service` drop-in that records how the process ended, and the Grafana rules, contact
   point and route, as inbox request 415 describes.
+- **Building Planner** (design approved, 411), built in this order, each step verified as
+  [building-planner.md](building-planner.md) describes before the next: (1) the `mod/` scaffold with run setups for a
+  server and two clients; (2) the plan model and `.litematic` storage; (3) the live-sync core on the server; (4) server
+  undo; (5) Syncmatica on the server (plans from shared files, the delete check, archiving deleted plans); (6) the
+  Litematica bridge on the client; (7) Effortless Building capture; (8) joining a server without the add-on. The
+  choices open in inbox request 420 stay behind one function or setting each until Geo answers.
 
 ## Design work: Building Planner
 
