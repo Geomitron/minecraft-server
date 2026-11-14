@@ -23,7 +23,7 @@ import net.minecraft.world.level.block.state.BlockState;
 
 /**
  * The client side: a session for each connection to a server with Building Planner, started by the server's
- * {@code hello}, and the hooks' way into it.
+ * {@code hello}, a notice on joining a server without it, and the hooks' way into it.
  */
 public final class BuildingPlannerClient implements ClientModInitializer {
 	private static final KeyMapping.Category CATEGORY =
@@ -36,7 +36,14 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	/** The player's block mix, kept while the game runs, across servers. */
 	private static final BlockMix MIX = new BlockMix();
 
-	/** Null while not connected to a server with Building Planner. */
+	/** The payloads a session sends; a server that can't receive them all doesn't run Building Planner. */
+	private static final List<CustomPacketPayload.Type<?>> SERVERBOUND = List.of(Payloads.Subscribe.TYPE,
+		Payloads.Unsubscribe.TYPE, Payloads.Edit.TYPE, Payloads.Undo.TYPE, Payloads.Redo.TYPE);
+
+	/**
+	 * Null while not connected to a server with Building Planner: on any other server, Building Planner is off, so
+	 * Litematica's edits stay on the player's screen and Effortless Building sends its shapes to the server as usual.
+	 */
 	private static ClientSession session;
 
 	@Override
@@ -44,12 +51,12 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		KeyMappingHelper.registerKeyMapping(START_PLAN);
 		KeyMappingHelper.registerKeyMapping(BLOCK_MIX);
 		RenderEventHandler.getInstance().registerWorldLastRenderer(GLOW);
-		ClientPlayNetworking.registerGlobalReceiver(Payloads.Hello.TYPE, (hello, context) -> {
-			if (hello.protocolVersion() == Payloads.PROTOCOL_VERSION) {
-				session = new ClientSession(hello.limits(), GLOW, MIX);
-			} else {
-				BuildingPlanner.LOGGER.warn("The server runs Building Planner protocol {}, this client {}",
-					hello.protocolVersion(), Payloads.PROTOCOL_VERSION);
+		ClientPlayNetworking.registerGlobalReceiver(Payloads.Hello.TYPE, (hello, context) -> hello(hello));
+		// A singleplayer or LAN host's own world runs no server side, and needs no notice.
+		ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
+			if (!client.isLocalServer() && !SERVERBOUND.stream().allMatch(ClientPlayNetworking::canSend)) {
+				BuildingPlanner.LOGGER.info("The server doesn't run Building Planner, so it's off");
+				LitematicaPlans.showMessage(PlayerMessage.notOnServer());
 			}
 		});
 		ClientPlayNetworking.registerGlobalReceiver(Payloads.Snapshot.TYPE, (payload, context) -> receive(payload));
@@ -78,6 +85,17 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 			}
 		});
 		BuildingPlanner.LOGGER.info("Building Planner client loaded");
+	}
+
+	/** The server's {@code hello}: starts a session when the server speaks this client's protocol version. */
+	static void hello(Payloads.Hello hello) {
+		if (hello.protocolVersion() == Payloads.PROTOCOL_VERSION) {
+			session = new ClientSession(hello.limits(), GLOW, MIX);
+		} else {
+			BuildingPlanner.LOGGER.warn("The server runs Building Planner protocol {}, this client {}",
+				hello.protocolVersion(), Payloads.PROTOCOL_VERSION);
+			LitematicaPlans.showMessage(PlayerMessage.otherVersion());
+		}
 	}
 
 	private static void receive(CustomPacketPayload payload) {

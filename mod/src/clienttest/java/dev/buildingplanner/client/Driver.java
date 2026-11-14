@@ -5,7 +5,9 @@ import ch.endte.syncmatica.litematica.LitematicManager;
 import ch.endte.syncmatica.litematica.gui.GuiSyncmaticaServerPlacementList;
 import dev.buildingplanner.sync.BlockChange;
 import dev.buildingplanner.sync.EditKind;
+import dev.buildingplanner.sync.Payloads;
 import dev.buildingplanner.sync.PlanReplicas;
+import dev.buildingplanner.sync.SyncLimits;
 import fi.dy.masa.litematica.data.DataManager;
 import fi.dy.masa.litematica.schematic.placement.SchematicPlacement;
 import fi.dy.masa.litematica.selection.AreaSelection;
@@ -266,6 +268,11 @@ public final class Driver implements ClientModInitializer {
 				mc.getTutorial().setStep(TutorialSteps.NONE);
 				return "ok";
 			}
+			case "hello" -> {
+				// hello <version>: handles a server hello with that protocol version, as one from another release would be.
+				BuildingPlannerClient.hello(new Payloads.Hello(Integer.parseInt(a[1]), SyncLimits.DEFAULT));
+				return "ok";
+			}
 			case "shot" -> {
 				Screenshot.grab(mc.gameDirectory, a[1] + ".png", mc.gameRenderer.mainRenderTarget(), 1, c -> {
 				});
@@ -283,6 +290,7 @@ public final class Driver implements ClientModInitializer {
 		Minecraft mc = Minecraft.getInstance();
 		return switch (a[0]) {
 			case "session" -> session() != null;
+			case "nosession" -> session() == null;
 			case "screen" -> mc.gui.screen() != null
 				&& mc.gui.screen().getTitle().getString().equals(what.substring(7));
 			case "noscreen" -> mc.gui.screen() == null;

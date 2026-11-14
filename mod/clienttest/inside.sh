@@ -34,7 +34,8 @@ cat > run/server/ops.json << 'EOF'
 EOF
 
 # start <run> <folder> <log> [program args...]: starts a captured dev run in the background; its pid goes to
-# /tmp/<log>.pid. With LEAVE_OUT set, the classpath leaves out each entry whose path contains it.
+# /tmp/<log>.pid. With LEAVE_OUT set, the classpath leaves out each entry whose path matches it as a glob, anywhere in
+# the path.
 start() {
 	local run=$1 dir=$2 log=$3
 	shift 3
@@ -46,7 +47,8 @@ start() {
 			kept=()
 			IFS=: read -ra entries <<< "${a[i + 1]}"
 			for entry in "${entries[@]}"; do
-				[[ $entry == *"$LEAVE_OUT"* ]] || kept+=("$entry")
+				# shellcheck disable=SC2053
+				[[ $entry == *$LEAVE_OUT* ]] || kept+=("$entry")
 			done
 			a[i + 1]=$(IFS=:; echo "${kept[*]}")
 		done
@@ -62,8 +64,28 @@ wait_for() {
 	timeout "${3:-300}" grep -q -m1 -F -- "$2" <(tail -n +1 -F "$1" 2> /dev/null)
 }
 
+# The add-on's own classes and resources on the classpath, and the driver's, for start_server and start_client to
+# leave out.
+ADDON='/work/mod/build/*/'
+
+# start_server [left-out] [log]: starts the dev server, logging to /out/<log>.log (server.log unless given), and
+# waits until it's ready; the optional first argument leaves the classpath entries matching it out ($ADDON, say).
+start_server() {
+	local log=${2:-server}
+	LEAVE_OUT=${1:-} start runServer server "$log" nogui
+	wait_for "/out/$log.log" 'Done (' 300 || { tail -30 "/out/$log.log"; return 1; }
+}
+
+# stop_server [log]: stops the server start_server started with that log.
+stop_server() {
+	local pid
+	pid=$(cat "/tmp/${1:-server}.pid")
+	kill "$pid"
+	wait "$pid" || true
+}
+
 # start_client <n> [left-out]: starts dev client n, playing as Planner<n>; the optional second argument leaves the
-# mod jars whose paths contain it off the classpath (effortless-building, say).
+# classpath entries matching it out (effortless-building, say).
 start_client() {
 	local n=$1
 	mkdir -p "run/client$n"
@@ -168,8 +190,7 @@ Xvfb :1 -screen 0 1024x768x24 -nolisten tcp > /out/xvfb1.log 2>&1 &
 Xvfb :2 -screen 0 1024x768x24 -nolisten tcp > /out/xvfb2.log 2>&1 &
 
 echo "Starting the dev server..."
-start runServer server server nogui
-wait_for /out/server.log 'Done (' 300 || { tail -30 /out/server.log; exit 1; }
+start_server || exit 1
 
 echo "Starting both dev clients..."
 start_client 1

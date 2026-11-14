@@ -67,12 +67,13 @@ menus, so it adds nothing to the registries Fabric API syncs at login, and playe
   They run only on a dedicated server, which is how the group plays; in a singleplayer or LAN world Syncmatica works
   as it does without the add-on.
 - **Client:** the Litematica bridge (attach plans to placements, apply edits, capture Edit Schematic writes, grow in
-  place), starting a plan, the edit glow, the Effortless Building capture and the block-mix picker.
+  place), starting a plan, the edit glow, the Effortless Building capture, the block-mix picker, and the check for a
+  server without the add-on.
 
 They're built in the steps [plan.md](plan.md) lists. Step 6 built the client's Litematica bridge (hooks L1, L3, S2 and
 E4), starting a plan and the edit glow. Step 7 built the Effortless Building capture (E1 to E3 and E5 to E9), the
-block-mix picker with its inventory toggle, the mix's part of L1, and L2. Step 8 adds the client's notice when the
-server lacks the add-on. The dev clients run Effortless Building 4.3 for Fabric 26.3 (Modrinth version `R8eAP63A`, set
+block-mix picker with its inventory toggle, the mix's part of L1, and L2. Step 8 built the client's check for a
+server without the add-on, with its messages. The dev clients run Effortless Building 4.3 for Fabric 26.3 (Modrinth version `R8eAP63A`, set
 in `mod/gradle.properties`), the release built from the source the hooks were checked in; the dev server doesn't run
 it.
 
@@ -314,10 +315,12 @@ a message naming the key; "Clear" empties the list; "Cancel" and Escape leave th
 
 ### When the server lacks the mod
 
-The client checks `ClientPlayNetworking.canSend` for its payloads after joining. Without them, Building Planner turns
-itself off for that server: shapes are still dropped (Effortless Building's packets would be anyway) and a `notice`
-says Building Planner isn't on the server; Litematica's edits stay on that player's screen, as plain Litematica does.
-A protocol-version mismatch in `hello` does the same. The server sends nothing to a player who can't receive it
+On joining, the client checks with `ClientPlayNetworking.canSend` that the server takes all five of its payloads. When
+it doesn't, Building Planner stays off for that server and a chat message says so; a singleplayer world, or a LAN
+host's own world, gets no message. While it's off, its hooks pass everything through: Litematica's edits stay on that
+player's screen, as plain Litematica does, and Effortless Building sends its shapes to the server, which drops them
+when it doesn't run Effortless Building, so nothing is placed. A `hello` with another protocol version leaves it off
+the same way, with a message of its own. The server sends nothing to a player who can't receive it
 (`ServerPlayNetworking.canSend`), so players without the add-on, or without any mods, join and play as before; with
 Syncmatica alone they see each plan as it was first shared.
 
@@ -359,6 +362,17 @@ with the player looking straight down, and checks:
 - A client without Effortless Building (its jar left off the classpath) loads without it or mixin errors, keeps
   Litematica edits flowing both ways, and opens the picker.
 
+`step8.sh` restarts the server and the clients as its checks need (`start_server` and `start_client` can leave the
+add-on's classes off the classpath) and checks:
+
+- On a server with the add-on, neither client gets a message about it.
+- A client without the add-on joins that server, stays connected and places a real block.
+- On the same server with Building Planner left out and Syncmatica still in, both clients get the message and start no
+  session; a plan loaded from Syncmatica's list takes a Litematica fill on that player's screen only; and an Effortless
+  Building shape adds no ghost blocks and places no real ones, with the player staying connected.
+- A `hello` with another protocol version, which the driver hands to the client, gives its own message and starts no
+  session.
+
 The results, the game logs and the screenshots go to a folder outside the repository.
 
 ## Unverified
@@ -369,3 +383,6 @@ The results, the game logs and the screenshots go to a folder outside the reposi
 - That the shape preview draws the mix's blocks, and how block states turn out for blocks whose placement depends on
   their neighbours (stairs, fences, slabs).
 - Whether Litematica's edits aim from Freecam's camera.
+- A client without any mods joining a server with the add-on; the checks use a Fabric client without the add-on.
+- A real server running another protocol version; the check hands the client a made-up `hello`.
+- That singleplayer and a LAN host's own world give no message about a missing server side.

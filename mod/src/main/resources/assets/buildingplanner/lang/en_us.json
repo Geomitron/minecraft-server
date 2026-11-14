@@ -13,6 +13,8 @@
 	"buildingplanner.shape.no_plan": "Start the shape inside a plan, or select a plan in Litematica first.",
 	"buildingplanner.mix.on": "Block mix on. Press %s to turn it off.",
 	"buildingplanner.mix.off": "Block mix off.",
+	"buildingplanner.off.not_on_server": "Building Planner isn't on this server. Your Litematica edits stay on your screen, and Effortless Building's shapes place nothing.",
+	"buildingplanner.off.other_version": "This server runs a different version of Building Planner, so it's off here. Your Litematica edits stay on your screen, and Effortless Building's shapes place nothing.",
 	"buildingplanner.ui.start_plan.title": "Start a plan",
 	"buildingplanner.ui.start_plan.name": "Plan name",
 	"buildingplanner.ui.start_plan.create": "Create",
