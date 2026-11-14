@@ -42,17 +42,39 @@ From inbox requests 401 and 402 (revisions 1 to 4):
 - Players run Litematica (with MaLiLib), Syncmatica and Freecam, with Fabric API; the server runs Fabric, Fabric API
   and Syncmatica. These are the mods 402 r2 to r4 proposed and 408 described when Geo approved the pack and the switch.
 - The player guide covers Prism Launcher only, with no steps for the official launcher (410, comment c1).
+- The server's errors email Geo and reach the project thread as inbox notices through the VPS's existing Grafana and
+  Prometheus, as inbox request 415 describes; a known error's rate alerts above 30 an hour and above 3 times its
+  hourly average across the day before (415, Q1 A and Q2 A).
+
+The planning mod, from inbox request 411:
+
+- It's named Building Planner (Q8).
+- Named plans: each plan is a box that players show, hide, move and turn as a whole, with its own material list (Q1 A).
+- A shape that crosses a plan's edge grows the plan to fit it (Q2 A).
+- Anyone can change a shared plan; only its creator can delete it (Q3 B).
+- Undo takes back only that player's own changes in a plan (Q4 A).
+- Changes made with Litematica's own Edit Schematic tools sync live too (Q5 A).
+- Effortless Building stays off the server, on players' computers only, so players without the pack can still join.
+  Its Randomizer item needs the server copy, so Building Planner gives players its own block-mix picker (Q6 A).
+- One add-on that hooks into unchanged Effortless Building, Litematica and Syncmatica, with its own licence (Q7 A).
 
 ## Agent-ready work
 
 - **Player pack** (approved, 408 Q1 A): a packwiz pack of the player mods for 26.3 at a public web address, and a Prism
   instance file that runs packwiz's installer before each launch, and a player guide for Prism Launcher only.
+- **Error alerts** (approved, 415): a watcher beside the server that gives each error a short id and exports counts
+  for Prometheus, a `minecraft.service` drop-in that records how the process ended, and the Grafana rules, contact
+  point and route, as inbox request 415 describes.
 
-## Design work: the planning mod
+## Design work: Building Planner
 
-Geo decides these in inbox request 411, which holds the questions and their options: the plan model, growth past a
-plan's edge, permissions, undo, live sync for Litematica's own Edit Schematic tools, whether Effortless Building goes on
-the server, how the mod is built, and its name. The messages players see go to Geo for review once something is built.
+Geo's decisions from inbox request 411 are above. As 411 Q7 described it, the add-on takes each finished Effortless
+Building shape where Effortless Building would send it to the server and writes it into the plan instead; it sends
+Litematica's Edit Schematic writes live; it grows a plan by replacing its placement with a bigger schematic; and it
+sends live changes over its own connection, sharing the updated plan through Syncmatica for players who join later,
+with an owner check on Syncmatica's delete. How players use it (starting a plan, the block-mix picker, undo, menus
+and keys) and the add-on's licence are still open. The messages players see go to Geo for review once something is
+built.
 
 ### Source evidence (read 2026-11-13)
 
