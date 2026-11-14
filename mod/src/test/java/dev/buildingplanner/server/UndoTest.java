@@ -153,7 +153,6 @@ class UndoTest {
 		assertEquals(dirt, region().get(B), "Blair's block stays as Blair left it");
 		assertTrue(region().get(C).isAir());
 		assertEquals(List.of(PlayerMessage.blocksLeftAsTheyAre(1)), alex.notices);
-		assertEquals(List.of("1"), alex.notices.getFirst().args());
 		assertEveryoneHasTheServersPlan();
 	}
 

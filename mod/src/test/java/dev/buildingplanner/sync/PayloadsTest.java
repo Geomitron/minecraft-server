@@ -131,6 +131,13 @@ class PayloadsTest {
 		assertTrue(bytes > 1024 * 1024 && bytes < 1024 * 1024 + 16 * 1024, "the snapshot took " + bytes + " bytes");
 	}
 
+	@Test
+	void oneBlockLeftAsItIsHasItsOwnText() {
+		assertEquals(new PlayerMessage("buildingplanner.undo.left_as_it_is", List.of()), PlayerMessage.blocksLeftAsTheyAre(1));
+		assertEquals(new PlayerMessage("buildingplanner.undo.left_as_they_are", List.of("2")),
+			PlayerMessage.blocksLeftAsTheyAre(2));
+	}
+
 	/**
 	 * Every message the add-on can send has its text in en_us.json, with one %s per argument, and every other text there
 	 * is a key binding's ({@code key.}) or a screen's ({@code buildingplanner.ui.}).
@@ -147,12 +154,15 @@ class PayloadsTest {
 			if (!Modifier.isStatic(factory.getModifiers()) || factory.getReturnType() != PlayerMessage.class) {
 				continue;
 			}
-			Object[] args = Arrays.stream(factory.getParameterTypes()).map(type -> type == String.class ? (Object) "Alex" : (Object) 1).toArray();
-			PlayerMessage message = (PlayerMessage) factory.invoke(null, args);
-			assertTrue(lang.has(message.key()), "en_us.json has " + message.key());
-			Matcher placeholders = Pattern.compile("%s").matcher(lang.get(message.key()).getAsString());
-			assertEquals(message.args().size(), placeholders.results().count(), message.key() + "'s placeholders");
-			used.add(message.key());
+			// Counts of 1 and 2, since a message can have its own text for one.
+			for (int count : new int[] {1, 2}) {
+				Object[] args = Arrays.stream(factory.getParameterTypes()).map(type -> type == String.class ? (Object) "Alex" : (Object) count).toArray();
+				PlayerMessage message = (PlayerMessage) factory.invoke(null, args);
+				assertTrue(lang.has(message.key()), "en_us.json has " + message.key());
+				Matcher placeholders = Pattern.compile("%s").matcher(lang.get(message.key()).getAsString());
+				assertEquals(message.args().size(), placeholders.results().count(), message.key() + "'s placeholders");
+				used.add(message.key());
+			}
 		}
 		Set<String> others = new HashSet<>(lang.keySet());
 		others.removeAll(used);
