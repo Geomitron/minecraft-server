@@ -1,0 +1,2 @@
+# Deployed to a Linux server as-is; the stop hook and Compose file need LF line endings.
+* text eol=lf
