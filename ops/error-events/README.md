@@ -53,7 +53,8 @@ an event, whose source is how the process ended:
 
 The watcher serves `GET /metrics` on port 9464 inside its container. It publishes no port: Prometheus reaches it on
 the `minecraft-error-events` Docker network at **`minecraft-error-events:9464`**. Use the scrape job name
-**`minecraft-error-events`**; a 1-minute scrape interval is enough.
+**`minecraft-error-events`**. Prometheus scrapes it at its global 15-second interval, which keeps an alert's email
+within about two minutes of the error.
 
 | Metric                                                | Type    | Labels                       | Meaning |
 | ----------------------------------------------------- | ------- | ---------------------------- | ------- |
