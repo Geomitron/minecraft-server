@@ -1,0 +1,26 @@
+name: minecraft-error-events
+
+services:
+  watcher:
+    image: node:24-alpine
+    container_name: minecraft-error-events
+    restart: unless-stopped
+    working_dir: /app
+    command: ['node', 'src/main.mjs']
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    volumes:
+      - ./src:/app/src:ro
+      - ./data:/app/data
+      - ./exits:/exits:ro
+      - /home/minecraft:/minecraft:ro
+    networks: [minecraft-error-events]
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1:9464/metrics']
+      interval: 1m
+      timeout: 10s
+
+networks:
+  minecraft-error-events:
+    external: true
