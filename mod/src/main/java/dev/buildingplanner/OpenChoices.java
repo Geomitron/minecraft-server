@@ -11,6 +11,12 @@ public final class OpenChoices {
 	 */
 	public static final boolean REDO = false;
 
+	/**
+	 * Q9: whether server operators can delete any plan, as well as the player who shared it. The delete check
+	 * (hook S1) lets operators through only while this is on.
+	 */
+	public static final boolean OPERATORS_DELETE_ANY_PLAN = false;
+
 	private OpenChoices() {
 	}
 }

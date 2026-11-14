@@ -68,6 +68,8 @@ menus, so it adds nothing to the registries Fabric API syncs at login, and playe
 
 - **Common:** the plan model (regions, palette, growth), the `.litematic` reader and writer, and the network payloads.
 - **Server:** the plan store, the edit log and its order, per-player undo, the Syncmatica listener and the delete check.
+  They run only on a dedicated server, which is how the group plays; in a singleplayer or LAN world Syncmatica works
+  as it does without the add-on.
 - **Client:** the Litematica bridge (attach plans to placements, apply edits, capture Edit Schematic writes, grow in
   place), the Effortless Building capture, the block-mix picker and the plan keys.
 
@@ -133,7 +135,9 @@ Public Syncmatica API the add-on calls: `Syncmatica.getContext(SERVER_CONTEXT | 
 
 Fabric API: `PayloadTypeRegistry` (`registerLarge` for snapshots), `ServerPlayNetworking`, `ClientPlayNetworking`
 (`canSend`), `ServerPlayConnectionEvents`, `KeyMappingHelper`. Both sides' payload handlers run on the main thread
-(server thread, render thread), which the ordering below relies on.
+(server thread, render thread), which the ordering below relies on. Fabric splits a payload registered with
+`registerLarge` into packets of at most 1 MiB to players (32,767 bytes to the server) and joins them on arrival, so a
+snapshot of any plan within the cap reaches the client whole.
 
 ### Roles of Syncmatica and the add-on
 
@@ -217,9 +221,12 @@ reloads. Plans never shrink; undo doesn't shrink them either.
 The server keeps each plan in memory and writes it to `<world>/building-planner/plans/<plan id>.litematic` in
 Litematica's own format (version 7: palette and packed block states per region, with block states as Litematica's
 `Name` and `Properties`, not vanilla 26.3's `id` and `properties`), through a temporary file and a rename, at most every 30 seconds while it has changed, and when the server stops. When a placement is first shared,
-the add-on reads its blocks from the file Syncmatica stored (`syncmatics/<hash>.litematic`). At start, each Syncmatica
-placement loads the add-on's file, or Syncmatica's when the add-on has none. A deleted plan's file moves to
-`<world>/building-planner/deleted/`, where it can be put back by hand. Revisions start again at each server start;
+the add-on reads its blocks from the file Syncmatica stored (`syncmatics/<hash>.litematic`). At start (on the first
+server tick, once Syncmatica has loaded its placements), each Syncmatica placement loads the add-on's file, or
+Syncmatica's when the add-on has none. When the add-on's file can't be read, the server logs an error, leaves the file
+for repair by hand, and doesn't sync that plan. A deleted plan, as it was at the delete, goes to
+`<world>/building-planner/deleted/<plan id>.litematic` and its file in `plans/` is removed; it is an ordinary
+`.litematic` that a player can load in Litematica and share again. Revisions start again at each server start;
 players reconnect and take snapshots. The add-on's files equal Litematica's as NBT (tests round-trip files Litematica's
 own code writes, and Litematica's reader reads the add-on's); the bytes differ in the order of compound keys, which no
 reader depends on.
@@ -230,8 +237,10 @@ Syncmatica's delete reaches the server as `REMOVE_SYNCMATIC` with the plan's id.
 consuming it, looks up the placement, and compares its owner (the player who shared it, which Syncmatica records and
 saves in `placements.json`) with the sender (`getGameProfile(source)`). If they differ, the hook cancels the delete,
 so no one's copy is removed, and sends the sender a `notice`. Syncmatica's move and turn stay open to everyone.
+A placement saved without an owner (older Syncmatica versions) can't be deleted by anyone this way.
 **Open (Q9)**: whether server operators can also delete any plan (recommended), so a plan whose creator never
-returns can still be deleted in the game.
+returns can still be deleted in the game. The setting `OpenChoices.OPERATORS_DELETE_ANY_PLAN` (off) lets operators
+(`ops.json`) through.
 
 ### Undo
 
@@ -275,3 +284,5 @@ and copies none of it, so its own licence is free.
 - Growth in place redraws correctly and quickly (L3 and the reset), and Syncmatica's later moves keep working on a
   grown plan.
 - Whether Litematica's edits aim from Freecam's camera.
+- The operator side of the delete check (`OpenChoices.OPERATORS_DELETE_ANY_PLAN` on), which only a unit test of the
+  rule covers.

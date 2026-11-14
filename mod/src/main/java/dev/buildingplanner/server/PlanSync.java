@@ -80,6 +80,18 @@ public final class PlanSync {
 		return Optional.ofNullable(plans.get(planId)).map(live -> live.plan);
 	}
 
+	/** The plans whose blocks or size changed since the last call, which clears their changed flags. */
+	public List<UUID> takeChanged() {
+		List<UUID> changed = new ArrayList<>();
+		plans.forEach((planId, live) -> {
+			if (live.changed) {
+				live.changed = false;
+				changed.add(planId);
+			}
+		});
+		return changed;
+	}
+
 	public int revision(UUID planId) {
 		LivePlan live = plans.get(planId);
 		if (live == null) {
@@ -188,6 +200,7 @@ public final class PlanSync {
 			history.record(player, new Step(planId, stepBlocks));
 		}
 		live.revision++;
+		live.changed |= !grown.isEmpty() || !applied.isEmpty();
 		broadcast(live, new Payloads.Applied(planId, live.revision, player, clientSeq, grown, applied));
 		return Optional.empty();
 	}
@@ -230,6 +243,7 @@ public final class PlanSync {
 		}
 		if (!done.isEmpty()) {
 			live.revision++;
+			live.changed = true;
 			broadcast(live, new Payloads.Applied(step.plan(), live.revision, player, Payloads.NO_CLIENT_SEQ, List.of(),
 				done.stream().map(block -> new BlockChange(block.region(), block.pos(), block.after())).toList()));
 		}
@@ -274,6 +288,8 @@ public final class PlanSync {
 		final Plan plan;
 		final Set<UUID> subscribers = new LinkedHashSet<>();
 		int revision;
+		/** Set when the plan's blocks or size change; {@link #takeChanged} clears it. */
+		boolean changed;
 
 		LivePlan(Plan plan) {
 			this.plan = plan;

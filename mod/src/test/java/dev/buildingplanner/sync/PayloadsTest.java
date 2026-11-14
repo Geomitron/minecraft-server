@@ -119,7 +119,7 @@ class PayloadsTest {
 			if (!Modifier.isStatic(factory.getModifiers()) || factory.getReturnType() != PlayerMessage.class) {
 				continue;
 			}
-			Object[] args = Arrays.stream(factory.getParameterTypes()).map(type -> (Object) 1).toArray();
+			Object[] args = Arrays.stream(factory.getParameterTypes()).map(type -> type == String.class ? (Object) "Alex" : (Object) 1).toArray();
 			PlayerMessage message = (PlayerMessage) factory.invoke(null, args);
 			assertTrue(lang.has(message.key()), "en_us.json has " + message.key());
 			Matcher placeholders = Pattern.compile("%s").matcher(lang.get(message.key()).getAsString());

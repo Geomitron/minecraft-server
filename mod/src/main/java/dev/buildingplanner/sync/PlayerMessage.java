@@ -46,4 +46,9 @@ public record PlayerMessage(String key, List<String> args) {
 	public static PlayerMessage nothingToRedo() {
 		return new PlayerMessage(PREFIX + "redo.nothing", List.of());
 	}
+
+	/** The delete check stopped a player deleting a plan someone else shared. */
+	public static PlayerMessage notYourPlan(String owner) {
+		return new PlayerMessage(PREFIX + "delete.not_yours", List.of(owner));
+	}
 }

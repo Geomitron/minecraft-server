@@ -48,8 +48,13 @@ public final class LitematicFormat {
 
 	/** Writes through a temporary file beside the target and a rename, so a crash never leaves half a file. */
 	public static void writeFile(Plan plan, Path file) throws IOException {
+		writeFile(write(plan), file);
+	}
+
+	/** Writes a plan's tag from {@link #write}, as {@link #writeFile(Plan, Path)} does. */
+	public static void writeFile(CompoundTag root, Path file) throws IOException {
 		Path temporary = file.resolveSibling(file.getFileName() + ".tmp");
-		NbtIo.writeCompressed(write(plan), temporary);
+		NbtIo.writeCompressed(root, temporary);
 		Files.move(temporary, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
 	}
 

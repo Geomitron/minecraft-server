@@ -6,5 +6,6 @@
 	"buildingplanner.rejected.does_not_fit": "That edit doesn't fit this plan, so it wasn't made.",
 	"buildingplanner.undo.nothing": "Nothing to undo.",
 	"buildingplanner.undo.left_as_they_are": "%s blocks someone else has changed since were left as they are.",
-	"buildingplanner.redo.nothing": "Nothing to redo."
+	"buildingplanner.redo.nothing": "Nothing to redo.",
+	"buildingplanner.delete.not_yours": "Only %s, who shared this plan, can delete it."
 }
