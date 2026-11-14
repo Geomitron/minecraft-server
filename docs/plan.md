@@ -93,7 +93,7 @@ How players use Building Planner, from inbox request 420:
 - Agents push finished, tested Building Planner work and doc changes to this repository without asking each time;
   changes to the pack or the instance, and releases, go to Geo first (inbox request 429, Q1 A).
 
-Starting plans and seeing edits, as built, from inbox request 469:
+Building Planner as built, from inbox requests 469 and 473:
 
 - N is the "Start a plan" key until a player changes it in Controls (Q1 A).
 - Players hide a plan with Litematica's rendering switch or Syncmatica's Unload; Building Planner adds no switch of its
@@ -102,6 +102,9 @@ Starting plans and seeing edits, as built, from inbox request 469:
 - Building Planner's messages to a player show in chat (Q4 A).
 - Geo kept the "Start a plan" screen's title, name hint and Create button, the message when no area is marked, and
   the Controls heading and key name as written.
+- Geo kept Building Planner's other messages to players and its description as written, with a message of its own
+  for one block left as it was after an undo or redo: "1 block someone else has changed since was left as it is."
+  (inbox request 473).
 
 ## Agent-ready work
 
