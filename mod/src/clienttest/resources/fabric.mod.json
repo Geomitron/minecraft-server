@@ -1,0 +1,14 @@
+{
+	"schemaVersion": 1,
+	"id": "buildingplanner_clienttest",
+	"version": "0",
+	"name": "Building Planner client checks",
+	"description": "Drives a dev client for the in-game checks in clienttest/. Dev clients only.",
+	"environment": "client",
+	"entrypoints": {
+		"client": ["dev.buildingplanner.client.Driver"]
+	},
+	"depends": {
+		"buildingplanner": "*"
+	}
+}

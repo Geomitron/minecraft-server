@@ -22,11 +22,25 @@ repositories {
 
 loom {
 	splitEnvironmentSourceSets()
+}
 
+// The driver for the in-game checks in clienttest/: a mod of its own on the dev clients' classpath, never in the
+// add-on's jar.
+sourceSets {
+	clienttest {
+		compileClasspath += sourceSets.client.compileClasspath + sourceSets.client.output
+		runtimeClasspath += sourceSets.client.runtimeClasspath + sourceSets.client.output
+	}
+}
+
+loom {
 	mods {
 		buildingplanner {
 			sourceSet sourceSets.main
 			sourceSet sourceSets.client
+		}
+		buildingplanner_clienttest {
+			sourceSet sourceSets.clienttest
 		}
 	}
 
@@ -41,11 +55,13 @@ loom {
 		// on start.
 		client {
 			client()
+			source sourceSets.clienttest
 			runDir 'run/client1'
 			programArgs '--username', 'Planner1', '--quickPlayMultiplayer', 'localhost:25565'
 		}
 		client2 {
 			client()
+			source sourceSets.clienttest
 			configName = 'Minecraft Client 2'
 			runDir 'run/client2'
 			programArgs '--username', 'Planner2', '--quickPlayMultiplayer', 'localhost:25565'

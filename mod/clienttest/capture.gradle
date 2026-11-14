@@ -1,0 +1,14 @@
+// Writes each dev run's java command line to $BP_ARGS/<task>.args, one argument a line, instead of starting it, so
+// inside.sh can start the server and both clients at once and stop and restart them on their own. Loom writes the
+// argument file its command names only when the run starts, so the classpath is given directly instead.
+allprojects {
+	tasks.matching { it.name in ['runServer', 'runClient', 'runClient2'] }.configureEach { t ->
+		t.doFirst {
+			def f = new File(System.getenv('BP_ARGS'), "${t.name}.args")
+			def exe = t.javaLauncher.get().executablePath.asFile.absolutePath
+			def jvm = t.allJvmArgs.findAll { !it.startsWith('@') }
+			f.text = ([exe] + jvm + ['-cp', t.classpath.asPath, t.mainClass.get()]).join('\n')
+			throw new StopExecutionException()
+		}
+	}
+}

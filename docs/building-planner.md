@@ -307,18 +307,27 @@ Syncmatica alone they see each plan as it was first shared.
 MIT (`mod/LICENSE`). Effortless Building and Litematica are LGPL-3.0 and Syncmatica is CC0; the add-on calls their
 code and copies none of it, so it can take its own licence.
 
+### In-game checks
+
+`mod/clienttest/run.sh <checks>` runs the dev server and both dev clients in a Linux container, each client on its own
+virtual screen with Mesa's software OpenGL, so nothing shows on the host. The clients carry a driver mod (the
+`clienttest` source set, never in the add-on's jar) that runs commands from a file in the game folder: Litematica
+actions, waits for a state, and screenshots. Key presses and clicks are real ones, sent with xdotool. `step6.sh`
+checks, with Planner1 an operator and Planner2 not:
+
+- Each client starts a session on `hello`.
+- Starting a plan: N, typing a name and Enter create and share it, and the other player sees it at once.
+- A Litematica fill and a single block reach the other client, glowing with the editor's name, and the glow fades.
+- An edit past the plan's box grows it in place on both clients.
+- Ctrl+Z and Ctrl+Y undo and redo the player's edit on both clients.
+- Syncmatica's Unload hides the plan for that player only, until they next join.
+- A player who rejoins gets the edits and growth made while they were away.
+- Syncmatica's Remove: refused, with the message, for a player removing someone else's plan; allowed for an operator
+  and for the plan's owner.
+
+The results, the game logs and the screenshots go to a folder outside the repository.
+
 ## Unverified
 
-Step 6's client side is covered by unit tests of `PlanReplicas` and the payloads only. These checks need a server and
-two clients and haven't been done in a repeatable run:
-
-- A placement loads, subscribes and takes a snapshot; a player joining mid-edit gets the current blocks and box.
-- Starting a plan with the key, the screen and Enter, and the plan appearing for the other player at once.
-- Edit Schematic writes on one client appearing on the other, glowing with the editor's name.
-- Undo and redo with Ctrl+Z and Ctrl+Y going to Building Planner instead of Effortless Building.
-- Syncmatica's Remove button: refused for a non-operator removing someone else's plan, allowed for the owner and for an
-  operator; and Unload hiding a plan until the player next joins.
-- Growth in place redraws correctly and quickly (L3 and the reset), and Syncmatica's later moves keep working on a
-  grown plan.
+- Syncmatica's later moves on a grown plan, and how quickly growth redraws a large plan.
 - Whether Litematica's edits aim from Freecam's camera.
-- The operator side of the delete check, which only a unit test of the rule covers.
