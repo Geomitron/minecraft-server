@@ -14,6 +14,12 @@ The vanilla `server.jar` stays in place: to switch back, change the jar in `Exec
 `systemctl daemon-reload` and `systemctl restart minecraft.service`. The VPS has 30 GB of RAM (about 16 GB available) and
 163 GB of free disk; it also hosts other services.
 
+**Error watcher.** `ops/error-events/` runs beside the server from `/home/minecraft-error-events` (Docker Compose,
+container `minecraft-error-events` on the network of that name, no published port). It gives each error a short id and
+exports counts for Prometheus. The drop-in `/etc/systemd/system/minecraft.service.d/error-events.conf` records how the
+process ended at each stop. Its README holds the metrics, the alert expressions and the command that marks an error
+handled. The Grafana alerts that email Geo and notify the project thread are the remaining part of "Error alerts".
+
 **Players.** Unmodded today. Geo prefers Prism Launcher (Geo, inbox request 402). Geo is new to how Minecraft mods
 work (Geo, inbox request 408), so explanations start from what a mod, Fabric and an instance are.
 
