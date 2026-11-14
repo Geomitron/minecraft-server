@@ -8,6 +8,7 @@
 	"entrypoints": {
 		"client": ["dev.buildingplanner.client.Driver"]
 	},
+	"mixins": ["buildingplanner_clienttest.mixins.json"],
 	"depends": {
 		"buildingplanner": "*"
 	}

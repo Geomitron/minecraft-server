@@ -206,6 +206,10 @@ public final class Driver implements ClientModInitializer {
 					count > 0 ? Integer.parseInt(a[4]) : 0);
 				return "ok";
 			}
+			case "ebsent" -> {
+				// ebsent: the kinds of Effortless Building packet this client has sent, comma-separated, or "none".
+				return SentPackets.effortless();
+			}
 			case "selectplacement" -> {
 				// selectplacement [plan]: selects that plan in Litematica's placement list, or nothing.
 				DataManager.getSchematicPlacementManager().setSelectedSchematicPlacement(

@@ -1,6 +1,6 @@
 # Step 8's in-game checks: a client without the add-on on a server with it, clients with the add-on on the same
 # server with Building Planner left out (Syncmatica still in), and a hello with another protocol version. Sourced by
-# inside.sh, which provides drv, val, check, keys, click, use_click, client_said, start_server, stop_server,
+# inside.sh, which provides drv, val, check, keys, click, use_click, attack_click, client_said, start_server, stop_server,
 # start_client, stop_client and $ADDON.
 
 not_on_server="Building Planner isn't on this server. Your Litematica edits stay on your screen, and Effortless Building's shapes place nothing."
@@ -83,6 +83,14 @@ check "and places no real blocks" \
 	eval '[[ $(val 1 "real 4 -60 5") == minecraft:air && $(val 1 "real 7 -60 5") == minecraft:air ]]'
 check "and the player stays connected" \
 	eval '! grep -qE "Planner1 lost connection|Disconnecting Planner1" /out/server-without-addon.log'
+# The undo and redo keys and the break click would send undo, redo and break packets too. The driver's counter sees
+# each packet as it leaves the client; the server without Effortless Building couldn't show that it never got them.
+keys 1 keydown ctrl key z sleep 0.3 keyup ctrl
+keys 1 keydown ctrl key y sleep 0.3 keyup ctrl
+attack_click 1
+drv 1 "wait 20" > /dev/null
+check "no place, break, undo or redo packet of Effortless Building leaves the client" \
+	eval '! val 1 "ebsent" | grep -qE "place_build_mode|break_build_mode|undo|redo"'
 drv 1 "ebarray 0" > /dev/null
 
 # A hello from a server with another protocol version gives its own notice and starts no session.

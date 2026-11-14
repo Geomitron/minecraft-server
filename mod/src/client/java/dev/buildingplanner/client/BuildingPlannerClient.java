@@ -15,6 +15,7 @@ import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.KeyMapping;
+import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
@@ -42,7 +43,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 
 	/**
 	 * Null while not connected to a server with Building Planner: on any other server, Building Planner is off, so
-	 * Litematica's edits stay on the player's screen and Effortless Building sends its shapes to the server as usual.
+	 * Litematica's edits stay on the player's screen and Effortless Building's shapes and undo send nothing.
 	 */
 	private static ClientSession session;
 
@@ -128,6 +129,14 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		return session != null;
 	}
 
+	/**
+	 * Whether Building Planner is off on a server (the player isn't in a singleplayer or LAN host's own world and has no
+	 * session), so Effortless Building's packets that change real blocks must not be sent: its shapes edit only plans.
+	 */
+	public static boolean off() {
+		return session == null &&!Minecraft.getInstance().isLocalServer();
+	}
+
 	/** Hooks E5 and E6: whether shapes take their blocks from the mix. */
 	public static boolean mixOn() {
 		return session != null && MIX.isOn();
@@ -148,19 +157,22 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		}
 	}
 
-	/** Hook E4: undoes the player's newest plan edit; returns false when Building Planner isn't on. */
+	/**
+	 * Hook E4: undoes the player's newest plan edit. Returns whether Effortless Building's own undo packet is held
+	 * back: always while Building Planner is on or off on a server, never in a singleplayer world without it.
+	 */
 	public static boolean undo() {
 		if (session == null) {
-			return false;
+			return off();
 		}
 		session.undo();
 		return true;
 	}
 
-	/** Hook E4: redoes the player's newest undone plan edit; returns false when Building Planner isn't on. */
+	/** Hook E4: redoes the player's newest undone plan edit; returns whether the packet is held back, as for undo. */
 	public static boolean redo() {
 		if (session == null) {
-			return false;
+			return off();
 		}
 		session.redo();
 		return true;

@@ -32,12 +32,15 @@ import org.spongepowered.asm.mixin.injection.At;
  */
 @Mixin(value = BuildPipelineClient.class, remap = false)
 abstract class BuildPipelineClientMixin {
-	/** Hook E1: the finished shape goes into the plan, not to the server as real blocks. */
+	/**
+	 * Hook E1: the finished shape goes into the plan, not to the server as real blocks; with Building Planner off on
+	 * a server, it goes nowhere.
+	 */
 	@WrapWithCondition(method = "handleClick", at = @At(value = "INVOKE",
 		target = "Lnl/requios/effortlessbuilding/network/PacketHandler;sendToServer(Lnl/requios/effortlessbuilding/network/PlaceBuildModePacket;)V"))
 	private static boolean buildingplanner$place(PlaceBuildModePacket packet, @Local BlockSet blocks) {
 		if (!BuildingPlannerClient.active()) {
-			return true;
+			return !BuildingPlannerClient.off();
 		}
 		EffortlessShapes.place(blocks);
 		return false;
@@ -48,7 +51,7 @@ abstract class BuildPipelineClientMixin {
 		target = "Lnl/requios/effortlessbuilding/network/PacketHandler;sendToServer(Lnl/requios/effortlessbuilding/network/BreakBuildModePacket;)V"))
 	private static boolean buildingplanner$erase(BreakBuildModePacket packet, @Local BlockSet blocks) {
 		if (!BuildingPlannerClient.active()) {
-			return true;
+			return !BuildingPlannerClient.off();
 		}
 		EffortlessShapes.erase(blocks);
 		return false;
