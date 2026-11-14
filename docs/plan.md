@@ -23,7 +23,16 @@ to fire once the watcher has 25 hours of history, from about 11:54 PM ET, Nov 14
 minutes. Its contact point **Minecraft Server error events** emails Geo and sends each alert to the project thread as
 an inbox notice, carrying only the error's id, kind and source.
 
-**Players.** Unmodded today. Geo prefers Prism Launcher (Geo, inbox request 402). Geo is new to how Minecraft mods
+**Player pack.** This repository is public at https://github.com/Geomitron/minecraft-server. `pack/` is the packwiz
+pack "Server Pack": Minecraft 26.3 and Fabric loader 0.20.1 with Litematica, MaLiLib, Syncmatica 0.3.20, Freecam and
+Fabric API, served from `main` at https://raw.githubusercontent.com/Geomitron/minecraft-server/main/pack/pack.toml, so
+a push to `main` changes what players get at their next launch. `instance/` is the Prism Launcher instance "Server
+Pack", which runs `packwiz-installer-bootstrap.jar` against that URL before each launch. Players import it from
+https://github.com/Geomitron/minecraft-server/releases/latest/download/prism-instance.zip, a zip of `instance/` in the
+release `v1.0.0`; the instance needs a new release only when `instance/` changes. The guide sent to players is
+[players.md](players.md). Building Planner and Effortless Building join the pack once Building Planner has a first build.
+
+**Players.** Unmodded until they install the pack. Geo prefers Prism Launcher (Geo, inbox request 402). Geo is new to how Minecraft mods
 work (Geo, inbox request 408), so explanations start from what a mod, Fabric and an instance are.
 
 ## Decisions
@@ -46,11 +55,12 @@ From inbox requests 401 and 402 (revisions 1 to 4):
   run before launch, reading a pack at a public web address), so new test builds reach everyone (408, Q1 A).
 - Switch the survival server to Fabric with Syncmatica now (408, Q2 A), as "Server switch" below describes.
 - The work runs as its own T3 project, "Minecraft Server", with a project thread of that name; its workspace is this
-  repository, which becomes a public GitHub repository under Geo's account once there's code to publish (409, and
-  402 r4 Q1).
+  repository, a public GitHub repository under Geo's account (409, and 402 r4 Q1).
 - Players run Litematica (with MaLiLib), Syncmatica and Freecam, with Fabric API; the server runs Fabric, Fabric API
   and Syncmatica. These are the mods 402 r2 to r4 proposed and 408 described when Geo approved the pack and the switch.
 - The player guide covers Prism Launcher only, with no steps for the official launcher (410, comment c1).
+- Publish the repository with the player guide (`docs/players.md`), the README and the pack and instance name "Server
+  Pack" as Geo wrote them, and the instance at the release link the guide gives (410 r2, Q1 A).
 - The server's errors email Geo and reach the project thread as inbox notices through the VPS's existing Grafana and
   Prometheus, as inbox request 415 describes; a known error's rate alerts above 30 an hour and above 3 times its
   hourly average across the day before (415, Q1 A and Q2 A).
@@ -69,8 +79,6 @@ The planning mod, from inbox request 411:
 
 ## Agent-ready work
 
-- **Player pack** (approved, 408 Q1 A): a packwiz pack of the player mods for 26.3 at a public web address, and a Prism
-  instance file that runs packwiz's installer before each launch, and a player guide for Prism Launcher only.
 - **Building Planner** (design approved, 411), built in this order, each step verified as
   [building-planner.md](building-planner.md) describes before the next: (1) the `mod/` scaffold with run setups for a
   server and two clients; (2) the plan model and `.litematic` storage; (3) the live-sync core on the server; (4) server
