@@ -47,6 +47,11 @@ public record PlayerMessage(String key, List<String> args) {
 		return new PlayerMessage(PREFIX + "redo.nothing", List.of());
 	}
 
+	/** The player pressed the key to start a plan without an area marked with Litematica's area tool. */
+	public static PlayerMessage noAreaMarked() {
+		return new PlayerMessage(PREFIX + "start.no_area", List.of());
+	}
+
 	/** The delete check stopped a player deleting a plan someone else shared. */
 	public static PlayerMessage notYourPlan(String owner) {
 		return new PlayerMessage(PREFIX + "delete.not_yours", List.of(owner));

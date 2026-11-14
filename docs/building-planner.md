@@ -8,9 +8,12 @@ Effortless Building, Litematica and Syncmatica. Geo's decisions behind it are in
 
 - **Plans.** A plan is a named box of ghost blocks in the world, shared with everyone on the server. Each player can
   show or hide any plan, and anyone can move or turn it as a whole. Litematica lists each plan's materials.
-- **Starting a plan.** The player marks an area with Litematica's area tool, presses a Building Planner key and types a
-  name. The empty plan is created and shared to everyone in one step.
-- **Seeing plans.** Every plan appears for everyone in its place as soon as it's shared, and each player can hide it.
+- **Starting a plan.** The player marks an area with Litematica's area tool, presses Building Planner's "Start a plan"
+  key (N unless the player changes it in Controls) and types a name. The empty plan is created and shared to everyone
+  in one step.
+- **Seeing plans.** Every plan appears for everyone in its place as soon as it's shared, and each player can hide it:
+  with Litematica's rendering toggle in its placement list, which Litematica remembers, or with Syncmatica's Unload,
+  which lasts until the player next joins.
 - **Drawing shapes.** With an Effortless Building mode chosen (line, wall, floor, cube, slope, circle, cylinder,
   sphere and the rest), a player's clicks draw the shape into a plan as ghost blocks, with Effortless Building's
   mirror, radial mirror and array (repeat). A shape drawn with the break (left) click erases those ghost blocks from
@@ -64,7 +67,12 @@ menus, so it adds nothing to the registries Fabric API syncs at login, and playe
   They run only on a dedicated server, which is how the group plays; in a singleplayer or LAN world Syncmatica works
   as it does without the add-on.
 - **Client:** the Litematica bridge (attach plans to placements, apply edits, capture Edit Schematic writes, grow in
-  place), the Effortless Building capture, the block-mix picker and the plan keys.
+  place), starting a plan, the edit glow, the Effortless Building capture and the block-mix picker.
+
+They're built in the steps [plan.md](plan.md) lists. Step 6 built the client's Litematica bridge (hooks L1, L3, S2 and
+E4), starting a plan and the edit glow. Step 7 adds the Effortless Building capture (E1 to E3 and E5 to E9), the
+block-mix picker with its inventory toggle, the mix's part of L1, and L2. Step 8 adds the client's notice when the
+server lacks the add-on.
 
 `fabric.mod.json` depends on Fabric API and Syncmatica, which both sides run. Litematica, MaLiLib and Effortless
 Building run only on players' computers, so the add-on lists them under `suggests` (Fabric Loader warns at start about a missing `recommends`, not a missing `suggests`), puts every mixin into those mods
@@ -107,27 +115,31 @@ Litematica, under `src/main/java/fi/dy/masa/litematica/`:
 
 Public Litematica API the add-on calls: `SchematicUtils.getUntransformedBlockState`;
 `LitematicaSchematic.createEmptySchematic`, `createFromFile`, `writeToFile`, `getSubRegionContainer`, `getAreaSize`,
-`getSubRegionPosition`; `SchematicMetadata` setters for total blocks, volume and enclosing size;
-`SchematicPlacement.createFor`, `toggleLocked`, `resetAllSubRegionsToSchematicValues`;
-`SchematicPlacementManager.addSchematicPlacement`, `markAllPlacementsOfSchematicForRebuild`;
-`SchematicPlacementEventHandler.registerSchematicPlacementEventListener` (placement added and removed);
-`DataManager.getSelectionManager().getCurrentSelection()`.
+`getBlockEntityMapForRegion`, `getEntityListForRegion`; `LitematicaBlockStateContainer`'s constructor, `get` and `set`;
+`SchematicMetadata` setters for name, volume and enclosing size; `SchematicHolder.getOrLoad`, `addSchematic`;
+`SchematicPlacement.createFor`, `toggleLocked`, `resetAllSubRegionsToSchematicValues`,
+`getRelativeSubRegionPlacement`; `SchematicPlacementManager.getAllSchematicsPlacements`, `addSchematicPlacement`,
+`markAllPlacementsOfSchematicForRebuild`, `markChunkForRebuild`; `PositionUtils.getValidBoxes`,
+`getTransformedPlacementPosition`, `getTransformedBlockPos`; `DataManager.getSelectionManager().getCurrentSelection()`,
+`getSchematicsBaseDirectory`. From MaLiLib: `RenderEventHandler.registerWorldLastRenderer` and `RenderUtils`' batched
+box and text-plate drawing.
 
 Syncmatica, under `src/main/java/ch/endte/syncmatica/`:
 
 | # | File, method | Hook | Purpose |
 |---|---|---|---|
 | S1 | `communication/ServerCommunicationManager.java`, `handle(ExchangeTarget, PacketType, FriendlyByteBuf)` | `@Inject` at head, cancellable, when the type is `REMOVE_SYNCMATIC` | The delete check (below). |
-| S2 | `litematica/LitematicManager.java`, `renderSyncmatic(ServerPlacement)` | `@WrapOperation` on `SchematicHolder.getOrLoad(Path)` | Load each plan's file into its own schematic. Litematica caches schematics by path, and Syncmatica names files by content hash, so two plans from one file would otherwise share their blocks. |
+| S2 | `litematica/LitematicManager.java`, `renderSyncmatic(ServerPlacement)` | `@WrapOperation` on `SchematicHolder.getOrLoad(Path)` | Load each plan's file into its own schematic. Litematica caches schematics by path, and Syncmatica names files by content hash, so two plans from one file would otherwise share their blocks. When the cached schematic is in no placement, the plan takes it. |
 
-Public Syncmatica API the add-on calls: `Syncmatica.getContext(SERVER_CONTEXT | CLIENT_CONTEXT)`;
-`SyncmaticManager.addServerPlacementConsumer`, `getPlacement`; `ServerPlacement.getId`, `getOwner` (its `uuid`),
-`getDimension`; `ServerCommunicationManager.getGameProfile`; `IFileStorage.getLocalLitematic`;
-`LitematicManager.getRenderingSyncmatic`, `isRendered`, `renderSyncmatic`; `CommunicationManager.download`;
+Public Syncmatica API the add-on calls: `Syncmatica.getContext(SERVER_CONTEXT)`;
+`SyncmaticManager.addServerPlacementConsumer`, `getPlacement`, `getAll`; `ServerPlacement.getId`, `getOwner` (its
+`uuid`), `getDimension`; `ServerCommunicationManager.getGameProfile`; `IFileStorage.getLocalLitematic`,
+`getLocalState`; `LitematicManager.getActiveContext`, `getRenderingSyncmatic`, `isRendered`, `renderSyncmatic`,
+`updateRendered`, `getPlayerDimension`; `CommunicationManager.download`, `getDownloadState`, `startExchange`;
 `ClientCommunicationManager.getServer`; `ShareLitematicExchange`'s public constructor.
 
 Fabric API: `PayloadTypeRegistry` (`registerLarge` for snapshots), `ServerPlayNetworking`, `ClientPlayNetworking`
-(`canSend`), `ServerPlayConnectionEvents`, `KeyMappingHelper`. Both sides' payload handlers run on the main thread
+(`canSend`), `ServerPlayConnectionEvents`, `ClientPlayConnectionEvents`, `ClientTickEvents`, `KeyMappingHelper`. Both sides' payload handlers run on the main thread
 (server thread, render thread), which the ordering below relies on. Fabric splits a payload registered with
 `registerLarge` into packets of at most 1 MiB to players (32,767 bytes to the server) and joins them on arrival, so a
 snapshot of any plan within the cap reaches the client whole.
@@ -190,12 +202,37 @@ loads the plan.
 
 ### Players joining mid-edit
 
-When a plan's Litematica placement appears on a player's screen (Syncmatica's render after a download, or the
-player's own share), the add-on sends `subscribe`. The server answers with a `snapshot` at the current revision, then
-every later `applied`, on the same connection, so nothing falls between them. The client grows the region in place if
-the plan has grown since its file was shared, fills the blocks from the snapshot, and redraws. The add-on unsubscribes
-when the placement is removed from that player's Litematica list. The client also starts Syncmatica's download for each new plan when the player is in its dimension (Syncmatica only draws a
-plan in its own dimension).
+The client side starts when the server's `hello` arrives with the same protocol version, and ends when the player
+leaves. Each client tick it compares the placements Syncmatica draws (Syncmatica's render after a download, the
+player's own share, or a placement Litematica restored) with the plans it has: it sends `subscribe` for each new one
+and `unsubscribe` for each one removed from that player's Litematica list. The server answers a `subscribe` with a
+`snapshot` at the current revision, then every later `applied`, on the same connection, so nothing falls between them.
+The client builds each region's container from the snapshot, swaps it into the schematic (L3), takes the snapshot's
+box if the plan has grown since its file was shared, and redraws.
+
+Each tick the client also loads, once while the player is connected, every plan in the player's dimension that isn't
+drawn yet (Syncmatica only draws a plan in its own dimension): from Syncmatica's copy of the file when it has a current
+one, or else by starting Syncmatica's download, which draws the plan when it finishes. A plan the player unloads stays
+unloaded until they next join.
+
+### The client
+
+Edit Schematic writes to a plan's container (L1) are recorded with the block's plan position and new state, the newest
+state at each position, and sent once a client tick as one `edit` per plan. A tick's writes over the server's block cap
+(from `hello`) aren't sent; the player gets the server's message for too many blocks and the client takes a fresh
+snapshot. Writes to placements that aren't plans stay Litematica's own. Undo and redo (E4) first send the tick's
+writes.
+
+An `applied` edit writes its blocks into the plan's containers and marks the chunks they're in for redraw. When the
+author is someone else, the changed blocks glow for 3 seconds, fading out: an outline and a translucent fill on each
+block, or one translucent box around them for an edit of more than 512 blocks, with the editor's name (from the
+player list) above them. Messages from the server show in the player's chat.
+
+Starting a plan: the key opens a screen asking for the plan's name, unless no area is marked, when the player gets a
+message instead. Create makes an empty schematic of the marked area (`createEmptySchematic`, with the player as
+author and the name as the schematic's name), saves it to `Building Planner/<name>.litematic` in Litematica's
+schematics folder (a number is added when the name is taken), places it at the area's origin, and shares it through
+Syncmatica as its Share button does.
 
 ### Growth
 
@@ -203,11 +240,12 @@ When a shape's block falls outside its region, the server works out the region's
 box joined with the shape's blocks), copies the blocks into a bigger grid, and sends the growth in the same `applied`
 as the shape. A grown region's position becomes its new minimum corner and its size turns positive (a Litematica region
 can have a negative size, running from its position toward lower coordinates); block entities, entities and scheduled
-ticks move with their blocks. Each client, with the placement unlocked as Syncmatica does when it updates one: builds the bigger
-container, copies the old blocks across, writes the new container, size and region position into the schematic's maps
-(L3), resets the placement's sub-regions to the schematic's values, updates the metadata's volume and enclosing size,
-and marks the plan for redraw. The placement, its Syncmatica identity, origin and position stay the same, so no one
-reloads. Plans never shrink; undo doesn't shrink them either.
+ticks move with their blocks. Each client builds the bigger container from its copy of the plan, writes the new
+container, size and region position into the schematic's maps (L3), moves the region's block entities and entities by
+the same rule, then, with the placement unlocked as Syncmatica does when it updates one, resets the placement's
+sub-regions to the schematic's values, lets Syncmatica put back its own sub-region data (`updateRendered`), and marks
+the plan for redraw. The placement, its Syncmatica identity, origin and position stay the same, so no one reloads.
+Plans never shrink; undo doesn't shrink them either.
 
 ### Plan storage on the server
 
@@ -271,6 +309,15 @@ code and copies none of it, so it can take its own licence.
 
 ## Unverified
 
+Step 6's client side is covered by unit tests of `PlanReplicas` and the payloads only. These checks need a server and
+two clients and haven't been done in a repeatable run:
+
+- A placement loads, subscribes and takes a snapshot; a player joining mid-edit gets the current blocks and box.
+- Starting a plan with the key, the screen and Enter, and the plan appearing for the other player at once.
+- Edit Schematic writes on one client appearing on the other, glowing with the editor's name.
+- Undo and redo with Ctrl+Z and Ctrl+Y going to Building Planner instead of Effortless Building.
+- Syncmatica's Remove button: refused for a non-operator removing someone else's plan, allowed for the owner and for an
+  operator; and Unload hiding a plan until the player next joins.
 - Growth in place redraws correctly and quickly (L3 and the reset), and Syncmatica's later moves keep working on a
   grown plan.
 - Whether Litematica's edits aim from Freecam's camera.

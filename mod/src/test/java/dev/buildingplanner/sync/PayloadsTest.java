@@ -131,7 +131,10 @@ class PayloadsTest {
 		assertTrue(bytes > 1024 * 1024 && bytes < 1024 * 1024 + 16 * 1024, "the snapshot took " + bytes + " bytes");
 	}
 
-	/** Every message the add-on can send has its text in en_us.json, with one %s per argument, and nothing else is. */
+	/**
+	 * Every message the add-on can send has its text in en_us.json, with one %s per argument, and every other text there
+	 * is a key binding's ({@code key.}) or a screen's ({@code buildingplanner.ui.}).
+	 */
 	@Test
 	void everyPlayerMessageHasItsText() throws Exception {
 		JsonObject lang;
@@ -151,6 +154,9 @@ class PayloadsTest {
 			assertEquals(message.args().size(), placeholders.results().count(), message.key() + "'s placeholders");
 			used.add(message.key());
 		}
-		assertEquals(used, lang.keySet(), "en_us.json holds only messages the add-on sends");
+		Set<String> others = new HashSet<>(lang.keySet());
+		others.removeAll(used);
+		others.removeIf(key -> key.startsWith("key.") || key.startsWith("buildingplanner.ui."));
+		assertEquals(Set.of(), others, "en_us.json holds only messages the add-on sends, key bindings and screens");
 	}
 }

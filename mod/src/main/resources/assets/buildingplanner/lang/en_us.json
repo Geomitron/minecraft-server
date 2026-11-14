@@ -7,5 +7,11 @@
 	"buildingplanner.undo.nothing": "Nothing to undo.",
 	"buildingplanner.undo.left_as_they_are": "%s blocks someone else has changed since were left as they are.",
 	"buildingplanner.redo.nothing": "Nothing to redo.",
-	"buildingplanner.delete.not_yours": "Only %s, who shared this plan, can delete it."
+	"buildingplanner.delete.not_yours": "Only %s, who shared this plan, can delete it.",
+	"buildingplanner.start.no_area": "Mark an area with Litematica's area tool first, then press this key again.",
+	"buildingplanner.ui.start_plan.title": "Start a plan",
+	"buildingplanner.ui.start_plan.name": "Plan name",
+	"buildingplanner.ui.start_plan.create": "Create",
+	"key.category.buildingplanner.main": "Building Planner",
+	"key.buildingplanner.start_plan": "Start a plan"
 }

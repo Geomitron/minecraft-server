@@ -8,7 +8,10 @@
 		"syncmatica.ServerCommunicationManagerMixin"
 	],
 	"client": [
-		"effortless.EffortlessBuildingClientMixin"
+		"effortless.PacketHandlerMixin",
+		"litematica.LitematicaSchematicAccessor",
+		"litematica.SchematicUtilsMixin",
+		"syncmatica.LitematicManagerMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

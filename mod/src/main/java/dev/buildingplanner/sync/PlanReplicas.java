@@ -119,6 +119,14 @@ public final class PlanReplicas {
 		return seq;
 	}
 
+	/** Asks for a fresh snapshot of an attached plan, dropping the copy's early Litematica changes. */
+	public void resync(UUID planId) {
+		Replica replica = replicas.get(planId);
+		if (replica != null) {
+			resubscribe(planId, replica);
+		}
+	}
+
 	public void undo() {
 		connection.send(new Payloads.Undo());
 	}
