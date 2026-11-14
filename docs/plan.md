@@ -9,7 +9,8 @@ whitelist enforced (11 players), online mode. The world (`world/`) is 1.9 GB. Ea
 `minecraft-archive-2026-10-29-1.21.11.tar.gz` and `minecraft-backup-2025-12-12.tar.gz`. No mods or plugins. The VPS has
 30 GB of RAM (about 16 GB available) and 163 GB of free disk; it also hosts other services.
 
-**Players.** Unmodded today. Geo prefers Prism Launcher (Geo, inbox request 402).
+**Players.** Unmodded today. Geo prefers Prism Launcher (Geo, inbox request 402). Geo is new to how Minecraft mods
+work (Geo, inbox request 408), so explanations start from what a mod, Fabric and an instance are.
 
 ## Decisions
 
@@ -27,18 +28,24 @@ From inbox requests 401 and 402 (revisions 1 to 4):
 - No automation (block placers, breakers, quarries) for now (402 r2).
 - Build the planning mod with live shared editing: each change to a plan reaches everyone as it's made, and several
   players can edit one plan at once (402 r4, Q1 B).
+- Players get their mods from a Prism Launcher instance that updates itself at each launch (packwiz's installer
+  run before launch, reading a pack at a public web address), so new test builds reach everyone (408, Q1 A).
+- Switch the survival server to Fabric with Syncmatica now (408, Q2 A), as "Server switch" below describes.
+- The work runs as its own T3 project, "Minecraft Server", with a project thread of that name; its workspace is this
+  repository, which becomes a public GitHub repository under Geo's account once there's code to publish (409, and
+  402 r4 Q1).
 
 Proposed, not yet approved: players run Litematica (with MaLiLib), Syncmatica and Freecam; the server runs Fabric,
-Fabric API and Syncmatica (402 r2 to r4, 408).
+Fabric API and Syncmatica (402 r2 to r4).
 
 ## Agent-ready work
 
-Ready to run once Geo approves the action (inbox request 408):
-
-- **Server switch:** back up `world/`, replace `server.jar` in `minecraft.service` with Fabric's server launcher for
-  26.3, add Fabric API and Syncmatica (26.3 builds), restart when no one is online, and check the world loads.
-- **Player pack:** the proposed player mods for 26.3, delivered as request 408's answer chooses (a self-updating Prism
-  instance through packwiz, or a modpack file).
+- **Server switch** (approved, 408 Q2 A): back up `world/`, replace `server.jar` in `minecraft.service` with Fabric's
+  server launcher for 26.3, add Fabric API and Syncmatica (26.3 builds), restart when no one is online, and check the
+  world loads. Players who install nothing can still join; switching back to `server.jar` stays possible.
+- **Player pack** (approved, 408 Q1 A): a packwiz pack of the player mods for 26.3 at a public web address, and a Prism
+  instance file that runs packwiz's installer before each launch. It includes steps for players on the official
+  launcher (install Fabric, copy the mods by hand, no automatic updates).
 
 ## Design work: the planning mod
 
