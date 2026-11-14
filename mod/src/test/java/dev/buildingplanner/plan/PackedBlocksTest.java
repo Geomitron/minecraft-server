@@ -19,9 +19,17 @@ class PackedBlocksTest {
 			values[i] = random.nextInt(1 << bits);
 			litematica.setAt(i, values[i]);
 		}
-		long[] packed = PackedBlocks.pack(values, bits);
+		PackedBlocks.Writer writer = new PackedBlocks.Writer(count, bits);
+		for (int value : values) {
+			writer.write(value);
+		}
+		long[] packed = writer.longs();
 		assertArrayEquals(litematica.getBackingLongArray(), packed);
-		assertArrayEquals(values, PackedBlocks.unpack(packed, bits, count));
+		PackedBlocks.Reader reader = new PackedBlocks.Reader(packed, bits, count);
+		int[] read = new int[count];
+		for (int i = 0; i < count; i++) {
+			read[i] = reader.read();
+		}
+		assertArrayEquals(values, read);
 	}
-
 }

@@ -96,22 +96,12 @@ public final class LitematicFormat {
 		if (palette.isEmpty()) {
 			palette.add(PlanRegion.AIR);
 		}
-		long volume = (long) Math.abs(size.getX()) * Math.abs(size.getY()) * Math.abs(size.getZ());
-		if (volume > Integer.MAX_VALUE) {
-			throw new IllegalArgumentException("Region " + name + " is too large: " + size);
-		}
 		long[] packed = tag.getLongArray(BLOCKS).orElseGet(() -> new long[0]);
-		int[] blocks = PackedBlocks.unpack(packed, PackedBlocks.bitsFor(palette.size()), (int) volume);
-		for (int i = 0; i < blocks.length; i++) {
-			// Litematica shows an index past the palette as air.
-			if (blocks[i] >= palette.size()) {
-				blocks[i] = 0;
-			}
-		}
 		for (String key : List.of(POSITION, SIZE, PALETTE, BLOCKS)) {
 			tag.remove(key);
 		}
-		return new PlanRegion(name, position, size, palette, blocks, tag);
+		// Litematica shows an index past the palette as air.
+		return PlanRegion.unpack(name, position, size, palette, packed, tag, false);
 	}
 
 	private static CompoundTag writeRegion(PlanRegion region) {
@@ -123,7 +113,7 @@ public final class LitematicFormat {
 			palette.add(LitematicBlockStates.write(state));
 		}
 		tag.put(PALETTE, palette);
-		tag.put(BLOCKS, new LongArrayTag(PackedBlocks.pack(region.paletteIndices(), PackedBlocks.bitsFor(region.palette().size()))));
+		tag.put(BLOCKS, new LongArrayTag(region.packedBlocks()));
 		return tag;
 	}
 

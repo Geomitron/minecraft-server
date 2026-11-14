@@ -184,8 +184,11 @@ Order and conflicts:
 
 Starting caps, in the server's config file `config/buildingplanner.properties` (`max-edit-blocks`, `max-plan-side`):
 50,000 blocks an edit, 512 blocks a side for a plan. The size cap applies to the plan's enclosing box, on each side an
-edit grows; a plan shared already larger can still grow along its other sides. A region at the cap on every side holds 134 million
-blocks, about 540 MB of the server's memory at four bytes a block.
+edit grows; a plan shared already larger can still grow along its other sides. The server keeps a region's blocks in
+16-block cubes at two bytes a block, only where the region holds something other than air, so its memory follows the
+blocks a plan holds, not its box: a region at the cap on every side with one full floor (262,144 blocks) takes about
+8.5 MB, and the same region filled throughout about 270 MB. A snapshot still carries every position in the box, at two
+bits or more each, so one of a region at the cap is at least 34 MB, built for each player who loads the plan.
 
 ### Players joining mid-edit
 

@@ -17,22 +17,14 @@ public record RegionSnapshot(String name, BlockPos min, Vec3i dimensions, List<B
 
 	public static RegionSnapshot of(PlanRegion region) {
 		return new RegionSnapshot(region.name(), region.minCorner(), region.dimensions(), region.palette(),
-			PackedBlocks.pack(region.paletteIndices(), PackedBlocks.bitsFor(region.palette().size())));
+			region.packedBlocks());
 	}
 
 	/** A region holding the snapshot's blocks, positioned at its minimum corner. */
 	public PlanRegion toRegion() {
-		long volume = (long) dimensions.getX() * dimensions.getY() * dimensions.getZ();
-		if (dimensions.getX() <= 0 || dimensions.getY() <= 0 || dimensions.getZ() <= 0 || volume > Integer.MAX_VALUE
-			|| palette.isEmpty()) {
+		if (dimensions.getX() <= 0 || dimensions.getY() <= 0 || dimensions.getZ() <= 0) {
 			throw new IllegalArgumentException("Region " + name + " has an invalid snapshot: " + dimensions);
 		}
-		int[] blocks = PackedBlocks.unpack(packed, PackedBlocks.bitsFor(palette.size()), (int) volume);
-		for (int i = 0; i < blocks.length; i++) {
-			if (blocks[i] >= palette.size()) {
-				throw new IllegalArgumentException("Region " + name + " has a block past its palette");
-			}
-		}
-		return new PlanRegion(name, min, dimensions, palette, blocks, new CompoundTag());
+		return PlanRegion.unpack(name, min, dimensions, palette, packed, new CompoundTag(), true);
 	}
 }
