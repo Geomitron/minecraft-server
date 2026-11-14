@@ -69,19 +69,21 @@ stop_client() {
 
 marks=0
 # drv <client> <command>...: runs the commands on that client's driver and prints each with its result. It fails
-# when a command times out, errors, or returns false.
+# when a command times out, errors, or returns false. Each call ends with a mark the driver echoes; the mark names the
+# shell process too, because val runs drv in a subshell, whose count never reaches the caller.
 drv() {
 	local n=$1
 	shift
-	local out_file=run/client$n/driver-out.txt before out
+	local out_file=run/client$n/driver-out.txt before out mark
 	before=$(wc -l < "$out_file")
 	marks=$((marks + 1))
-	printf '%s\n' "$@" "mark $marks" >> "run/client$n/driver-in.txt"
-	if ! wait_for "$out_file" "mark $marks =>" 180; then
+	mark="mark $BASHPID.$marks"
+	printf '%s\n' "$@" "$mark" >> "run/client$n/driver-in.txt"
+	if ! wait_for "$out_file" "$mark =>" 180; then
 		echo "  client$n: no answer to: $*" | tee -a /out/checks.log
 		return 1
 	fi
-	out=$(tail -n +$((before + 1)) "$out_file" | grep -vF "mark $marks =>")
+	out=$(tail -n +$((before + 1)) "$out_file" | grep -vF "$mark =>" || true)
 	sed "s/^/  client$n: /" <<< "$out" >> /out/checks.log
 	printf '%s\n' "$out"
 	! grep -qE '=> (TIMEOUT|ERROR|unknown command|false$)' <<< "$out"
