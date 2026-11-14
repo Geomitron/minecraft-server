@@ -1,0 +1,132 @@
+plugins {
+	id 'net.fabricmc.fabric-loom' version "${loom_version}"
+}
+
+base {
+	archivesName = 'building-planner'
+}
+
+repositories {
+	exclusiveContent {
+		forRepository {
+			maven {
+				name = 'Modrinth'
+				url = 'https://api.modrinth.com/maven'
+			}
+		}
+		filter {
+			includeGroup 'maven.modrinth'
+		}
+	}
+}
+
+loom {
+	splitEnvironmentSourceSets()
+
+	mods {
+		buildingplanner {
+			sourceSet sourceSets.main
+			sourceSet sourceSets.client
+		}
+	}
+
+	runs {
+		// Dev server: offline mode, port 25565 (see prepareDevServer). Loads the add-on, Fabric API and Syncmatica;
+		// the client-only mods stay off its classpath.
+		server {
+			server()
+			runDir 'run/server'
+		}
+		// Two dev clients with every client mod, each with its own game directory and player name, joining the dev server
+		// on start.
+		client {
+			client()
+			runDir 'run/client1'
+			programArgs '--username', 'Planner1', '--quickPlayMultiplayer', 'localhost:25565'
+		}
+		client2 {
+			client()
+			configName = 'Minecraft Client 2'
+			runDir 'run/client2'
+			programArgs '--username', 'Planner2', '--quickPlayMultiplayer', 'localhost:25565'
+		}
+	}
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:${minecraft_version}"
+	implementation "net.fabricmc:fabric-loader:${loader_version}"
+
+	// Both sides.
+	implementation "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}"
+	implementation "maven.modrinth:syncmatica:${syncmatica_version}"
+
+	// Players' computers only.
+	clientImplementation "maven.modrinth:litematica:${litematica_version}"
+	clientImplementation "maven.modrinth:malilib:${malilib_version}"
+	clientImplementation "maven.modrinth:effortless-building:${effortless_building_version}"
+
+	// Tests run under Fabric Loader, with Minecraft's classes as in the game.
+	testImplementation "net.fabricmc:fabric-loader-junit:${loader_version}"
+	testImplementation platform('org.junit:junit-bom:5.13.4')
+	testImplementation 'org.junit.jupiter:junit-jupiter'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+processResources {
+	def version = project.version
+	inputs.property 'version', version
+
+	filesMatching('fabric.mod.json') {
+		expand 'version': version
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = 25
+}
+
+java {
+	sourceCompatibility = JavaVersion.VERSION_25
+	targetCompatibility = JavaVersion.VERSION_25
+}
+
+test {
+	useJUnitPlatform()
+}
+
+// Sets the given keys in a key-value settings file, keeping its other lines.
+def setKeys = { File settingsFile, String separator, Map<String, String> settings ->
+	def lines = settingsFile.exists() ? settingsFile.readLines() : []
+	lines = lines.findAll { line -> !settings.keySet().any { line.startsWith(it + separator) } }
+	lines.addAll(settings.collect { key, value -> "${key}${separator}${value}" as String })
+	settingsFile.parentFile.mkdirs()
+	settingsFile.text = lines.join('\n') + '\n'
+}
+
+// The dev server runs in offline mode without a whitelist so the dev clients (offline accounts) can join.
+// Accepting Mojang's EULA in run/server/eula.txt stays a manual step.
+tasks.register('prepareDevServer') {
+	def propertiesFile = file('run/server/server.properties')
+	doLast {
+		setKeys(propertiesFile, '=', ['online-mode': 'false', 'white-list': 'false', 'enforce-whitelist': 'false',
+			'server-port': '25565', 'spawn-protection': '0'])
+	}
+}
+tasks.named('runServer') {
+	dependsOn 'prepareDevServer'
+}
+
+// A dev client's first start shows Minecraft's accessibility welcome screen, which stops it joining the dev server,
+// and an unfocused client would pause.
+['client': 'run/client1', 'client2': 'run/client2'].each { run, dir ->
+	def prepare = tasks.register("prepareDev${run.capitalize()}") {
+		def optionsFile = file("${dir}/options.txt")
+		doLast {
+			setKeys(optionsFile, ':', ['onboardAccessibility': 'false', 'pauseOnLostFocus': 'false'])
+		}
+	}
+	tasks.named("run${run.capitalize()}") {
+		dependsOn prepare
+	}
+}

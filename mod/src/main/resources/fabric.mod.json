@@ -1,0 +1,25 @@
+{
+	"schemaVersion": 1,
+	"id": "buildingplanner",
+	"version": "${version}",
+	"name": "Building Planner",
+	"description": "Plan builds together as shared Litematica plans, drawn with Effortless Building's shapes.",
+	"environment": "*",
+	"entrypoints": {
+		"main": ["dev.buildingplanner.BuildingPlanner"],
+		"client": ["dev.buildingplanner.client.BuildingPlannerClient"]
+	},
+	"mixins": ["buildingplanner.mixins.json"],
+	"depends": {
+		"fabricloader": ">=0.20.1",
+		"minecraft": "~26.3",
+		"java": ">=25",
+		"fabric-api": "*",
+		"syncmatica": "*"
+	},
+	"recommends": {
+		"litematica": "*",
+		"malilib": "*",
+		"effortlessbuilding": "*"
+	}
+}

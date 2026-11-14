@@ -1,0 +1,59 @@
+package dev.buildingplanner;
+
+import java.util.List;
+import java.util.Set;
+import java.util.function.Predicate;
+import net.fabricmc.loader.api.FabricLoader;
+import org.objectweb.asm.tree.ClassNode;
+import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
+import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
+
+/**
+ * Skips the hooks into Effortless Building when that mod isn't installed: it runs only on players' computers, and
+ * players may leave it out.
+ */
+public final class BuildingPlannerMixinPlugin implements IMixinConfigPlugin {
+	static final String EFFORTLESS_MIXIN_PACKAGE = "dev.buildingplanner.mixin.effortless.";
+	static final String EFFORTLESS_MOD_ID = "effortlessbuilding";
+
+	private final Predicate<String> modLoaded;
+
+	public BuildingPlannerMixinPlugin() {
+		this(id -> FabricLoader.getInstance().isModLoaded(id));
+	}
+
+	BuildingPlannerMixinPlugin(Predicate<String> modLoaded) {
+		this.modLoaded = modLoaded;
+	}
+
+	@Override
+	public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
+		return !mixinClassName.startsWith(EFFORTLESS_MIXIN_PACKAGE) || modLoaded.test(EFFORTLESS_MOD_ID);
+	}
+
+	@Override
+	public void onLoad(String mixinPackage) {
+	}
+
+	@Override
+	public String getRefMapperConfig() {
+		return null;
+	}
+
+	@Override
+	public void acceptTargets(Set<String> myTargets, Set<String> otherTargets) {
+	}
+
+	@Override
+	public List<String> getMixins() {
+		return null;
+	}
+
+	@Override
+	public void preApply(String targetClassName, ClassNode targetClass, String mixinClassName, IMixinInfo mixinInfo) {
+	}
+
+	@Override
+	public void postApply(String targetClassName, ClassNode targetClass, String mixinClassName, IMixinInfo mixinInfo) {
+	}
+}
