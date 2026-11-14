@@ -196,7 +196,9 @@ plan in its own dimension).
 
 When a shape's block falls outside its region, the server works out the region's new minimum corner and size (the old
 box joined with the shape's blocks), copies the blocks into a bigger grid, and sends the growth in the same `applied`
-as the shape. Each client, with the placement unlocked as Syncmatica does when it updates one: builds the bigger
+as the shape. A grown region's position becomes its new minimum corner and its size turns positive (a Litematica region
+can have a negative size, running from its position toward lower coordinates); block entities, entities and scheduled
+ticks move with their blocks. Each client, with the placement unlocked as Syncmatica does when it updates one: builds the bigger
 container, copies the old blocks across, writes the new container, size and region position into the schematic's maps
 (L3), resets the placement's sub-regions to the schematic's values, updates the metadata's volume and enclosing size,
 and marks the plan for redraw. The placement, its Syncmatica identity, origin and position stay the same, so no one
@@ -205,12 +207,14 @@ reloads. Plans never shrink; undo doesn't shrink them either.
 ### Plan storage on the server
 
 The server keeps each plan in memory and writes it to `<world>/building-planner/plans/<plan id>.litematic` in
-Litematica's own format (version 7: palette and packed block states per region), through a temporary file and a
-rename, at most every 30 seconds while it has changed, and when the server stops. When a placement is first shared,
+Litematica's own format (version 7: palette and packed block states per region, with block states as Litematica's
+`Name` and `Properties`, not vanilla 26.3's `id` and `properties`), through a temporary file and a rename, at most every 30 seconds while it has changed, and when the server stops. When a placement is first shared,
 the add-on reads its blocks from the file Syncmatica stored (`syncmatics/<hash>.litematic`). At start, each Syncmatica
 placement loads the add-on's file, or Syncmatica's when the add-on has none. A deleted plan's file moves to
 `<world>/building-planner/deleted/`, where it can be put back by hand. Revisions start again at each server start;
-players reconnect and take snapshots.
+players reconnect and take snapshots. The add-on's files equal Litematica's as NBT (tests round-trip files Litematica's
+own code writes, and Litematica's reader reads the add-on's); the bytes differ in the order of compound keys, which no
+reader depends on.
 
 ### The delete check
 
@@ -260,5 +264,3 @@ and copies none of it, so its own licence is free.
 - Growth in place redraws correctly and quickly (L3 and the reset), and Syncmatica's later moves keep working on a
   grown plan.
 - Whether Litematica's edits aim from Freecam's camera.
-- The add-on's `.litematic` reader and writer match Litematica byte for byte; tests check them against files Litematica
-  writes.

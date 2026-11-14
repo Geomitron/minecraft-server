@@ -71,6 +71,9 @@ dependencies {
 	testImplementation platform('org.junit:junit-bom:5.13.4')
 	testImplementation 'org.junit.jupiter:junit-jupiter'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	// Litematica's own writer and reader check the add-on's .litematic files.
+	testImplementation "maven.modrinth:litematica:${litematica_version}"
+	testImplementation "maven.modrinth:malilib:${malilib_version}"
 }
 
 processResources {
