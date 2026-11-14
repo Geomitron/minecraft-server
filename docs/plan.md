@@ -77,21 +77,36 @@ The planning mod, from inbox request 411:
   Its Randomizer item needs the server copy, so Building Planner gives players its own block-mix picker (Q6 A).
 - One add-on that hooks into unchanged Effortless Building, Litematica and Syncmatica, with its own licence (Q7 A).
 
+How players use Building Planner, from inbox request 420:
+
+- A player starts a plan by marking the area, pressing a key and typing a name (Q1 A).
+- A shared plan appears for everyone straight away, and each player can hide it (Q2 A).
+- An Effortless Building shape goes into the plan it starts in, or else the selected plan (Q3 A).
+- A shape can start on a plan's ghost blocks as well as on real blocks (Q4 A).
+- The block-mix picker offers every block in the game (Q5 A). Geo would like a toggle that filters it to the blocks in
+  the player's inventory (Q5 comment).
+- Ctrl+Z undoes and Ctrl+Y redoes (Q6 A).
+- When someone else edits a plan, the changed ghost blocks glow briefly, with the editor's name (Q7 B).
+- Copy and paste of part of a plan comes after the first version works (Q8 A).
+- Server operators can delete any plan, as well as its creator (Q9 A).
+- Building Planner's code uses the MIT licence (Q10 A); the repository has no other licence.
+- Agents push finished, tested Building Planner work and doc changes to this repository without asking each time;
+  changes to the pack or the instance, and releases, go to Geo first (inbox request 429, Q1 A).
+
 ## Agent-ready work
 
 - **Building Planner** (design approved, 411), built in this order, each step verified as
   [building-planner.md](building-planner.md) describes before the next: (1) the `mod/` scaffold with run setups for a
   server and two clients; (2) the plan model and `.litematic` storage; (3) the live-sync core on the server; (4) server
   undo; (5) Syncmatica on the server (plans from shared files, the delete check, archiving deleted plans); (6) the
-  Litematica bridge on the client; (7) Effortless Building capture; (8) joining a server without the add-on. The
-  choices open in inbox request 420 stay behind one function or setting each until Geo answers.
+  Litematica bridge on the client; (7) Effortless Building capture; (8) joining a server without the add-on; then
+  (9) copy and paste of part of a plan (420, Q8 A).
 
 ## Design work: Building Planner
 
 [building-planner.md](building-planner.md) is the spec: what players get, how each goal above is met, the technical
-design with every hook checked in the source, and what's unverified. Geo's decisions from inbox request 411 are above.
-How players use it and the add-on's licence wait on Geo in inbox request 420. The messages players see go to Geo for
-review once something is built.
+design with every hook checked in the source, and what's unverified. Geo's decisions from inbox requests 411 and 420
+are above. The messages players see go to Geo for review once something is built.
 
 ### Source evidence (read 2026-11-13)
 
