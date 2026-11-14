@@ -1,6 +1,7 @@
 package dev.buildingplanner.sync;
 
 import dev.buildingplanner.BuildingPlanner;
+import dev.buildingplanner.OpenChoices;
 import dev.buildingplanner.plan.RegionSnapshot;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -25,7 +26,7 @@ import net.minecraft.world.level.block.state.BlockState;
 public final class Payloads {
 	/** Raised whenever a payload's layout changes; a client that sees another version turns Building Planner off. */
 	public static final int PROTOCOL_VERSION = 1;
-	/** Marks an {@code applied} or {@code rejected} that answers no client edit (a subscribe). */
+	/** Marks an {@code applied} or {@code rejected} that answers no client edit (an undo, a redo, a subscribe). */
 	public static final int NO_CLIENT_SEQ = -1;
 	/** Room for {@link SyncLimits#WIRE_MAX_EDIT_BLOCKS} changes at their largest (a long and a three-byte id each). */
 	static final int MAX_EDIT_BYTES = SyncLimits.WIRE_MAX_EDIT_BLOCKS * 12 + 64 * 1024;
@@ -77,6 +78,27 @@ public final class Payloads {
 
 		@Override
 		public Type<Edit> type() {
+			return TYPE;
+		}
+	}
+
+	public record Undo() implements CustomPacketPayload {
+		public static final Type<Undo> TYPE = payloadType("undo");
+		static final StreamCodec<FriendlyByteBuf, Undo> CODEC = StreamCodec.unit(new Undo());
+
+		@Override
+		public Type<Undo> type() {
+			return TYPE;
+		}
+	}
+
+	/** Registered only while {@link OpenChoices#REDO} is on. */
+	public record Redo() implements CustomPacketPayload {
+		public static final Type<Redo> TYPE = payloadType("redo");
+		static final StreamCodec<FriendlyByteBuf, Redo> CODEC = StreamCodec.unit(new Redo());
+
+		@Override
+		public Type<Redo> type() {
 			return TYPE;
 		}
 	}
@@ -193,6 +215,10 @@ public final class Payloads {
 		serverbound.register(Subscribe.TYPE, Subscribe.CODEC);
 		serverbound.register(Unsubscribe.TYPE, Unsubscribe.CODEC);
 		serverbound.registerLarge(Edit.TYPE, Edit.CODEC, MAX_EDIT_BYTES);
+		serverbound.register(Undo.TYPE, Undo.CODEC);
+		if (OpenChoices.REDO) {
+			serverbound.register(Redo.TYPE, Redo.CODEC);
+		}
 		PayloadTypeRegistry<?> clientbound = PayloadTypeRegistry.clientboundPlay();
 		clientbound.register(Hello.TYPE, Hello.CODEC);
 		clientbound.registerLarge(Snapshot.TYPE, Snapshot.CODEC, MAX_CLIENTBOUND_BYTES);

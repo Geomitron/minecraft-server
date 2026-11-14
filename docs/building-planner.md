@@ -233,12 +233,15 @@ returns can still be deleted in the game.
 ### Undo
 
 The server keeps an undo list for each player, across plans: each step is one edit (a shape, an erase, or one tick of
-Litematica writes) with each block's state before and after. Undo takes the player's newest step and sets each of its
-blocks back to its before-state only if the plan still holds that step's after-state there; blocks someone has changed
-since stay as they are, and a `notice` says how many. The undo goes out as an ordinary `applied` edit. Steps survive
-growth and moves (plan coordinates), are dropped with their plan when it's deleted, keep the newest 50 per player
-(Effortless Building's own depth), and last until the server restarts. With redo (Q6), an undone step goes onto a redo
-list, cleared by the player's next new edit.
+Litematica writes) with each block's state before and after the whole edit. Undo takes the player's newest step and
+sets each of its blocks back to its before-state only if the plan still holds that step's after-state there; blocks
+someone has changed since stay as they are, and a `notice` says how many. The undo goes out as an ordinary `applied`
+edit with no `clientSeq`; an undo that changes no block sends none, and with no steps left a `notice` says there's
+nothing to undo. Steps survive growth and moves (plan coordinates) and the player leaving, are dropped with their plan
+when it's deleted, keep the newest 50 per player (Effortless Building's own depth), and last until the server
+restarts. Redo waits on Q6 behind one setting (`OpenChoices.REDO`, off), which also registers the `redo` payload: with
+it on, the part of a step an undo changed goes onto a redo list, a redo applies it forward by the same rule, and the
+player's next new edit clears the list.
 
 ### The block-mix picker
 

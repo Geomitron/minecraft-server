@@ -34,7 +34,11 @@ final class SimulatedNetwork {
 	private final Map<UUID, Client> clients = new HashMap<>();
 
 	SimulatedNetwork(SyncLimits limits) {
-		server = new PlanSync(limits, this::deliver);
+		this(limits, false);
+	}
+
+	SimulatedNetwork(SyncLimits limits, boolean redo) {
+		server = new PlanSync(limits, redo, this::deliver);
 	}
 
 	Client client(String name) {
@@ -113,6 +117,14 @@ final class SimulatedNetwork {
 			return seq;
 		}
 
+		void undo() {
+			outbox.add(new Payloads.Undo());
+		}
+
+		void redo() {
+			outbox.add(new Payloads.Redo());
+		}
+
 		/** The server reads this client's next message; false when there was none. */
 		boolean serverReadsOne() {
 			CustomPacketPayload payload = outbox.poll();
@@ -123,6 +135,8 @@ final class SimulatedNetwork {
 				case Payloads.Subscribe p -> server.subscribe(id, p.plan());
 				case Payloads.Unsubscribe p -> server.unsubscribe(id, p.plan());
 				case Payloads.Edit p -> server.edit(id, p.plan(), p.clientSeq(), p.kind(), p.changes());
+				case Payloads.Undo p -> server.undo(id);
+				case Payloads.Redo p -> server.redo(id);
 				default -> throw new IllegalStateException("Not a client payload: " + payload);
 			}
 			return true;

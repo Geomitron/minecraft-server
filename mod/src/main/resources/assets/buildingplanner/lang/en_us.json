@@ -3,5 +3,8 @@
 	"buildingplanner.rejected.not_loaded": "Load this plan before editing it.",
 	"buildingplanner.rejected.too_many_blocks": "That edit changes %s blocks, more than the server's limit of %s.",
 	"buildingplanner.rejected.too_large": "That would make the plan %s blocks across, more than the server's limit of %s.",
-	"buildingplanner.rejected.does_not_fit": "That edit doesn't fit this plan, so it wasn't made."
+	"buildingplanner.rejected.does_not_fit": "That edit doesn't fit this plan, so it wasn't made.",
+	"buildingplanner.undo.nothing": "Nothing to undo.",
+	"buildingplanner.undo.left_as_they_are": "%s blocks someone else has changed since were left as they are.",
+	"buildingplanner.redo.nothing": "Nothing to redo."
 }

@@ -33,4 +33,17 @@ public record PlayerMessage(String key, List<String> args) {
 	public static PlayerMessage editDoesNotFit() {
 		return new PlayerMessage(PREFIX + "rejected.does_not_fit", List.of());
 	}
+
+	public static PlayerMessage nothingToUndo() {
+		return new PlayerMessage(PREFIX + "undo.nothing", List.of());
+	}
+
+	/** After an undo (or a redo) that left blocks someone else changed since. */
+	public static PlayerMessage blocksLeftAsTheyAre(int blocks) {
+		return new PlayerMessage(PREFIX + "undo.left_as_they_are", List.of(Integer.toString(blocks)));
+	}
+
+	public static PlayerMessage nothingToRedo() {
+		return new PlayerMessage(PREFIX + "redo.nothing", List.of());
+	}
 }

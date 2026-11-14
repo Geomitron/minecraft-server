@@ -1,5 +1,6 @@
 package dev.buildingplanner.server;
 
+import dev.buildingplanner.OpenChoices;
 import dev.buildingplanner.plan.Plan;
 import dev.buildingplanner.plan.PlanRegion;
 import dev.buildingplanner.sync.BlockChange;
@@ -8,6 +9,8 @@ import dev.buildingplanner.sync.Payloads;
 import dev.buildingplanner.sync.PlayerMessage;
 import dev.buildingplanner.sync.RegionBox;
 import dev.buildingplanner.sync.SyncLimits;
+import dev.buildingplanner.server.UndoHistory.Step;
+import dev.buildingplanner.server.UndoHistory.StepBlock;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -28,6 +31,8 @@ import net.minecraft.world.level.block.state.BlockState;
  * applied edit raises its plan's revision by one and goes to every subscriber, its author included, through the
  * {@link Outbox}. Each block takes the value of the last edit, in this order, that wrote it; there are no locks.
  * Plans are keyed by Syncmatica's placement id; revisions start at 0 when a plan is added.
+ *
+ * <p>Each player's edits also go on their own undo list (see {@link #undo}).
  */
 public final class PlanSync {
 	/** Sends a payload to one player; the Fabric adapter sends it on that player's connection, in call order. */
@@ -39,10 +44,16 @@ public final class PlanSync {
 	private final SyncLimits limits;
 	private final Outbox outbox;
 	private final Map<UUID, LivePlan> plans = new HashMap<>();
+	private final UndoHistory history;
 
 	public PlanSync(SyncLimits limits, Outbox outbox) {
+		this(limits, OpenChoices.REDO, outbox);
+	}
+
+	PlanSync(SyncLimits limits, boolean redo, Outbox outbox) {
 		this.limits = limits;
 		this.outbox = outbox;
+		this.history = new UndoHistory(redo);
 	}
 
 	public SyncLimits limits() {
@@ -56,9 +67,13 @@ public final class PlanSync {
 		}
 	}
 
-	/** Stops syncing a plan and forgets its subscribers. Their clients drop the plan when Syncmatica removes it. */
+	/**
+	 * Stops syncing a plan and forgets its subscribers and every player's undo steps in it. Their clients drop the
+	 * plan when Syncmatica removes it.
+	 */
 	public void removePlan(UUID planId) {
 		plans.remove(planId);
+		history.dropPlan(planId);
 	}
 
 	public Optional<Plan> plan(UUID planId) {
@@ -157,15 +172,72 @@ public final class PlanSync {
 			grown.add(new RegionBox(region.name(), region.minCorner(), region.dimensions()));
 		});
 		List<BlockChange> applied = new ArrayList<>(inBox.size());
+		// Each block's state before the edit (its first write) and after it (its last).
+		Map<RegionPos, StepBlock> step = new LinkedHashMap<>();
 		for (BlockChange change : inBox) {
 			BlockState before = plan.region(change.region()).orElseThrow().set(change.pos(), change.state());
 			if (!before.equals(change.state())) {
 				applied.add(change);
+				step.merge(new RegionPos(change.region(), change.pos()),
+					new StepBlock(change.region(), change.pos(), before, change.state()),
+					(first, last) -> new StepBlock(first.region(), first.pos(), first.before(), last.after()));
 			}
+		}
+		List<StepBlock> stepBlocks = step.values().stream().filter(block -> !block.before().equals(block.after())).toList();
+		if (!stepBlocks.isEmpty()) {
+			history.record(player, new Step(planId, stepBlocks));
 		}
 		live.revision++;
 		broadcast(live, new Payloads.Applied(planId, live.revision, player, clientSeq, grown, applied));
 		return Optional.empty();
+	}
+
+	/**
+	 * Takes back the player's newest step, in whichever plan it was made: each block goes back to its state before
+	 * the step only if the plan still holds the step's state there. Blocks someone has changed since stay as they
+	 * are, and a notice says how many. The undo goes to subscribers as an ordinary applied edit. Plans never shrink.
+	 */
+	public void undo(UUID player) {
+		Optional<Step> step = history.takeUndo(player);
+		if (step.isEmpty()) {
+			outbox.send(player, new Payloads.Notice(PlayerMessage.nothingToUndo()));
+			return;
+		}
+		Step undone = applyStep(player, step.get().reversed());
+		history.undone(player, undone.reversed());
+	}
+
+	/** Takes the player's newest undone step forward again, as {@link #undo} takes it back. Off with {@link OpenChoices#REDO}. */
+	public void redo(UUID player) {
+		Optional<Step> step = history.redoEnabled() ? history.takeRedo(player) : Optional.empty();
+		if (step.isEmpty()) {
+			outbox.send(player, new Payloads.Notice(PlayerMessage.nothingToRedo()));
+			return;
+		}
+		history.redone(player, applyStep(player, step.get()));
+	}
+
+	/** Sets each block from its before-state to its after-state where the plan still holds the before-state. */
+	private Step applyStep(UUID player, Step step) {
+		LivePlan live = plans.get(step.plan());
+		List<StepBlock> done = new ArrayList<>(step.blocks().size());
+		for (StepBlock block : step.blocks()) {
+			PlanRegion region = live.plan.region(block.region()).orElseThrow();
+			if (region.get(block.pos()).equals(block.before())) {
+				region.set(block.pos(), block.after());
+				done.add(block);
+			}
+		}
+		if (!done.isEmpty()) {
+			live.revision++;
+			broadcast(live, new Payloads.Applied(step.plan(), live.revision, player, Payloads.NO_CLIENT_SEQ, List.of(),
+				done.stream().map(block -> new BlockChange(block.region(), block.pos(), block.after())).toList()));
+		}
+		int left = step.blocks().size() - done.size();
+		if (left > 0) {
+			outbox.send(player, new Payloads.Notice(PlayerMessage.blocksLeftAsTheyAre(left)));
+		}
+		return new Step(step.plan(), done);
 	}
 
 	/** Growth must leave the plan's enclosing box within the size cap on every side that grows. */
@@ -193,6 +265,9 @@ public final class PlanSync {
 		for (UUID subscriber : live.subscribers) {
 			outbox.send(subscriber, payload);
 		}
+	}
+
+	private record RegionPos(String region, BlockPos pos) {
 	}
 
 	private static final class LivePlan {
