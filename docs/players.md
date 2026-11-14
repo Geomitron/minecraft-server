@@ -29,7 +29,18 @@ Prism Launcher is a free Minecraft launcher. It stores each copy of the game, ca
 1. Click "Add Instance" at the top left.
 2. Choose "Import" on the left.
 3. Paste this link into the text box: https://github.com/Geomitron/minecraft-server/releases/latest/download/prism-instance.zip
-4. Click "OK". An instance named "Server Pack" appears.
+4. In the "Name" box at the top, change the name to "Server Pack".
+5. Click "OK". An instance named "Server Pack" appears.
+
+### Your Old Settings
+
+If you've played Minecraft on this computer before, you can bring your controls, video, sound, and other settings into the new instance. Minecraft saves them in a file named `options.txt`.
+
+1. Find `options.txt` where you played before, and copy it:
+   - **Prism Launcher:** right-click the instance you played before, click "Folder", and open the "minecraft" folder.
+   - **The Minecraft Launcher:** on Windows, press Windows+R, type `%APPDATA%\.minecraft`, and press Enter. On a Mac, in Finder, click "Go", then "Go to Folder", type `~/Library/Application Support/minecraft`, and press Return. On Linux, open the hidden `.minecraft` folder in your home folder.
+2. In Prism Launcher, right-click "Server Pack" and click "Folder".
+3. Open the "minecraft" folder and paste `options.txt` there. If your computer asks, replace the file that's already there.
 
 ### First Launch
 
