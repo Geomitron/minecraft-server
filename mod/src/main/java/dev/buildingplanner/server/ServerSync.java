@@ -1,7 +1,6 @@
 package dev.buildingplanner.server;
 
 import dev.buildingplanner.BuildingPlanner;
-import dev.buildingplanner.OpenChoices;
 import dev.buildingplanner.sync.Payloads;
 import dev.buildingplanner.sync.SyncLimits;
 import java.io.IOException;
@@ -87,10 +86,8 @@ public final class ServerSync {
 				payload.kind(), payload.changes())));
 		ServerPlayNetworking.registerGlobalReceiver(Payloads.Undo.TYPE, (payload, context) ->
 			current().ifPresent(sync -> sync.undo(context.player().getUUID())));
-		if (OpenChoices.REDO) {
-			ServerPlayNetworking.registerGlobalReceiver(Payloads.Redo.TYPE, (payload, context) ->
-				current().ifPresent(sync -> sync.redo(context.player().getUUID())));
-		}
+		ServerPlayNetworking.registerGlobalReceiver(Payloads.Redo.TYPE, (payload, context) ->
+			current().ifPresent(sync -> sync.redo(context.player().getUUID())));
 		BuildingPlanner.LOGGER.info("Building Planner live sync: {} blocks an edit, {} blocks a plan side",
 			limits.maxEditBlocks(), limits.maxPlanSide());
 	}

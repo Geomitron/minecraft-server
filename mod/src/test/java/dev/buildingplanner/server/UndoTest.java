@@ -21,6 +21,7 @@ import net.minecraft.server.Bootstrap;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class UndoTest {
@@ -46,8 +47,9 @@ class UndoTest {
 		glass = Blocks.GLASS.defaultBlockState();
 	}
 
-	private void start(boolean redo) {
-		network = new SimulatedNetwork(SyncLimits.DEFAULT, redo);
+	@BeforeEach
+	void start() {
+		network = new SimulatedNetwork(SyncLimits.DEFAULT);
 		planId = addPlan();
 		alex = network.client("Alex");
 		blair = network.client("Blair");
@@ -90,7 +92,6 @@ class UndoTest {
 
 	@Test
 	void undoTakesBackThePlayersNewestStepForEveryone() {
-		start(false);
 		edit(alex, stone, A, B, C);
 		blair.inbox.clear();
 		alex.undo();
@@ -110,7 +111,6 @@ class UndoTest {
 
 	@Test
 	void eachPlayerUndoesOnlyTheirOwnStepsNewestFirst() {
-		start(false);
 		edit(alex, stone, A);
 		edit(blair, dirt, B);
 		edit(alex, glass, A, C);
@@ -132,7 +132,6 @@ class UndoTest {
 
 	@Test
 	void undoTakesTheWholeEditBackToItsStateBeforeTheEdit() {
-		start(false);
 		edit(alex, dirt, A);
 		// One edit writes A twice: undo goes back to the state before the edit, not between its writes.
 		alex.edit(planId, EditKind.SHAPE, List.of(new BlockChange(REGION, A, stone), new BlockChange(REGION, A, glass)));
@@ -145,7 +144,6 @@ class UndoTest {
 
 	@Test
 	void undoLeavesBlocksSomeoneElseChangedSince() {
-		start(false);
 		edit(alex, stone, A, B, C);
 		edit(blair, dirt, B);
 
@@ -161,7 +159,6 @@ class UndoTest {
 
 	@Test
 	void anUndoWhoseBlocksAllChangedSinceChangesNothing() {
-		start(false);
 		edit(alex, stone, A, B);
 		edit(blair, dirt, A, B);
 		int revision = network.server.revision(planId);
@@ -176,7 +173,6 @@ class UndoTest {
 
 	@Test
 	void undoAfterGrowthKeepsTheGrownBoxAndPlanPositions() {
-		start(false);
 		edit(alex, stone, A);
 		// Blair grows the plan toward negative coordinates after Alex's step; Alex grows it upward.
 		edit(blair, dirt, new BlockPos(-6, 0, -2));
@@ -197,7 +193,6 @@ class UndoTest {
 
 	@Test
 	void aDeletedPlansStepsGoWithIt() {
-		start(false);
 		UUID otherPlan = addPlan();
 		alex.subscribe(otherPlan);
 		network.settle();
@@ -217,7 +212,6 @@ class UndoTest {
 
 	@Test
 	void undoAfterThePlansDeletedHasNothingToUndo() {
-		start(false);
 		edit(alex, stone, A);
 		network.server.removePlan(planId);
 		alex.inbox.clear();
@@ -230,7 +224,6 @@ class UndoTest {
 
 	@Test
 	void eachPlayerKeepsTheNewest50Steps() {
-		start(false);
 		for (int i = 0; i < 51; i++) {
 			edit(alex, i % 2 == 0 ? stone : dirt, new BlockPos(i % 8, 0, i / 8));
 		}
@@ -247,7 +240,6 @@ class UndoTest {
 
 	@Test
 	void stepsOutlastTheConnection() {
-		start(false);
 		edit(alex, stone, A);
 		network.server.disconnect(alex.id);
 
@@ -258,21 +250,18 @@ class UndoTest {
 	}
 
 	@Test
-	void withRedoOffThereIsNothingToRedo() {
-		start(false);
+	void withNothingUndoneThereIsNothingToRedo() {
 		edit(alex, stone, A);
-		undo(alex);
 
 		alex.redo();
 		network.settle();
 
-		assertTrue(region().get(A).isAir());
+		assertEquals(stone, region().get(A));
 		assertEquals(List.of(PlayerMessage.nothingToRedo()), alex.notices);
 	}
 
 	@Test
-	void withRedoOnAnUndoneStepCanBeRedoneUntilTheNextEdit() {
-		start(true);
+	void anUndoneStepCanBeRedoneUntilTheNextEdit() {
 		edit(alex, stone, A, B);
 		edit(alex, dirt, C);
 		undo(alex);

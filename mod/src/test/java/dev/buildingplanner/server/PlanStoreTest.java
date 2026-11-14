@@ -170,14 +170,12 @@ class PlanStoreTest {
 	}
 
 	@Test
-	void onlyThePlansSharerMayDeleteItUnlessOperatorsMay() {
+	void onlyThePlansSharerOrAnOperatorMayDeleteIt() {
 		UUID owner = UUID.randomUUID();
 		UUID other = UUID.randomUUID();
 
-		assertTrue(SyncmaticaPlans.allowsDelete(owner, owner, false, false));
-		assertFalse(SyncmaticaPlans.allowsDelete(owner, other, false, false));
-		assertFalse(SyncmaticaPlans.allowsDelete(owner, other, true, false));
-		assertTrue(SyncmaticaPlans.allowsDelete(owner, other, true, true));
-		assertFalse(SyncmaticaPlans.allowsDelete(owner, other, false, true));
+		assertTrue(SyncmaticaPlans.allowsDelete(owner, owner, false));
+		assertFalse(SyncmaticaPlans.allowsDelete(owner, other, false));
+		assertTrue(SyncmaticaPlans.allowsDelete(owner, other, true), "an operator may delete anyone's plan");
 	}
 }

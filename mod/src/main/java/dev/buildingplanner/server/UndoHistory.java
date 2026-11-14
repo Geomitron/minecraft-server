@@ -11,8 +11,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * Each player's undo steps, across plans, newest first, kept in memory until the server stops. With redo on, an undone
- * step waits on a redo list until the player's next new edit clears it.
+ * Each player's undo steps, across plans, newest first, kept in memory until the server stops. An undone step waits on
+ * a redo list until the player's next new edit clears it.
  */
 final class UndoHistory {
 	/** Effortless Building's own undo depth. */
@@ -36,17 +36,8 @@ final class UndoHistory {
 		}
 	}
 
-	private final boolean redo;
 	private final Map<UUID, Deque<Step>> undoSteps = new HashMap<>();
 	private final Map<UUID, Deque<Step>> redoSteps = new HashMap<>();
-
-	UndoHistory(boolean redo) {
-		this.redo = redo;
-	}
-
-	boolean redoEnabled() {
-		return redo;
-	}
 
 	/** A new edit: its step goes on the undo list, and the redo list empties. */
 	void record(UUID player, Step step) {
@@ -58,11 +49,9 @@ final class UndoHistory {
 		return Optional.ofNullable(undoSteps.getOrDefault(player, new ArrayDeque<>()).pollFirst());
 	}
 
-	/** The part of an undone step that was undone, ready to redo. Does nothing while redo is off. */
+	/** The part of an undone step that was undone, ready to redo. */
 	void undone(UUID player, Step step) {
-		if (redo) {
-			push(redoSteps, player, step);
-		}
+		push(redoSteps, player, step);
 	}
 
 	Optional<Step> takeRedo(UUID player) {

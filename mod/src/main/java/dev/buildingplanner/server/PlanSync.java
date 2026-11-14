@@ -1,6 +1,5 @@
 package dev.buildingplanner.server;
 
-import dev.buildingplanner.OpenChoices;
 import dev.buildingplanner.plan.Plan;
 import dev.buildingplanner.plan.PlanRegion;
 import dev.buildingplanner.sync.BlockChange;
@@ -47,13 +46,9 @@ public final class PlanSync {
 	private final UndoHistory history;
 
 	public PlanSync(SyncLimits limits, Outbox outbox) {
-		this(limits, OpenChoices.REDO, outbox);
-	}
-
-	PlanSync(SyncLimits limits, boolean redo, Outbox outbox) {
 		this.limits = limits;
 		this.outbox = outbox;
-		this.history = new UndoHistory(redo);
+		this.history = new UndoHistory();
 	}
 
 	public SyncLimits limits() {
@@ -220,9 +215,9 @@ public final class PlanSync {
 		history.undone(player, undone.reversed());
 	}
 
-	/** Takes the player's newest undone step forward again, as {@link #undo} takes it back. Off with {@link OpenChoices#REDO}. */
+	/** Takes the player's newest undone step forward again, as {@link #undo} takes it back. */
 	public void redo(UUID player) {
-		Optional<Step> step = history.redoEnabled() ? history.takeRedo(player) : Optional.empty();
+		Optional<Step> step = history.takeRedo(player);
 		if (step.isEmpty()) {
 			outbox.send(player, new Payloads.Notice(PlayerMessage.nothingToRedo()));
 			return;

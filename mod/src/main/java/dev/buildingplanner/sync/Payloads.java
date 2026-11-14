@@ -1,7 +1,6 @@
 package dev.buildingplanner.sync;
 
 import dev.buildingplanner.BuildingPlanner;
-import dev.buildingplanner.OpenChoices;
 import dev.buildingplanner.plan.RegionSnapshot;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -92,7 +91,6 @@ public final class Payloads {
 		}
 	}
 
-	/** Registered only while {@link OpenChoices#REDO} is on. */
 	public record Redo() implements CustomPacketPayload {
 		public static final Type<Redo> TYPE = payloadType("redo");
 		static final StreamCodec<FriendlyByteBuf, Redo> CODEC = StreamCodec.unit(new Redo());
@@ -216,9 +214,7 @@ public final class Payloads {
 		serverbound.register(Unsubscribe.TYPE, Unsubscribe.CODEC);
 		serverbound.registerLarge(Edit.TYPE, Edit.CODEC, MAX_EDIT_BYTES);
 		serverbound.register(Undo.TYPE, Undo.CODEC);
-		if (OpenChoices.REDO) {
-			serverbound.register(Redo.TYPE, Redo.CODEC);
-		}
+		serverbound.register(Redo.TYPE, Redo.CODEC);
 		PayloadTypeRegistry<?> clientbound = PayloadTypeRegistry.clientboundPlay();
 		clientbound.register(Hello.TYPE, Hello.CODEC);
 		clientbound.registerLarge(Snapshot.TYPE, Snapshot.CODEC, MAX_CLIENTBOUND_BYTES);

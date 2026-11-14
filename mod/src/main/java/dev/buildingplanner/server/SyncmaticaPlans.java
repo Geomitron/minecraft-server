@@ -6,7 +6,6 @@ import ch.endte.syncmatica.data.ServerPlacement;
 import ch.endte.syncmatica.data.SyncmaticManager;
 import com.mojang.authlib.GameProfile;
 import dev.buildingplanner.BuildingPlanner;
-import dev.buildingplanner.OpenChoices;
 import dev.buildingplanner.plan.Plan;
 import dev.buildingplanner.sync.Payloads;
 import dev.buildingplanner.sync.PlayerMessage;
@@ -55,8 +54,8 @@ final class SyncmaticaPlans {
 	}
 
 	/**
-	 * Hook S1: whether {@code sender} may delete the placement. Only the player who shared it may, and operators too
-	 * while {@link OpenChoices#OPERATORS_DELETE_ANY_PLAN} is on. A refused sender gets a notice. A placement Syncmatica
+	 * Hook S1: whether {@code sender} may delete the placement: the player who shared it and server operators may. A
+	 * refused sender gets a notice. A placement Syncmatica
 	 * doesn't have passes, as Syncmatica ignores it.
 	 */
 	boolean mayDelete(GameProfile sender, UUID placementId) {
@@ -64,17 +63,15 @@ final class SyncmaticaPlans {
 		if (placement == null) {
 			return true;
 		}
-		boolean operator = OpenChoices.OPERATORS_DELETE_ANY_PLAN
-			&& server.getPlayerList().isOp(new NameAndId(sender));
-		if (allowsDelete(placement.getOwner().uuid, sender.id(), operator, OpenChoices.OPERATORS_DELETE_ANY_PLAN)) {
+		if (allowsDelete(placement.getOwner().uuid, sender.id(), server.getPlayerList().isOp(new NameAndId(sender)))) {
 			return true;
 		}
 		outbox.send(sender.id(), new Payloads.Notice(PlayerMessage.notYourPlan(placement.getOwner().getName())));
 		return false;
 	}
 
-	static boolean allowsDelete(UUID owner, UUID sender, boolean senderIsOperator, boolean operatorsMayDelete) {
-		return owner.equals(sender) || operatorsMayDelete && senderIsOperator;
+	static boolean allowsDelete(UUID owner, UUID sender, boolean senderIsOperator) {
+		return owner.equals(sender) || senderIsOperator;
 	}
 
 	private void attach() {

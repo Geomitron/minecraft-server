@@ -4,46 +4,39 @@ Building Planner is a Fabric add-on for Minecraft 26.3. With it, the group plans
 plans that everyone on the server sees and edits live, then builds them by hand. It hooks into unchanged copies of
 Effortless Building, Litematica and Syncmatica. Geo's decisions behind it are in [plan.md](plan.md) ("Decisions").
 
-Choices marked **Open** are player-experience decisions that wait on Geo in inbox request 420, by its question
-numbers. Each names the option the agent recommends;
-the build keeps each one behind a single function or setting until Geo answers.
-
 ## What players get
 
 - **Plans.** A plan is a named box of ghost blocks in the world, shared with everyone on the server. Each player can
   show or hide any plan, and anyone can move or turn it as a whole. Litematica lists each plan's materials.
-- **Starting a plan.** **Open (Q1)**: the player marks an area with Litematica's area tool, then a Building Planner key
-  asks for a name and creates the empty plan, shared to everyone in one step (recommended); or the player uses
-  Litematica's own steps (save the area as an empty schematic, place it, share it with Syncmatica's Share button); or
-  a chat command does the key's job.
-- **Seeing plans.** **Open (Q2)**: every plan appears for everyone in its place as soon as it's shared, and each player
-  can hide it (recommended); or each player loads the plans they want from Syncmatica's list, as Syncmatica works today.
+- **Starting a plan.** The player marks an area with Litematica's area tool, presses a Building Planner key and types a
+  name. The empty plan is created and shared to everyone in one step.
+- **Seeing plans.** Every plan appears for everyone in its place as soon as it's shared, and each player can hide it.
 - **Drawing shapes.** With an Effortless Building mode chosen (line, wall, floor, cube, slope, circle, cylinder,
   sphere and the rest), a player's clicks draw the shape into a plan as ghost blocks, with Effortless Building's
   mirror, radial mirror and array (repeat). A shape drawn with the break (left) click erases those ghost blocks from
   the plan. Effortless Building never places or breaks real blocks.
-  - Which plan a shape goes into: **Open (Q3)**: the plan the shape starts in, or the player's selected Litematica plan
-    when it starts outside every plan (recommended); or always the selected plan; or only the plan the shape starts in,
-    with shapes that start outside every plan doing nothing.
-  - Where a shape can start: **Open (Q4)**: on a plan's ghost blocks as well as on real blocks (recommended); or on
-    real blocks only, as Effortless Building aims today.
+  - A shape goes into the plan it starts in, or into the player's selected Litematica plan when it starts outside every
+    plan.
+  - A shape can start on a plan's ghost blocks as well as on real blocks.
 - **Growing.** A shape that crosses a plan's edge grows the plan to fit it. Everyone sees the bigger plan without
   reloading it.
 - **Fine edits.** Litematica's ten Edit Schematic actions (place, break, replace and fill ghost blocks, singly, in a
   direction or across the plan) change the shared plan live, as shapes do. They only change blocks inside a plan's box;
   they never grow it.
-- **Block mixes.** **Open (Q5)**: a key opens a picker that lists every block, with search. The player picks up to
-  nine blocks, each with a share (say 80 cobblestone to 20 mossy cobblestone); while the mix is on, shapes and
-  Litematica's place, fill and replace use it instead of the held block, and the same key turns it off. A mix of one
-  block lets a survival player plan with a block they don't have (recommended). The alternative picker lists only
-  blocks in the player's inventory.
-- **Undo.** Undo takes back only that player's own changes, newest first: a whole shape, or one Litematica action, at a
-  time, in whichever plan it was made. A block someone else has changed since stays as they left it.
-  **Open (Q6)**: Effortless Building's Ctrl+Z (and the undo button in its radial menu) undoes and its Ctrl+Y redoes
-  (recommended); or Ctrl+Z undoes and there is no redo; or Building Planner has its own keys in the Controls menu.
-- **Others' edits.** **Open (Q7)**: the ghost blocks simply change as others edit (recommended); or the changed blocks
-  also glow for a few seconds with the editor's name beside them.
-- **Deleting.** Anyone can change, move or turn a plan; only the player who shared it can delete it.
+- **Block mixes.** A key opens a picker that lists every block in the game, with search and a toggle that filters the
+  list to the blocks in the player's inventory. The player picks up to nine blocks, each with a share (say 80
+  cobblestone to 20 mossy cobblestone); while the mix is on, shapes and Litematica's place, fill and replace use it
+  instead of the held block, and the same key turns it off. A mix of one block lets a survival player plan with a block
+  they don't have.
+- **Undo and redo.** Undo takes back only that player's own changes, newest first: a whole shape, or one Litematica
+  action, at a time, in whichever plan it was made. A block someone else has changed since stays as they left it.
+  Effortless Building's Ctrl+Z (and the undo button in its radial menu) undoes, and its Ctrl+Y (and the redo button)
+  redoes the newest undone change, until the player's next new change.
+- **Others' edits.** When someone else changes a plan, the changed ghost blocks glow for a few seconds, with the
+  editor's name beside them.
+- **Deleting.** Anyone can change, move or turn a plan; only the player who shared it, or a server operator, can delete
+  it.
+- **Copy and paste.** After the first version works, a player can copy part of a plan and paste it elsewhere in a plan.
 - **Messages.** Every message players see goes to Geo for review once there's something built to show it in.
 
 ## Geo's goals, and what meets each
@@ -54,7 +47,7 @@ the build keeps each one behind a single function or setting until Geo answers.
 | Plan room sizes and shapes before committing | Effortless Building's shapes drawn into plans; Litematica area boxes; plans grow to fit. | None. |
 | See and judge a build (free or fixed camera) | Litematica draws plans as ghost blocks; Freecam moves the camera away from the player. | Effortless Building aims from the player's eyes, not the camera, so shapes can't be drawn from a Freecam view. Litematica's edits aim from the camera entity; whether Freecam's camera counts is unverified. |
 | Lay out walls, shapes and components quickly | Effortless Building's eleven build modes, captured into plans. | None. |
-| Copy and paste | Effortless Building's array repeats while drawing. Litematica can copy a real area into a new plan (its clone action saves real blocks) and load any saved schematic as a new plan. | No tool copies part of a plan and pastes it elsewhere in a plan. **Open (Q8)**: whether Building Planner adds one, after the first version (recommended) or in it. |
+| Copy and paste | Effortless Building's array repeats while drawing. Litematica can copy a real area into a new plan (its clone action saves real blocks) and load any saved schematic as a new plan. | No tool yet copies part of a plan and pastes it elsewhere in a plan; Building Planner adds one after the first version works. |
 | Symmetry | Effortless Building's mirror and radial mirror. | None. |
 | Randomized block mixes | Building Planner's block-mix picker (Effortless Building's Randomizer needs the server copy, which Geo kept off the server). | None. |
 | A plan everyone on the server sees, built for real by hand | Syncmatica shares plans; Building Planner keeps their blocks live for everyone; Litematica's material list and ghost blocks guide the build. | None. |
@@ -94,12 +87,12 @@ Effortless Building, under `common/src/main/java/nl/requios/effortlessbuilding/`
 | E1 | `buildpipeline/BuildPipelineClient.java`, `handleClick` | `@WrapWithCondition` on `PacketHandler.sendToServer(PlaceBuildModePacket)`, reading the local `BlockSet blocks` | Take the finished shape (every entry, after mode, modifiers, mix and constraints) into the plan; don't send the packet. `getFirstClickHit()` is still set here, so block states use the first click's face. |
 | E2 | same method | `@WrapWithCondition` on `PacketHandler.sendToServer(BreakBuildModePacket)` | Erase the shape's positions from the plan; don't send. |
 | E3 | same method | `@WrapWithCondition` on `PlacedBlockTracker.clientTrackAll` | Don't record ghost positions as real blocks the player placed. |
-| E4 | `network/PacketHandler.java`, `sendToServer(UndoPacket)` and `sendToServer(RedoPacket)` | `@Inject` at head, cancellable | Route undo (and redo, if Q6 keeps it) to the plan. Covers both the Ctrl+Z/Ctrl+Y keys (`fabric/.../EffortlessBuildingClient.java`, client tick) and the radial menu (`buildmode/ModeOptions.java`, `performAction`). |
+| E4 | `network/PacketHandler.java`, `sendToServer(UndoPacket)` and `sendToServer(RedoPacket)` | `@Inject` at head, cancellable | Route undo and redo to the plan. Covers both the Ctrl+Z/Ctrl+Y keys (`fabric/.../EffortlessBuildingClient.java`, client tick) and the radial menu (`buildmode/ModeOptions.java`, `performAction`). |
 | E5 | `buildpipeline/RandomizerSystem.java`, `processBlocks` | `@Inject` at head, cancellable | While a mix is on, give each entry its block from the mix (`entry.item`, `entry.blockState`), chosen by a fixed hash of the position so the preview and the result match. |
 | E6 | `buildpipeline/BuildPipeline.java` `isBuildTriggerItem`; `buildpipeline/BuildPipelineClient.java` `shouldInterceptPlacing`, `updateDisplayTrackers`; `render/BlockPreviewRenderer.java` `render` | `@ModifyExpressionValue` on `instanceof RandomizerToolItem` | While a mix is on, treat the held item as Effortless Building's Randomizer, so clicks start shapes and the preview draws each entry's own block. |
 | E7 | `buildpipeline/ConstraintSystem.java`, `processBlocks` | `@ModifyExpressionValue` on the `instabuild` read, and on `getProtectTileEntities()` | Skip the survival checks on real blocks (placed-by-player, hardness, tools) and the protected-block-entity check, which concern real blocks, not plans. World border, build height and the block cap still apply. |
 | E8 | `buildpipeline/BuildPipelineClient.java`, `updateDisplayTrackers` | `@WrapWithCondition` on `ItemUsageTracker.compute` | No red "missing items" tint: plans don't use up items. |
-| E9 | `buildpipeline/BuildPipelineClient.java`, `handleClick`, `getPreviewBlocks`, `resolveFirstClickPos` | `@WrapOperation` on `Level.clip` and on `Level.getBlockState` | Only if Q4 allows starting on ghost blocks: aim at the nearer of the real block and Litematica's ghost block (`RayTraceUtils.traceToSchematicWorld`), and read the ghost block's state when picking the start position. |
+| E9 | `buildpipeline/BuildPipelineClient.java`, `handleClick`, `getPreviewBlocks`, `resolveFirstClickPos` | `@WrapOperation` on `Level.clip` and on `Level.getBlockState` | Let shapes start on ghost blocks: aim at the nearer of the real block and Litematica's ghost block (`RayTraceUtils.traceToSchematicWorld`), and read the ghost block's state when picking the start position. |
 
 Effortless Building's limits come from its config on the player's computer (`config/ServerConfig.java`; survival
 defaults: reach 32, 2,000 blocks a shape, 64 a side). The server applies its own caps (below).
@@ -160,8 +153,7 @@ to the region holding the shape's first block, or the first region.
 Payloads (namespace `buildingplanner`):
 
 - Client to server: `subscribe(plan)`, `unsubscribe(plan)`, `edit(plan, clientSeq, kind, changes)` where `kind` is
-  shape, erase or Litematica and `changes` is a list of region, plan position and block state, and `undo` (and
-  `redo` if Q6 keeps it).
+  shape, erase or Litematica and `changes` is a list of region, plan position and block state, `undo` and `redo`.
 - Server to client: `hello(protocolVersion, limits)` at join; `snapshot(plan, rev, regions)` with each region's
   minimum corner, size, palette and packed blocks; `applied(plan, rev, author, clientSeq, growth, changes)`;
   `rejected(plan, clientSeq, reason)`; `notice(key, args)` for messages players see.
@@ -200,8 +192,7 @@ When a plan's Litematica placement appears on a player's screen (Syncmatica's re
 player's own share), the add-on sends `subscribe`. The server answers with a `snapshot` at the current revision, then
 every later `applied`, on the same connection, so nothing falls between them. The client grows the region in place if
 the plan has grown since its file was shared, fills the blocks from the snapshot, and redraws. The add-on unsubscribes
-when the placement is removed from that player's Litematica list. If Q2 makes plans appear for everyone, the client
-also starts Syncmatica's download for each new plan when the player is in its dimension (Syncmatica only draws a
+when the placement is removed from that player's Litematica list. The client also starts Syncmatica's download for each new plan when the player is in its dimension (Syncmatica only draws a
 plan in its own dimension).
 
 ### Growth
@@ -237,10 +228,8 @@ Syncmatica's delete reaches the server as `REMOVE_SYNCMATIC` with the plan's id.
 consuming it, looks up the placement, and compares its owner (the player who shared it, which Syncmatica records and
 saves in `placements.json`) with the sender (`getGameProfile(source)`). If they differ, the hook cancels the delete,
 so no one's copy is removed, and sends the sender a `notice`. Syncmatica's move and turn stay open to everyone.
-A placement saved without an owner (older Syncmatica versions) can't be deleted by anyone this way.
-**Open (Q9)**: whether server operators can also delete any plan (recommended), so a plan whose creator never
-returns can still be deleted in the game. The setting `OpenChoices.OPERATORS_DELETE_ANY_PLAN` (off) lets operators
-(`ops.json`) through.
+Server operators (`ops.json`) may delete any plan too, so a plan whose creator never returns can still be deleted in
+the game, including a placement saved without an owner (older Syncmatica versions), which no one else can delete.
 
 ### Undo
 
@@ -251,9 +240,8 @@ someone has changed since stay as they are, and a `notice` says how many. The un
 edit with no `clientSeq`; an undo that changes no block sends none, and with no steps left a `notice` says there's
 nothing to undo. Steps survive growth and moves (plan coordinates) and the player leaving, are dropped with their plan
 when it's deleted, keep the newest 50 per player (Effortless Building's own depth), and last until the server
-restarts. Redo waits on Q6 behind one setting (`OpenChoices.REDO`, off), which also registers the `redo` payload: with
-it on, the part of a step an undo changed goes onto a redo list, a redo applies it forward by the same rule, and the
-player's next new edit clears the list.
+restarts. The part of a step an undo changed goes onto the player's redo list; a redo applies it forward by the same
+rule, and the player's next new edit clears the list.
 
 ### The block-mix picker
 
@@ -262,8 +250,8 @@ each shape position its block, chosen by a fixed hash of the position over the w
 agree; hook E6 makes Effortless Building start shapes and draw the preview from those blocks; and hook L1 swaps each
 block Litematica's place, fill and replace actions write for the mix's block at that position. Block states come from
 each block's placement rules with the first click's face and the player's facing, then the shape's mirror and turn.
-Without a mix, shapes use the held block, as in Effortless Building. Which blocks the picker lists, its key and its
-screen wait on Q5.
+Without a mix, shapes use the held block, as in Effortless Building. The picker lists every block in the game, with
+search, and a toggle limits the list to the blocks in the player's inventory.
 
 ### When the server lacks the mod
 
@@ -276,13 +264,12 @@ Syncmatica alone they see each plan as it was first shared.
 
 ### The add-on's licence
 
-**Open (Q10).** Effortless Building and Litematica are LGPL-3.0 and Syncmatica is CC0. The add-on calls their code
-and copies none of it, so its own licence is free.
+MIT (`mod/LICENSE`). Effortless Building and Litematica are LGPL-3.0 and Syncmatica is CC0; the add-on calls their
+code and copies none of it, so it can take its own licence.
 
 ## Unverified
 
 - Growth in place redraws correctly and quickly (L3 and the reset), and Syncmatica's later moves keep working on a
   grown plan.
 - Whether Litematica's edits aim from Freecam's camera.
-- The operator side of the delete check (`OpenChoices.OPERATORS_DELETE_ANY_PLAN` on), which only a unit test of the
-  rule covers.
+- The operator side of the delete check, which only a unit test of the rule covers.

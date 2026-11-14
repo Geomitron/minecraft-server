@@ -34,11 +34,7 @@ final class SimulatedNetwork {
 	private final Map<UUID, Client> clients = new HashMap<>();
 
 	SimulatedNetwork(SyncLimits limits) {
-		this(limits, false);
-	}
-
-	SimulatedNetwork(SyncLimits limits, boolean redo) {
-		server = new PlanSync(limits, redo, this::deliver);
+		server = new PlanSync(limits, this::deliver);
 	}
 
 	Client client(String name) {
