@@ -1,17 +1,7 @@
 # Step 8's in-game checks: a client without the add-on on a server with it, clients with the add-on on the same
 # server with Building Planner left out (Syncmatica still in), and a hello with another protocol version. Sourced by
 # inside.sh, which provides drv, val, check, keys, click, use_click, attack_click, client_said, start_server, stop_server,
-# start_client, stop_client and $ADDON.
-
-# no_planner_message <client>: that client's chat has shown none of Building Planner's messages, the texts in its
-# language file other than its screens' and key bindings', each matched by its text up to its first %s (or, for one
-# that starts with %s, by its text from there to the next).
-no_planner_message() {
-	! grep -qFf <(tr -d '\r' < src/main/resources/assets/buildingplanner/lang/en_us.json | sed -n \
-		-e '/"buildingplanner\.ui\./d' \
-		-e 's/^\s*"buildingplanner\.[^"]*": "%s\([^"%]*\).*$/\1/p' \
-		-e 's/^\s*"buildingplanner\.[^"]*": "\([^"%]*\).*$/[CHAT] \1/p') "/out/client$1.log"
-}
+# start_client, stop_client, no_planner_message and $ADDON.
 
 # On a server with the add-on: sessions start. Planner1 starts the plan Hall (2 -60 2 to 8 -57 8),
 # which Syncmatica keeps for the server without the add-on below.

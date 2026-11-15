@@ -373,21 +373,24 @@ edit names no air, because a shape edit grows the plan for every block it names:
 plan's blocks as they are, and the plan grows only to fit the copy's blocks. The copy stays after a paste, for more
 pastes.
 
+Where the copy overlaps a plan, Litematica draws the copy on that player's screen: its blocks, and air in its empty
+space, hide the plan's blocks inside its box. A paste still leaves the plan's blocks under the copy's empty space.
+
 Clear removes the copy. Removing it in Litematica's placement list, or leaving the server, ends it too. Paste with no
 copy gives a message; Turn, Mirror and Clear with no copy do nothing.
 
 ### When the server lacks the mod
 
 On joining, the client checks with `ClientPlayNetworking.canSend` that the server takes all five of its payloads. When
-it doesn't, Building Planner stays off for that server, silently: the player sees no message, and N, B and the five copy and paste keys do nothing.
-While it's off, Litematica's edits stay on that player's screen, as plain Litematica does, and Effortless Building's
-shapes place nothing: its place and break packets (hooks E1 and E2) and its undo and redo packets (E4) aren't sent, so
-a server that runs Effortless Building without Building Planner never changes real blocks for them. The same holds from
-joining until the server's `hello` arrives. A `hello` with another protocol version leaves it off the same way. A
-singleplayer world, or a LAN host's own world, runs no server side, and Effortless Building works there as it does
-without Building Planner. The server sends nothing to a player who can't receive it
-(`ServerPlayNetworking.canSend`), so players without the add-on, or without any mods, join and play as before; with
-Syncmatica alone they see each plan as it was first shared.
+it doesn't, Building Planner stays off for that server, silently: the player sees no message, and N, B and the five
+copy and paste keys do nothing. While it's off, Litematica's edits stay on that player's screen, as plain Litematica
+does, and Effortless Building's shapes place nothing: its place and break packets (hooks E1 and E2) and its undo and
+redo packets (E4) aren't sent, so a server that runs Effortless Building without Building Planner never changes real
+blocks for them. The same holds from joining until the server's `hello` arrives. A `hello` with another protocol
+version leaves it off the same way. A singleplayer world, or a LAN host's own world, runs no server side, and
+Effortless Building works there as it does without Building Planner. The server sends nothing to a player who can't
+receive it (`ServerPlayNetworking.canSend`), so players without the add-on, or without any mods, join and play as
+before; with Syncmatica alone they see each plan as it was first shared.
 
 ### The add-on's licence
 
@@ -441,6 +444,26 @@ add-on's classes off the classpath) and checks:
 - A `hello` with another protocol version, which the driver hands to the client, starts no session and shows no
   message.
 
+`step9.sh` checks copy and paste with the real keys, and a real click of Litematica's tool:
+
+- J copies the marked area's plan blocks, with the message naming the Paste key; the copy sits on the block the
+  player aims at, selected, with Litematica's tool in "Schematic Placement" mode, shows the plan's blocks, places no
+  real block, and doesn't reach the other player.
+- A click with the tool item moves the copy; U turns it a quarter turn clockwise, and H, facing south, flips it east
+  to west, with its stairs turning with it.
+- K pastes it into the plan at its corner: the other player sees its blocks at once, turned and mirrored as the copy
+  showed them, glowing with the paster's name; the copy's empty space leaves the plan's blocks, and the copy stays.
+- One Ctrl+Z undoes the whole paste, and Ctrl+Y redoes it.
+- Two more pastes go into a second plan, the first growing it by a layer.
+- An area over two plans copies both; pasted outside every plan, the copy goes into the plan most of its blocks came
+  from, which grows to fit it.
+- J over no plan blocks, and over a single block, give their messages; Delete, and removing the placement in
+  Litematica, clear the copy; K with no copy, and K with the copy outside every plan and its source plan unloaded,
+  give their messages.
+- J over 51,200 plan blocks gives the message with the server's limit, and keeps the earlier copy.
+- On the same server with Building Planner left out, J, K, U, H and Delete make no copy, open nothing and show no
+  message.
+
 `remove-loaded.sh` checks hook S3: Planner1 shares 30 plans, ten at a time, which Planner2 loads, and removes each
 with Syncmatica's Remove button while Planner2's game draws their boxes; Planner2's game keeps running, logs no
 `ConcurrentModificationException`, unloads every plan, and logs nothing from Syncmatica or Litematica on its network
@@ -461,3 +484,6 @@ The results, the game logs and the screenshots go to a folder outside the reposi
 - A client without any mods joining a server with the add-on; the checks use a Fabric client without the add-on.
 - A real server running another protocol version; the check hands the client a made-up `hello`.
 - That Effortless Building places real blocks as usual in singleplayer and in a LAN host's own world.
+- Litematica's nudge keys, placement settings, and its own rotate and mirror actions on the copy.
+- Copying plans hidden with Litematica's rendering switch or in chunks that aren't loaded.
+- Mirror in the game for a player facing east or west; the unit tests cover it.

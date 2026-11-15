@@ -137,7 +137,8 @@ Building Planner as built, from inbox requests 469, 473, 477, 482, 483, 485, 570
   server and two clients; (2) the plan model and `.litematic` storage; (3) the live-sync core on the server; (4) server
   undo; (5) Syncmatica on the server (plans from shared files, the delete check, archiving deleted plans); (6) the
   Litematica bridge on the client; (7) Effortless Building capture; (8) joining a server without the add-on; then
-  (9) copy and paste of part of a plan (420, Q8 A). Steps 1 to 8 are built; step 9 is next.
+  (9) copy and paste of part of a plan (420, Q8 A). All nine steps are built. Step 9's
+  player texts wait on Geo's review, and copy and paste reaches players only in a new release, which goes to Geo first.
 
 ## Design work: Building Planner
 

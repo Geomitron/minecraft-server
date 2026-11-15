@@ -178,6 +178,16 @@ client_said() {
 	wait_for "/out/client$1.log" "[CHAT] $2" 60
 }
 
+# no_planner_message <client>: that client's chat has shown none of Building Planner's messages, the texts in its
+# language file other than its screens' and key bindings', each matched by its text up to its first %s (or, for one
+# that starts with %s, by its text from there to the next).
+no_planner_message() {
+	! grep -qFf <(tr -d '\r' < src/main/resources/assets/buildingplanner/lang/en_us.json | sed -n \
+		-e '/"buildingplanner\.ui\./d' \
+		-e 's/^\s*"buildingplanner\.[^"]*": "%s\([^"%]*\).*$/\1/p' \
+		-e 's/^\s*"buildingplanner\.[^"]*": "\([^"%]*\).*$/[CHAT] \1/p') "/out/client$1.log"
+}
+
 finish() {
 	for f in run/client*/screenshots/*.png; do
 		[[ -e $f ]] && cp "$f" "/out/$(basename "$(dirname "$(dirname "$f")")")-$(basename "$f")"

@@ -169,6 +169,32 @@ public final class Driver implements ClientModInitializer {
 			case "get" -> {
 				return blockId(pos(a, 1));
 			}
+			case "state" -> {
+				// state x y z: the full block state Litematica's schematic world shows there.
+				return SchematicWorldHandler.getSchematicWorld().getBlockState(pos(a, 1)).toString();
+			}
+			case "copy" -> {
+				return copy();
+			}
+			case "movecopy" -> {
+				// movecopy x y z: moves the selected placement's origin there, as a click with Litematica's tool does.
+				DataManager.getSchematicPlacementManager().setPositionOfCurrentSelectionTo(pos(a, 1), mc);
+				return "ok";
+			}
+			case "removecopy" -> {
+				// removecopy: removes the copy's placement, as the Remove button in Litematica's placement list does.
+				return String.valueOf(DataManager.getSchematicPlacementManager().removeSchematicPlacement(clipboard().placement()));
+			}
+			case "placements" -> {
+				List<String> names = new ArrayList<>();
+				for (SchematicPlacement p : DataManager.getSchematicPlacementManager().getAllSchematicsPlacements()) {
+					names.add(p.getName());
+				}
+				return String.join(",", names);
+			}
+			case "toolmode" -> {
+				return DataManager.getToolMode().name();
+			}
 			case "shape" -> {
 				// shape <plan> x y z block: one block in the plan's first region, in plan coordinates, as a SHAPE edit
 				// (the kind Effortless Building's capture sends), which can grow the plan.
@@ -306,6 +332,7 @@ public final class Driver implements ClientModInitializer {
 			case "real" -> realBlockId(pos(a, 1)).equals(a[4]);
 			case "area" -> area(a[1]).equals(a[2]);
 			case "glow" -> glows().contains(what.substring(5));
+			case "copy" -> copy().startsWith(what.substring(5));
 			case "noglow" -> glows().isEmpty();
 			default -> throw new IllegalArgumentException(what);
 		};
@@ -319,6 +346,7 @@ public final class Driver implements ClientModInitializer {
 				case "real" -> realBlockId(pos(a, 2));
 				case "area" -> area(a[2]);
 				case "glow" -> glows();
+				case "copy" -> copy();
 				case "shared", "notshared" -> sharedNames().toString();
 				case "screen", "noscreen" -> String.valueOf(Minecraft.getInstance().gui.screen());
 				default -> "";
@@ -432,6 +460,30 @@ public final class Driver implements ClientModInitializer {
 		Field f = BuildingPlannerClient.class.getDeclaredField("session");
 		f.setAccessible(true);
 		return (ClientSession) f.get(null);
+	}
+
+	private static Clipboard clipboard() throws Exception {
+		Field f = ClientSession.class.getDeclaredField("clipboard");
+		f.setAccessible(true);
+		return (Clipboard) f.get(session());
+	}
+
+	/**
+	 * The player's copy: {@code none}, or its origin, mirror, rotation, whether it's the selected placement, and its
+	 * placement's name; {@code nosession} while Building Planner is off.
+	 */
+	private static String copy() throws Exception {
+		if (session() == null) {
+			return "nosession";
+		}
+		Clipboard clipboard = clipboard();
+		if (!clipboard.exists()) {
+			return "none";
+		}
+		SchematicPlacement p = clipboard.placement();
+		boolean selected = DataManager.getSchematicPlacementManager().getSelectedSchematicPlacement() == p;
+		return "origin " + p.getOrigin().toShortString().replace(" ", "") + " " + p.getMirror() + " " + p.getRotation()
+			+ (selected ? " selected " : " unselected ") + p.getName();
 	}
 
 	private static PlanReplicas replicas() throws Exception {
