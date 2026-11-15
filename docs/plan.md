@@ -120,6 +120,8 @@ Building Planner as built, from inbox requests 469, 473, 477, 482, 483, 485, 570
 - When Building Planner is released to players, the player guide's list of mods gains Building Planner ("lets
   everyone edit the same plan at once, and shows each change to everyone as it's made") and Effortless Building
   ("draws lines, walls, floors, and other shapes into a plan"), as Geo approved them (inbox request 570).
+- Building Planner is released to players: on the server, and with Effortless Building in the player pack (570 Q1 A).
+  The player guide gains a section on planning builds with these mods, drafted for Geo's review (Q2 A).
 - On a server without Building Planner, or with another version of it, Building Planner turns off silently, with no
   message (Geo, inbox request 483: "none of these messages are necessary; just silently disable the mod in these
   cases").
