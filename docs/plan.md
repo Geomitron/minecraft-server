@@ -93,7 +93,7 @@ How players use Building Planner, from inbox request 420:
 - Agents push finished, tested Building Planner work and doc changes to this repository without asking each time;
   changes to the pack or the instance, and releases, go to Geo first (inbox request 429, Q1 A).
 
-Building Planner as built, from inbox requests 469 and 473:
+Building Planner as built, from inbox requests 469, 473, 477 and 482:
 
 - N is the "Start a plan" key until a player changes it in Controls (Q1 A).
 - Players hide a plan with Litematica's rendering switch or Syncmatica's Unload; Building Planner adds no switch of its
@@ -105,6 +105,14 @@ Building Planner as built, from inbox requests 469 and 473:
 - Geo kept Building Planner's other messages to players and its description as written, with a message of its own
   for one block left as it was after an undo or redo: "1 block someone else has changed since was left as it is."
   (inbox request 473).
+- B opens the block-mix picker (477 Q1 A). The picker keeps its layout: search and the inventory switch at the top,
+  the blocks, then the mix with a share box under each block, and the buttons (Q2 A).
+- A player's mix lasts until they close the game (Q3 A). While it's on, every right-click draws into a plan, even with
+  no Effortless Building mode chosen (Q4 A).
+- Geo kept step 7's texts as written, except two: the empty mix row reads "Click blocks above to add them. (up to
+  nine)", and each share box's tooltip reads "Percentage of the mix" (477).
+- Building Planner works around Syncmatica's crash when a plan another player has loaded is removed, and the agent
+  drafts an issue for Geo to post to Syncmatica (482 Q1 A).
 
 ## Agent-ready work
 
