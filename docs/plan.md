@@ -93,7 +93,7 @@ How players use Building Planner, from inbox request 420:
 - Agents push finished, tested Building Planner work and doc changes to this repository without asking each time;
   changes to the pack or the instance, and releases, go to Geo first (inbox request 429, Q1 A).
 
-Building Planner as built, from inbox requests 469, 473, 477, 482 and 483:
+Building Planner as built, from inbox requests 469, 473, 477, 482, 483 and 485:
 
 - N is the "Start a plan" key until a player changes it in Controls (Q1 A).
 - Players hide a plan with Litematica's rendering switch or Syncmatica's Unload; Building Planner adds no switch of its
@@ -116,6 +116,10 @@ Building Planner as built, from inbox requests 469, 473, 477, 482 and 483:
 - On a server without Building Planner, or with another version of it, Building Planner turns off silently, with no
   message (Geo, inbox request 483: "none of these messages are necessary; just silently disable the mod in these
   cases").
+- Copy and paste (485): a Copy key makes a movable copy of the plans' blocks in the marked area, and a Paste key
+  writes it into a plan as one edit (Q1 A). A paste writes only the copy's blocks, so the empty space in it leaves
+  the plan's blocks as they are (Q2 A). A paste goes into the plan where the copy's corner sits, or else the plan it
+  was copied from (Q3 A). The spec's section on copy and paste has the design.
 
 ## Agent-ready work
 
