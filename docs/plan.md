@@ -2,14 +2,17 @@
 
 ## Current setup
 
-**Server.** Minecraft 26.3 on Fabric (loader 0.20.1, server launcher 1.1.2) with Fabric API 0.166.2+26.3 and
-Syncmatica 0.3.20 (`/home/minecraft/mods/`), on Geo's VPS. The systemd unit
-`minecraft.service` runs it as root from `/home/minecraft`:
+**Server.** Minecraft 26.3 on Fabric (loader 0.20.1, server launcher 1.1.2) with Fabric API 0.166.2+26.3,
+Syncmatica 0.3.20, and Building Planner 0.1.0 from the release `building-planner-0.1.0` (`/home/minecraft/mods/`), on
+Geo's VPS. The systemd unit `minecraft.service` runs it as root from `/home/minecraft`:
 `/usr/lib/jvm/java-25-openjdk-amd64/bin/java -Xmx6G -Xms1G -jar fabric-server-mc.26.3-loader.0.20.1-launcher.1.1.2.jar nogui`,
-port 25565. Survival, hard, whitelist enforced (11 players), online mode. Neither mod adds blocks or items, so players without
-mods can join: an unmodded 26.3 client joined a dev server with the same mods plus Building Planner (`def7603`). The world (`world/`) is 1.9 GB.
-Archives sit beside it: `minecraft-backup-2026-11-14-pre-fabric.tar.gz` (the world just before the switch to Fabric,
+port 25565. Survival, hard, whitelist enforced (11 players), online mode. None of the mods adds blocks or items, so players without
+mods can join: an unmodded 26.3 client joined a dev server with the same mods (`def7603`). The world (`world/`) is 1.9 GB.
+Archives sit beside it: `minecraft-backup-2026-11-15-pre-building-planner.tar.gz` (the world just before Building Planner
+was installed, 1.5 GB), `minecraft-backup-2026-11-14-pre-fabric.tar.gz` (the world just before the switch to Fabric,
 1.5 GB), `minecraft-archive-2026-10-29-1.21.11.tar.gz` and `minecraft-backup-2025-12-12.tar.gz`.
+To take Building Planner off the server, remove `mods/building-planner-0.1.0.jar` and run
+`systemctl restart minecraft.service`.
 The vanilla `server.jar` stays in place: to switch back, change the jar in `ExecStart` to `server.jar`, then run
 `systemctl daemon-reload` and `systemctl restart minecraft.service`. The VPS has 30 GB of RAM (about 16 GB available) and
 163 GB of free disk; it also hosts other services.
@@ -24,13 +27,14 @@ minutes. Its contact point **Minecraft Server error events** emails Geo and send
 an inbox notice, carrying only the error's id, kind and source.
 
 **Player pack.** This repository is public at https://github.com/Geomitron/minecraft-server. `pack/` is the packwiz
-pack "Server Pack": Minecraft 26.3 and Fabric loader 0.20.1 with Litematica, MaLiLib, Syncmatica 0.3.20, Freecam and
-Fabric API, served from `main` at https://raw.githubusercontent.com/Geomitron/minecraft-server/main/pack/pack.toml, so
+pack "Server Pack": Minecraft 26.3 and Fabric loader 0.20.1 with Litematica, MaLiLib, Syncmatica 0.3.20, Freecam,
+Fabric API, Building Planner 0.1.0 (downloaded from its release), and Effortless Building 4.3, served from `main` at
+https://raw.githubusercontent.com/Geomitron/minecraft-server/main/pack/pack.toml, so
 a push to `main` changes what players get at their next launch. `instance/` is the Prism Launcher instance "Server
 Pack", which runs `packwiz-installer-bootstrap.jar` against that URL before each launch. Players import it from
 https://github.com/Geomitron/minecraft-server/releases/latest/download/prism-instance.zip, a zip of `instance/` in the
 release `v1.0.0`; the instance needs a new release only when `instance/` changes. The guide sent to players is
-[players.md](players.md). Building Planner and Effortless Building join the pack once Building Planner has a first build.
+[players.md](players.md).
 
 **Players.** Unmodded until they install the pack. Geo prefers Prism Launcher (Geo, inbox request 402). Geo is new to how Minecraft mods
 work (Geo, inbox request 408), so explanations start from what a mod, Fabric and an instance are.
