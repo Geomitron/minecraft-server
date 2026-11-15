@@ -4,6 +4,8 @@ The server uses these mods for planning builds together:
 
 - Litematica shows a build plan as see-through "ghost" blocks.
 - Syncmatica shares those plans with everyone on the server.
+- Building Planner lets everyone edit the same plan at once, and shows each change to everyone as it's made.
+- Effortless Building draws lines, walls, floors, and other shapes into a plan.
 - Freecam lets you fly the camera around a build without moving your character.
 
 You need a Minecraft: Java Edition account. The steps below install the right version of Minecraft and the mods for you.

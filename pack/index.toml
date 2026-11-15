@@ -1,6 +1,16 @@
 hash-format = "sha256"
 
 [[files]]
+file = "mods/building-planner.pw.toml"
+hash = "f3f014df37b0e5e09ed95b2696aafea9b838ce23c1ffe309c5ffe352c568600e"
+metafile = true
+
+[[files]]
+file = "mods/effortless-building.pw.toml"
+hash = "bac61b82d1a46fcff1adf3684b17c242438c58359e2b58e44d4d73eeb5287790"
+metafile = true
+
+[[files]]
 file = "mods/fabric-api.pw.toml"
 hash = "fb72a70cb53c63f1da4520c25c8a7d806cc1c733e827016615623b65d751852d"
 metafile = true
