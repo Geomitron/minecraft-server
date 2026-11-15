@@ -133,6 +133,7 @@ Syncmatica, under `src/main/java/ch/endte/syncmatica/`:
 |---|---|---|---|
 | S1 | `communication/ServerCommunicationManager.java`, `handle(ExchangeTarget, PacketType, FriendlyByteBuf)` | `@Inject` at head, cancellable, when the type is `REMOVE_SYNCMATIC` | The delete check (below). |
 | S2 | `litematica/LitematicManager.java`, `renderSyncmatic(ServerPlacement)` | `@WrapOperation` on `SchematicHolder.getOrLoad(Path)` | Load each plan's file into its own schematic. Litematica caches schematics by path, and Syncmatica names files by content hash, so two plans from one file would otherwise share their blocks. When the cached schematic is in no placement, the plan takes it. |
+| S3 | `network/handler/ClientPlayHandler.java`, `decodeSyncData(SyncmaticaPacket, ClientPacketListener)` | `@Inject` at head, cancellable | Off the client's main thread, put the packet back into the game's packet queue (`Minecraft.packetProcessor().scheduleIfPossible`), which handles it on the main thread, and skip it here. See "Roles of Syncmatica and the add-on". |
 
 Public Syncmatica API the add-on calls: `Syncmatica.getContext(SERVER_CONTEXT)`;
 `SyncmaticManager.addServerPlacementConsumer`, `getPlacement`, `getAll`; `ServerPlacement.getId`, `getOwner` (its
@@ -153,6 +154,17 @@ Syncmatica carries each plan's existence, name, creator, dimension, position, ro
 turning, listing and deleting work as Syncmatica does them, for everyone. Its stored file is fixed by a content hash,
 so it can't carry changed blocks; the add-on carries a plan's blocks and size, live, from the server to everyone who
 has the plan loaded. Every placement shared through Syncmatica on this server is a plan.
+
+Syncmatica's client catches its packets with a mixin at the head of `ClientCommonPacketListenerImpl.handleCustomPayload`,
+on the network thread, unless Fabric API's receiver, which Syncmatica registers after its handshake, catches them
+first and hands them to the main thread. Which one comes first varies from connection to connection, and the
+handshake is always on the network thread. Handled on the network thread, a plan's load, move or removal changes
+Litematica's placements while the render thread draws their boxes (`OverlayRenderer.renderBoxes`), and the game can
+crash with a `ConcurrentModificationException`; a player sees it when someone removes a plan they have loaded. Hook
+S3 makes Syncmatica's client handle every packet on the main thread: a packet caught on the network thread goes back
+into the game's packet queue, where Fabric API's receiver handles its packets too, so all of them, the add-on's
+included, are handled in the order they arrived. Each packet carries its own copy of its bytes, so it can wait.
+Building Planner does this on any server, with or without its server side.
 
 ### Plan coordinates
 
@@ -377,6 +389,13 @@ add-on's classes off the classpath) and checks:
   or redo packet of Effortless Building is sent after a shape, Ctrl+Z, Ctrl+Y and the break click.
 - A `hello` with another protocol version, which the driver hands to the client, starts no session and shows no
   message.
+
+`remove-loaded.sh` checks hook S3: Planner1 shares 30 plans, ten at a time, which Planner2 loads, and removes each
+with Syncmatica's Remove button while Planner2's game draws their boxes; Planner2's game keeps running, logs no
+`ConcurrentModificationException`, unloads every plan, and logs nothing from Syncmatica or Litematica on its network
+thread. Run on a copy of `mod/` without hook S3, the last check always fails, since Syncmatica's handshake runs on
+the network thread, and on a connection where Syncmatica's own mixin catches the later packets too, Planner2's game
+can crash.
 
 The results, the game logs and the screenshots go to a folder outside the repository.
 

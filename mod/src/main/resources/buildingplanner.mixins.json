@@ -17,6 +17,7 @@
 		"litematica.LitematicaSchematicAccessor",
 		"litematica.SchematicUtilsInvoker",
 		"litematica.SchematicUtilsMixin",
+		"syncmatica.ClientPlayHandlerMixin",
 		"syncmatica.LitematicManagerMixin"
 	],
 	"injectors": {
