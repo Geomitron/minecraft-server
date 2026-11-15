@@ -66,7 +66,7 @@ for cell in 0 1; do
 	click 1 "$x" "$y"
 done
 for share in 0:80 1:20; do
-	read -r x y < <(val 1 "widget ${share%%:*} Share")
+	read -r x y < <(val 1 "widget ${share%%:*} Percentage of the mix")
 	click 1 "$x" "$y"
 	keys 1 key ctrl+a type "${share##*:}"
 done
