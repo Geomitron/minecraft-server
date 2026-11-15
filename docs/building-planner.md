@@ -39,7 +39,11 @@ Effortless Building, Litematica and Syncmatica. Geo's decisions behind it are in
   editor's name beside them.
 - **Deleting.** Anyone can change, move or turn a plan; only the player who shared it, or a server operator, can delete
   it.
-- **Copy and paste.** After the first version works, a player can copy part of a plan and paste it elsewhere in a plan.
+- **Copy and paste.** The player marks an area with Litematica's area tool and presses Building Planner's "Copy" key:
+  the ghost blocks of the plans in that area become a copy, a ghost placement only that player sees, placed where they
+  aim. They move it with Litematica's own controls, turn and mirror it with Building Planner's keys, and press "Paste"
+  to write it into a plan as one change, which one undo takes back. The empty space in the copy leaves the plan's
+  blocks as they are. The copy stays for more pastes until the player clears it.
 - **Messages.** Every message players see goes to Geo for review once there's something built to show it in.
 
 ## Geo's goals, and what meets each
@@ -50,7 +54,7 @@ Effortless Building, Litematica and Syncmatica. Geo's decisions behind it are in
 | Plan room sizes and shapes before committing | Effortless Building's shapes drawn into plans; Litematica area boxes; plans grow to fit. | None. |
 | See and judge a build (free or fixed camera) | Litematica draws plans as ghost blocks; Freecam moves the camera away from the player. | Effortless Building aims from the player's eyes, not the camera, so shapes can't be drawn from a Freecam view. Litematica's edits aim from the camera entity; whether Freecam's camera counts is unverified. |
 | Lay out walls, shapes and components quickly | Effortless Building's eleven build modes, captured into plans. | None. |
-| Copy and paste | Effortless Building's array repeats while drawing. Litematica can copy a real area into a new plan (its clone action saves real blocks) and load any saved schematic as a new plan. | No tool yet copies part of a plan and pastes it elsewhere in a plan; Building Planner adds one after the first version works. |
+| Copy and paste | Building Planner's copy and paste keys copy the plans' blocks in a marked area and paste them into a plan. Effortless Building's array repeats while drawing. Litematica can copy a real area into a new plan (its clone action saves real blocks) and load any saved schematic as a new plan. | None. |
 | Symmetry | Effortless Building's mirror and radial mirror. | None. |
 | Randomized block mixes | Building Planner's block-mix picker (Effortless Building's Randomizer needs the server copy, which Geo kept off the server). | None. |
 | A plan everyone on the server sees, built for real by hand | Syncmatica shares plans; Building Planner keeps their blocks live for everyone; Litematica's material list and ghost blocks guide the build. | None. |
@@ -67,13 +71,13 @@ menus, so it adds nothing to the registries Fabric API syncs at login, and playe
   They run only on a dedicated server, which is how the group plays; in a singleplayer or LAN world Syncmatica works
   as it does without the add-on.
 - **Client:** the Litematica bridge (attach plans to placements, apply edits, capture Edit Schematic writes, grow in
-  place), starting a plan, the edit glow, the Effortless Building capture, the block-mix picker, and the check for a
-  server without the add-on.
+  place), starting a plan, the edit glow, the Effortless Building capture, the block-mix picker, copy and paste, and
+  the check for a server without the add-on.
 
 They're built in the steps [plan.md](plan.md) lists. Step 6 built the client's Litematica bridge (hooks L1, L3, S2 and
 E4), starting a plan and the edit glow. Step 7 built the Effortless Building capture (E1 to E3 and E5 to E9), the
 block-mix picker with its inventory toggle, the mix's part of L1, and L2. Step 8 built the client's check for a
-server without the add-on, with its messages. The dev clients run Effortless Building 4.3 for Fabric 26.3 (Modrinth version `R8eAP63A`, set
+server without the add-on. Step 9 built copy and paste, which needs no new hook. The dev clients run Effortless Building 4.3 for Fabric 26.3 (Modrinth version `R8eAP63A`, set
 in `mod/gradle.properties`), the release built from the source the hooks were checked in; the dev server doesn't run
 it.
 
@@ -121,9 +125,12 @@ Public Litematica API the add-on calls: `SchematicUtils.getUntransformedBlockSta
 `getBlockEntityMapForRegion`, `getEntityListForRegion`; `LitematicaBlockStateContainer`'s constructor, `get` and `set`;
 `SchematicMetadata` setters for name, volume and enclosing size; `SchematicHolder.getOrLoad`, `addSchematic`;
 `SchematicPlacement.createFor`, `toggleLocked`, `resetAllSubRegionsToSchematicValues`,
-`getRelativeSubRegionPlacement`; `SchematicPlacementManager.getAllSchematicsPlacements`, `addSchematicPlacement`,
-`markAllPlacementsOfSchematicForRebuild`, `markChunkForRebuild`; `PositionUtils.getValidBoxes`,
-`getTransformedPlacementPosition`, `getTransformedBlockPos`; `DataManager.getSelectionManager().getCurrentSelection()`,
+`getRelativeSubRegionPlacement`, `getOrigin`, `getRotation`, `setRotation`, `getMirror`, `setMirror`;
+`SchematicPlacementManager.getAllSchematicsPlacements`, `addSchematicPlacement`, `removeSchematicPlacement`,
+`getSelectedSchematicPlacement`, `setSelectedSchematicPlacement`, `markAllPlacementsOfSchematicForRebuild`,
+`markChunkForRebuild`; `AreaSelection`'s constructor and `addSubRegionBox`; `Box`'s constructor;
+`PositionUtils.getValidBoxes`, `getTransformedPlacementPosition`, `getTransformedBlockPos`;
+`RayTraceUtils.getRayTraceFromEntity`; `DataManager.getSelectionManager().getCurrentSelection()`, `setToolMode`,
 `getSchematicsBaseDirectory`. From MaLiLib: `RenderEventHandler.registerWorldLastRenderer` and `RenderUtils`' batched
 box and text-plate drawing.
 
@@ -325,10 +332,54 @@ player's inventory. Clicking a block adds it to the mix with a share of 1; under
 which the player types, and its percentage; clicking a block in the mix takes it out. "Use mix" turns the mix on, with
 a message naming the key; "Clear" empties the list; "Cancel" and Escape leave the mix as it was.
 
+### Copy and paste
+
+The copy is a Litematica placement of a schematic kept in memory on the player's computer, named "Building Planner
+copy" in Litematica's placement list. Only that player sees it: Syncmatica doesn't share it, and Litematica doesn't
+save it, since it has no file. Five keys work it, each changeable in Controls under Building Planner: Copy (J), Paste
+(K), Turn (U), Mirror (H) and Clear (Delete). None of them is a default key, or part of a default key combination, of
+Minecraft 26.3, Litematica, MaLiLib, Effortless Building 4.3 or Freecam 1.5.1.
+
+Copy takes the marked area as "Start a plan" does, with the same message when no area is marked. It reads each plan's
+own region containers inside the area's boxes, not Litematica's schematic world, so it copies the plans the player has
+hidden with Litematica's rendering switch and blocks in chunks that aren't loaded, and never other placements or real
+blocks. An area over two plans copies both. Each block goes into the copy as the world shows it: the plan's block
+state mirrored, then turned, by the plan's placement, as Litematica places it. Air isn't copied, and the copy's box is
+the smallest box around the copied blocks. When the area has no plan blocks, the player gets a message and nothing
+changes. A copy of more blocks than the server's block cap for an edit (`max-edit-blocks`, from `hello`) is refused
+with a message, since its paste would be. Otherwise the new copy replaces any earlier one. Its origin, its corner
+with the lowest coordinates, goes on the block beside the face the player aims at, within 64 blocks, or over the
+copied area when they aim at nothing. The copy is selected in Litematica's placement list, Litematica's tool switches
+to its "Schematic Placement" mode, and the player gets a message naming the Paste key. The copy remembers its source
+plan, the plan most of its blocks came from.
+
+The player moves the copy with Litematica's controls for the selected placement: a click with the tool item moves its
+origin to the aimed block, and Litematica's nudge and placement settings work as for any placement. Building Planner
+never switches Litematica to its Paste tool, which places real blocks in creative mode. Litematica's Edit Schematic
+actions change the copy on the player's screen only, since hook L1 records writes to plans alone.
+
+Turn gives the copy a quarter turn clockwise, seen from above, around its origin. Mirror flips it left to right as the
+player faces it, around its origin: across the east-west line when they face north or south, and across the
+north-south line when they face east or west. Both set the placement's rotation and mirror, which Litematica applies
+mirror first, then rotation; Mirror combines its flip with the turn already set. Litematica's own rotate and mirror
+actions work on the copy too.
+
+Paste sends the copy as one shape edit, through the same capture as a finished Effortless Building shape, so growth,
+the server's order, the glow for other players, undo, redo and the block cap work as they do for shapes. The edit goes
+into the plan whose box holds the copy's origin, or else into the source plan; when the player has neither loaded, they
+get a message and nothing is sent. Each block of the copy that isn't air goes to the world position where Litematica
+draws it, with its state mirrored and turned as the copy is, then into plan coordinates as a shape's blocks do. The
+edit names no air, because a shape edit grows the plan for every block it names: the copy's empty space leaves the
+plan's blocks as they are, and the plan grows only to fit the copy's blocks. The copy stays after a paste, for more
+pastes.
+
+Clear removes the copy. Removing it in Litematica's placement list, or leaving the server, ends it too. Paste with no
+copy gives a message; Turn, Mirror and Clear with no copy do nothing.
+
 ### When the server lacks the mod
 
 On joining, the client checks with `ClientPlayNetworking.canSend` that the server takes all five of its payloads. When
-it doesn't, Building Planner stays off for that server, silently: the player sees no message, and N and B do nothing.
+it doesn't, Building Planner stays off for that server, silently: the player sees no message, and N, B and the five copy and paste keys do nothing.
 While it's off, Litematica's edits stay on that player's screen, as plain Litematica does, and Effortless Building's
 shapes place nothing: its place and break packets (hooks E1 and E2) and its undo and redo packets (E4) aren't sent, so
 a server that runs Effortless Building without Building Planner never changes real blocks for them. The same holds from
