@@ -33,6 +33,14 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		new KeyMapping("key.buildingplanner.start_plan", InputConstants.KEY_N, CATEGORY);
 	private static final KeyMapping BLOCK_MIX =
 		new KeyMapping("key.buildingplanner.block_mix", InputConstants.KEY_B, CATEGORY);
+	// Copy and paste. None of these keys is a default key, or in a default key combination, of Minecraft, Litematica,
+	// MaLiLib, Effortless Building or Freecam.
+	private static final KeyMapping COPY = new KeyMapping("key.buildingplanner.copy", InputConstants.KEY_J, CATEGORY);
+	private static final KeyMapping PASTE = new KeyMapping("key.buildingplanner.paste", InputConstants.KEY_K, CATEGORY);
+	private static final KeyMapping TURN = new KeyMapping("key.buildingplanner.turn", InputConstants.KEY_U, CATEGORY);
+	private static final KeyMapping MIRROR = new KeyMapping("key.buildingplanner.mirror", InputConstants.KEY_H, CATEGORY);
+	private static final KeyMapping CLEAR =
+		new KeyMapping("key.buildingplanner.clear", InputConstants.KEY_DELETE, CATEGORY);
 	private static final EditGlow GLOW = new EditGlow();
 	/** The player's block mix, kept while the game runs, across servers. */
 	private static final BlockMix MIX = new BlockMix();
@@ -51,6 +59,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	public void onInitializeClient() {
 		KeyMappingHelper.registerKeyMapping(START_PLAN);
 		KeyMappingHelper.registerKeyMapping(BLOCK_MIX);
+		List.of(COPY, PASTE, TURN, MIRROR, CLEAR).forEach(KeyMappingHelper::registerKeyMapping);
 		RenderEventHandler.getInstance().registerWorldLastRenderer(GLOW);
 		ClientPlayNetworking.registerGlobalReceiver(Payloads.Hello.TYPE, (hello, context) -> hello(hello));
 		// A singleplayer or LAN host's own world runs no server side.
@@ -78,6 +87,31 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 			while (BLOCK_MIX.consumeClick()) {
 				if (session != null) {
 					toggleMix();
+				}
+			}
+			while (COPY.consumeClick()) {
+				if (session != null) {
+					session.copy(PASTE.getTranslatedKeyMessage().getString());
+				}
+			}
+			while (PASTE.consumeClick()) {
+				if (session != null) {
+					session.paste(COPY.getTranslatedKeyMessage().getString());
+				}
+			}
+			while (TURN.consumeClick()) {
+				if (session != null) {
+					session.turnCopy();
+				}
+			}
+			while (MIRROR.consumeClick()) {
+				if (session != null && client.player != null) {
+					session.mirrorCopy(client.player.getDirection());
+				}
+			}
+			while (CLEAR.consumeClick()) {
+				if (session != null) {
+					session.clearCopy();
 				}
 			}
 			if (session != null) {

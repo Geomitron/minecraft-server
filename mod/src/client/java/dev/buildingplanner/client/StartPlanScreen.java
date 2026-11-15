@@ -40,15 +40,24 @@ final class StartPlanScreen extends Screen {
 
 	/** Opens the screen, or tells the player to mark an area first. */
 	static void open() {
+		AreaSelection area = markedArea();
+		if (area == null) {
+			LitematicaPlans.showMessage(PlayerMessage.noAreaMarked());
+			return;
+		}
+		Minecraft.getInstance().setScreenAndShow(new StartPlanScreen(area));
+	}
+
+	/** The area the player marked with Litematica's area tool, or null when they haven't marked one. */
+	static AreaSelection markedArea() {
 		AreaSelection area = DataManager.getSelectionManager().getCurrentSelection();
 		// Litematica's Simple mode keeps one box with both corners at 0,0,0 until the player marks an area
 		// (AreaSelectionSimple.createDefaultBoxIfNeeded), so a box like that is no area.
 		if (area == null || PositionUtils.getValidBoxes(area).stream()
 			.allMatch(box -> BlockPos.ZERO.equals(box.getPos1()) && BlockPos.ZERO.equals(box.getPos2()))) {
-			LitematicaPlans.showMessage(PlayerMessage.noAreaMarked());
-			return;
+			return null;
 		}
-		Minecraft.getInstance().setScreenAndShow(new StartPlanScreen(area));
+		return area;
 	}
 
 	@Override

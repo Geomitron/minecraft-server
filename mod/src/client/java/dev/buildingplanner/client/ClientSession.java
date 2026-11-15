@@ -9,6 +9,7 @@ import ch.endte.syncmatica.data.ServerPlacement;
 import ch.endte.syncmatica.litematica.LitematicManager;
 import dev.buildingplanner.BuildingPlanner;
 import dev.buildingplanner.sync.BlockChange;
+import dev.buildingplanner.sync.CopyRules;
 import dev.buildingplanner.sync.EditKind;
 import dev.buildingplanner.sync.PlanReplicas;
 import dev.buildingplanner.sync.PlayerMessage;
@@ -16,15 +17,19 @@ import dev.buildingplanner.sync.SyncLimits;
 import fi.dy.masa.litematica.data.DataManager;
 import fi.dy.masa.litematica.schematic.container.LitematicaBlockStateContainer;
 import fi.dy.masa.litematica.schematic.placement.SchematicPlacement;
+import fi.dy.masa.litematica.selection.AreaSelection;
+import fi.dy.masa.litematica.util.PositionUtils;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -42,6 +47,7 @@ final class ClientSession {
 	private final Map<UUID, Map<BlockPos, BlockChange>> captured = new LinkedHashMap<>();
 	/** Plans this session has loaded for the player already; a plan the player unloads stays unloaded until they rejoin. */
 	private final Set<UUID> autoLoaded = new HashSet<>();
+	private final Clipboard clipboard = new Clipboard();
 
 	ClientSession(SyncLimits limits, EditGlow glow, BlockMix mix) {
 		this.limits = limits;
@@ -66,6 +72,7 @@ final class ClientSession {
 	}
 
 	void close() {
+		clipboard.clear();
 		plans.clear();
 		captured.clear();
 		glow.clear();
@@ -108,6 +115,81 @@ final class ClientSession {
 		if (planId == null || replicas.plan(planId).isEmpty()) {
 			LitematicaPlans.showMessage(PlayerMessage.noPlanForShape());
 			return;
+		}
+		sendShape(kind, blocks, start, planId);
+	}
+
+	/**
+	 * Copies the plans' blocks in the area marked with Litematica's area tool; {@code pasteKey} is the Paste key's
+	 * name, for the message.
+	 */
+	void copy(String pasteKey) {
+		AreaSelection area = StartPlanScreen.markedArea();
+		if (area == null) {
+			LitematicaPlans.showMessage(PlayerMessage.noAreaMarked());
+			return;
+		}
+		LitematicaPlans.Found found = plans.blocksIn(PositionUtils.getValidBoxes(area), limits.maxEditBlocks());
+		Optional<PlayerMessage> refusal = CopyRules.refusal(found.total(), limits.maxEditBlocks());
+		if (refusal.isPresent()) {
+			LitematicaPlans.showMessage(refusal.get());
+			return;
+		}
+		Map<UUID, Integer> counts = new LinkedHashMap<>();
+		Map<BlockPos, BlockState> blocks = new LinkedHashMap<>();
+		found.blocksByPlan().forEach((planId, planBlocks) -> {
+			counts.put(planId, planBlocks.size());
+			blocks.putAll(planBlocks);
+		});
+		clipboard.place(blocks, CopyRules.sourcePlan(counts));
+		if (clipboard.exists()) {
+			LitematicaPlans.showMessage(PlayerMessage.copied(blocks.size(), pasteKey));
+		}
+	}
+
+	/**
+	 * Pastes the copy as one shape edit: into the plan whose box holds its origin, or else the plan it came from. It
+	 * names only the copy's blocks, never air, so the copy's empty space leaves the plan's blocks as they are.
+	 */
+	void paste(String copyKey) {
+		if (!clipboard.exists()) {
+			LitematicaPlans.showMessage(PlayerMessage.nothingToPaste(copyKey));
+			return;
+		}
+		LitematicaPlans.Located at = plans.locate(clipboard.placement().getOrigin());
+		UUID source = clipboard.source();
+		Optional<UUID> target = CopyRules.pasteTarget(at == null ? null : at.plan(), source,
+			source != null && replicas.plan(source).isPresent());
+		if (target.isEmpty() || replicas.plan(target.get()).isEmpty()) {
+			LitematicaPlans.showMessage(PlayerMessage.noPlanForPaste());
+			return;
+		}
+		sendShape(EditKind.SHAPE, clipboard.worldBlocks(), at, target.get());
+	}
+
+	void turnCopy() {
+		if (clipboard.exists()) {
+			clipboard.turn();
+		}
+	}
+
+	void mirrorCopy(Direction facing) {
+		if (clipboard.exists()) {
+			clipboard.mirror(facing);
+		}
+	}
+
+	void clearCopy() {
+		clipboard.clear();
+	}
+
+	/**
+	 * Sends a shape as one edit into {@code planId}: each block into the plan region whose box holds it, or else the
+	 * region {@code start} is in (the plan's first region when it's null or in another plan).
+	 */
+	private void sendShape(EditKind kind, Map<BlockPos, BlockState> blocks, LitematicaPlans.Located start, UUID planId) {
+		if (start != null && !start.plan().equals(planId)) {
+			start = null;
 		}
 		String fallback = start != null ? start.region() : replicas.plan(planId).orElseThrow().firstRegion().name();
 		Map<BlockPos, BlockChange> changes = new LinkedHashMap<>();

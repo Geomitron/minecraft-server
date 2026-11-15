@@ -68,6 +68,32 @@ public record PlayerMessage(String key, List<String> args) {
 		return new PlayerMessage(PREFIX + "mix.off", List.of());
 	}
 
+	/** The marked area holds no plan blocks to copy. */
+	public static PlayerMessage nothingToCopy() {
+		return new PlayerMessage(PREFIX + "copy.nothing", List.of());
+	}
+
+	/** The marked area holds more plan blocks than a paste may carry. */
+	public static PlayerMessage copyTooLarge(int blocks, int max) {
+		return new PlayerMessage(PREFIX + "copy.too_many", List.of(Integer.toString(blocks), Integer.toString(max)));
+	}
+
+	/** The player copied {@code blocks} blocks; {@code pasteKey} is the Paste key's name. */
+	public static PlayerMessage copied(int blocks, String pasteKey) {
+		return blocks == 1 ? new PlayerMessage(PREFIX + "copy.done_one", List.of(pasteKey))
+			: new PlayerMessage(PREFIX + "copy.done", List.of(Integer.toString(blocks), pasteKey));
+	}
+
+	/** The player pressed Paste with no copy; {@code copyKey} is the Copy key's name. */
+	public static PlayerMessage nothingToPaste(String copyKey) {
+		return new PlayerMessage(PREFIX + "paste.nothing", List.of(copyKey));
+	}
+
+	/** The copy's origin is in no plan, and the player doesn't have the plan it came from loaded. */
+	public static PlayerMessage noPlanForPaste() {
+		return new PlayerMessage(PREFIX + "paste.no_plan", List.of());
+	}
+
 	/** The delete check stopped a player deleting a plan someone else shared. */
 	public static PlayerMessage notYourPlan(String owner) {
 		return new PlayerMessage(PREFIX + "delete.not_yours", List.of(owner));

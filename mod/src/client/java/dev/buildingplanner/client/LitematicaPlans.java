@@ -16,6 +16,7 @@ import fi.dy.masa.litematica.schematic.LitematicaSchematic.EntityInfo;
 import fi.dy.masa.litematica.schematic.container.LitematicaBlockStateContainer;
 import fi.dy.masa.litematica.schematic.placement.SchematicPlacement;
 import fi.dy.masa.litematica.schematic.placement.SubRegionPlacement;
+import fi.dy.masa.litematica.selection.Box;
 import fi.dy.masa.litematica.util.PositionUtils;
 import fi.dy.masa.litematica.util.SchematicUtils;
 import fi.dy.masa.malilib.util.data.tag.CompoundData;
@@ -23,6 +24,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -33,6 +35,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.block.Mirror;
+import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
@@ -161,6 +165,81 @@ final class LitematicaPlans implements PlanReplicas.View {
 	/** A block state as a plan stores it, before its placement's rotation and mirror. */
 	BlockState untransformed(UUID planId, String region, BlockState state) {
 		return SchematicUtils.getUntransformedBlockState(state, attached.get(planId).placement(), region);
+	}
+
+	/** The plans' blocks in some boxes, by plan, and how many there are, counted past the ones kept. */
+	record Found(Map<UUID, Map<BlockPos, BlockState>> blocksByPlan, int total) {
+	}
+
+	/**
+	 * The blocks other than air that the plans hold inside {@code boxes} (world positions, both corners inside), as the
+	 * world shows them: each plan's block state mirrored and turned by its placement. Read from the plans' containers,
+	 * so hidden plans and chunks that aren't loaded count too. Keeps the first {@code keep} blocks and counts the rest.
+	 */
+	Found blocksIn(List<Box> boxes, int keep) {
+		Map<UUID, Map<BlockPos, BlockState>> found = new LinkedHashMap<>();
+		int total = 0;
+		for (Map.Entry<LitematicaBlockStateContainer, Target> entry : containers.entrySet()) {
+			LitematicaBlockStateContainer container = entry.getKey();
+			Target target = entry.getValue();
+			SchematicPlacement placement = attached.get(target.plan()).placement();
+			Vec3i size = container.getSize();
+			BlockPos a = worldPosition(placement, target.region(), BlockPos.ZERO);
+			BlockPos b = worldPosition(placement, target.region(),
+				new BlockPos(size.getX() - 1, size.getY() - 1, size.getZ() - 1));
+			if (a == null || b == null) {
+				continue;
+			}
+			SubRegionPlacement sub = placement.getRelativeSubRegionPlacement(target.region());
+			for (Box box : boxes) {
+				if (box.getPos1() == null || box.getPos2() == null) {
+					continue;
+				}
+				BlockPos low = PositionUtils.getMaxCorner(PositionUtils.getMinCorner(a, b),
+					PositionUtils.getMinCorner(box.getPos1(), box.getPos2()));
+				BlockPos high = PositionUtils.getMinCorner(PositionUtils.getMaxCorner(a, b),
+					PositionUtils.getMaxCorner(box.getPos1(), box.getPos2()));
+				if (low.getX() > high.getX() || low.getY() > high.getY() || low.getZ() > high.getZ()) {
+					continue;
+				}
+				for (BlockPos world : BlockPos.betweenClosed(low, high)) {
+					BlockPos rel = SchematicUtilsInvoker.buildingplanner$toContainer(world, placement.getSchematic(),
+						target.region(), placement, sub);
+					if (rel == null || rel.getX() < 0 || rel.getY() < 0 || rel.getZ() < 0 || rel.getX() >= size.getX()
+						|| rel.getY() >= size.getY() || rel.getZ() >= size.getZ()) {
+						continue;
+					}
+					BlockState state = container.get(rel.getX(), rel.getY(), rel.getZ());
+					if (state.isAir()) {
+						continue;
+					}
+					Map<BlockPos, BlockState> blocks = found.computeIfAbsent(target.plan(), plan -> new LinkedHashMap<>());
+					if (blocks.containsKey(world)) {
+						continue;
+					}
+					if (++total <= keep) {
+						blocks.put(world.immutable(), transformed(placement, target.region(), state));
+					}
+				}
+			}
+		}
+		return new Found(found, total);
+	}
+
+	/**
+	 * A block state as a placement shows it in the world: the inverse of Litematica's
+	 * {@code SchematicUtils.getUntransformedBlockState}, which mirrors by the placement, then by the sub-region (on the
+	 * other axis while the placement is turned a quarter), then turns by both.
+	 */
+	static BlockState transformed(SchematicPlacement placement, String region, BlockState state) {
+		SubRegionPlacement sub = placement.getRelativeSubRegionPlacement(region);
+		Mirror subMirror = sub == null ? Mirror.NONE : sub.getMirror();
+		Rotation rotation = sub == null ? placement.getRotation() : placement.getRotation().getRotated(sub.getRotation());
+		if (subMirror != Mirror.NONE && (placement.getRotation() == Rotation.CLOCKWISE_90
+			|| placement.getRotation() == Rotation.COUNTERCLOCKWISE_90)) {
+			subMirror = subMirror == Mirror.FRONT_BACK ? Mirror.LEFT_RIGHT : Mirror.FRONT_BACK;
+		}
+		return state.mirror(placement.getMirror()).mirror(subMirror).rotate(rotation);
 	}
 
 	@Override

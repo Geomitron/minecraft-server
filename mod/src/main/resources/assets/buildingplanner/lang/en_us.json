@@ -13,9 +13,16 @@
 	"buildingplanner.shape.no_plan": "Start the shape inside a plan, or select a plan in Litematica first.",
 	"buildingplanner.mix.on": "Block mix on. Press %s to turn it off.",
 	"buildingplanner.mix.off": "Block mix off.",
+	"buildingplanner.copy.nothing": "There are no plan blocks in the marked area to copy.",
+	"buildingplanner.copy.too_many": "That area has %s plan blocks, more than the server's limit of %s.",
+	"buildingplanner.copy.done_one": "Copied 1 block. Press %s to paste it.",
+	"buildingplanner.copy.done": "Copied %s blocks. Press %s to paste them.",
+	"buildingplanner.paste.nothing": "Nothing to paste. Mark an area over a plan and press %s to copy it.",
+	"buildingplanner.paste.no_plan": "Move the copy's corner into a plan first. The plan it came from isn't loaded.",
 	"buildingplanner.ui.start_plan.title": "Start a plan",
 	"buildingplanner.ui.start_plan.name": "Plan name",
 	"buildingplanner.ui.start_plan.create": "Create",
+	"buildingplanner.ui.copy.name": "Building Planner copy",
 	"buildingplanner.ui.block_mix.title": "Block mix",
 	"buildingplanner.ui.block_mix.search": "Search blocks",
 	"buildingplanner.ui.block_mix.inventory_only": "Only my inventory",
@@ -27,5 +34,10 @@
 	"buildingplanner.ui.block_mix.clear": "Clear",
 	"key.category.buildingplanner.main": "Building Planner",
 	"key.buildingplanner.start_plan": "Start a plan",
-	"key.buildingplanner.block_mix": "Block mix"
+	"key.buildingplanner.block_mix": "Block mix",
+	"key.buildingplanner.copy": "Copy plan blocks",
+	"key.buildingplanner.paste": "Paste the copy",
+	"key.buildingplanner.turn": "Turn the copy",
+	"key.buildingplanner.mirror": "Mirror the copy",
+	"key.buildingplanner.clear": "Clear the copy"
 }
