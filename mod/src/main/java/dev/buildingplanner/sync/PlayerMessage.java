@@ -68,16 +68,6 @@ public record PlayerMessage(String key, List<String> args) {
 		return new PlayerMessage(PREFIX + "mix.off", List.of());
 	}
 
-	/** The player joined a server without Building Planner, so it's off there. */
-	public static PlayerMessage notOnServer() {
-		return new PlayerMessage(PREFIX + "off.not_on_server", List.of());
-	}
-
-	/** The player joined a server running another protocol version of Building Planner, so it's off there. */
-	public static PlayerMessage otherVersion() {
-		return new PlayerMessage(PREFIX + "off.other_version", List.of());
-	}
-
 	/** The delete check stopped a player deleting a plan someone else shared. */
 	public static PlayerMessage notYourPlan(String owner) {
 		return new PlayerMessage(PREFIX + "delete.not_yours", List.of(owner));

@@ -316,12 +316,13 @@ a message naming the key; "Clear" empties the list; "Cancel" and Escape leave th
 ### When the server lacks the mod
 
 On joining, the client checks with `ClientPlayNetworking.canSend` that the server takes all five of its payloads. When
-it doesn't, Building Planner stays off for that server and a chat message says so; a singleplayer world, or a LAN
-host's own world, gets no message. While it's off, Litematica's edits stay on that player's screen, as plain
-Litematica does, and Effortless Building's shapes place nothing: its place and break packets (hooks E1 and E2) and its
-undo and redo packets (E4) aren't sent, so a server that runs Effortless Building without Building Planner never
-changes real blocks for them. The same holds from joining until the server's `hello` arrives. A `hello` with another protocol version leaves it off
-the same way, with a message of its own. The server sends nothing to a player who can't receive it
+it doesn't, Building Planner stays off for that server, silently: the player sees no message, and N and B do nothing.
+While it's off, Litematica's edits stay on that player's screen, as plain Litematica does, and Effortless Building's
+shapes place nothing: its place and break packets (hooks E1 and E2) and its undo and redo packets (E4) aren't sent, so
+a server that runs Effortless Building without Building Planner never changes real blocks for them. The same holds from
+joining until the server's `hello` arrives. A `hello` with another protocol version leaves it off the same way. A
+singleplayer world, or a LAN host's own world, runs no server side, and Effortless Building works there as it does
+without Building Planner. The server sends nothing to a player who can't receive it
 (`ServerPlayNetworking.canSend`), so players without the add-on, or without any mods, join and play as before; with
 Syncmatica alone they see each plan as it was first shared.
 
@@ -366,15 +367,16 @@ with the player looking straight down, and checks:
 `step8.sh` restarts the server and the clients as its checks need (`start_server` and `start_client` can leave the
 add-on's classes off the classpath) and checks:
 
-- On a server with the add-on, neither client gets a message about it.
+- On a server with the add-on, both clients start a session.
 - A client without the add-on joins that server, stays connected and places a real block.
-- On the same server with Building Planner left out and Syncmatica still in, both clients get the message and start no
-  session; a plan loaded from Syncmatica's list takes a Litematica fill on that player's screen only; an Effortless
-  Building shape adds no ghost blocks and places no real ones, with the player staying connected; and, by the driver's
+- On the same server with Building Planner left out and Syncmatica still in, both clients start no session and show
+  no Building Planner message, and N and B open nothing; a plan loaded from Syncmatica's list takes a Litematica fill
+  on that player's screen only; an Effortless Building shape adds no ghost blocks and places no real ones, with the
+  player staying connected; and, by the driver's
   counter of the custom payloads leaving the client (a mixin in the `clienttest` source set), no place, break, undo
   or redo packet of Effortless Building is sent after a shape, Ctrl+Z, Ctrl+Y and the break click.
-- A `hello` with another protocol version, which the driver hands to the client, gives its own message and starts no
-  session.
+- A `hello` with another protocol version, which the driver hands to the client, starts no session and shows no
+  message.
 
 The results, the game logs and the screenshots go to a folder outside the repository.
 
@@ -388,4 +390,4 @@ The results, the game logs and the screenshots go to a folder outside the reposi
 - Whether Litematica's edits aim from Freecam's camera.
 - A client without any mods joining a server with the add-on; the checks use a Fabric client without the add-on.
 - A real server running another protocol version; the check hands the client a made-up `hello`.
-- That singleplayer and a LAN host's own world give no message about a missing server side.
+- That Effortless Building places real blocks as usual in singleplayer and in a LAN host's own world.

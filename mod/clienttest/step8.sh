@@ -3,10 +3,17 @@
 # inside.sh, which provides drv, val, check, keys, click, use_click, attack_click, client_said, start_server, stop_server,
 # start_client, stop_client and $ADDON.
 
-not_on_server="Building Planner isn't on this server. Your Litematica edits stay on your screen, and Effortless Building's shapes place nothing."
-other_version="This server runs a different version of Building Planner, so it's off here. Your Litematica edits stay on your screen, and Effortless Building's shapes place nothing."
+# no_planner_message <client>: that client's chat has shown none of Building Planner's messages, the texts in its
+# language file other than its screens' and key bindings', each matched by its text up to its first %s (or, for one
+# that starts with %s, by its text from there to the next).
+no_planner_message() {
+	! grep -qFf <(tr -d '\r' < src/main/resources/assets/buildingplanner/lang/en_us.json | sed -n \
+		-e '/"buildingplanner\.ui\./d' \
+		-e 's/^\s*"buildingplanner\.[^"]*": "%s\([^"%]*\).*$/\1/p' \
+		-e 's/^\s*"buildingplanner\.[^"]*": "\([^"%]*\).*$/[CHAT] \1/p') "/out/client$1.log"
+}
 
-# On a server with the add-on: sessions start, with no notice. Planner1 starts the plan Hall (2 -60 2 to 8 -57 8),
+# On a server with the add-on: sessions start. Planner1 starts the plan Hall (2 -60 2 to 8 -57 8),
 # which Syncmatica keeps for the server without the add-on below.
 check "client 1 starts a session on hello" drv 1 "await session" "await noscreen"
 check "client 2 starts a session on hello" drv 2 "await session" "await noscreen"
@@ -17,7 +24,6 @@ keys 1 type Hall
 keys 1 key Return
 check "Planner1 starts Hall and client 2 sees it" \
 	eval 'drv 1 "await placement Hall" && drv 2 "await placement Hall"'
-check "neither client gets the notice" eval '! grep -qF "[CHAT] Building Planner isn" /out/client1.log /out/client2.log'
 
 # A client without the add-on (its classes and the driver's left off the classpath) joins the server with it and
 # plays: it stays connected and places a real block.
@@ -48,11 +54,13 @@ check "the server starts without Building Planner" eval 'start_server "$ADDON" s
 	! grep -qF "Building Planner loaded" /out/server-without-addon.log'
 start_client 1
 start_client 2
-# The loading screen swallows key presses and hides chat, so wait for it to close.
-check "client 1 gets the notice and starts no session" \
-	eval 'client_said 1 "$not_on_server" && drv 1 "await noscreen" "wait 40" "await nosession"'
-check "client 2 gets the notice too" eval 'client_said 2 "$not_on_server" && drv 2 "await noscreen"'
-drv 1 "notoasts" "wait 5" "shot notice-not-on-server" > /dev/null
+# The loading screen swallows key presses, so wait for it to close.
+check "client 1 starts no session" drv 1 "await noscreen" "wait 40" "await nosession"
+check "client 2 starts no session" drv 2 "await noscreen" "wait 40" "await nosession"
+keys 1 key n
+keys 1 key b
+check "N and B open nothing" drv 1 "wait 20" "await noscreen"
+drv 1 "notoasts" "wait 5" "shot off-not-on-server" > /dev/null
 
 # load <client>: loads Hall from Syncmatica's list, with its Load button (or Download, without the file).
 load() {
@@ -93,9 +101,11 @@ check "no place, break, undo or redo packet of Effortless Building leaves the cl
 	eval '! val 1 "ebsent" | grep -qE "place_build_mode|break_build_mode|undo|redo"'
 drv 1 "ebarray 0" > /dev/null
 
-# A hello from a server with another protocol version gives its own notice and starts no session.
+# A hello from a server with another protocol version starts no session.
 drv 1 "cmd tp @s 5 -60 -3 0 10" "wait 20" "hello 99" > /dev/null
-check "a hello with another protocol version gives its notice and starts no session" \
-	eval 'client_said 1 "$other_version" && drv 1 "await nosession"'
+check "a hello with another protocol version starts no session" drv 1 "wait 20" "await nosession"
 # The screenshot is written after the command returns; wait for it before inside.sh copies it.
-drv 1 "notoasts" "wait 5" "shot notice-other-version" "wait 20" > /dev/null
+drv 1 "notoasts" "wait 5" "shot off-other-version" "wait 20" > /dev/null
+
+check "neither client showed a Building Planner message on the server without it" \
+	eval 'no_planner_message 1 && no_planner_message 2'

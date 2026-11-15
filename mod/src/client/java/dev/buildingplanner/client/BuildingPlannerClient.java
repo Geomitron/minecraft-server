@@ -24,7 +24,7 @@ import net.minecraft.world.level.block.state.BlockState;
 
 /**
  * The client side: a session for each connection to a server with Building Planner, started by the server's
- * {@code hello}, a notice on joining a server without it, and the hooks' way into it.
+ * {@code hello}, and the hooks' way into it. On any other server Building Planner stays off, silently.
  */
 public final class BuildingPlannerClient implements ClientModInitializer {
 	private static final KeyMapping.Category CATEGORY =
@@ -53,11 +53,10 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		KeyMappingHelper.registerKeyMapping(BLOCK_MIX);
 		RenderEventHandler.getInstance().registerWorldLastRenderer(GLOW);
 		ClientPlayNetworking.registerGlobalReceiver(Payloads.Hello.TYPE, (hello, context) -> hello(hello));
-		// A singleplayer or LAN host's own world runs no server side, and needs no notice.
+		// A singleplayer or LAN host's own world runs no server side.
 		ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
 			if (!client.isLocalServer() && !SERVERBOUND.stream().allMatch(ClientPlayNetworking::canSend)) {
 				BuildingPlanner.LOGGER.info("The server doesn't run Building Planner, so it's off");
-				LitematicaPlans.showMessage(PlayerMessage.notOnServer());
 			}
 		});
 		ClientPlayNetworking.registerGlobalReceiver(Payloads.Snapshot.TYPE, (payload, context) -> receive(payload));
@@ -88,14 +87,16 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		BuildingPlanner.LOGGER.info("Building Planner client loaded");
 	}
 
-	/** The server's {@code hello}: starts a session when the server speaks this client's protocol version. */
+	/**
+	 * The server's {@code hello}: starts a session when the server speaks this client's protocol version, and otherwise
+	 * leaves Building Planner off.
+	 */
 	static void hello(Payloads.Hello hello) {
 		if (hello.protocolVersion() == Payloads.PROTOCOL_VERSION) {
 			session = new ClientSession(hello.limits(), GLOW, MIX);
 		} else {
 			BuildingPlanner.LOGGER.warn("The server runs Building Planner protocol {}, this client {}",
 				hello.protocolVersion(), Payloads.PROTOCOL_VERSION);
-			LitematicaPlans.showMessage(PlayerMessage.otherVersion());
 		}
 	}
 
