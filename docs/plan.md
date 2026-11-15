@@ -93,7 +93,7 @@ How players use Building Planner, from inbox request 420:
 - Agents push finished, tested Building Planner work and doc changes to this repository without asking each time;
   changes to the pack or the instance, and releases, go to Geo first (inbox request 429, Q1 A).
 
-Building Planner as built, from inbox requests 469, 473, 477 and 482:
+Building Planner as built, from inbox requests 469, 473, 477, 482 and 483:
 
 - N is the "Start a plan" key until a player changes it in Controls (Q1 A).
 - Players hide a plan with Litematica's rendering switch or Syncmatica's Unload; Building Planner adds no switch of its
@@ -113,6 +113,9 @@ Building Planner as built, from inbox requests 469, 473, 477 and 482:
   nine)", and each share box's tooltip reads "Percentage of the mix" (477).
 - Building Planner works around Syncmatica's crash when a plan another player has loaded is removed, and the agent
   drafts an issue for Geo to post to Syncmatica (482 Q1 A).
+- On a server without Building Planner, or with another version of it, Building Planner turns off silently, with no
+  message (Geo, inbox request 483: "none of these messages are necessary; just silently disable the mod in these
+  cases").
 
 ## Agent-ready work
 
