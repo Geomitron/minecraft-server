@@ -359,8 +359,8 @@ never switches Litematica to its Paste tool, which places real blocks in creativ
 actions change the copy on the player's screen only, since hook L1 records writes to plans alone.
 
 Turn gives the copy a quarter turn clockwise, seen from above, around its origin. Mirror flips it left to right as the
-player faces it, around its origin: across the east-west line when they face north or south, and across the
-north-south line when they face east or west. Both set the placement's rotation and mirror, which Litematica applies
+player faces it, around its origin: across the north-south line when they face north or south, and across the
+east-west line when they face east or west. Both set the placement's rotation and mirror, which Litematica applies
 mirror first, then rotation; Mirror combines its flip with the turn already set. Litematica's own rotate and mirror
 actions work on the copy too.
 
