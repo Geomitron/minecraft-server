@@ -29,9 +29,10 @@ an inbox notice, carrying only the error's id, kind and source.
 
 **Player pack.** This repository is public at https://github.com/Geomitron/minecraft-server. `pack/` is the packwiz
 pack "Server Pack": Minecraft 26.3 and Fabric loader 0.20.1 with Litematica, MaLiLib, Syncmatica 0.3.20, Freecam,
-Fabric API, Building Planner 0.2.0 (downloaded from its release), and Effortless Building 4.3, served from `main` at
-https://raw.githubusercontent.com/Geomitron/minecraft-server/main/pack/pack.toml, so
-a push to `main` changes what players get at their next launch. `instance/` is the Prism Launcher instance "Server
+Fabric API, Building Planner 0.2.1 (downloaded from its release `building-planner-0.2.1`), and Effortless Building
+4.3, served from `main` at https://raw.githubusercontent.com/Geomitron/minecraft-server/main/pack/pack.toml, so
+a push to `main` changes what players get at their next launch. The server stays on Building Planner 0.2.0: the two
+work together because 0.2.1 changes only the player's game, and both use protocol 2. `instance/` is the Prism Launcher instance "Server
 Pack", which runs `packwiz-installer-bootstrap.jar` against that URL before each launch. Players import it from
 https://github.com/Geomitron/minecraft-server/releases/latest/download/prism-instance.zip, a zip of `instance/` in the
 release `v1.0.0`; the instance needs a new release only when `instance/` changes. The guide sent to players is
