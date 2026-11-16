@@ -97,7 +97,7 @@ How players use Building Planner, from inbox request 420:
 - Agents push finished, tested Building Planner work and doc changes to this repository without asking each time;
   changes to the pack or the instance, and releases, go to Geo first (inbox request 429, Q1 A).
 
-Building Planner as built, from inbox requests 469, 473, 477, 482, 483, 485, 570 and 571:
+Building Planner as built, from inbox requests 469, 473, 477, 482, 483, 485, 570, 571, 578 and 584:
 
 - N is the "Start a plan" key until a player changes it in Controls (Q1 A).
 - Players hide a plan with Litematica's rendering switch or Syncmatica's Unload; Building Planner adds no switch of its
@@ -129,6 +129,14 @@ Building Planner as built, from inbox requests 469, 473, 477, 482, 483, 485, 570
   writes it into a plan as one edit (Q1 A). A paste writes only the copy's blocks, so the empty space in it leaves
   the plan's blocks as they are (Q2 A). A paste goes into the plan where the copy's corner sits, or else the plan it
   was copied from (Q3 A). The spec's section on copy and paste has the design.
+- Copy and paste's keys are J (copy), K (paste), U (turn), H (mirror), and Delete (clear), until a player changes them
+  in Controls (584 Q1 A). Copy switches Litematica's tool to "Schematic Placement" (Q2 A). Geo kept copy and paste's
+  texts as written. An agent looks for a way to show a plan's blocks under the copy's empty space, and reports back
+  (Q3 A). Copy and paste goes to players as Building Planner 0.2.0, released the same way as 0.1.0 (Q4 A).
+- Before the player guide's section on planning builds is published, Geo walks through every planning feature in the
+  game from a runbook with room for feedback (Geo, inbox request 578: "Build a runbook to teach me how it works, walk
+  me through using all the features we have available, with space for me to provide feedback and suggestions on how to
+  adjust the experience of using the mod. Once I'm happy with it, we can publish a guide on how to use it.").
 
 ## Agent-ready work
 
@@ -137,8 +145,7 @@ Building Planner as built, from inbox requests 469, 473, 477, 482, 483, 485, 570
   server and two clients; (2) the plan model and `.litematic` storage; (3) the live-sync core on the server; (4) server
   undo; (5) Syncmatica on the server (plans from shared files, the delete check, archiving deleted plans); (6) the
   Litematica bridge on the client; (7) Effortless Building capture; (8) joining a server without the add-on; then
-  (9) copy and paste of part of a plan (420, Q8 A). All nine steps are built. Step 9's
-  player texts wait on Geo's review, and copy and paste reaches players only in a new release, which goes to Geo first.
+  (9) copy and paste of part of a plan (420, Q8 A). All nine steps are built.
 
 ## Design work: Building Planner
 

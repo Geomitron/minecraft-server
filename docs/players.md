@@ -48,6 +48,6 @@ If you've played Minecraft on this computer before, you can bring your controls,
 
 1. Double-click "Server Pack".
 2. A small window shows the mods downloading. Wait for it to finish. It's slower the first time, when it downloads every mod.
-3. Minecraft starts. Click "Multiplayer", then "Add Server", and enter the server address Geo gave you.
+3. Minecraft starts. Click "Multiplayer", then "Add Server", and enter the server address.
 
 Always start Minecraft from the "Server Pack" instance. Starting it anywhere else skips the mod updates.
