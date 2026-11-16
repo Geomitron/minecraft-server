@@ -1,8 +1,8 @@
 name = "Building Planner"
-filename = "building-planner-0.1.0.jar"
+filename = "building-planner-0.2.0.jar"
 side = "both"
 
 [download]
-url = "https://github.com/Geomitron/minecraft-server/releases/download/building-planner-0.1.0/building-planner-0.1.0.jar"
+url = "https://github.com/Geomitron/minecraft-server/releases/download/building-planner-0.2.0/building-planner-0.2.0.jar"
 hash-format = "sha256"
-hash = "1d209ee7b0db788de37597e65943abbafa4ef270ce20a1753acb23b889f851dc"
+hash = "e5c8ad2d09774aa5ee4e20b46b37d631c06006b383132ac8f683d5cd63037374"
