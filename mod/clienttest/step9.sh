@@ -96,6 +96,8 @@ check "the copy moves over Barn" drv 1 "await copy origin 14,-59,4 FRONT_BACK CO
 # Where the copy and a plan overlap, Litematica shows one block; the log records which.
 echo "  where the copy overlaps Barn: 15 -59 5 shows $(val 1 "get 15 -59 5") (copy stone_bricks, Barn gold_block);" \
 	"15 -58 4 shows $(val 1 "get 15 -58 4") (copy empty, Barn glass)" >> /out/checks.log
+check "the copy's empty space shows Barn's glass" eval '[[ $(val 1 "get 15 -58 4") == minecraft:glass ]] &&
+	[[ $(val 1 "get 15 -59 5") == minecraft:stone_bricks ]]'
 shot 1 copy-over-plan
 
 # K pastes it into Barn, where its corner is: its 8 blocks, the stairs still facing west, and its empty space leaves

@@ -24,6 +24,7 @@ import net.minecraft.core.Vec3i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
@@ -80,6 +81,14 @@ final class Clipboard {
 		String name = Component.translatable("buildingplanner.ui.copy.name").getString();
 		schematic.getMetadata().setName(name);
 		LitematicaBlockStateContainer container = schematic.getSubRegionContainer(REGION);
+		// Structure void, not air, fills the copy's empty space: Litematica skips it when it draws placements into its
+		// schematic world, so the plans' blocks there stay visible under the copy.
+		Vec3i size = container.getSize();
+		BlockState empty = Blocks.STRUCTURE_VOID.defaultBlockState();
+		for (BlockPos pos : BlockPos.betweenClosed(BlockPos.ZERO,
+			new BlockPos(size.getX() - 1, size.getY() - 1, size.getZ() - 1))) {
+			container.set(pos.getX(), pos.getY(), pos.getZ(), empty);
+		}
 		BlockPos corner = min;
 		blocks.forEach((pos, state) -> container.set(pos.getX() - corner.getX(), pos.getY() - corner.getY(),
 			pos.getZ() - corner.getZ(), state));
@@ -90,7 +99,7 @@ final class Clipboard {
 		DataManager.setToolMode(ToolMode.SCHEMATIC_PLACEMENT);
 	}
 
-	/** The copy's blocks other than air, at the world positions where Litematica draws them, with their states turned. */
+	/** The copy's blocks other than its empty space, at the world positions where Litematica draws them, with their states turned. */
 	Map<BlockPos, BlockState> worldBlocks() {
 		Map<BlockPos, BlockState> blocks = new LinkedHashMap<>();
 		LitematicaBlockStateContainer container = placement.getSchematic().getSubRegionContainer(REGION);
@@ -98,7 +107,7 @@ final class Clipboard {
 		for (BlockPos pos : BlockPos.betweenClosed(BlockPos.ZERO,
 			new BlockPos(size.getX() - 1, size.getY() - 1, size.getZ() - 1))) {
 			BlockState state = container.get(pos.getX(), pos.getY(), pos.getZ());
-			if (!state.isAir()) {
+			if (!state.isAir() && !state.is(Blocks.STRUCTURE_VOID)) {
 				BlockPos world = LitematicaPlans.worldPosition(placement, REGION, pos);
 				if (world != null) {
 					blocks.put(world, LitematicaPlans.transformed(placement, REGION, state));
