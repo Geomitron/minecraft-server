@@ -345,7 +345,8 @@ own region containers inside the area's boxes, not Litematica's schematic world,
 hidden with Litematica's rendering switch and blocks in chunks that aren't loaded, and never other placements or real
 blocks. An area over two plans copies both. Each block goes into the copy as the world shows it: the plan's block
 state mirrored, then turned, by the plan's placement, as Litematica places it. Air isn't copied, and the copy's box is
-the smallest box around the copied blocks. When the area has no plan blocks, the player gets a message and nothing
+the smallest box around the copied blocks. The copy's schematic holds structure void in every position that has no
+copied block, not air (see where the copy overlaps a plan, below). When the area has no plan blocks, the player gets a message and nothing
 changes. A copy of more blocks than the server's block cap for an edit (`max-edit-blocks`, from `hello`) is refused
 with a message, since its paste would be. Otherwise the new copy replaces any earlier one. Its origin, its corner
 with the lowest coordinates, goes on the block beside the face the player aims at, within 64 blocks, or over the
@@ -367,14 +368,20 @@ actions work on the copy too.
 Paste sends the copy as one shape edit, through the same capture as a finished Effortless Building shape, so growth,
 the server's order, the glow for other players, undo, redo and the block cap work as they do for shapes. The edit goes
 into the plan whose box holds the copy's origin, or else into the source plan; when the player has neither loaded, they
-get a message and nothing is sent. Each block of the copy that isn't air goes to the world position where Litematica
-draws it, with its state mirrored and turned as the copy is, then into plan coordinates as a shape's blocks do. The
-edit names no air, because a shape edit grows the plan for every block it names: the copy's empty space leaves the
-plan's blocks as they are, and the plan grows only to fit the copy's blocks. The copy stays after a paste, for more
-pastes.
+get a message and nothing is sent. Each block of the copy other than air and structure void goes to the world position
+where Litematica draws it, with its state mirrored and turned as the copy is, then into plan coordinates as a shape's
+blocks do. The edit names no air or structure void, because a shape edit grows the plan for every block it names: the
+copy's empty space leaves the plan's blocks as they are, and the plan grows only to fit the copy's blocks. The copy
+stays after a paste, for more pastes.
 
-Where the copy overlaps a plan, Litematica draws the copy on that player's screen: its blocks, and air in its empty
-space, hide the plan's blocks inside its box. A paste still leaves the plan's blocks under the copy's empty space.
+Where the copy overlaps a plan, the plan's blocks show in the copy's empty space, and the copy's blocks hide the
+plan's. Litematica draws every placement that touches a chunk section into one schematic world, in the order each
+placement first touched that section (`PlacementManagerTaskRebuild.buildTask`). Under its default "replace behavior"
+(`PLACEMENT_REPLACE_BEHAVIOR` = ALL), a later placement overwrites the earlier ones' blocks, and that includes air
+(`WorldPlacingUtils.placeBlocksToProtoChunk`); it skips structure void before it reads the old block. The copy's empty
+space is structure void, so it draws nothing there and leaves the plans' blocks. This is read in Litematica 0.29.1 for
+Minecraft 26.3 (`sakura-ryoko/litematica` at `b1a2682`), and the in-game checks confirm it for a copy over the plan
+"Barn".
 
 Clear removes the copy. Removing it in Litematica's placement list, or leaving the server, ends it too. Paste with no
 copy gives a message; Turn, Mirror and Clear with no copy do nothing.
@@ -451,6 +458,8 @@ add-on's classes off the classpath) and checks:
   real block, and doesn't reach the other player.
 - A click with the tool item moves the copy; U turns it a quarter turn clockwise, and H, facing south, flips it east
   to west, with its stairs turning with it.
+- With the copy over the plan "Barn", the copy's blocks show where they overlap Barn's blocks, and Barn's glass shows in
+  the copy's empty space.
 - K pastes it into the plan at its corner: the other player sees its blocks at once, turned and mirrored as the copy
   showed them, glowing with the paster's name; the copy's empty space leaves the plan's blocks, and the copy stays.
 - One Ctrl+Z undoes the whole paste, and Ctrl+Y redoes it.
@@ -487,3 +496,8 @@ The results, the game logs and the screenshots go to a folder outside the reposi
 - Litematica's nudge keys, placement settings, and its own rotate and mirror actions on the copy.
 - Copying plans hidden with Litematica's rendering switch or in chunks that aren't loaded.
 - Mirror in the game for a player facing east or west; the unit tests cover it.
+- Read in Litematica's code, not seen in the game: its material list for the copy likely lists structure void, since
+  `MaterialListUtils.createMaterialListFor` counts every block state.
+- Read in Litematica's code, not seen in the game: a plan that first touches a chunk section after the copy does would
+  hide the copy's blocks there, because a later placement overwrites an earlier one's.
+- Read in Litematica's code, not seen in the game: overlapping plans hide each other's blocks the same way.
