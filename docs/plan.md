@@ -198,9 +198,14 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it, not
 - While the mix is on, the block mix key (B) opens the mix screen to change the mix; the screen gains a "Turn off"
   button (677 Q1 A).
 - The mix panel, as Geo approved it with changes (inbox request 709): the heading "Block mix", then each block's icon
-  with its share only ("80%"), then "B: close", with B the key as bound. It is narrow and drawn smaller: "note that my
-  changes allow it to be significantly vertically narrower, which I want. Maybe scale the whole thing down to like
-  70% too, if possible". "Use mix" leaves the chat message "Block mix on. Press B to change it or turn it off."
+  with its share only ("80%"), and no line about B: "remove B: close; the chat message is enough" (709 revision 2
+  Q2). It is narrow: "note that my changes allow it to be significantly vertically narrower, which I want" (709 Q1).
+  "Use mix" leaves the chat message "Block mix on. Press B to change it or turn it off."
+- The panel's text and icons, and the speed sliders' labels, are drawn small but evenly: at 70% the font's pixels
+  came out uneven and hard to read ("just restore the panel to a slightly larger size where the font doesn't have
+  the weird scaling issues that makes it hard to read", 709 revision 2 Q3; "same text issue happens with the scaled
+  down sliders", Geo in the project's thread). Each is drawn at the smallest size at or above 70% at which every font
+  pixel covers a whole number of screen pixels: full size at GUI scales 1 to 3, 75% at 4, 80% at 5.
 - The copy follows where the player aims: its corner sits on the block they look at, until they paste or clear it
   (677 Q2 A).
 - N shows or hides the ghost blocks, since "Start a plan" no longer needs it (677 Q3 A).
