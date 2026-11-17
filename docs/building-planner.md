@@ -8,9 +8,9 @@ behind it are in [plan.md](plan.md) ("Decisions").
 **What's built.** Players run Building Planner 0.2.1, and the server 0.2.0, which keep ghost blocks in separate named
 plans shared through Syncmatica. Built on `main` since then: hold to repeat at fixed speeds (hook E10), the look of
 ghost blocks, the layer's storage and files, the server's side of the layer and protocol 3, the one-time import of
-the plans Syncmatica shared, and the player's copy of the layer with its tiles, shapes and erasing in world positions,
-and the edit glow. Neither side speaks protocol 2's named plans any more. Tiles still show in Litematica's screens, and
-the client still carries hooks S2, S3, L2 and L3 and "Start a plan", until build step 8. Everything else this spec
+the plans Syncmatica shared, the player's copy of the layer with its tiles, shapes and erasing in world positions,
+and the edit glow, hooks L1 and L4 to L7, which keep tiles out of Litematica's screens and edits, and the removal of old
+plans' placements. Neither side speaks protocol 2's named plans or uses Syncmatica any more. Everything else this spec
 describes waits on the build steps in [plan.md](plan.md) ("Agent-ready work"), which end with the release. The build reuses what still fits: Effortless Building's hooks E1 to E10 (E1, E2 and E6 change),
 the rules of undo and redo, the edit glow, the block mix screen's layout, the check for a server without the add-on, and
 the in-game check harness.
@@ -101,7 +101,9 @@ config. Its mixin config plugin skips the Effortless Building mixins when that m
 mixins when Litematica or MaLiLib is; without Litematica and MaLiLib the client side stays off, as on a server without
 the add-on. Injectors use MixinExtras, which Fabric Loader 0.20.1 bundles (0.5.5). The dev clients run Effortless
 Building 4.3 for Fabric 26.3 (Modrinth version `R8eAP63A`, set in `mod/gradle.properties`), the release built from the
-source the hooks were checked in; the dev server runs neither Effortless Building nor Syncmatica.
+source the hooks were checked in; the dev server runs neither Effortless Building nor Syncmatica, and the dev clients
+run without Syncmatica. Only the unit tests have Syncmatica on their classpath, so that its own writer makes the
+import's fixture.
 
 ### Hooks
 
@@ -139,8 +141,8 @@ Litematica, under `src/main/java/fi/dy/masa/litematica/`:
 
 | # | File, method | Hook | Purpose |
 |---|---|---|---|
-| L1 | `util/SchematicUtils.java`: `setTargetedSchematicBlockState(BlockPos, BlockState)`, `setSchematicBlockStates`, `setAllStatesToAirExcept(SchematicPlacementManager, PlacementPart, BlockState, Level)`, `replaceAllIdenticalBlocks` | `@WrapOperation` on each `LitematicaBlockStateContainer.set(int, int, int, BlockState)` (the only four writes the ten Edit Schematic actions make, all called from `event/InputHandler.java`) | Skip a write into a tile's container, so Litematica's Edit Schematic actions never change the layer, even on a computer whose Litematica tool mode is still "Edit Schematic" (`InputHandler.handleUseKey` and `handleAttackKey` edit in that mode whatever the player holds). Writes to other placements, such as the copy, stay Litematica's own. |
-| L4 | `schematic/placement/SchematicPlacementManager.java`, `setSelectedSchematicPlacement(SchematicPlacement)` | `@ModifyVariable` at head, on the argument | A tile is never selected: selecting one selects nothing instead. Covers `addSchematicPlacement`, which selects a new placement when none is selected, `removeSchematicPlacement`, which then selects the first placement, selection by aim, and the placement list. |
+| L1 | `util/SchematicUtils.java`: `setTargetedSchematicBlockState(BlockPos, BlockState)`, `setSchematicBlockStates`, `setAllStatesToAirExcept(SchematicPlacementManager, PlacementPart, BlockState, Level)`, `replaceAllIdenticalBlocks` | `@WrapWithCondition` on each `LitematicaBlockStateContainer.set(int, int, int, BlockState)` (the only four writes the ten Edit Schematic actions make, all called from `event/InputHandler.java`) | Skip a write into a tile's container, so Litematica's Edit Schematic actions never change the layer, even on a computer whose Litematica tool mode is still "Edit Schematic" (`InputHandler.handleUseKey` and `handleAttackKey` edit in that mode whatever the player holds). Writes to other placements, such as the copy, stay Litematica's own. |
+| L4 | `schematic/placement/SchematicPlacementManager.java`, `setSelectedSchematicPlacement(SchematicPlacement)` | `@Inject` at head, cancellable | A tile is never selected: selecting one leaves the selection as it was, since selecting none would also clear Litematica's material list. Covers `addSchematicPlacement`, which selects a new placement when none is selected, `removeSchematicPlacement`, which then selects the first placement, selection by aim, and the placement list. Tiles are known as tiles before they're added. |
 | L5 | `gui/widgets/WidgetListSchematicPlacements.java`, `getAllEntries()` | `@ModifyReturnValue` | Leave tiles out of Litematica's placement list. |
 | L6 | `render/OverlayRenderer.java`, `updatePlacementCache()` | `@WrapOperation` on `SchematicPlacementManager.getAllSchematicsPlacements()` | Leave tiles out of the boxes and origin markers `renderBoxes` draws. Litematica's own switch for those boxes (`enablePlacementBoxesRendering`) would hide the copy's box too. |
 | L7 | `render/schematic/ChunkRendererSchematicVbo.java`, `getOverlayType(BlockState, BlockState)` | `@ModifyReturnValue` | While Building Planner has a session, turn `EXTRA` into `NONE`. Litematica marks a real block as extra wherever a placement's box holds air there (`schematicOverlayTypeExtra`, on by default), and a tile's box is a whole chunk column's sections, so every real block in it would be marked. The layer holds only blocks to place, so no real block is extra. Missing and wrong blocks keep their colours. |
@@ -163,12 +165,6 @@ Fabric API: `PayloadTypeRegistry` (`registerLarge` for column snapshots), `Serve
 `KeyMappingHelper`. Both sides' payload handlers run on the main thread (server thread, render thread), which the
 ordering below relies on. Fabric splits a payload registered with `registerLarge` into packets of at most 1 MiB to
 players and joins them on arrival.
-
-Build step 8 removes what the shared layer replaces from the client's code: hooks S2 and S3 into Syncmatica (each
-plan's own schematic, and Syncmatica's packets on the main thread) with `remove-loaded.sh`, L2 (plan coordinates
-without clamping) and L3 (growing a plan's region in place), the "Start a plan" screen and key, and Syncmatica on the
-dev clients' classpath (`clientImplementation` in `build.gradle`). The server's side has none of them: `fabric.mod.json` doesn't name Syncmatica, and the dev server
-runs without it.
 
 ### Tiles: how Litematica draws the layer
 
@@ -313,10 +309,11 @@ redo applies it forward by the same rule, and the player's next new edit clears 
 ### The client
 
 The client side starts when the server's `hello` arrives with the same protocol version, and ends when the player
-leaves. At its start it removes from Litematica every placement whose schematic file lies in the game folder's
-`schematics/sync/` (where Syncmatica's client kept shared plans) or `schematics/Building Planner/` (where "Start a
-plan" saved them): Litematica saved those placements and restores them on its own, and they would show old plans over
-the layer. The files stay.
+leaves. At its first tick, and the first tick after each change of dimension, it removes from Litematica every
+placement whose schematic file lies in the game folder's `schematics/sync/` (where Syncmatica's client kept shared
+plans) or in `Building Planner/` in Litematica's schematics folder (where Building Planner 0.2's "Start a plan" saved
+them): Litematica saved those placements and restores each dimension's when the player enters it, and they would show
+old plans over the layer. The files stay, and a plan the player loads from them later stays loaded.
 
 A finished shape (E1, E2) goes as one `edit` of world positions. Each block's state is the one Effortless Building
 would place: the block's placement rules with the first click's face and the player's facing, then the shape's mirror
@@ -479,14 +476,18 @@ on the dev server; [plan.md](plan.md) says which build step makes or rewrites ea
 `step6.sh`, the layer:
 
 - Each client starts a session on `hello`, and each client's Litematica placement list, boxes and selection show no
-  tile.
+  tile, though the tile is Litematica's only placement.
+- Litematica's own edits (a block placed into a tile, a fill over one) leave the layer and the tile as they were.
 - A shape Planner1 draws reaches Planner2 at once, glowing with Planner1's name, and the glow fades; no real block is
   placed.
 - Planner2 erases some of Planner1's ghost blocks with the break click, and both clients show them gone.
 - Ctrl+Z and Ctrl+Y undo and redo the player's own edit on both clients, and leave the other player's blocks.
 - A shape in a chunk Planner2 hasn't loaded shows for Planner2 when they walk to it; a player who rejoins sees the
   edits made while they were away; a shape in the Nether doesn't show in the overworld.
-- No real block inside a tile's box shows Litematica's "extra block" mark.
+- No real block inside a tile's box shows Litematica's "extra block" mark, and a ghost block with no real block
+  there is still marked as missing.
+- Placements of old plans' files in `schematics/sync/` and `schematics/Building Planner/`, which Litematica saves and
+  restores at the next start, are gone once the session starts, and their files stay.
 - The server, stopped and started again, reads back the same layer.
 
 `step7.sh`, drawing:
@@ -509,8 +510,10 @@ add-on's classes off the classpath) and checks:
 
 - On a server with the add-on, both clients start a session.
 - A client without the add-on joins that server, stays connected and places a real block.
+- A client with the add-on and Effortless Building but without Litematica and MaLiLib loads with Building Planner off,
+  joins that server and stays connected.
 - On the same server with Building Planner left out, both clients start no session and show no Building Planner
-  message; its keys open nothing; an Effortless Building shape adds no ghost blocks and places no real ones, with the
+  message; the block mix key opens nothing; an Effortless Building shape adds no ghost blocks and places no real ones, with the
   player staying connected; and, by the driver's counter of the custom payloads leaving the client (a mixin in the
   `clienttest` source set), no place, break, undo or redo packet of Effortless Building is sent after a shape, Ctrl+Z,
   Ctrl+Y and the break click.
@@ -563,7 +566,9 @@ other in the game's own copy of the layer, again after a restart, which doesn't 
 - Tiles in the game: how long adding thousands of them takes when a player joins near large builds (expected tens of
   milliseconds for 10,000, from `SchematicPlacementManager`'s copy-on-write list), and how much memory they take
   (Litematica's containers are dense, at least 2 bits a position: about 4 KB for a column two sections tall).
-- That Litematica restores, without Syncmatica, the placements Syncmatica made, which the client removes at its start.
+- That Litematica restores, without Syncmatica, the placements Syncmatica made, which the client removes at its start;
+  `step6.sh` checks placements Litematica made itself of files in the same folders.
+- The removal of old plans' placements after a change of dimension: the checks cover a session's start.
 - That the widgets hooks E11 and E12 add take clicks and drags in the radial menu (read in `RadialMenu.mouseClicked`
   and Minecraft's `Screen`, not run), and how they fit beside the menu's own buttons at each GUI scale.
 - The material list on a placement never added to Litematica (read in `MaterialListPlacement` and

@@ -256,8 +256,8 @@ are built (`step10.sh`). The steps below come in this order, each small enough f
    paste use the layer through Litematica's marked area until step 10.
 8. **Tiles out of sight, and Syncmatica off the client**: hooks L4 to L7, L1 as a guard, removing S2, S3, L2, L3,
    "Start a plan" and `remove-loaded.sh`, the removal of old plan placements at a session's start, and the mixin
-   plugin's Litematica rule. Done when `step6.sh`, with the checks on hidden tiles this step adds to it, and
-   `step8.sh` pass.
+   plugin's Litematica rule. Built (the hooks in `dev.buildingplanner.mixin.litematica`, `OldPlans` in the client;
+   `step6.sh`, with its checks on hidden tiles, and `step8.sh` pass).
 9. **Show or hide**: the key, the radial menu button, showing again when drawing, and the tool item off by default.
    Done when `step9.sh`'s check with ghost blocks hidden passes, and `step10.sh`
    finds the tool item off after a first start.
