@@ -142,14 +142,27 @@ Building Planner as built, from inbox requests 469, 473, 477, 482, 483, 485, 570
   me through using all the features we have available, with space for me to provide feedback and suggestions on how to
   adjust the experience of using the mod. Once I'm happy with it, we can publish a guide on how to use it.").
 
-From Geo's walkthrough (inbox request 608) and requests 669 to 677 after it, not built yet:
+From Geo's walkthrough (inbox request 608) and requests 669 to 704 after it, not built yet:
 
 - Ghost blocks show see-through at 0.8 opacity by default: "render blocks as translucent is true", "ghostBlockAlpha
   default to 0.8" (608 note). A player's own change to either stays.
 - In Effortless Building's "Single" mode, holding the button keeps placing or erasing ghost blocks: "I want to be able
   to place or destroy quickly" (608 note). Two sliders in Effortless Building's menu set the placing speed and the
   erasing speed (Geo, comment c2 on inbox request 670: "I'd like this to be two different configurable sliders on the
-  effortless building UI, easy to change as you work").
+  effortless building UI, easy to change as you work"). They read "Build speed: 5 blocks/s" and "Break speed: 3.33
+  blocks/s" at their first settings (Geo's wording, inbox request 703). They sit aligned just below the menu's
+  left-hand buttons, narrower and a bit smaller than first built, clear of a mode's description: "C and D, and make
+  them a bit smaller if possible. Also move them to be aligned just below the other config buttons. If that wrench
+  button shows additional quick settings, we might want to merge these in with those, instead" (703 Q1, where C moved
+  the sliders away from the description and D made them narrower with shorter labels). The first repeat waits at
+  least 0.2 seconds, the game's own wait before a held click repeats, then repeats at the slider's speed (703 Q2 A).
+- In every Effortless Building mode, with anything but a placeable item in hand (a tool, food, an empty hand), every
+  click acts as without mods, breaking and using real blocks; ghost blocks are drawn and erased only with a placeable
+  item in hand (704 Q1 A). Placeable items include more than blocks: "only with a block in hand" should be expanded
+  to placeable things, such as redstone, fences, etc..." (Geo's comment on 704). The agent reads that as every item
+  that places a block (blocks, redstone dust, fences, doors, signs, seeds, string and the like); items that place an
+  entity or a fluid (item frames, armor stands, boats, buckets) act as without mods, since ghost blocks show only
+  blocks.
 - With "Disable" chosen in Effortless Building, clicks act as they do without mods, even with the block mix on. The
   mix must never be on without the player knowing: "I don't want that feature of block mix; I'd rather deliberately
   select which blocks to use with the block mix UI open... either that or some much clearer "block mix selection mode"
