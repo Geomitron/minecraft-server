@@ -36,17 +36,19 @@ hold_while_walking() {
 	wait "$holder"
 }
 
-# hold_ok <log> <button> <period>: the hold log shows every gap between edits as <period> ticks, and the edits a held
-# button gives: one when it goes down, then one every <period> ticks.
+# hold_ok <log> <button> <period>: the hold log shows the edits a held button gives: one when it goes down, the first
+# repeat 4 ticks later (the game's own wait) or <period> ticks later if that's longer, then one every <period> ticks.
 hold_ok() {
-	local log=$1 down edits gaps
+	local log=$1 down edits gaps first=$(($3 > 4 ? $3 : 4)) repeats=0
 	down=${log#*"$2="}
 	down=${down%% *}
 	edits=${log#*edits=}
 	edits=${edits%% *}
 	gaps=${log#*gaps=}
-	((edits == 1 + (down - 1) / $3)) || return 1
-	[[ -z $gaps ]] || [[ $(tr ',' '\n' <<< "$gaps" | sort -u) == "$3" ]]
+	((down - 1 < first)) || repeats=$(((down - 1 - first) / $3 + 1))
+	((edits == 1 + repeats)) || return 1
+	[[ -z $gaps ]] || [[ ${gaps%%,*} == "$first" ]] || return 1
+	[[ $gaps != *,* ]] || [[ $(tr ',' '\n' <<< "${gaps#*,}" | sort -u) == "$3" ]]
 }
 
 # Both players stand south of the row.
@@ -100,19 +102,20 @@ done
 drv 1 "ebmode SINGLE" "cmd tp @s 20 -58 -5 0 30" "wait 20" "notoasts" > /dev/null
 xdo 1 keydown Alt_L
 check "the radial menu shows both sliders at their first settings" eval 'drv 1 "await screen Build Modes" > /dev/null &&
-	[[ $(val 1 texts) == "Placing speed: 5 blocks/s | Erasing speed: 3.33 blocks/s" ]]'
+	[[ $(val 1 texts) == "Build speed: 5 blocks/s | Break speed: 3.33 blocks/s" ]]'
 drv 1 "wait 20" "shot radial-first" > /dev/null
+echo "  the sliders' boxes: $(val 1 "box Build speed") and $(val 1 "box Break speed")" >> /out/checks.log
 # The pointer over "Single", whose description shows under the menu.
 xdo 1 mousemove --window %w 493 170
 drv 1 "wait 10" "shot radial-single-description" > /dev/null
-read -r x y < <(val 1 "sliderat 2 Placing speed")
+read -r x y < <(val 1 "sliderat 2 Build speed")
 xdo 1 mousemove --window %w "$x" "$y" click 1
-read -r x y < <(val 1 "sliderat 6 Erasing speed")
-read -r x2 y2 < <(val 1 "sliderat 10 Erasing speed")
+read -r x y < <(val 1 "sliderat 6 Break speed")
+read -r x2 y2 < <(val 1 "sliderat 10 Break speed")
 xdo 1 mousemove --window %w "$x" "$y" mousedown 1 mousemove --window %w $(((x + x2) / 2)) "$y" sleep 0.2 \
 	mousemove --window %w "$x2" "$y2" sleep 0.2 mouseup 1
 check "the click and the drag set them to 10 and 2 blocks a second" \
-	eval '[[ $(val 1 texts) == "Placing speed: 10 blocks/s | Erasing speed: 2 blocks/s" ]]'
+	eval '[[ $(val 1 texts) == "Build speed: 10 blocks/s | Break speed: 2 blocks/s" ]]'
 xdo 1 mousemove --window %w 600 300
 drv 1 "wait 10" "shot radial-moved" > /dev/null
 xdo 1 keyup Alt_L
@@ -137,7 +140,7 @@ hold_at() {
 	echo "  hold $2: $log" >> /out/checks.log
 	hold_ok "$log" "$2" "$3"
 }
-check "holding use now sends an edit every 2 ticks" hold_at 3 use 2
+check "holding use now sends an edit 4 ticks after it goes down, then every 2 ticks" hold_at 3 use 2
 check "and holding attack one every 10" hold_at 1 attack 10
 
 # Both settings survive a restart: the sliders show them, and hold to repeat uses them.
@@ -148,10 +151,60 @@ check "after a restart, hold to repeat keeps both settings" eval '[[ $(val 1 rep
 drv 1 "cmd tp @s 20 -58 -5 0 30" "wait 20" > /dev/null
 xdo 1 keydown Alt_L
 check "and so do the sliders" eval 'drv 1 "await screen Build Modes" > /dev/null &&
-	[[ $(val 1 texts) == "Placing speed: 10 blocks/s | Erasing speed: 2 blocks/s" ]]'
+	[[ $(val 1 texts) == "Build speed: 10 blocks/s | Break speed: 2 blocks/s" ]]'
 xdo 1 keyup Alt_L
 drv 1 "await noscreen" "ebmode SINGLE" > /dev/null
-check "holding use after the restart sends an edit every 2 ticks" hold_at 3 use 2
+check "holding use after the restart sends an edit 4 ticks after it goes down, then every 2 ticks" hold_at 3 use 2
+
+# At the fastest speed, 20 blocks a second (a repeat every tick), a quick click still acts once, and a held one first
+# repeats after the game's own wait of 4 ticks. Both sliders are dragged to their right end.
+drv 1 "cmd tp @s 20 -58 -5 0 30" "wait 20" > /dev/null
+xdo 1 keydown Alt_L
+drv 1 "await screen Build Modes" > /dev/null
+for slider in "Build speed" "Break speed"; do
+	read -r x y < <(val 1 "sliderat 6 $slider")
+	read -r x2 y2 < <(val 1 "sliderat 1 $slider")
+	xdo 1 mousemove --window %w "$x" "$y" mousedown 1 mousemove --window %w $(((x + x2) / 2)) "$y" sleep 0.2 \
+		mousemove --window %w $((x2 + 4)) "$y2" sleep 0.2 mouseup 1
+done
+check "both sliders now read 20 blocks a second" \
+	eval '[[ $(val 1 texts) == "Build speed: 20 blocks/s | Break speed: 20 blocks/s" ]]'
+xdo 1 keyup Alt_L
+drv 1 "await noscreen" "ebmode SINGLE" > /dev/null
+check "hold to repeat takes a repeat every tick" eval '[[ $(val 1 repeat) == "place=1 erase=1" ]]'
+# quick_click <use|attack>: one quick click on the row z 5 at 2 -60 5, with the row filled first for attack; the hold
+# log then shows one edit.
+quick_click() {
+	if [[ $1 == attack ]]; then
+		drv 1 "fill 2 -60 5 40 -60 5 minecraft:stone_bricks" "await block 40 -60 5 minecraft:stone_bricks" > /dev/null
+	else
+		drv 1 "fill 2 -60 5 40 -57 5 minecraft:air" "await block 40 -60 5 minecraft:air" > /dev/null
+	fi
+	drv 1 "cmd tp @s 2.5 -55 5.5 0 90" "wait 30" "holdreset" > /dev/null
+	"${1}_click" 1
+	drv 1 "wait 20" > /dev/null
+	local log
+	log=$(val 1 holdlog)
+	echo "  quick $1 click: $log" >> /out/checks.log
+	[[ $log == *" edits=1 "* ]]
+}
+check "at 20 blocks a second, a quick use click places one block" quick_click use
+check "and a quick attack click erases one" quick_click attack
+check "holding use sends an edit 4 ticks after it goes down, then every tick" hold_at 3 use 1
+check "and holding attack likewise" hold_at 1 attack 1
+
+# The screen the radial menu's wrench button opens, for Geo's review: its pointer goes to the wrench (157 left of the
+# menu's middle and 13 above it, at GUI scale 2), and a click opens Effortless Building's Modifiers screen.
+drv 1 "cmd tp @s 20 -58 -5 0 30" "wait 20" > /dev/null
+xdo 1 keydown Alt_L
+drv 1 "await screen Build Modes" "wait 20" > /dev/null
+xdo 1 mousemove --window %w $((854 / 2 - 157 * 2)) $((480 / 2 - 13 * 2))
+drv 1 "wait 10" > /dev/null
+xdo 1 click 1
+check "the wrench button opens the Modifiers screen" drv 1 "await screen Modifiers"
+xdo 1 keyup Alt_L
+# The chat, full of the checks' teleports, fades over 10 seconds first.
+drv 1 "wait 220" "notoasts" "wait 5" "shot modifiers" "close" "await noscreen" > /dev/null
 drv 1 "ebmode DISABLED" > /dev/null
 
 # The look, after the player's own change: translucent off and alpha 0.3, saved; a restart keeps both.

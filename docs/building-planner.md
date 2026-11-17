@@ -30,9 +30,10 @@ the in-game check harness.
   placed them. Effortless Building never places or breaks real blocks. A shape can start on a ghost block as well as
   on a real block.
 - **Hold to repeat.** In Single mode, holding the place button keeps placing ghost blocks and holding the break button
-  keeps erasing them. Two sliders in Effortless Building's radial menu set the placing speed and the erasing speed; at
-  first they're the game's own pace for a held button, five a second to place and just over three to erase. The other
-  modes act once for each click.
+  keeps erasing them. Two sliders in Effortless Building's radial menu, "Build speed" and "Break speed", set how fast,
+  from 1 to 20 blocks a second; at first they're the game's own pace for a held button, five a second to place and
+  just over three to erase. The first repeat waits at least 0.2 seconds, the game's own wait before a held click
+  repeats, so a quick click places or erases one block at every speed. The other modes act once for each click.
 - **Disable.** With "Disable" chosen in Effortless Building's radial menu, clicks act as they do without mods, placing
   and breaking real blocks, even with the block mix on.
 - **Block mixes.** The block mix key (B unless the player changes it in Controls) opens the block mix screen, the only
@@ -130,7 +131,7 @@ Effortless Building, under `common/src/main/java/nl/requios/effortlessbuilding/`
 | E9 | `buildpipeline/BuildPipelineClient.java`, `handleClick` and `getPreviewBlocks`; `resolveFirstClickPos` | `@WrapOperation` on `ClientLevel.clip`; on `Level.getBlockState` | Let shapes start on ghost blocks: aim at the nearer of the real block and Litematica's ghost block (`RayTraceUtils.traceToSchematicWorld`), and read the ghost block's state, where the real block can be replaced, when picking the start position, so the shape goes beside it. |
 | E10 | `buildpipeline/BuildPipelineClient.java`, public static `handleRightClick` and `handleLeftClick`, with `shouldInterceptPlacing`, `shouldInterceptBreaking` and `getBuildState`; `buildpipeline/BuildPipeline.java`, `isBuildTriggerItem`; `buildmode/BuildModes.java`, `getBuildMode`; the click checks copy `fabric/.../EffortlessBuildingClient.java`'s client tick | No mixin: Building Planner's own `END_CLIENT_TICK` calls the two public methods again while a button stays down | Hold to repeat in Single mode (see "The client"). Effortless Building's own tick acts only when a button goes down (`rightJustPressed`, `leftJustPressed`). |
 | E11 | `screen/RadialMenu.java`, `init()` | `@Inject` at tail, calling `Screen.addRenderableWidget` | Add Building Planner's buttons and sliders to the radial menu each time it opens (Minecraft clears a screen's widgets and calls `init` on each open). They're children of the screen, so `RadialMenu.mouseClicked`, which calls `super.mouseClicked` after its own `performAction`, routes clicks and drags to them. |
-| E12 | `screen/RadialMenu.java`, `extractRenderState(GuiGraphicsExtractor, int, int, float)` | `@Inject` at tail | Draw those widgets: the method draws the menu itself and never calls `Screen`'s own drawing, which would draw them. |
+| E12 | `screen/RadialMenu.java`, `extractRenderState(GuiGraphicsExtractor, int, int, float)` | `@Inject` before its call to `drawTexts` | Draw those widgets: the method draws the menu itself and never calls `Screen`'s own drawing, which would draw them. Drawn before the menu's texts, they leave a hovered mode's name, which can fall on the sliders, on top. |
 
 Effortless Building's limits come from its config on the player's computer (`config/ServerConfig.java`; survival
 defaults: reach 32, 2,000 blocks a shape, 64 a side). The server applies its own caps (below). The radial menu's own
@@ -330,8 +331,10 @@ the player's chat.
 Hold to repeat (E10): while Building Planner has a session, Effortless Building is loaded and its mode is Single, the
 client tick counts how many ticks each of the use and attack buttons has been down, with no screen open. After the
 tick a button goes down, which Effortless Building's own tick handles, it calls `handleRightClick` (use) or
-`handleLeftClick` (attack) again every N ticks, where N is the placing or erasing slider's setting, under the
-conditions Effortless Building sets for a fresh click (a build trigger item, or a sequence under way; for attack also
+`handleLeftClick` (attack) again (`HoldRepeat`): first after the larger of 4 ticks and N, then every N ticks, where N
+is the build or break slider's setting. The 4 ticks are the game's own wait before a held use button repeats (below),
+so a click held under 0.2 seconds acts once at every speed. Each repeat comes under the conditions Effortless
+Building sets for a fresh click (a build trigger item, or a sequence under way; for attack also
 `shouldInterceptBreaking`). Each repeat is an ordinary click, so it sends an edit as any shape does. The other modes,
 Disable, and a server without the add-on have no repeat. Effortless Building's mixins already cancel vanilla's own
 repeat while it intercepts.
@@ -369,22 +372,25 @@ off.
 ### The radial menu's buttons and sliders
 
 Hooks E11 and E12 add Building Planner's widgets to Effortless Building's radial menu (opened by holding its key, left
-Alt by default; it closes when the key is let go): a row of buttons under the menu's left-hand buttons for "Show or
-hide ghost blocks", "Copy", "Copy real blocks", "Paste" and "Material list"; a second row with "Turn", "Mirror" and
-"Clear" while a copy exists; and under them two sliders, "Placing speed" and "Erasing speed". The widgets sit by the
-menu's middle, as its own buttons do (`RadialMenuWidgets`): the menu's left-hand buttons are 20 across with their
-middles 26 apart, the leftmost 157 left of the middle, in two rows 13 above and below it, so the first row of
-Building Planner's buttons has its middles 39 below, the second 65 below, and the sliders, 156 across and 16 high with
-2 between them, start 81 below, under the leftmost button's left edge. The sliders stay there whether or not the rows
-show, and the lower one ends 115 below the middle, inside the 120 of a screen 240 high (the least Minecraft's
-automatic GUI scale gives). Each slider shows its speed in blocks a second, to two decimals at most ("Placing speed: 5
-blocks/s", "Erasing speed: 3.33 blocks/s"), so each step reads differently. Its steps are the tick gaps 20 to 1 from
-left to right (1 to 20 blocks a second); a click or a drag sets it, and the handle settles on the chosen step when
-let go. Each step it reaches is saved at once in `config/buildingplanner-client.properties` (`place-repeat-ticks`,
-`erase-repeat-ticks`; at first 4 and 6, which a missing value, or one that isn't a whole number from 1 to 20, reads
-as), where hold to repeat reads it each tick. A tick gap of 1 or 2 repeats a click the player holds for 2 or 3 ticks
-(100 to 150 milliseconds), as a quick click can be. The sliders show and save on any server, and take effect only
-where hold to repeat runs. Each button
+Alt by default; it closes when the key is let go): two sliders, "Build speed" and "Break speed", just under the menu's
+left-hand buttons (the wrench, undo and redo, and the row under them); under the sliders a row of buttons for "Show or
+hide ghost blocks", "Copy", "Copy real blocks", "Paste" and "Material list"; and a second row with "Turn", "Mirror" and
+"Clear" while a copy exists. The widgets sit by the menu's middle, as its own buttons do (`RadialMenuWidgets`): the
+menu's left-hand buttons are 20 across with their middles 26 apart, the leftmost 157 left of the middle, in two rows
+13 above and below it, so they span 167 to 95 left of the middle and end 23 below it. The sliders, 102 across and 12
+high with 2 between them, start 29 below the middle, 6 under the lower row as it is under the upper, with their left
+edges in line with the leftmost buttons'. They end 65 left of the middle, outside the menu's ring of modes (65 from the
+middle at most), and 55 below it, above the description of a mode under the pointer, which the menu draws 100 below
+the middle. The rows of buttons go under the sliders; where exactly, and how they keep clear of that description, is
+settled with Geo's review when they're built. Each slider draws as the game's own sliders do, with its text at 0.7 of
+the game's size (`RepeatSlider`), so the widest label, "Break speed: 3.33 blocks/s", fits in 96 across; at the
+smallest window, 854 by 480 at GUI scale 2, a line of it is about 13 pixels high. Each slider shows its speed in blocks
+a second, to two decimals at most ("Build speed: 5 blocks/s", "Break speed: 3.33 blocks/s" at first), so each step
+reads differently. Its steps are the tick gaps 20 to 1 from left to right (1 to 20 blocks a second); a click or a drag
+sets it, and the handle settles on the chosen step when let go. Each step it reaches is saved at once in
+`config/buildingplanner-client.properties` (`place-repeat-ticks`, `erase-repeat-ticks`; at first 4 and 6, which a
+missing value, or one that isn't a whole number from 1 to 20, reads as), where hold to repeat reads it each tick. The
+sliders show and save on any server, and take effect only where hold to repeat runs. Each button
 shows its name, and its key when it has one, on hover, as the menu's own buttons do. Their icons come from Lucide
 (ISC licence), copied as path data into a source file that names the set, its version, its source and its licence, and
 made into the mod's button textures from that data. The layout and labels are drafted for Geo's review, with
@@ -568,11 +574,14 @@ real buttons with xdotool while Planner1 is teleported one block every two ticks
   each edit put one ghost block in the row, on both clients, and no real block.
 - Holding attack over a row filled with ghost blocks sends an edit when the button goes down and then one every 6
   ticks, and each edit erased one ghost block, on both clients, leaving the real blocks.
-- The radial menu, opened with left Alt held, shows both sliders at their first settings (5 and 3.33 blocks a second).
-  A click on the placing slider sets it to 10 blocks a second and a drag on the erasing slider sets it to 2; hold to
-  repeat takes both at once, and Building Planner's client config keeps them. Holding use then sends an edit every 2
-  ticks and holding attack one every 10. After a restart the sliders show the same settings, and holding use still
-  sends an edit every 2 ticks.
+- The radial menu, opened with left Alt held, shows both sliders at their first settings ("Build speed: 5 blocks/s",
+  "Break speed: 3.33 blocks/s"). A click on the build slider sets it to 10 blocks a second and a drag on the break
+  slider sets it to 2; hold to repeat takes both at once, and Building Planner's client config keeps them. Holding use
+  then sends an edit 4 ticks after the button goes down and then every 2 ticks, and holding attack one every 10. After
+  a restart the sliders show the same settings, and holding use still repeats every 2 ticks.
+- With both sliders dragged to 20 blocks a second, a quick use click and a quick attack click each send one edit, and
+  holding either sends its first repeat 4 ticks after the button goes down and then one every tick.
+- The radial menu's wrench button opens Effortless Building's Modifiers screen.
 - Holding use in Line mode (which needs two clicks) and with the mode disabled sends no edit.
 - Each client's first start leaves Litematica's options at on and 0.8 (and the tool item off), saved in its config,
   and the line in Building Planner's client config.

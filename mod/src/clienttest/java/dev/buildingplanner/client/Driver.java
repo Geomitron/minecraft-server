@@ -417,6 +417,19 @@ public final class Driver implements ClientModInitializer {
 				}
 				return "none";
 			}
+			case "box" -> {
+				// box <text>: the window position, width and height of the first widget on the open screen whose text
+				// starts with <text>, for outlining it in a screenshot.
+				String prefix = line.substring(a[0].length() + 1);
+				double scale = mc.getWindow().getGuiScale();
+				for (GuiEventListener child : mc.gui.screen().children()) {
+					if (child instanceof AbstractWidget w && w.getMessage().getString().startsWith(prefix)) {
+						return scaled(mc, w.getX(), w.getY()) + " " + (int) (w.getWidth() * scale) + " "
+							+ (int) (w.getHeight() * scale);
+					}
+				}
+				return "none";
+			}
 			case "texts" -> {
 				// texts: the text of each widget on the open screen, separated by " | ".
 				List<String> texts = new ArrayList<>();

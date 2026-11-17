@@ -29,13 +29,21 @@ class HoldRepeatTest {
 	void aHeldClickRepeatsEveryPeriod() {
 		assertEquals(List.of(4, 8, 12, 16), repeats(new HoldRepeat(), 4, 17));
 		assertEquals(List.of(6, 12, 18), repeats(new HoldRepeat(), 6, 19));
-		assertEquals(List.of(1, 2, 3), repeats(new HoldRepeat(), 1, 4));
 		assertEquals(List.of(20), repeats(new HoldRepeat(), 20, 21));
 	}
 
 	@Test
+	void theFirstRepeatWaitsAtLeastFourTicksAtFasterSpeeds() {
+		assertEquals(List.of(4, 5, 6, 7), repeats(new HoldRepeat(), 1, 8));
+		assertEquals(List.of(4, 6, 8), repeats(new HoldRepeat(), 2, 9));
+		assertEquals(List.of(4, 7, 10), repeats(new HoldRepeat(), 3, 11));
+	}
+
+	@Test
 	void aClickReleasedBeforeTheFirstRepeatNeverRepeats() {
-		assertEquals(List.of(), repeats(new HoldRepeat(), 4, 4));
+		for (int period = 1; period <= 20; period++) {
+			assertEquals(List.of(), repeats(new HoldRepeat(), period, Math.max(HoldRepeat.FIRST_WAIT, period)));
+		}
 	}
 
 	@Test
