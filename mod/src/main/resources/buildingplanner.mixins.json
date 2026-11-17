@@ -11,6 +11,7 @@
 		"effortless.BuildPipelineMixin",
 		"effortless.ConstraintSystemMixin",
 		"effortless.PacketHandlerMixin",
+		"effortless.RadialMenuMixin",
 		"effortless.RandomizerSystemMixin",
 		"litematica.ChunkRendererSchematicVboMixin",
 		"litematica.OverlayRendererMixin",

@@ -1,6 +1,6 @@
-# Step 10's in-game checks: hold to repeat in Effortless Building's Single mode, and the look Building Planner sets
-# for Litematica's ghost blocks once. Sourced by inside.sh, which provides drv, val, check, keys, xdo, start_client,
-# stop_client and stop_server. Each client starts with a fresh game folder, so its first start is the first start.
+# Step 10's in-game checks: hold to repeat in Effortless Building's Single mode, with the radial menu's speed sliders,
+# and the look Building Planner sets for Litematica's ghost blocks once. Sourced by inside.sh, which provides drv, val,
+# check, keys, xdo, start_client, stop_client and stop_server. Each client starts with a fresh game folder, so its first start is the first start.
 
 # The look, on a first start: both of Litematica's options are set, saved to its config, and recorded. Each client
 # also saved a first start before it joined the server.
@@ -94,6 +94,64 @@ for mode in LINE DISABLED; do
 	drv 1 "wait 10" > /dev/null
 	check "holding use in $mode mode sends no edit" eval '[[ $(val 1 holdlog) == *"edits=0 "* ]]'
 done
+
+# The radial menu's sliders, opened with the menu's key (left Alt) held: a click on the placing slider sets 10 blocks
+# a second (2 ticks), and a drag of the erasing slider's handle sets 2 a second (10 ticks).
+drv 1 "ebmode SINGLE" "cmd tp @s 20 -58 -5 0 30" "wait 20" "notoasts" > /dev/null
+xdo 1 keydown Alt_L
+check "the radial menu shows both sliders at their first settings" eval 'drv 1 "await screen Build Modes" > /dev/null &&
+	[[ $(val 1 texts) == "Placing speed: 5 blocks/s | Erasing speed: 3.33 blocks/s" ]]'
+drv 1 "wait 20" "shot radial-first" > /dev/null
+# The pointer over "Single", whose description shows under the menu.
+xdo 1 mousemove --window %w 493 170
+drv 1 "wait 10" "shot radial-single-description" > /dev/null
+read -r x y < <(val 1 "sliderat 2 Placing speed")
+xdo 1 mousemove --window %w "$x" "$y" click 1
+read -r x y < <(val 1 "sliderat 6 Erasing speed")
+read -r x2 y2 < <(val 1 "sliderat 10 Erasing speed")
+xdo 1 mousemove --window %w "$x" "$y" mousedown 1 mousemove --window %w $(((x + x2) / 2)) "$y" sleep 0.2 \
+	mousemove --window %w "$x2" "$y2" sleep 0.2 mouseup 1
+check "the click and the drag set them to 10 and 2 blocks a second" \
+	eval '[[ $(val 1 texts) == "Placing speed: 10 blocks/s | Erasing speed: 2 blocks/s" ]]'
+xdo 1 mousemove --window %w 600 300
+drv 1 "wait 10" "shot radial-moved" > /dev/null
+xdo 1 keyup Alt_L
+check "the menu closes when its key is let go" drv 1 "await noscreen"
+check "hold to repeat takes both at once" eval '[[ $(val 1 repeat) == "place=2 erase=10" ]]'
+check "and they're kept in Building Planner's client config" eval \
+	'grep -q "^place-repeat-ticks=2" run/client1/'$marker' && grep -q "^erase-repeat-ticks=10" run/client1/'$marker
+
+# hold_at <button> <name> <period>: holds the button over the row z 5 from 2 -60 5, as above, and checks the edits
+# came every <period> ticks. For erasing, the row is filled first.
+hold_at() {
+	if [[ $1 == 1 ]]; then
+		drv 1 "fill 2 -60 5 40 -60 5 minecraft:stone_bricks" "await block 40 -60 5 minecraft:stone_bricks" > /dev/null
+	else
+		drv 1 "fill 2 -60 5 40 -57 5 minecraft:air" "await block 40 -60 5 minecraft:air" > /dev/null
+	fi
+	drv 1 "cmd tp @s 2.5 -55 5.5 0 90" "wait 30" "holdreset" > /dev/null
+	hold_while_walking "$1"
+	drv 1 "wait 20" > /dev/null
+	local log
+	log=$(val 1 holdlog)
+	echo "  hold $2: $log" >> /out/checks.log
+	hold_ok "$log" "$2" "$3"
+}
+check "holding use now sends an edit every 2 ticks" hold_at 3 use 2
+check "and holding attack one every 10" hold_at 1 attack 10
+
+# Both settings survive a restart: the sliders show them, and hold to repeat uses them.
+stop_client 1
+start_client 1
+check "client 1 starts a session again" drv 1 "await session" "await noscreen" "await placement Yard"
+check "after a restart, hold to repeat keeps both settings" eval '[[ $(val 1 repeat) == "place=2 erase=10" ]]'
+drv 1 "cmd tp @s 20 -58 -5 0 30" "wait 20" > /dev/null
+xdo 1 keydown Alt_L
+check "and so do the sliders" eval 'drv 1 "await screen Build Modes" > /dev/null &&
+	[[ $(val 1 texts) == "Placing speed: 10 blocks/s | Erasing speed: 2 blocks/s" ]]'
+xdo 1 keyup Alt_L
+drv 1 "await noscreen" "ebmode SINGLE" > /dev/null
+check "holding use after the restart sends an edit every 2 ticks" hold_at 3 use 2
 drv 1 "ebmode DISABLED" > /dev/null
 
 # The look, after the player's own change: translucent off and alpha 0.3, saved; a restart keeps both.

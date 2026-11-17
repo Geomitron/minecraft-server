@@ -1,28 +1,26 @@
 package dev.buildingplanner.client;
 
 import dev.buildingplanner.BuildingPlanner;
+import dev.buildingplanner.ClientConfig;
 import dev.buildingplanner.look.LookDefaults;
 import fi.dy.masa.litematica.config.Configs;
 import fi.dy.masa.malilib.config.options.ConfigBoolean;
 import fi.dy.masa.malilib.config.options.ConfigDouble;
 import java.io.IOException;
-import java.nio.file.Path;
-import net.fabricmc.loader.api.FabricLoader;
 
 /**
  * Sets how Litematica draws ghost blocks, once on a player's computer, whether or not they join a server with Building
  * Planner: translucent blocks at 0.8 opacity, for each option the player hasn't changed from Litematica's default. It
- * saves Litematica's config, then records that in {@code config/buildingplanner-client.properties}, so a later change
- * of the player's own stays.
+ * saves Litematica's config, then records that in the player's {@link ClientConfig}, so a later change of the
+ * player's own stays.
  */
 final class LitematicaLook {
 	private LitematicaLook() {
 	}
 
 	/** Call once Litematica has loaded its config, once a game run. */
-	static void setOnce() {
-		Path marker = FabricLoader.getInstance().getConfigDir().resolve("buildingplanner-client.properties");
-		if (LookDefaults.applied(marker)) {
+	static void setOnce(ClientConfig config) {
+		if (LookDefaults.applied(config)) {
 			return;
 		}
 		try {
@@ -39,7 +37,7 @@ final class LitematicaLook {
 				alpha.setDoubleValue(alphaNow);
 			}
 			Configs.saveToFile();
-			LookDefaults.markApplied(marker);
+			LookDefaults.markApplied(config);
 		} catch (IOException | RuntimeException e) {
 			BuildingPlanner.LOGGER.warn("Couldn't set Litematica's ghost block look", e);
 		}

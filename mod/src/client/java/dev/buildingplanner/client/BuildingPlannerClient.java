@@ -2,6 +2,7 @@ package dev.buildingplanner.client;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.buildingplanner.BuildingPlanner;
+import dev.buildingplanner.ClientConfig;
 import dev.buildingplanner.layer.Layer;
 import dev.buildingplanner.sync.EditKind;
 import dev.buildingplanner.sync.Payloads;
@@ -68,6 +69,8 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	/** The chunks of the game's level loaded now, by {@link Layer#key}, which a session watches from its start. */
 	private static final LongSet LOADED = new LongOpenHashSet();
 
+	/** Building Planner's settings on this computer, read when the game starts. */
+	private static ClientConfig config;
 	/** Hold to repeat in Effortless Building's Single mode; null without Effortless Building, whose classes it uses. */
 	private static HeldClicks heldClicks;
 	/** Whether Litematica's ghost block look has been set this run (see {@link LitematicaLook}). */
@@ -76,6 +79,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	@Override
 	public void onInitializeClient() {
 		FabricLoader loader = FabricLoader.getInstance();
+		config = ClientConfig.load(loader.getConfigDir().resolve("buildingplanner-client.properties"));
 		// The mixin plugin skips the Litematica hooks without Litematica or MaLiLib; with no session, Effortless
 		// Building's shapes send nothing on a server, as on a server without the add-on.
 		if (!loader.isModLoaded("litematica") || !loader.isModLoaded("malilib")) {
@@ -83,7 +87,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 			return;
 		}
 		if (loader.isModLoaded("effortlessbuilding")) {
-			heldClicks = new HeldClicks();
+			heldClicks = new HeldClicks(config);
 		}
 		KeyMappingHelper.registerKeyMapping(BLOCK_MIX);
 		List.of(COPY, PASTE, TURN, MIRROR, CLEAR).forEach(KeyMappingHelper::registerKeyMapping);
@@ -170,7 +174,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 			if (!lookSet) {
 				// Litematica has loaded its config by the first tick.
 				lookSet = true;
-				LitematicaLook.setOnce();
+				LitematicaLook.setOnce(config);
 			}
 			if (session != null) {
 				session.tick();
@@ -194,6 +198,11 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 			BuildingPlanner.LOGGER.warn("The server runs Building Planner protocol {}, this client {}",
 				hello.protocolVersion(), Payloads.PROTOCOL_VERSION);
 		}
+	}
+
+	/** Building Planner's settings on this computer, such as the speed sliders' in the radial menu (hook E11). */
+	public static ClientConfig config() {
+		return config;
 	}
 
 	private static void endSession() {

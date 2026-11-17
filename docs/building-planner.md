@@ -370,9 +370,20 @@ off.
 Hooks E11 and E12 add Building Planner's widgets to Effortless Building's radial menu (opened by holding its key, left
 Alt by default; it closes when the key is let go): a row of buttons under the menu's left-hand buttons for "Show or
 hide ghost blocks", "Copy", "Copy real blocks", "Paste" and "Material list"; a second row with "Turn", "Mirror" and
-"Clear" while a copy exists; and under them two sliders, "Placing speed" and "Erasing speed", each showing its speed in
-blocks a second. A slider's steps are the tick gaps 1 to 20 (20 to 1 a second); its setting is kept in
-`config/buildingplanner-client.properties` (`place-repeat-ticks`, `erase-repeat-ticks`; at first 4 and 6). Each button
+"Clear" while a copy exists; and under them two sliders, "Placing speed" and "Erasing speed". The widgets sit by the
+menu's middle, as its own buttons do (`RadialMenuWidgets`): the menu's left-hand buttons are 20 across with their
+middles 26 apart, the leftmost 157 left of the middle, in two rows 13 above and below it, so the first row of
+Building Planner's buttons has its middles 39 below, the second 65 below, and the sliders, 156 across and 16 high with
+2 between them, start 81 below, under the leftmost button's left edge. The sliders stay there whether or not the rows
+show, and the lower one ends 115 below the middle, inside the 120 of a screen 240 high (the least Minecraft's
+automatic GUI scale gives). Each slider shows its speed in blocks a second, to two decimals at most ("Placing speed: 5
+blocks/s", "Erasing speed: 3.33 blocks/s"), so each step reads differently. Its steps are the tick gaps 20 to 1 from
+left to right (1 to 20 blocks a second); a click or a drag sets it, and the handle settles on the chosen step when
+let go. Each step it reaches is saved at once in `config/buildingplanner-client.properties` (`place-repeat-ticks`,
+`erase-repeat-ticks`; at first 4 and 6, which a missing value, or one that isn't a whole number from 1 to 20, reads
+as), where hold to repeat reads it each tick. A tick gap of 1 or 2 repeats a click the player holds for 2 or 3 ticks
+(100 to 150 milliseconds), as a quick click can be. The sliders show and save on any server, and take effect only
+where hold to repeat runs. Each button
 shows its name, and its key when it has one, on hover, as the menu's own buttons do. Their icons come from Lucide
 (ISC licence), copied as path data into a source file that names the set, its version, its source and its licence, and
 made into the mod's button textures from that data. The layout and labels are drafted for Geo's review, with
@@ -545,8 +556,11 @@ real buttons with xdotool while Planner1 is teleported one block every two ticks
   each edit put one ghost block in the row, on both clients, and no real block.
 - Holding attack over a row filled with ghost blocks sends an edit when the button goes down and then one every 6
   ticks, and each edit erased one ghost block, on both clients, leaving the real blocks.
-- With the placing slider set to 2 ticks and the erasing slider to 10, holding use sends an edit every 2 ticks and
-  holding attack one every 10; the settings survive a restart.
+- The radial menu, opened with left Alt held, shows both sliders at their first settings (5 and 3.33 blocks a second).
+  A click on the placing slider sets it to 10 blocks a second and a drag on the erasing slider sets it to 2; hold to
+  repeat takes both at once, and Building Planner's client config keeps them. Holding use then sends an edit every 2
+  ticks and holding attack one every 10. After a restart the sliders show the same settings, and holding use still
+  sends an edit every 2 ticks.
 - Holding use in Line mode (which needs two clicks) and with the mode disabled sends no edit.
 - Each client's first start leaves Litematica's options at on and 0.8 (and the tool item off), saved in its config,
   and the line in Building Planner's client config.
@@ -569,8 +583,8 @@ other in the game's own copy of the layer, again after a restart, which doesn't 
 - That Litematica restores, without Syncmatica, the placements Syncmatica made, which the client removes at its start;
   `step6.sh` checks placements Litematica made itself of files in the same folders.
 - The removal of old plans' placements after a change of dimension: the checks cover a session's start.
-- That the widgets hooks E11 and E12 add take clicks and drags in the radial menu (read in `RadialMenu.mouseClicked`
-  and Minecraft's `Screen`, not run), and how they fit beside the menu's own buttons at each GUI scale.
+- How the radial menu's widgets fit at GUI scales other than 2 on a window 854 by 480 (240 high), where the checks
+  run; their positions follow the menu's middle, so larger screens leave more room.
 - The material list on a placement never added to Litematica (read in `MaterialListPlacement` and
   `TaskCountBlocksPlacement`, not run).
 - Shapes drawn with Effortless Building's multi-click modes other than Line, and its mirror and radial mirror; the

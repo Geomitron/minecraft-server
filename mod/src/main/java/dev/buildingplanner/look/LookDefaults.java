@@ -1,17 +1,12 @@
 package dev.buildingplanner.look;
 
+import dev.buildingplanner.ClientConfig;
 import java.io.IOException;
-import java.io.Reader;
-import java.io.Writer;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Properties;
 
 /**
  * How Building Planner sets Litematica's ghost blocks to look on a player's computer, once: translucent, at 0.8
  * opacity. An option the player has changed from Litematica's default keeps the player's value, and once the defaults
- * are set, the file {@code config/buildingplanner-client.properties} records it, so a later change of the player's own
- * is never overwritten.
+ * are set, the player's {@link ClientConfig} records it, so a later change of the player's own is never overwritten.
  */
 public final class LookDefaults {
 	/** What Building Planner sets {@code renderBlocksAsTranslucent} to. */
@@ -34,28 +29,13 @@ public final class LookDefaults {
 		return Double.compare(current, litematicaDefault) == 0 ? ours : current;
 	}
 
-	/** Whether {@code file} records that the defaults were set. A missing or unreadable file doesn't. */
-	public static boolean applied(Path file) {
-		if (!Files.exists(file)) {
-			return false;
-		}
-		Properties properties = new Properties();
-		try (Reader reader = Files.newBufferedReader(file)) {
-			properties.load(reader);
-		} catch (IOException | IllegalArgumentException e) {
-			return false;
-		}
-		return Boolean.parseBoolean(properties.getProperty(APPLIED, "").trim());
+	/** Whether the player's config records that the defaults were set. */
+	public static boolean applied(ClientConfig config) {
+		return Boolean.parseBoolean(config.get(APPLIED));
 	}
 
-	/** Records in {@code file} that the defaults were set. */
-	public static void markApplied(Path file) throws IOException {
-		Properties properties = new Properties();
-		properties.setProperty(APPLIED, "true");
-		Files.createDirectories(file.getParent());
-		try (Writer writer = Files.newBufferedWriter(file)) {
-			properties.store(writer, "Building Planner, on this computer. " + APPLIED
-				+ ": Litematica's ghost block look was set once, so later changes of yours stay.");
-		}
+	/** Records in the player's config that the defaults were set. */
+	public static void markApplied(ClientConfig config) throws IOException {
+		config.set(APPLIED, "true");
 	}
 }

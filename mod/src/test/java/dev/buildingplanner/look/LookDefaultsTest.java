@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import dev.buildingplanner.ClientConfig;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -43,26 +44,34 @@ class LookDefaultsTest {
 
 	@Test
 	void aMissingFileMeansTheDefaultsWereNotSet(@TempDir Path dir) {
-		assertFalse(LookDefaults.applied(dir.resolve("config/buildingplanner-client.properties")));
+		assertFalse(LookDefaults.applied(ClientConfig.load(dir.resolve("config/buildingplanner-client.properties"))));
 	}
 
 	@Test
-	void theMarkIsRecordedAndRead(@TempDir Path dir) throws IOException {
+	void theMarkIsRecordedAndReadBack(@TempDir Path dir) throws IOException {
 		Path file = dir.resolve("config/buildingplanner-client.properties");
-		LookDefaults.markApplied(file);
-		assertTrue(LookDefaults.applied(file));
-		LookDefaults.markApplied(file);
-		assertTrue(LookDefaults.applied(file));
+		LookDefaults.markApplied(ClientConfig.load(file));
+		assertTrue(LookDefaults.applied(ClientConfig.load(file)));
+		LookDefaults.markApplied(ClientConfig.load(file));
+		assertTrue(LookDefaults.applied(ClientConfig.load(file)));
+	}
+
+	@Test
+	void theMarkKeepsTheOtherSettings(@TempDir Path dir) throws IOException {
+		Path file = dir.resolve("client.properties");
+		Files.writeString(file, "place-repeat-ticks=2\n");
+		LookDefaults.markApplied(ClientConfig.load(file));
+		assertEquals("2", ClientConfig.load(file).get("place-repeat-ticks"));
 	}
 
 	@Test
 	void anUnreadableOrUnrelatedFileMeansTheDefaultsWereNotSet(@TempDir Path dir) throws IOException {
 		Path file = dir.resolve("client.properties");
 		Files.writeString(file, "something-else=true\n");
-		assertFalse(LookDefaults.applied(file));
+		assertFalse(LookDefaults.applied(ClientConfig.load(file)));
 		Files.writeString(file, "look-defaults-applied=maybe\n");
-		assertFalse(LookDefaults.applied(file));
+		assertFalse(LookDefaults.applied(ClientConfig.load(file)));
 		Files.writeString(file, "\\uZZZZ=1\n");
-		assertFalse(LookDefaults.applied(file));
+		assertFalse(LookDefaults.applied(ClientConfig.load(file)));
 	}
 }

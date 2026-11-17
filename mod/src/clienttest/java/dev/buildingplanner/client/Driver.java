@@ -1,5 +1,6 @@
 package dev.buildingplanner.client;
 
+import dev.buildingplanner.input.RepeatSpeed;
 import dev.buildingplanner.sync.EditKind;
 import dev.buildingplanner.sync.Payloads;
 import dev.buildingplanner.sync.SyncLimits;
@@ -385,6 +386,34 @@ public final class Driver implements ClientModInitializer {
 					}
 				}
 				return "none";
+			}
+			case "sliderat" -> {
+				// sliderat <ticks> <text>: the window position on the slider whose text starts with <text> that sets a gap
+				// of <ticks> ticks, where a vanilla slider takes a click at x as (x - (left + 4)) / (width - 8).
+				int ticks = Integer.parseInt(a[1]);
+				String prefix = line.substring(a[0].length() + a[1].length() + 2);
+				for (GuiEventListener child : mc.gui.screen().children()) {
+					if (child instanceof AbstractWidget w && w.getMessage().getString().startsWith(prefix)) {
+						return scaled(mc, w.getX() + 4 + RepeatSpeed.position(ticks) * (w.getWidth() - 8),
+							w.getY() + w.getHeight() / 2.0);
+					}
+				}
+				return "none";
+			}
+			case "texts" -> {
+				// texts: the text of each widget on the open screen, separated by " | ".
+				List<String> texts = new ArrayList<>();
+				for (GuiEventListener child : mc.gui.screen().children()) {
+					if (child instanceof AbstractWidget w) {
+						texts.add(w.getMessage().getString());
+					}
+				}
+				return String.join(" | ", texts);
+			}
+			case "repeat" -> {
+				// repeat: the ticks between repeats that hold to repeat uses now, for placing and for erasing.
+				return "place=" + RepeatSpeed.PLACING.ticks(BuildingPlannerClient.config())
+					+ " erase=" + RepeatSpeed.ERASING.ticks(BuildingPlannerClient.config());
 			}
 			case "close" -> {
 				mc.setScreenAndShow(null);
