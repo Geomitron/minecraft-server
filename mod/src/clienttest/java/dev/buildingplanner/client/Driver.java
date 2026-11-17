@@ -8,6 +8,7 @@ import dev.buildingplanner.sync.EditKind;
 import dev.buildingplanner.sync.Payloads;
 import dev.buildingplanner.sync.PlanReplicas;
 import dev.buildingplanner.sync.SyncLimits;
+import fi.dy.masa.litematica.config.Configs;
 import fi.dy.masa.litematica.data.DataManager;
 import fi.dy.masa.litematica.schematic.placement.SchematicPlacement;
 import fi.dy.masa.litematica.selection.AreaSelection;
@@ -59,10 +60,13 @@ public final class Driver implements ClientModInitializer {
 
 	@Override
 	public void onInitializeClient() {
+		ClientTickEvents.START_CLIENT_TICK.register(mc -> SentPackets.startTick());
 		ClientTickEvents.END_CLIENT_TICK.register(this::tick);
 	}
 
 	private void tick(Minecraft mc) {
+		SentPackets.buttons(mc.options.keyUse.isDown() && mc.gui.screen() == null,
+			mc.options.keyAttack.isDown() && mc.gui.screen() == null);
 		if (wait > 0) {
 			wait--;
 			return;
@@ -235,6 +239,37 @@ public final class Driver implements ClientModInitializer {
 			case "ebsent" -> {
 				// ebsent: the kinds of Effortless Building packet this client has sent, comma-separated, or "none".
 				return SentPackets.effortless();
+			}
+			case "holdreset" -> {
+				// holdreset: starts the hold log again.
+				SentPackets.resetHoldLog();
+				return "ok";
+			}
+			case "holdlog" -> {
+				// holdlog: ticks each mouse button was down, and the edits Building Planner sent since holdreset.
+				return SentPackets.holdLog();
+			}
+			case "countblocks" -> {
+				// countblocks <x1> <x2> <y> <z> <block>: how many blocks of that id the plans show along that row.
+				int count = 0;
+				for (int x = Integer.parseInt(a[1]); x <= Integer.parseInt(a[2]); x++) {
+					if (blockId(new BlockPos(x, Integer.parseInt(a[3]), Integer.parseInt(a[4]))).equals(a[5])) {
+						count++;
+					}
+				}
+				return String.valueOf(count);
+			}
+			case "look" -> {
+				// look: Litematica's renderBlocksAsTranslucent and ghostBlockAlpha now.
+				return "translucent=" + Configs.Visuals.RENDER_BLOCKS_AS_TRANSLUCENT.getBooleanValue()
+					+ " alpha=" + Configs.Visuals.GHOST_BLOCK_ALPHA.getDoubleValue();
+			}
+			case "setlook" -> {
+				// setlook <translucent> <alpha>: the player's own change in Litematica's settings, saved as its screen does.
+				Configs.Visuals.RENDER_BLOCKS_AS_TRANSLUCENT.setBooleanValue(Boolean.parseBoolean(a[1]));
+				Configs.Visuals.GHOST_BLOCK_ALPHA.setDoubleValue(Double.parseDouble(a[2]));
+				Configs.saveToFile();
+				return "ok";
 			}
 			case "selectplacement" -> {
 				// selectplacement [plan]: selects that plan in Litematica's placement list, or nothing.

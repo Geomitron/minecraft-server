@@ -14,6 +14,7 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
@@ -55,8 +56,16 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	 */
 	private static ClientSession session;
 
+	/** Hold to repeat in Effortless Building's Single mode; null without Effortless Building, whose classes it uses. */
+	private static HeldClicks heldClicks;
+	/** Whether Litematica's ghost block look has been set this run (see {@link LitematicaLook}). */
+	private static boolean lookSet;
+
 	@Override
 	public void onInitializeClient() {
+		if (FabricLoader.getInstance().isModLoaded("effortlessbuilding")) {
+			heldClicks = new HeldClicks();
+		}
 		KeyMappingHelper.registerKeyMapping(START_PLAN);
 		KeyMappingHelper.registerKeyMapping(BLOCK_MIX);
 		List.of(COPY, PASTE, TURN, MIRROR, CLEAR).forEach(KeyMappingHelper::registerKeyMapping);
@@ -114,8 +123,16 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 					session.clearCopy();
 				}
 			}
+			if (!lookSet) {
+				// Litematica has loaded its config by the first tick.
+				lookSet = true;
+				LitematicaLook.setOnce();
+			}
 			if (session != null) {
 				session.tick();
+				if (heldClicks != null) {
+					heldClicks.tick(client);
+				}
 			}
 		});
 		BuildingPlanner.LOGGER.info("Building Planner client loaded");
