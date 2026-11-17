@@ -447,7 +447,8 @@ nearest-pixel filtering, as the menu draws its own (`AllIcons.render`). Each ico
 generated candidate sets (inbox request 738), made with an OpenRouter model: `ghost_blocks_shown` and
 `ghost_blocks_hidden` from set 14, and `copy` from set 16, all `google/gemini-nano-banana-2.1`; `paste` from set 56a
 and `turn` from set 31, both `google/gemini-3.1-flash-image`; `material_list` from set 3 and `clear` from set 6, both
-`google/gemini-3-pro-image`; `mirror` from set 66a, `openai/gpt-5.4-image-2`.
+`google/gemini-3-pro-image`; `mirror` from set 66a, `openai/gpt-5.4-image-2`. Geo then edited each of them except
+`clear` by hand in Paint.NET.
 
 ### The block mix and its panel
 
