@@ -152,9 +152,10 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it, not
   effortless building UI, easy to change as you work"). They read "Build speed: 5 blocks/s" and "Break speed: 3.33
   blocks/s" at their first settings (Geo's wording, inbox request 703). They sit aligned just below the menu's
   left-hand buttons, narrower and a bit smaller than first built, clear of a mode's description: "C and D, and make
-  them a bit smaller if possible. Also move them to be aligned just below the other config buttons. If that wrench
-  button shows additional quick settings, we might want to merge these in with those, instead" (703 Q1, where C moved
-  the sliders away from the description and D made them narrower with shorter labels). The first repeat waits at
+  them a bit smaller if possible. Also move them to be aligned just below the other config buttons." (703 Q1, where C
+  moved the sliders away from the description and D made them narrower with shorter labels). They stay in the menu
+  rather than in the wrench button's Modifiers screen (703 revision 2 Q4: "A. In the menu, under the buttons, as
+  shown."). The first repeat waits at
   least 0.2 seconds, the game's own wait before a held click repeats, then repeats at the slider's speed (703 Q2 A).
 - In every Effortless Building mode, with anything but a placeable item in hand (a tool, food, an empty hand), every
   click acts as without mods, breaking and using real blocks; ghost blocks are drawn and erased only with a placeable
