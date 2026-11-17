@@ -219,6 +219,16 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it, not
   choices: old plans leave Litematica's list while their files stay; "Copy real blocks" and "Material list" are
   buttons without keys; the speed sliders run from 1 to 20 blocks a second; the mix panel sits at the right edge;
   Copy switches Effortless Building to "Cube" to mark the area, then back.
+- Building Planner's buttons in the radial menu sit above Effortless Building's wrench, undo and redo, in the same
+  columns, with the Turn, Mirror and Clear row above them while a copy exists (729 Q1 B). They act when the player
+  lets go of the menu key over them, as Effortless Building's own buttons do (729 Q3 A).
+- Showing or hiding the ghost blocks, by N or the button, says so in chat each time, such as "Ghost blocks hidden."
+  (729 Q4 B).
+- The buttons' icons are generated to match Effortless Building's own, and Geo picks from several options: "I don't
+  like either; would it be possible to image generate icons that fit the style of the other image icons? That means
+  pixelated at about the same resolution with black borders. Maybe there's something in my opencode provider that
+  can do a good job at this? I'd want to pick from multiple generated options." (729 Q2, over Lucide's line icons
+  and Minecraft items).
 - The shared layer replaces the decisions above that concern separate plans: named plans that move and turn as a whole
   (411 Q1), plan growth (411 Q2), who deletes a plan (411 Q3, 420 Q9), starting a plan with N (420 Q1, 469 Q1), hiding
   a plan with Litematica or Syncmatica (420 Q2, 469 Q2), the paste's target plan (485 Q3), Litematica's Edit Schematic
