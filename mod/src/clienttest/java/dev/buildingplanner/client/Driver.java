@@ -291,7 +291,10 @@ public final class Driver implements ClientModInitializer {
 				return "ok";
 			}
 			case "ebmode" -> {
-				// ebmode <mode>: Effortless Building's build mode, as its radial menu sets it.
+				// ebmode [<mode>]: sets Effortless Building's build mode, as its radial menu does, or without one, gives it.
+				if (a.length == 1) {
+					return EffortlessDriver.mode();
+				}
 				EffortlessDriver.mode(a[1]);
 				return "ok";
 			}
@@ -439,16 +442,6 @@ public final class Driver implements ClientModInitializer {
 					}
 				}
 				return String.join(" | ", texts);
-			}
-			case "buttonlayout" -> {
-				// buttonlayout <A|B|C|D>: the radial menu buttons' layout the menu takes the next time it opens.
-				System.setProperty(RadialMenuWidgets.LAYOUT_PROPERTY, a[1]);
-				return "ok";
-			}
-			case "buttonicons" -> {
-				// buttonicons <lucide|items>: the radial menu buttons' icons the menu takes the next time it opens.
-				System.setProperty(RadialMenuWidgets.ICONS_PROPERTY, a[1]);
-				return "ok";
 			}
 			case "draftbuttons" -> {
 				// draftbuttons <true|false>: whether the menu shows build steps 10 and 11's buttons, which do nothing yet.

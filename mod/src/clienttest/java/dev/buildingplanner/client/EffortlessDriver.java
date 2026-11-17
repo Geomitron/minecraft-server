@@ -27,6 +27,11 @@ final class EffortlessDriver {
 		BuildModes.CLIENT.setBuildMode(BuildModeEnum.valueOf(mode));
 	}
 
+	/** Effortless Building's build mode. */
+	static String mode() {
+		return BuildModes.CLIENT.getBuildMode().name();
+	}
+
 	/** Effortless Building's array modifier alone; a count of 0 clears it. */
 	static void array(int count, int dx, int dy, int dz) {
 		ModifierSystem.CLIENT.clearModifiers();

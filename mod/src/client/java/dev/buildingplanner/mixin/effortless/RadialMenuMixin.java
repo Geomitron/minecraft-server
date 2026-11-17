@@ -13,11 +13,13 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * Hooks E11 and E12: Building Planner's widgets in Effortless Building's radial menu. Minecraft clears a screen's
+ * Hooks E11, E12 and E16: Building Planner's widgets in Effortless Building's radial menu. Minecraft clears a screen's
  * widgets and calls {@code init} each time it opens, so E11 adds them there; as children of the screen they get the
  * clicks and drags the menu passes on to {@code Screen}. The menu draws itself without {@code Screen}'s own drawing, so
  * E12 draws them, after the menu's ring and buttons and before its texts, so a hovered mode's name, which can fall on
- * the sliders, shows over them. The menu has no widgets of its own.
+ * the sliders, shows over them. The menu has no widgets of its own. The menu acts on its own button under the pointer
+ * in {@code onClose}, which its {@code tick} calls once its key is let go; E16 lets Building Planner's buttons act there
+ * too.
  */
 @Mixin(value = RadialMenu.class, remap = false)
 abstract class RadialMenuMixin extends Screen {
@@ -28,6 +30,11 @@ abstract class RadialMenuMixin extends Screen {
 	@Inject(method = "init", at = @At("TAIL"))
 	private void buildingplanner$addWidgets(CallbackInfo ci) {
 		RadialMenuWidgets.create(width, height).forEach(this::addRenderableWidget);
+	}
+
+	@Inject(method = "onClose", at = @At("HEAD"))
+	private void buildingplanner$actOnClose(CallbackInfo ci) {
+		RadialMenuWidgets.menuClosing(children(), ((RadialMenu) (Object) this).performedActionUsingMouse);
 	}
 
 	@Inject(method = "extractRenderState", at = @At(value = "INVOKE",
