@@ -188,18 +188,66 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 672 after it, not
 
 ## Agent-ready work
 
-- **Building Planner** (design approved, 411), built in this order, each step verified as
-  [building-planner.md](building-planner.md) describes before the next: (1) the `mod/` scaffold with run setups for a
-  server and two clients; (2) the plan model and `.litematic` storage; (3) the live-sync core on the server; (4) server
-  undo; (5) Syncmatica on the server (plans from shared files, the delete check, archiving deleted plans); (6) the
-  Litematica bridge on the client; (7) Effortless Building capture; (8) joining a server without the add-on; then
-  (9) copy and paste of part of a plan (420, Q8 A). All nine steps are built.
+**Building Planner 0.3.0, the shared layer** (the decisions above from inbox request 608 on;
+[building-planner.md](building-planner.md) is the design). Hold to repeat at fixed speeds and the look of ghost blocks
+are built (`step10.sh`). The steps below come in this order, each small enough for one child, which pushes it to
+`main` once its check passes (inbox request 429). A step marked "waits on Geo" builds the suggestion in the spec only
+after Geo chooses; the steps before it don't wait.
+
+1. **The block mix's rules.** The mix applies only while the main hand holds a block, and in Disable every click is
+   vanilla's (hooks E5 and E6). Done when `step7.sh`'s checks with a pickaxe held and in Disable pass with the rest of
+   it.
+2. **The mix screen's "Turn off" and the mix panel.** Waits on Geo (open choice 1). Done when `step7.sh`'s panel and
+   "Turn off" checks pass, and screenshots of the panel and the changed screen, with the changes outlined in red, have
+   gone to Geo.
+3. **The radial menu's widgets and the two speed sliders** (hooks E11 and E12; the sliders set E10's gaps and are kept
+   in the client config). Done when `step10.sh`'s slider check passes and screenshots of the menu have gone to Geo.
+4. **The layer's storage and files** (common): columns of 16-block sections with palettes, and the area files. Done
+   when unit tests round-trip a layer through its files, free emptied sections and delete an emptied area's file.
+5. **The server's layer**: the store, column watching, edits in world positions with their checks, undo and redo,
+   messages and protocol version 3. Done when unit tests over the simulated network cover a snapshot then later edits
+   in order, every rejection, undo and redo across dimensions, and a save and reload.
+6. **The import, and Syncmatica off the server**: the one-time import, and removing hook S1, `SyncmaticaPlans`, the
+   delete check, the plan files' archive, `max-plan-side` and Syncmatica from `fabric.mod.json`, the build and the dev
+   server. Done when the import's unit tests pass and the dev server, started on a dev world with shared plans and
+   without Syncmatica, logs the import and serves the same blocks.
+7. **The player's layer and its tiles**: the copy of the layer, column watching, tiles, shapes and erasing in world
+   positions, and the edit glow on the layer. Done when `step6.sh` (all but its checks on hidden tiles) and
+   `step7.sh` pass.
+8. **Tiles out of sight, and Syncmatica off the client**: hooks L4 to L7, L1 as a guard, removing S2, S3, L2, L3,
+   "Start a plan" and `remove-loaded.sh`, the removal of old plan placements at a session's start, and the mixin
+   plugin's Litematica rule. Done when `step6.sh` and `step8.sh` pass.
+9. **Show or hide**: the key, the radial menu button, showing again when drawing, and the tool item off by default.
+   Waits on Geo (open choices 3 and 4). Done when `step9.sh`'s check with ghost blocks hidden passes, and `step10.sh`
+   finds the tool item off after a first start.
+10. **Copy and paste on the layer**: the "Cube" box for Copy and "Copy real blocks" (E1, E6), the copy following the
+    aim, and the radial menu's buttons. Waits on Geo (open choice 2). Done when `step9.sh`'s copy and paste checks
+    pass.
+11. **The material list for a marked area.** Done when `step9.sh`'s material list check passes.
+12. **Texts for Geo**: every text players see that the steps added or changed (messages, key names, button and slider
+    labels, the panel) goes to Geo as editable text, and Geo's version is built in. Done when the game shows Geo's
+    wording.
+13. **The release**, which goes to Geo for approval first: version 0.3.0. On the server, while no one is online, back
+    up the world beside the others (`minecraft-backup-<date>-pre-building-planner-0.3.0.tar.gz`), replace the jar,
+    remove Syncmatica's jar and restart; the log shows the import's counts. Then the pack: Building Planner 0.3.0 in,
+    Syncmatica out, with the player guide's list of mods and the README changed as Geo approves. "Current setup" above
+    then describes the new state. Done when a player from the updated pack sees the imported ghost blocks.
+
+Open choices, each with the spec's suggestion:
+
+1. The block mix key while the mix is on opens the mix screen to change it, which gains "Turn off", and the panel's
+   key line reads "B: change or turn off"; or the key turns the mix off as it does now, and a second key opens the
+   screen to change it.
+2. The copy follows where the player aims; or it stays where it's made, and a key moves it to where the player aims.
+3. N, freed by "Start a plan", as the "Show or hide ghost blocks" key.
+4. Building Planner turns Litematica's tool item off once, as it sets the look, since the stick plays no part in
+   planning; or it leaves the tool item as it is.
 
 ## Design work: Building Planner
 
 [building-planner.md](building-planner.md) is the spec: what players get, how each goal above is met, the technical
-design with every hook checked in the source, and what's unverified. Geo's decisions from inbox requests 411 and 420
-are above. The messages players see go to Geo for review once something is built.
+design with every hook checked in the source, and what's unverified. Geo's decisions are above. The texts players see
+go to Geo for review once something is built.
 
 ### Source evidence (read 2026-11-13)
 
@@ -224,22 +272,12 @@ are above. The messages players see go to Geo for review once something is built
   sub-region's box, then calls `markChunkForRebuild`; the pieces it uses (`getAllPlacementsTouchingChunk`,
   `getSchematicContainerPositionFromWorldPosition`, `getUntransformedBlockState`) are public.
   `LitematicaSchematic.createEmptySchematic(area, author)` makes an empty plan from an area selection.
-  - A plan's region can't grow in place: `schematic/LitematicaSchematic.java` keeps block containers and region sizes
-    in private final maps with no resize, and `SchematicPlacement` holds its schematic in a `final` field. Growing
-    means building a bigger schematic, copying the blocks in and replacing the placement, or a mixin into those maps.
   - All ten Edit Schematic actions run from `event/InputHandler.java` into `util/SchematicUtils.java`, which writes
     blocks only through four `container.set` calls, each also marking the plan modified: a hook point for live sync.
 - **Syncmatica**: `sakura-ryoko/syncmatica`, branch `26.3` (`37a969e`), CC0. `data/ServerPlacement` identifies a
   plan's contents by a fixed hash of its file (`hashValue`); `MODIFY` packets carry only placement values (origin,
   rotation, mirror, sub-regions). Block changes don't sync today; a changed plan must be shared again as a new file.
-  - Each downloaded file is checked against the plan's fixed `hashValue` (`communication/exchange/DownloadExchange.java`,
-    `data/FileStorage.java` `hashCompare`), so it can't carry a changed plan.
-  - It has no owner checks: any player can move or delete any shared plan, one move per plan at a time
-    (`communication/ServerCommunicationManager.java`, `communication/exchange/ModifyExchangeServer.java`).
-- **Upkeep** (GitHub API, commits on each default branch in the year to 2026-11-13): Effortless Building 80,
-  Litematica 100 or more (the API's page limit, translations included), Syncmatica 26. The files an add-on would hook
-  changed less: `BuildPipelineClient.java` 6 times, `SchematicUtils.java` 7. A changed copy of an LGPL-3.0 mod keeps
-  that licence and publishes its source; an add-on's licence is free; CC0 asks nothing.
+  - Ealicence and publishes its source; an add-on's licence is free; CC0 asks nothing.
 
-Unverified: how long a player's reload takes when a plan is replaced by a bigger one, and whether a Fabric player who
-lacks Effortless Building is turned away like an unmodded one (likely, from the registry code).
+Unverified: whether a Fabric player who lacks Effortless Building is turned away like an unmodded one (likely, from
+the registry code).
