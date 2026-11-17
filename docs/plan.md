@@ -142,7 +142,7 @@ Building Planner as built, from inbox requests 469, 473, 477, 482, 483, 485, 570
   me through using all the features we have available, with space for me to provide feedback and suggestions on how to
   adjust the experience of using the mod. Once I'm happy with it, we can publish a guide on how to use it.").
 
-From Geo's walkthrough (inbox request 608) and the reply after it, not built yet:
+From Geo's walkthrough (inbox request 608) and requests 669 to 672 after it, not built yet:
 
 - Ghost blocks show see-through at 0.8 opacity by default: "render blocks as translucent is true", "ghostBlockAlpha
   default to 0.8" (608 note). A player's own change to either stays.
@@ -171,9 +171,20 @@ From Geo's walkthrough (inbox request 608) and the reply after it, not built yet
   ghost blocks to be synced and shared for users on the same server, where each player can choose whether to see
   active ghost blocks or not. But we don't need to group them into different schematics either; it can be a simple
   toggle control for the user to see all ghost blocks or hide all ghost blocks").
-- Whether Building Planner keeps Litematica and Syncmatica, or plans with Effortless Building alone, is open with Geo,
-  from the 608 note's question: "Maybe the best option is to just get rid of Litematica / Syncmatica and just
-  implement that aspect ourselves?"
+- Litematica draws the shared layer out of sight, and Syncmatica leaves the server and the player pack (672 Q1 B).
+  Effortless Building is the only set of controls, and its menu gains copy and paste buttons; the "Cube" shape marks
+  the area to copy, and the stick and Litematica's tool modes play no part in planning (608 note).
+- Anyone may erase ghost blocks someone else placed; each player's undo takes back only their own changes (672 Q2 A).
+- The material list counts the ghost blocks in an area the player marks with the "Cube" shape, as copy does (672 Q3 A).
+- A key and a button in Effortless Building's menu both show or hide the ghost blocks (672 Q4 C).
+- Drawing a shape while the ghost blocks are hidden shows them again, then draws (672 Q5 C).
+- "Copy real blocks": the "Cube" shape marks real blocks, which become a copy to paste as ghost blocks (672 Q6 B).
+- The first release of the shared layer moves every current plan into it, including plans players have hidden; where
+  plans overlap, the later plan's blocks win (672 Q7 A).
+- The shared layer replaces the decisions above that concern separate plans: named plans that move and turn as a whole
+  (411 Q1), plan growth (411 Q2), who deletes a plan (411 Q3, 420 Q9), starting a plan with N (420 Q1, 469 Q1), hiding
+  a plan with Litematica or Syncmatica (420 Q2, 469 Q2), the paste's target plan (485 Q3), Litematica's Edit Schematic
+  actions syncing live (411 Q5), and Syncmatica on the server and in the pack (408 Q2).
 
 ## Agent-ready work
 
