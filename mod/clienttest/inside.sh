@@ -1,13 +1,15 @@
 #!/bin/bash
 # Runs inside the container (see run.sh): builds the add-on, starts the dev server and two dev clients, each client on
 # its own virtual screen, then runs the checks script it's given, which uses the helpers below. Client 1 plays as
-# Planner1, an operator; client 2 as Planner2, who isn't. Results go to /out.
+# Planner1, an operator; client 2 as Planner2, who isn't. It builds in BP_WORK, the checkout's own folder on the
+# bp-test-work volume (see run.sh). Results go to /out.
 set -euo pipefail
 checks=$1
+work=${BP_WORK:?BP_WORK names the build folder on the volume; run.sh sets it}
 
-mkdir -p /work/mod
-rsync -a --delete --exclude /build --exclude /.gradle --exclude /run --exclude /logs /src/ /work/mod/
-cd /work/mod
+mkdir -p "$work"
+rsync -a --delete --exclude /build --exclude /.gradle --exclude /run --exclude /logs /src/ "$work/"
+cd "$work"
 rm -rf run /tmp/args
 mkdir -p /tmp/args
 : > /out/checks.log
@@ -66,7 +68,7 @@ wait_for() {
 
 # The add-on's own classes and resources on the classpath, and the driver's, for start_server and start_client to
 # leave out.
-ADDON='/work/mod/build/*/'
+ADDON="$work/build/*/"
 
 # start_server [left-out] [log]: starts the dev server, logging to /out/<log>.log (server.log unless given), and
 # waits until it's ready; the optional first argument leaves the classpath entries matching it out ($ADDON, say).
