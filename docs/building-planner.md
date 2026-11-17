@@ -10,8 +10,7 @@ plans shared through Syncmatica. Built on `main` since then: hold to repeat at f
 ghost blocks. Everything else this spec describes waits on the build steps in [plan.md](plan.md) ("Agent-ready work"),
 which end with the release. The build reuses what still fits: Effortless Building's hooks E1 to E10 (E1, E2 and E6
 change), the rules of undo and redo, the edit glow, the block mix screen's layout, the check for a server without the
-add-on, and the in-game check harness. A choice marked "open for Geo" is a suggestion that waits on Geo's decision;
-[plan.md](plan.md) lists each with the build step it holds up.
+add-on, and the in-game check harness.
 
 ## What players get
 
@@ -328,11 +327,11 @@ the tool item off, Litematica's tool (a stick by default) does nothing, since th
 play no part in planning. When the file holds the line, it does nothing, so a player's own later change, even back to
 a default, stays. It doesn't need a session, so it happens before the player joins any server. If setting or saving
 fails, it logs a warning, writes no line and tries again at the next start. An option the player already set to the
-value Building Planner would set looks the same as one it set. Turning the tool item off is open for Geo.
+value Building Planner would set looks the same as one it set.
 
 ### Show or hide
 
-The switch is the "Show or hide ghost blocks" key (N, open for Geo) and a radial menu button. Hiding removes every tile
+The switch is the "Show or hide ghost blocks" key (N) and a radial menu button. Hiding removes every tile
 from Litematica; showing adds them back. While hidden, the game keeps watching columns and applying edits to its copy of
 the layer, so showing needs no reload, and the edit glow draws nothing. The state is kept in
 `config/buildingplanner-client.properties` (`ghost-blocks-shown`) and starts as shown. When a shape starts (Effortless
@@ -371,8 +370,7 @@ an "Only my inventory" switch that limits the list to the blocks in the player's
 to the mix with a share of 1; under each block in the mix is its share, which the player types, and its percentage;
 clicking a block in the mix takes it out. "Use mix" turns the mix on and closes the screen, with a message naming the
 key; "Clear" empties the list; "Cancel" and Escape leave the mix as it was. Opened while the mix is on, the screen
-shows the mix as it is, to change it, and has a "Turn off" button, which turns the mix off with a message. This use of
-the one key, and the panel's key line below, are open for Geo.
+shows the mix as it is, to change it, and has a "Turn off" button, which turns the mix off with a message.
 
 While the mix applies, a panel at the right edge of the screen, drawn through `HudElementRegistry`, shows each of its
 blocks (the block's icon and name) with its percentage, and under them the line "B: change or turn off", with the key
@@ -400,7 +398,7 @@ gets a message and nothing changes. A copy of more blocks than the server's bloc
 since its paste would be. Otherwise the new copy replaces any earlier one, and the player gets a message naming the
 Paste key. Effortless Building's own limit on a shape's sides (64 in survival by default) limits the box.
 
-The copy follows where the player aims (open for Geo): each client tick its origin, its corner with the lowest
+The copy follows where the player aims: each client tick its origin, its corner with the lowest
 coordinates, goes on the block beside the face the player aims at, real or ghost (as hook E9 aims), within 64 blocks;
 when they aim at nothing, it stays where it was. Turn gives the copy a quarter turn clockwise, seen from above, around
 its origin. Mirror flips it left to right as the player faces it, around its origin: across the north-south line when

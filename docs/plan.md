@@ -142,7 +142,7 @@ Building Planner as built, from inbox requests 469, 473, 477, 482, 483, 485, 570
   me through using all the features we have available, with space for me to provide feedback and suggestions on how to
   adjust the experience of using the mod. Once I'm happy with it, we can publish a guide on how to use it.").
 
-From Geo's walkthrough (inbox request 608) and requests 669 to 672 after it, not built yet:
+From Geo's walkthrough (inbox request 608) and requests 669 to 677 after it, not built yet:
 
 - Ghost blocks show see-through at 0.8 opacity by default: "render blocks as translucent is true", "ghostBlockAlpha
   default to 0.8" (608 note). A player's own change to either stays.
@@ -181,6 +181,17 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 672 after it, not
 - "Copy real blocks": the "Cube" shape marks real blocks, which become a copy to paste as ghost blocks (672 Q6 B).
 - The first release of the shared layer moves every current plan into it, including plans players have hidden; where
   plans overlap, the later plan's blocks win (672 Q7 A).
+- While the mix is on, the block mix key (B) opens the mix screen to change the mix; the screen gains a "Turn off"
+  button, and the panel reads "B: change or turn off" (677 Q1 A).
+- The copy follows where the player aims: its corner sits on the block they look at, until they paste or clear it
+  (677 Q2 A).
+- N shows or hides the ghost blocks, since "Start a plan" no longer needs it (677 Q3 A).
+- Ghost blocks only add blocks to a build; planning which real blocks to remove waits for a later design (677 Q4 A).
+- Building Planner turns Litematica's tool item off once, since the stick plays no part in planning ("no need for
+  Litematica's controls or the stick", 608 note). Geo saw this in 677 without a comment, with the agent's other
+  choices: old plans leave Litematica's list while their files stay; "Copy real blocks" and "Material list" are
+  buttons without keys; the speed sliders run from 1 to 20 blocks a second; the mix panel sits at the right edge;
+  Copy switches Effortless Building to "Cube" to mark the area, then back.
 - The shared layer replaces the decisions above that concern separate plans: named plans that move and turn as a whole
   (411 Q1), plan growth (411 Q2), who deletes a plan (411 Q3, 420 Q9), starting a plan with N (420 Q1, 469 Q1), hiding
   a plan with Litematica or Syncmatica (420 Q2, 469 Q2), the paste's target plan (485 Q3), Litematica's Edit Schematic
@@ -191,13 +202,12 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 672 after it, not
 **Building Planner 0.3.0, the shared layer** (the decisions above from inbox request 608 on;
 [building-planner.md](building-planner.md) is the design). Hold to repeat at fixed speeds and the look of ghost blocks
 are built (`step10.sh`). The steps below come in this order, each small enough for one child, which pushes it to
-`main` once its check passes (inbox request 429). A step marked "waits on Geo" builds the suggestion in the spec only
-after Geo chooses; the steps before it don't wait.
+`main` once its check passes (inbox request 429).
 
 1. **The block mix's rules.** The mix applies only while the main hand holds a block, and in Disable every click is
    vanilla's (hooks E5 and E6). Done when `step7.sh`'s checks with a pickaxe held and in Disable pass with the rest of
    it.
-2. **The mix screen's "Turn off" and the mix panel.** Waits on Geo (open choice 1). Done when `step7.sh`'s panel and
+2. **The mix screen's "Turn off" and the mix panel.** Done when `step7.sh`'s panel and
    "Turn off" checks pass, and screenshots of the panel and the changed screen, with the changes outlined in red, have
    gone to Geo.
 3. **The radial menu's widgets and the two speed sliders** (hooks E11 and E12; the sliders set E10's gaps and are kept
@@ -218,10 +228,10 @@ after Geo chooses; the steps before it don't wait.
    "Start a plan" and `remove-loaded.sh`, the removal of old plan placements at a session's start, and the mixin
    plugin's Litematica rule. Done when `step6.sh` and `step8.sh` pass.
 9. **Show or hide**: the key, the radial menu button, showing again when drawing, and the tool item off by default.
-   Waits on Geo (open choices 3 and 4). Done when `step9.sh`'s check with ghost blocks hidden passes, and `step10.sh`
+   Done when `step9.sh`'s check with ghost blocks hidden passes, and `step10.sh`
    finds the tool item off after a first start.
 10. **Copy and paste on the layer**: the "Cube" box for Copy and "Copy real blocks" (E1, E6), the copy following the
-    aim, and the radial menu's buttons. Waits on Geo (open choice 2). Done when `step9.sh`'s copy and paste checks
+    aim, and the radial menu's buttons. Done when `step9.sh`'s copy and paste checks
     pass.
 11. **The material list for a marked area.** Done when `step9.sh`'s material list check passes.
 12. **Texts for Geo**: every text players see that the steps added or changed (messages, key names, button and slider
@@ -232,16 +242,6 @@ after Geo chooses; the steps before it don't wait.
     remove Syncmatica's jar and restart; the log shows the import's counts. Then the pack: Building Planner 0.3.0 in,
     Syncmatica out, with the player guide's list of mods and the README changed as Geo approves. "Current setup" above
     then describes the new state. Done when a player from the updated pack sees the imported ghost blocks.
-
-Open choices, each with the spec's suggestion:
-
-1. The block mix key while the mix is on opens the mix screen to change it, which gains "Turn off", and the panel's
-   key line reads "B: change or turn off"; or the key turns the mix off as it does now, and a second key opens the
-   screen to change it.
-2. The copy follows where the player aims; or it stays where it's made, and a key moves it to where the player aims.
-3. N, freed by "Start a plan", as the "Show or hide ghost blocks" key.
-4. Building Planner turns Litematica's tool item off once, as it sets the look, since the stick plays no part in
-   planning; or it leaves the tool item as it is.
 
 ## Design work: Building Planner
 
