@@ -40,8 +40,9 @@ the in-game check harness.
   player picks up to nine blocks, each with a share (say 80 cobblestone to 20 mossy cobblestone), and turns the mix on.
   The screen closes, and the mix then applies to Effortless Building's shapes, in every mode but Disable, while the
   player holds a placeable item (a block); with a tool or any other item in hand, clicks act as they would without the
-  mix. While the mix applies, a panel at the edge of the screen shows its blocks and shares and the keys to change it
-  or turn it off. A mix of one block lets a survival player plan with a block they don't have.
+  mix. While the mix applies, a panel at the right edge of the screen shows its blocks and shares and the key to change
+  it or turn it off; with the mix on, that key opens the screen again, which then has a "Turn off" button. A mix of
+  one block lets a survival player plan with a block they don't have.
 - **Undo and redo.** Undo takes back only that player's own changes, newest first: a whole shape or paste at a time,
   in any dimension. A block someone else has changed since stays as they left it. Effortless Building's Ctrl+Z (and
   the undo button in its radial menu) undoes, and its Ctrl+Y (and the redo button) redoes the newest undone change,
@@ -402,14 +403,18 @@ The mix key (B unless the player changes it in Controls) opens the block mix scr
 blocks. It lists every block that has an item of its own, in the game's order, with a search box (by name or id) and
 an "Only my inventory" switch that limits the list to the blocks in the player's inventory. Clicking a block adds it
 to the mix with a share of 1; under each block in the mix is its share, which the player types, and its percentage;
-clicking a block in the mix takes it out. "Use mix" turns the mix on and closes the screen, with a message naming the
-key; "Clear" empties the list; "Cancel" and Escape leave the mix as it was. Opened while the mix is on, the screen
-shows the mix as it is, to change it, and has a "Turn off" button, which turns the mix off with a message.
+clicking a block in the mix takes it out. "Use mix" turns the mix on and closes the screen, with the message "Block mix
+on. Press B to change it or turn it off." (the key as the player has bound it); "Clear" empties the list; "Cancel" and
+Escape leave the mix as it was. Opened while the mix is on, the screen shows the mix as it is, to change it, and has a
+"Turn off" button between "Use mix" and "Clear", which turns the mix off, closes the screen and says "Block mix off.";
+the mix's blocks stay in the screen for the next time. The buttons share the row's width.
 
-While the mix applies, a panel at the right edge of the screen, drawn through `HudElementRegistry`, shows each of its
-blocks (the block's icon and name) with its percentage, and under them the line "B: change or turn off", with the key
-as the player has bound it. It hides while the mix doesn't apply, and while a screen is open or the game's HUD is
-hidden (F1). Its look and text are drafted for Geo's review, with screenshots.
+While the mix applies, a panel at the right edge of the screen (`MixPanel`, drawn through `HudElementRegistry`),
+centred top to bottom on a dark see-through box, shows the heading "Block mix", then each of the mix's blocks (its
+icon and name) with its percentage at the right, and under them, in grey, the line "B: change or turn off", with the
+key as the player has bound it. It hides while the mix doesn't apply (`MixRule`), while a screen is open, and while
+the game's HUD is hidden (F1). Without Effortless Building, whose mode the rule reads, it never shows. Its look and
+text are drafted for Geo's review, with screenshots.
 
 ### Copy and paste
 
@@ -505,14 +510,16 @@ on the dev server; [plan.md](plan.md) says which build step makes or rewrites ea
 
 - Single mode with the array modifier, and a Line shape, add ghost blocks on both clients, and no real blocks.
 - A shape started on a ghost block goes on top of it.
-- The mix key opens the mix screen, listing every block; the switch limits it to the inventory's two blocks; clicking
-  both, typing their shares and "Use mix" turns the mix on and closes the screen, with its message, and the panel
-  shows both blocks, their percentages and the key line.
+- The mix key opens the mix screen, without "Turn off", listing every block; the switch limits it to the inventory's
+  two blocks; clicking both, typing their shares and "Use mix" turns the mix on and closes the screen, with its
+  message, and the panel shows both blocks, their percentages and the key line. F1 hides the panel and shows it again.
 - With the mix on and a block held, each block of a 20-block shape is the mix's block at its position, on both
-  clients. With the mix on and a pickaxe or an apple held, the place click draws no ghost block and places no real
-  one, and an apple's break click breaks the real block as without mods. In Disable, with the mix on and a block held, the place
-  click puts a real block and no ghost block, and the use click opens a door.
-- The mix key while the mix is on opens the screen with the mix in it; "Turn off" turns it off, with its message.
+  clients. With the mix on and a pickaxe or an apple held, the panel hides, the place click draws no ghost block and
+  places no real one, and an apple's break click breaks the real block as without mods. In Disable, with the mix on and
+  a block held, the panel hides, the place click puts a real block and no ghost block, and the use click opens a door.
+- The mix key while the mix is on opens the screen with the mix in it and a "Turn off" button, and the panel hides
+  while the screen is open; "Turn off" turns the mix off and closes the screen, with its message, and the panel stays
+  hidden.
 - In Single mode with the mix off: with a pickaxe, an apple or nothing in hand, the place click on a
   real block or a ghost block does nothing. The break click with a pickaxe or nothing in hand goes to Effortless
   Building, which treats both as build items: it erases a ghost block, and on a real block it sends an edit that
