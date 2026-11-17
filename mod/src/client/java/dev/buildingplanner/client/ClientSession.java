@@ -143,9 +143,14 @@ final class ClientSession {
 		return tiles.shown();
 	}
 
-	/** The show or hide switch: hides ghost blocks while they show, and shows them while they're hidden. */
+	/**
+	 * The show or hide switch: hides ghost blocks while they show, and shows them while they're hidden, saying which in
+	 * chat.
+	 */
 	void toggleGhosts() {
-		setGhostsShown(!tiles.shown());
+		boolean shown = !tiles.shown();
+		setGhostsShown(shown);
+		show(shown ? PlayerMessage.ghostsShown() : PlayerMessage.ghostsHidden());
 	}
 
 	/**

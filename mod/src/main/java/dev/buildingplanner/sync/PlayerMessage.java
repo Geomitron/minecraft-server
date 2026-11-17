@@ -80,6 +80,16 @@ public record PlayerMessage(String key, List<String> args) {
 			: new PlayerMessage(PREFIX + "copy.done", List.of(Integer.toString(blocks), pasteKey));
 	}
 
+	/** The player hid the ghost blocks with the show or hide key or button. */
+	public static PlayerMessage ghostsHidden() {
+		return new PlayerMessage(PREFIX + "ghosts.hidden", List.of());
+	}
+
+	/** The player showed the ghost blocks with the show or hide key or button. */
+	public static PlayerMessage ghostsShown() {
+		return new PlayerMessage(PREFIX + "ghosts.shown", List.of());
+	}
+
 	/**
 	 * Ghost blocks were hidden and the player drew, which shows them again; {@code key} is the show or hide key's
 	 * name.

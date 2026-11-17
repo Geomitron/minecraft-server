@@ -11,6 +11,8 @@
 	"buildingplanner.copy.no_area": "Mark an area with Litematica's area tool first, then press this key again.",
 	"buildingplanner.mix.on": "Block mix on. Press %s to change it or turn it off.",
 	"buildingplanner.mix.off": "Block mix off.",
+	"buildingplanner.ghosts.hidden": "Ghost blocks hidden.",
+	"buildingplanner.ghosts.shown": "Ghost blocks shown.",
 	"buildingplanner.ghosts.shown_again": "Ghost blocks shown again. Press %s to hide them.",
 	"buildingplanner.copy.nothing": "There are no plan blocks in the marked area to copy.",
 	"buildingplanner.copy.too_many": "That area has %s plan blocks, more than the server's limit of %s.",
