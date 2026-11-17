@@ -36,11 +36,8 @@ import net.minecraft.world.level.block.state.BlockState;
  * path>/<x>.<z>.dat} for each area of {@value Layer#AREA_SIDE} by {@value Layer#AREA_SIDE} columns that holds ghost
  * blocks, where x and z are the area's coordinates.
  *
- * <p>Each file is gzip-compressed NBT: {@code version} ({@value #VERSION}), {@code data_version} (the game's data
- * version when it was written; older block states go through the game's data fixer when read), and {@code columns},
- * each with {@code x} and {@code z} (chunk coordinates) and {@code sections}, each with {@code y} (its height),
- * {@code palette} (block states as Litematica's palettes store them, air first) and {@code blocks}
- * ({@link LayerSection#pack}).
+ * <p>The file's layout, and what makes a file unreadable, are in {@code docs/building-planner.md}, "The layer's files
+ * on the server".
  *
  * <p>Calls come from one thread. {@link #save} builds a changed area's contents there and one background thread
  * writes them in call order, each through a temporary file and a rename, or deletes the file of an area left empty.

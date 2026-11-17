@@ -6,11 +6,11 @@ Building; Litematica draws the ghost blocks, out of sight. It hooks into unchang
 behind it are in [plan.md](plan.md) ("Decisions").
 
 **What's built.** Players run Building Planner 0.2.1, and the server 0.2.0, which keep ghost blocks in separate named
-plans shared through Syncmatica. Built on `main` since then: hold to repeat at fixed speeds (hook E10) and the look of
-ghost blocks. Everything else this spec describes waits on the build steps in [plan.md](plan.md) ("Agent-ready work"),
-which end with the release. The build reuses what still fits: Effortless Building's hooks E1 to E10 (E1, E2 and E6
-change), the rules of undo and redo, the edit glow, the block mix screen's layout, the check for a server without the
-add-on, and the in-game check harness.
+plans shared through Syncmatica. Built on `main` since then: hold to repeat at fixed speeds (hook E10), the look of
+ghost blocks, and the layer's storage and files, which nothing uses until the server's layer is built. Everything else
+this spec describes waits on the build steps in [plan.md](plan.md) ("Agent-ready work"), which end with the release. The
+build reuses what still fits: Effortless Building's hooks E1 to E10 (E1, E2 and E6 change), the rules of undo and redo,
+the edit glow, the block mix screen's layout, the check for a server without the add-on, and the in-game check harness.
 
 ## What players get
 
@@ -195,11 +195,11 @@ after which the tiles come back as the new dimension's columns arrive.
 ### The layer and its column watching
 
 The layer is a map, for each dimension, from chunk column to the 16-block sections of that column that hold ghost
-blocks. A section keeps its blocks as two-byte indexes into a palette of block states, and is freed when it holds no
-ghost block again, so memory follows the ghost blocks, not the area they span: 8 KB for each section with a ghost
-block. The server holds every dimension's whole layer in memory; each player's game holds only the columns it watches.
-Block states travel as ids in the block-state registry (both sides run the same vanilla blocks); files store them by
-name and properties.
+blocks. A section keeps its blocks as two-byte indexes into a palette of its own, which drops a block state when its
+last block goes, and the section is freed when it holds no ghost block again, as is a column with no section left, so
+memory follows the ghost blocks, not the area they span: 8 KB for each section with a ghost block. The server holds
+every dimension's whole layer in memory; each player's game holds only the columns it watches. Block states travel as
+ids in the block-state registry (both sides run the same vanilla blocks); files store them by name and properties.
 
 A player's game watches the columns whose chunks it has loaded, since Litematica draws only in loaded chunks
 (`SchematicPlacementManager.canHandleChunk`). Fabric API's `ClientChunkEvents.CHUNK_LOAD` and `CHUNK_UNLOAD` say which;
@@ -245,13 +245,26 @@ edit.
 
 The server writes the layer to `<world>/building-planner/layer/<dimension namespace>/<dimension path>/<x>.<z>.dat`, one
 file for each 32 by 32 chunk columns (512 by 512 blocks), where `<x>` and `<z>` are the area's coordinates (chunk
-coordinates divided by 32, rounded down). Each file is compressed NBT: a format version, then a list of columns, each
-with its chunk coordinates and its sections, each section its height, its palette (block states by name and
-properties, as `NbtUtils.writeBlockState` writes them) and its packed blocks. A file whose area holds no ghost blocks
-is deleted. The server builds a changed area's contents on the server thread and one background thread writes them,
-each through a temporary file and a rename, at most every 30 seconds while the layer has changed, and when the server
-stops. At start the server reads every file. When a file can't be read, the server logs an error, leaves the file for
-repair by hand, and never writes that area while it runs, so no edit overwrites it.
+coordinates divided by 32, rounded down). Each file is gzip-compressed NBT:
+
+- `version`: the format's version, 1.
+- `data_version`: the game's data version when the file was written; block states from an older one go through the
+  game's data fixer when read.
+- `columns`: each column with ghost blocks, with `x` and `z` (its chunk coordinates) and `sections`, each section with
+  ghost blocks, lowest first, with `y` (its block y divided by 16, rounded down), `palette` (air, then each block state
+  the section holds, by `Name` and `Properties` as Litematica's palettes store them) and `blocks` (each of the 4,096
+  positions' index into the palette, y slowest, then z, then x, packed as Litematica packs a region: as many bits as
+  the palette's size needs, at least 2, running on across longs, the first in the lowest bits).
+
+A file whose area holds no ghost blocks is deleted. The server builds a changed area's contents on the server thread and
+one background thread writes them, each through a temporary file and a rename, at most every 30 seconds while the layer
+has changed, and when the server stops. At start the server reads every file. When a file can't be read, the server logs
+an error, adds none of its ghost blocks, leaves the file for repair by hand, and never writes that area while it runs,
+so no edit overwrites it. A file can't be read when it's cut short or isn't compressed NBT, has another version or a
+missing entry, lists a column outside its area or twice, or a section twice in one column, or has a section with a block
+past its palette or a block array of the wrong length. A block the game doesn't know reads as no ghost block, as in
+Litematica. The server skips a `.dat` file whose name or folder isn't an area's, with a warning, and ignores the
+temporary files a crash leaves.
 
 ### The import of today's plans
 

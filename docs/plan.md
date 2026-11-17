@@ -212,8 +212,8 @@ are built (`step10.sh`). The steps below come in this order, each small enough f
    gone to Geo.
 3. **The radial menu's widgets and the two speed sliders** (hooks E11 and E12; the sliders set E10's gaps and are kept
    in the client config). Done when `step10.sh`'s slider check passes and screenshots of the menu have gone to Geo.
-4. **The layer's storage and files** (common): columns of 16-block sections with palettes, and the area files. Done
-   when unit tests round-trip a layer through its files, free emptied sections and delete an emptied area's file.
+4. **The layer's storage and files** (common): columns of 16-block sections with palettes, and the area files. Built
+   (`dev.buildingplanner.layer`, with its unit tests); nothing uses it until step 5.
 5. **The server's layer**: the store, column watching, edits in world positions with their checks, undo and redo,
    messages and protocol version 3. Done when unit tests over the simulated network cover a snapshot then later edits
    in order, every rejection, undo and redo across dimensions, and a save and reload.
