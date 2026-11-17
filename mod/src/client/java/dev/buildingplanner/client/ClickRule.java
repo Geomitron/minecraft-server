@@ -16,6 +16,11 @@ import nl.requios.effortlessbuilding.buildpipeline.BuildPipelineClient;
 public final class ClickRule {
 	/** Whether the pick under way leaves Effortless Building's reach out (hook E15). Only the client thread uses it. */
 	private static boolean vanillaPick;
+	/**
+	 * Whether Copy or "Copy real blocks" waits for a box drawn with Effortless Building's "Cube" shape, which any held
+	 * item, or none, then draws (hooks E13 to E15).
+	 */
+	private static boolean boxAwaited;
 
 	private ClickRule() {
 	}
@@ -36,13 +41,27 @@ public final class ClickRule {
 		return player != null && placeable(player.getMainHandItem());
 	}
 
+	/** Whether a box is awaited for a copy, so any held item, or none, draws the cube. */
+	public static boolean boxAwaited() {
+		return boxAwaited;
+	}
+
+	static void setBoxAwaited(boolean awaited) {
+		boxAwaited = awaited;
+	}
+
+	/** Hooks E13 to E15: whether Effortless Building's clicks are taken now: a placeable item in hand, or a box awaited. */
+	public static boolean startsShapes() {
+		return boxAwaited || holdsPlaceable();
+	}
+
 	/**
 	 * Hook E15: runs the game's pick of what the crosshair aims at. With anything but a placeable item in the main hand
 	 * and no shape under way, Effortless Building's longer reach, which it gives an empty hand and which aims through
 	 * an entity at the block behind it, is left out, so the hand aims as without mods.
 	 */
 	public static void pick(Runnable pick) {
-		vanillaPick = BuildingPlannerClient.ownsShapes() && !holdsPlaceable() && BuildPipelineClient.getBuildState() == null;
+		vanillaPick = BuildingPlannerClient.ownsShapes() && !startsShapes() && BuildPipelineClient.getBuildState() == null;
 		try {
 			pick.run();
 		} finally {

@@ -14,7 +14,6 @@ import fi.dy.masa.litematica.schematic.LitematicaSchematic;
 import fi.dy.masa.litematica.schematic.placement.SchematicPlacement;
 import fi.dy.masa.litematica.selection.AreaSelection;
 import fi.dy.masa.litematica.selection.Box;
-import fi.dy.masa.litematica.util.PositionUtils;
 import fi.dy.masa.litematica.util.SchematicUtils;
 import fi.dy.masa.litematica.world.SchematicWorldHandler;
 import fi.dy.masa.malilib.gui.GuiBase;
@@ -40,10 +39,12 @@ import net.minecraft.client.tutorial.TutorialSteps;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.multiplayer.PlayerInfo;
+import net.minecraft.commands.arguments.EntityAnchorArgument;
 import net.minecraft.commands.arguments.blocks.BlockStateParser;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * Drives a dev client for the in-game checks in {@code clienttest/}. It runs the commands in {@code driver-in.txt} in
@@ -153,12 +154,6 @@ public final class Driver implements ClientModInitializer {
 			case "selmode" -> {
 				return DataManager.getSelectionManager().getSelectionMode().name();
 			}
-			case "select" -> {
-				AreaSelection area = DataManager.getSelectionManager().getCurrentSelection();
-				area.setSelectedSubRegionCornerPos(pos(a, 1), PositionUtils.Corner.CORNER_1);
-				area.setSelectedSubRegionCornerPos(pos(a, 4), PositionUtils.Corner.CORNER_2);
-				return "ok";
-			}
 			case "fill" -> {
 				Method m = SchematicUtils.class.getDeclaredMethod("setSchematicBlockStates", BlockPos.class,
 					BlockPos.class, BlockState.class);
@@ -181,14 +176,22 @@ public final class Driver implements ClientModInitializer {
 			case "copy" -> {
 				return copy();
 			}
-			case "movecopy" -> {
-				// movecopy x y z: moves the selected placement's origin there, as a click with Litematica's tool does.
-				DataManager.getSchematicPlacementManager().setPositionOfCurrentSelectionTo(pos(a, 1), mc);
+			case "lookat" -> {
+				// lookat x y z: turns the player to look at that point, which may be fractional, as a real mouse move
+				// would; the copy then follows the aim.
+				mc.player.lookAt(EntityAnchorArgument.Anchor.EYES, new Vec3(Double.parseDouble(a[1]),
+					Double.parseDouble(a[2]), Double.parseDouble(a[3])));
 				return "ok";
 			}
-			case "removecopy" -> {
-				// removecopy: removes the copy's placement, as the Remove button in Litematica's placement list does.
-				return String.valueOf(DataManager.getSchematicPlacementManager().removeSchematicPlacement(clipboard().placement()));
+			case "fly" -> {
+				// fly <true|false>: the player flies, as a double jump in creative starts, so a teleport leaves them there.
+				mc.player.getAbilities().flying = Boolean.parseBoolean(a[1]);
+				mc.player.onUpdateAbilities();
+				return "ok";
+			}
+			case "boxwait" -> {
+				// boxwait: whether Copy or "Copy real blocks" waits for a box, and Effortless Building's mode now.
+				return ClickRule.boxAwaited() + " " + EffortlessDriver.mode();
 			}
 			case "placements" -> {
 				List<String> names = new ArrayList<>();
@@ -196,9 +199,6 @@ public final class Driver implements ClientModInitializer {
 					names.add(p.getName());
 				}
 				return String.join(",", names);
-			}
-			case "toolmode" -> {
-				return DataManager.getToolMode().name();
 			}
 			case "edit" -> {
 				// edit x1 y1 z1 x2 y2 z2 block: every position of the box as one edit to the layer, as a shape sends it;
@@ -237,9 +237,10 @@ public final class Driver implements ClientModInitializer {
 				return glows();
 			}
 			case "selected" -> {
-				// selected: Litematica's selected placement: none, a tile, or another placement's name.
+				// selected: Litematica's selected placement: none, a tile, the copy, or another placement's name.
 				SchematicPlacement p = DataManager.getSchematicPlacementManager().getSelectedSchematicPlacement();
-				return p == null ? "none" : BuildingPlannerClient.isTile(p) ? "a tile" : p.getName();
+				return p == null ? "none" : BuildingPlannerClient.isTile(p) ? "a tile"
+					: clipboard().holds(p) ? "the copy" : p.getName();
 			}
 			case "selecttile" -> {
 				// selecttile: asks Litematica to select a tile, as its placement list or aim would.
@@ -396,12 +397,13 @@ public final class Driver implements ClientModInitializer {
 				return "none";
 			}
 			case "widget" -> {
-				// widget <n> <text>: the window position of the centre of the nth widget (from 0) on the open screen
-				// whose text starts with <text>.
+				// widget <n> <text>: the window position of the centre of the nth shown widget (from 0) on the open
+				// screen whose text starts with <text>, or none.
 				int n = Integer.parseInt(a[1]);
 				String prefix = line.substring(a[0].length() + a[1].length() + 2);
 				for (GuiEventListener child : mc.gui.screen().children()) {
-					if (child instanceof AbstractWidget w && w.getMessage().getString().startsWith(prefix) && n-- == 0) {
+					if (child instanceof AbstractWidget w && w.visible && w.getMessage().getString().startsWith(prefix)
+						&& n-- == 0) {
 						return scaled(mc, w.getX() + w.getWidth() / 2.0, w.getY() + w.getHeight() / 2.0);
 					}
 				}
@@ -434,10 +436,10 @@ public final class Driver implements ClientModInitializer {
 				return "none";
 			}
 			case "texts" -> {
-				// texts: the text of each widget on the open screen, separated by " | ".
+				// texts: the text of each shown widget on the open screen, separated by " | ".
 				List<String> texts = new ArrayList<>();
 				for (GuiEventListener child : mc.gui.screen().children()) {
-					if (child instanceof AbstractWidget w) {
+					if (child instanceof AbstractWidget w && w.visible) {
 						texts.add(w.getMessage().getString());
 					}
 				}
@@ -459,7 +461,7 @@ public final class Driver implements ClientModInitializer {
 				double scale = mc.getWindow().getGuiScale();
 				List<String> boxes = new ArrayList<>();
 				for (GuiEventListener child : mc.gui.screen().children()) {
-					if (child instanceof RadialButton w) {
+					if (child instanceof RadialButton w && w.visible) {
 						boxes.add(w.getMessage().getString() + ": " + scaled(mc, w.getX(), w.getY()) + " "
 							+ (int) (w.getWidth() * scale) + " " + (int) (w.getHeight() * scale));
 					}
@@ -665,7 +667,7 @@ public final class Driver implements ClientModInitializer {
 		SchematicPlacement p = clipboard.placement();
 		boolean selected = DataManager.getSchematicPlacementManager().getSelectedSchematicPlacement() == p;
 		return "origin " + p.getOrigin().toShortString().replace(" ", "") + " " + p.getMirror() + " " + p.getRotation()
-			+ (selected ? " selected " : " unselected ") + p.getName();
+			+ (selected ? " selected " : " unselected ") + clipboard.worldBlocks().size() + " blocks";
 	}
 
 	private static BlockPos pos(String[] a, int i) {

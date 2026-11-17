@@ -48,11 +48,13 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	// Copy and paste. None of these keys is a default key, or in a default key combination, of Minecraft, Litematica,
 	// MaLiLib, Effortless Building or Freecam.
 	static final KeyMapping COPY = new KeyMapping("key.buildingplanner.copy", InputConstants.KEY_J, CATEGORY);
+	/** "Copy real blocks" has no key unless the player sets one. */
+	static final KeyMapping COPY_REAL =
+		new KeyMapping("key.buildingplanner.copy_real", InputConstants.UNKNOWN.getValue(), CATEGORY);
 	static final KeyMapping PASTE = new KeyMapping("key.buildingplanner.paste", InputConstants.KEY_K, CATEGORY);
-	private static final KeyMapping TURN = new KeyMapping("key.buildingplanner.turn", InputConstants.KEY_U, CATEGORY);
-	private static final KeyMapping MIRROR = new KeyMapping("key.buildingplanner.mirror", InputConstants.KEY_H, CATEGORY);
-	private static final KeyMapping CLEAR =
-		new KeyMapping("key.buildingplanner.clear", InputConstants.KEY_DELETE, CATEGORY);
+	static final KeyMapping TURN = new KeyMapping("key.buildingplanner.turn", InputConstants.KEY_U, CATEGORY);
+	static final KeyMapping MIRROR = new KeyMapping("key.buildingplanner.mirror", InputConstants.KEY_H, CATEGORY);
+	static final KeyMapping CLEAR = new KeyMapping("key.buildingplanner.clear", InputConstants.KEY_DELETE, CATEGORY);
 	/**
 	 * The edit glow, drawn through MaLiLib; null while Building Planner is off for want of Litematica or MaLiLib, so this
 	 * class never loads their classes then.
@@ -81,6 +83,11 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	private static boolean lookSet;
 	/** The mix panel; null without Effortless Building, whose mode the mix rule reads. */
 	private static MixPanel mixPanel;
+	/**
+	 * Copy and "Copy real blocks" waiting for a box drawn with Effortless Building's "Cube" shape; null without
+	 * Effortless Building, whose classes it uses, so neither copies then.
+	 */
+	private static BoxWait boxWait;
 
 	@Override
 	public void onInitializeClient() {
@@ -94,12 +101,13 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		}
 		if (loader.isModLoaded("effortlessbuilding")) {
 			heldClicks = new HeldClicks(config);
+			boxWait = new BoxWait();
 			mixPanel = new MixPanel(MIX, EffortlessShapes::mixApplies);
 			HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(BuildingPlanner.MOD_ID, "mix_panel"), mixPanel);
 		}
 		KeyMappingHelper.registerKeyMapping(BLOCK_MIX);
 		KeyMappingHelper.registerKeyMapping(SHOW_HIDE);
-		List.of(COPY, PASTE, TURN, MIRROR, CLEAR).forEach(KeyMappingHelper::registerKeyMapping);
+		List.of(COPY, COPY_REAL, PASTE, TURN, MIRROR, CLEAR).forEach(KeyMappingHelper::registerKeyMapping);
 		glow = EditGlow.registered();
 		ClientPlayNetworking.registerGlobalReceiver(Payloads.Hello.TYPE, (hello, context) -> hello(hello));
 		// A singleplayer or LAN host's own world runs no server side.
@@ -146,6 +154,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		ClientLevelEvents.AFTER_CLIENT_LEVEL_CHANGE.register((client, level) -> {
 			LOADED.clear();
 			if (session != null) {
+				stopBoxWait();
 				session.levelChanged(dimension(level));
 			}
 		});
@@ -161,29 +170,22 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 				}
 			}
 			while (COPY.consumeClick()) {
-				if (session != null) {
-					session.copy(PASTE.getTranslatedKeyMessage().getString());
-				}
+				copy();
+			}
+			while (COPY_REAL.consumeClick()) {
+				copyReal();
 			}
 			while (PASTE.consumeClick()) {
-				if (session != null) {
-					session.paste(COPY.getTranslatedKeyMessage().getString());
-				}
+				paste();
 			}
 			while (TURN.consumeClick()) {
-				if (session != null) {
-					session.turnCopy();
-				}
+				turnCopy();
 			}
 			while (MIRROR.consumeClick()) {
-				if (session != null && client.player != null) {
-					session.mirrorCopy(client.player.getDirection());
-				}
+				mirrorCopy();
 			}
 			while (CLEAR.consumeClick()) {
-				if (session != null) {
-					session.clearCopy();
-				}
+				clearCopy();
 			}
 			if (!lookSet) {
 				// Litematica has loaded its config by the first tick.
@@ -192,6 +194,9 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 			}
 			if (session != null) {
 				session.tick();
+				if (boxWait != null) {
+					boxWait.tick();
+				}
 				if (heldClicks != null) {
 					// A shape started while ghost blocks are hidden shows them, so the player sees what it joins.
 					if (EffortlessShapes.shapeUnderWay()) {
@@ -226,9 +231,15 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 
 	private static void endSession() {
 		if (session != null) {
+			stopBoxWait();
 			session.close();
 			session = null;
 		}
+	}
+
+	/** The session, or null while Building Planner is off. */
+	static ClientSession session() {
+		return session;
 	}
 
 	private static Identifier dimension(ClientLevel level) {
@@ -254,14 +265,94 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		}
 	}
 
+	/**
+	 * The Copy key and button: waits for a box around ghost blocks drawn with Effortless Building's "Cube" shape, or
+	 * stops a wait under way. Does nothing while Building Planner is off or without Effortless Building.
+	 */
+	static void copy() {
+		awaitBox(BoxWait.Purpose.COPY);
+	}
+
+	/** The "Copy real blocks" key and button: as {@link #copy()}, for a box around real blocks. */
+	static void copyReal() {
+		awaitBox(BoxWait.Purpose.COPY_REAL);
+	}
+
+	private static void awaitBox(BoxWait.Purpose purpose) {
+		if (session == null || boxWait == null) {
+			return;
+		}
+		if (boxWait.purpose() != null) {
+			boxWait.stop();
+			return;
+		}
+		boxWait.start(purpose);
+		ClientSession.show(purpose == BoxWait.Purpose.COPY ? PlayerMessage.drawBoxToCopy()
+			: PlayerMessage.drawBoxToCopyReal());
+	}
+
+	/** Hooks E1 and E2: the box awaited for a copy, by its lowest and highest corners. */
+	public static void boxDrawn(BlockPos min, BlockPos max) {
+		if (session != null && boxWait != null && boxWait.purpose() != null) {
+			boolean real = boxWait.take() == BoxWait.Purpose.COPY_REAL;
+			session.copy(min, max, real, PASTE.getTranslatedKeyMessage().getString());
+		}
+	}
+
+	private static void stopBoxWait() {
+		if (boxWait != null) {
+			boxWait.stop();
+		}
+	}
+
+	/** The Paste key and button. */
+	static void paste() {
+		if (session != null) {
+			session.paste(COPY.getTranslatedKeyMessage().getString());
+		}
+	}
+
+	/** The Turn key and button. */
+	static void turnCopy() {
+		if (session != null) {
+			session.turnCopy();
+		}
+	}
+
+	/** The Mirror key and button, for the way the player faces. */
+	static void mirrorCopy() {
+		Minecraft mc = Minecraft.getInstance();
+		if (session != null && mc.player != null) {
+			session.mirrorCopy(mc.player.getDirection());
+		}
+	}
+
+	/** The Clear key and button: stops waiting for a box and removes the copy. */
+	static void clearCopy() {
+		if (session != null) {
+			stopBoxWait();
+			session.clearCopy();
+		}
+	}
+
+	/** Whether the player has a copy, which the radial menu's Turn, Mirror and Clear buttons need. */
+	static boolean copyExists() {
+		return session != null && session.clipboard().exists();
+	}
+
 	/** Whether Building Planner is on for this server, so Effortless Building's hooks draw ghost blocks. */
 	public static boolean active() {
 		return session != null;
 	}
 
-	/** Hooks L4 and L6: whether the placement is one of the tiles that hand the layer to Litematica. */
+	/** Hook L6: whether the placement is one of the tiles that hand the layer to Litematica. */
 	public static boolean isTile(SchematicPlacement placement) {
 		return session != null && session.tiles().holds(placement);
+	}
+
+	/** Hooks L4 and L5: whether the placement is a tile or the copy, which Litematica never selects or lists. */
+	public static boolean isOurs(SchematicPlacement placement) {
+		return session != null && (session.tiles().holds(placement) || session.clipboard().holds(placement));
 	}
 
 	/** Hook L1: whether Litematica's block container is a tile's. */
@@ -269,13 +360,21 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		return session != null && session.tiles().holds(container);
 	}
 
-	/** Hooks L5 and L6: the placements without the tiles. */
+	/** Hook L6: the placements without the tiles. */
 	public static List<SchematicPlacement> withoutTiles(Collection<SchematicPlacement> placements) {
 		if (session == null) {
 			return placements instanceof List<SchematicPlacement> list ? list : List.copyOf(placements);
 		}
 		Tiles tiles = session.tiles();
 		return placements.stream().filter(placement -> !tiles.holds(placement)).toList();
+	}
+
+	/** Hook L5: the placements without the tiles and the copy. */
+	public static List<SchematicPlacement> withoutOurs(Collection<SchematicPlacement> placements) {
+		if (session == null) {
+			return placements instanceof List<SchematicPlacement> list ? list : List.copyOf(placements);
+		}
+		return placements.stream().filter(placement -> !isOurs(placement)).toList();
 	}
 
 	/**

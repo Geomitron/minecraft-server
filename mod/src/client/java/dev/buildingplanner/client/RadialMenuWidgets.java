@@ -4,6 +4,7 @@ import dev.buildingplanner.input.RepeatSpeed;
 import dev.buildingplanner.look.SmallText;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -27,10 +28,10 @@ import net.minecraft.resources.Identifier;
  *
  * <p>Building Planner's buttons ({@link RadialButton}) sit above the wrench, undo and redo, in the same columns (middles
  * 157, 131 and 105 left of the menu's middle), in rows 39 and 65 above the middle: "Show or hide ghost blocks", Copy and
- * Paste, then "Copy real blocks" and "Material list". The row 91 above the middle stays free for Turn, Mirror and
- * Clear. Copy, Paste, "Copy real blocks" and "Material list" come with build steps 10 and 11; until then they show,
- * doing nothing, only while the development system property {@value #DRAFT_PROPERTY} is {@code true}. Each icon is a
- * texture of its own ({@link RadialButton#icon}).
+ * Paste, then "Copy real blocks" and "Material list"; and in the row 91 above the middle, Turn, Mirror and Clear, which
+ * show only while a copy exists. Each does what its key does. "Material list" comes with build step 11; until then it
+ * shows, doing nothing, only while the development system property {@value #DRAFT_PROPERTY} is {@code true}, which
+ * also shows Turn, Mirror and Clear without a copy. Each icon is a texture of its own ({@link RadialButton#icon}).
  */
 public final class RadialMenuWidgets {
 	static final String DRAFT_PROPERTY = "buildingplanner.draftButtons";
@@ -43,7 +44,8 @@ public final class RadialMenuWidgets {
 	private static final String BUILD = "buildingplanner.ui.radial.build_speed";
 	private static final String BREAK = "buildingplanner.ui.radial.break_speed";
 	/** The buttons' middles from the menu's middle, {x, y}, in the buttons' order. */
-	private static final int[][] SLOTS = {{-157, -39}, {-131, -39}, {-105, -39}, {-157, -65}, {-131, -65}};
+	private static final int[][] SLOTS = {{-157, -39}, {-131, -39}, {-105, -39}, {-157, -65}, {-131, -65},
+		{-157, -91}, {-131, -91}, {-105, -91}};
 
 	private static final Identifier SHOWN = RadialButton.icon("ghost_blocks_shown");
 	private static final Identifier HIDDEN = RadialButton.icon("ghost_blocks_hidden");
@@ -51,6 +53,9 @@ public final class RadialMenuWidgets {
 	private static final Identifier PASTE = RadialButton.icon("paste");
 	private static final Identifier COPY_REAL = RadialButton.icon("copy_real_blocks");
 	private static final Identifier MATERIAL_LIST = RadialButton.icon("material_list");
+	private static final Identifier TURN = RadialButton.icon("turn");
+	private static final Identifier MIRROR = RadialButton.icon("mirror");
+	private static final Identifier CLEAR = RadialButton.icon("clear");
 
 	private RadialMenuWidgets() {
 	}
@@ -64,24 +69,42 @@ public final class RadialMenuWidgets {
 			new RepeatSlider(x, top, sliderWidth, HEIGHT, RepeatSpeed.PLACING, BUILD, BuildingPlannerClient.config()),
 			new RepeatSlider(x, top + HEIGHT + SLIDER_GAP, sliderWidth, HEIGHT, RepeatSpeed.ERASING, BREAK,
 				BuildingPlannerClient.config())));
+		boolean draft = Boolean.getBoolean(DRAFT_PROPERTY);
+		BooleanSupplier always = () -> true;
+		BooleanSupplier withCopy = draft ? always : BuildingPlannerClient::copyExists;
 		widgets.add(button(width, height, SLOTS[0], Component.translatable(BuildingPlannerClient.SHOW_HIDE.getName()),
 			BuildingPlannerClient.SHOW_HIDE, () -> BuildingPlannerClient.ghostsShown() ? SHOWN : HIDDEN,
-			BuildingPlannerClient::toggleGhosts));
-		if (Boolean.getBoolean(DRAFT_PROPERTY)) {
-			widgets.add(button(width, height, SLOTS[1], Component.translatable("buildingplanner.ui.radial.copy"),
-				BuildingPlannerClient.COPY, () -> COPY, () -> {
-				}));
-			widgets.add(button(width, height, SLOTS[2], Component.translatable("buildingplanner.ui.radial.paste"),
-				BuildingPlannerClient.PASTE, () -> PASTE, () -> {
-				}));
-			widgets.add(button(width, height, SLOTS[3], Component.translatable("buildingplanner.ui.radial.copy_real"),
-				null, () -> COPY_REAL, () -> {
-				}));
+			BuildingPlannerClient::toggleGhosts, always));
+		widgets.add(button(width, height, SLOTS[1], Component.translatable("buildingplanner.ui.radial.copy"),
+			BuildingPlannerClient.COPY, () -> COPY, BuildingPlannerClient::copy, always));
+		widgets.add(button(width, height, SLOTS[2], Component.translatable("buildingplanner.ui.radial.paste"),
+			BuildingPlannerClient.PASTE, () -> PASTE, BuildingPlannerClient::paste, always));
+		widgets.add(button(width, height, SLOTS[3], Component.translatable("buildingplanner.ui.radial.copy_real"),
+			BuildingPlannerClient.COPY_REAL, () -> COPY_REAL, BuildingPlannerClient::copyReal, always));
+		if (draft) {
 			widgets.add(button(width, height, SLOTS[4],
 				Component.translatable("buildingplanner.ui.radial.material_list"), null, () -> MATERIAL_LIST, () -> {
-				}));
+				}, always));
 		}
+		widgets.add(button(width, height, SLOTS[5], Component.translatable(BuildingPlannerClient.TURN.getName()),
+			BuildingPlannerClient.TURN, () -> TURN, BuildingPlannerClient::turnCopy, withCopy));
+		widgets.add(button(width, height, SLOTS[6], Component.translatable(BuildingPlannerClient.MIRROR.getName()),
+			BuildingPlannerClient.MIRROR, () -> MIRROR, BuildingPlannerClient::mirrorCopy, withCopy));
+		widgets.add(button(width, height, SLOTS[7], Component.translatable(BuildingPlannerClient.CLEAR.getName()),
+			BuildingPlannerClient.CLEAR, () -> CLEAR, BuildingPlannerClient::clearCopy, withCopy));
 		return widgets;
+	}
+
+	/**
+	 * Hook E12, before each frame of the menu: shows each button by its condition, so Turn, Mirror and Clear go with the
+	 * copy, even after Clear in the open menu.
+	 */
+	public static void beforeDraw(List<? extends GuiEventListener> children) {
+		for (GuiEventListener child : children) {
+			if (child instanceof RadialButton button) {
+				button.refresh();
+			}
+		}
 	}
 
 	/**
@@ -94,18 +117,18 @@ public final class RadialMenuWidgets {
 			return;
 		}
 		for (GuiEventListener child : children) {
-			if (child instanceof RadialButton button && button.isHovered()) {
+			if (child instanceof RadialButton button && button.visible && button.isHovered()) {
 				button.act();
 			}
 		}
 	}
 
 	private static RadialButton button(int width, int height, int[] middle, Component name, KeyMapping key,
-		Supplier<Identifier> icon, Runnable action) {
+		Supplier<Identifier> icon, Runnable action, BooleanSupplier shown) {
 		Supplier<String> keyName = key == null || key.isUnbound() ? () -> null
 			: () -> key.getTranslatedKeyMessage().getString();
 		return new RadialButton(width / 2 + middle[0] - RadialButton.SIZE / 2,
-			height / 2 + middle[1] - RadialButton.SIZE / 2, name, keyName, icon, action);
+			height / 2 + middle[1] - RadialButton.SIZE / 2, name, keyName, icon, action, shown);
 	}
 
 	/** The width the longest label either slider shows takes at the current size, in GUI pixels. */

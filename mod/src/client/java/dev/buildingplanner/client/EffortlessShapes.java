@@ -2,7 +2,7 @@ package dev.buildingplanner.client;
 
 import dev.buildingplanner.input.MixRule;
 import dev.buildingplanner.sync.EditKind;
-import fi.dy.masa.litematica.util.RayTraceUtils;
+import fi.dy.masa.litematica.util.PositionUtils;
 import fi.dy.masa.litematica.world.SchematicWorldHandler;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -22,11 +22,11 @@ import net.minecraft.world.level.block.state.properties.BedPart;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.phys.BlockHitResult;
-import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import nl.requios.effortlessbuilding.buildmode.BuildModeEnum;
 import nl.requios.effortlessbuilding.buildmode.BuildModes;
 import nl.requios.effortlessbuilding.buildpipeline.BuildPipelineClient;
+import nl.requios.effortlessbuilding.config.ServerConfig;
 import nl.requios.effortlessbuilding.utilities.BlockEntry;
 import nl.requios.effortlessbuilding.utilities.BlockSet;
 
@@ -135,24 +135,17 @@ public final class EffortlessShapes {
 	}
 
 	/**
-	 * Hook E9: aims at the nearer of the real block Effortless Building found and a ghost block, so shapes can
-	 * start on ghost blocks.
+	 * Hook E9: aims at the nearer of the real block Effortless Building found and a ghost block of the layer (not the
+	 * copy, which floats where the player aims), so shapes can start on ghost blocks while they show.
 	 */
 	public static BlockHitResult nearerHit(BlockHitResult real, ClipContext context) {
-		Player player = Minecraft.getInstance().player;
-		if (player == null) {
+		ClientSession session = BuildingPlannerClient.session();
+		Level level = Minecraft.getInstance().level;
+		if (session == null || level == null) {
 			return real;
 		}
-		double range = context.getFrom().distanceTo(context.getTo());
-		BlockHitResult ghost = RayTraceUtils.traceToSchematicWorld(player, range, true, false);
-		if (ghost == null || ghost.getType() != HitResult.Type.BLOCK) {
-			return real;
-		}
-		if (real.getType() == HitResult.Type.BLOCK
-			&& context.getFrom().distanceToSqr(real.getLocation()) <= context.getFrom().distanceToSqr(ghost.getLocation())) {
-			return real;
-		}
-		return ghost;
+		return GhostAim.nearer(real,
+			GhostAim.ghostHit(session.replica().layer(), session.ghostsShown(), level, context), context.getFrom());
 	}
 
 	/**
@@ -160,14 +153,32 @@ public final class EffortlessShapes {
 	 * (air, grass), so a shape started on a ghost block goes beside it, not into it.
 	 */
 	public static BlockState startBlock(Level level, BlockPos pos, BlockState real) {
-		if (!real.canBeReplaced()) {
+		ClientSession session = BuildingPlannerClient.session();
+		if (!real.canBeReplaced() || session == null || !session.ghostsShown()) {
 			return real;
 		}
-		Level schematic = SchematicWorldHandler.getSchematicWorld();
-		if (schematic == null) {
-			return real;
-		}
-		BlockState ghost = schematic.getBlockState(pos);
+		BlockState ghost = session.replica().layer().get(pos);
 		return ghost.isAir() ? real : ghost;
+	}
+
+	/**
+	 * Hooks E1 and E2 while a box is awaited: the cube's opposite corners, which modifiers don't move, the last kept
+	 * within Effortless Building's limit on a side as the cube's own blocks are ({@code ThreeClicksBuildMode
+	 * .findCoordinates}). The box is the copy's; nothing is placed or erased.
+	 */
+	public static void boxDrawn(BlockSet blocks) {
+		Player player = Minecraft.getInstance().player;
+		if (blocks.firstPos == null || blocks.lastPos == null || player == null) {
+			return;
+		}
+		int limit = ServerConfig.INSTANCE.getMaxBlocksPerAxis(player);
+		BlockPos first = blocks.firstPos;
+		BlockPos last = new BlockPos(within(first.getX(), blocks.lastPos.getX(), limit),
+			within(first.getY(), blocks.lastPos.getY(), limit), within(first.getZ(), blocks.lastPos.getZ(), limit));
+		BuildingPlannerClient.boxDrawn(PositionUtils.getMinCorner(first, last), PositionUtils.getMaxCorner(first, last));
+	}
+
+	private static int within(int from, int to, int limit) {
+		return Math.clamp(to, from - limit + 1, from + limit - 1);
 	}
 }

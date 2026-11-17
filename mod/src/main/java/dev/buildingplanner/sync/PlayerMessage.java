@@ -49,9 +49,14 @@ public record PlayerMessage(String key, List<String> args) {
 		return new PlayerMessage(PREFIX + "redo.nothing", List.of());
 	}
 
-	/** The player pressed the Copy key without an area marked with Litematica's area tool. */
-	public static PlayerMessage noAreaMarked() {
-		return new PlayerMessage(PREFIX + "copy.no_area", List.of());
+	/** Copy waits for a box drawn with Effortless Building's "Cube" shape around ghost blocks. */
+	public static PlayerMessage drawBoxToCopy() {
+		return new PlayerMessage(PREFIX + "copy.draw_box", List.of());
+	}
+
+	/** "Copy real blocks" waits for a box drawn with Effortless Building's "Cube" shape around real blocks. */
+	public static PlayerMessage drawBoxToCopyReal() {
+		return new PlayerMessage(PREFIX + "copy_real.draw_box", List.of());
 	}
 
 	/** The player turned the block mix on in the picker; {@code key} is the picker key's name. */
@@ -64,12 +69,17 @@ public record PlayerMessage(String key, List<String> args) {
 		return new PlayerMessage(PREFIX + "mix.off", List.of());
 	}
 
-	/** The marked area holds no plan blocks to copy. */
+	/** The box holds no ghost blocks to copy. */
 	public static PlayerMessage nothingToCopy() {
 		return new PlayerMessage(PREFIX + "copy.nothing", List.of());
 	}
 
-	/** The marked area holds more plan blocks than a paste may carry. */
+	/** The box for "Copy real blocks" holds only air. */
+	public static PlayerMessage nothingRealToCopy() {
+		return new PlayerMessage(PREFIX + "copy_real.nothing", List.of());
+	}
+
+	/** The box holds more blocks than a paste may carry. */
 	public static PlayerMessage copyTooLarge(int blocks, int max) {
 		return new PlayerMessage(PREFIX + "copy.too_many", List.of(Integer.toString(blocks), Integer.toString(max)));
 	}

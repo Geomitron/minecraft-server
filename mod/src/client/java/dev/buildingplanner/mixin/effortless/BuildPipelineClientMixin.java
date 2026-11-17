@@ -29,14 +29,15 @@ import org.spongepowered.asm.mixin.injection.At;
 
 /**
  * Effortless Building's client pipeline, on a server with Building Planner: a finished shape goes into the layer
- * instead of to the server as real blocks (hooks E1 to E3), the mix starts shapes (E6), the preview has no "missing items"
- * tint (E8), shapes can start on ghost blocks (E9), and clicks without a placeable item stay vanilla's (E14).
+ * instead of to the server as real blocks (hooks E1 to E3), or marks a box for a copy, the mix starts shapes (E6), the
+ * preview has no "missing items" tint (E8), shapes can start on ghost blocks (E9), clicks without a placeable item stay
+ * vanilla's (E14), and a box for a copy starts on the block aimed at (E17).
  */
 @Mixin(value = BuildPipelineClient.class, remap = false)
 abstract class BuildPipelineClientMixin {
 	/**
-	 * Hook E1: the finished shape goes into the layer, not to the server as real blocks; with Building Planner off on
-	 * a server, it goes nowhere.
+	 * Hook E1: the finished shape goes into the layer, not to the server as real blocks, or, while a box is awaited, is
+	 * the box; with Building Planner off on a server, it goes nowhere.
 	 */
 	@WrapWithCondition(method = "handleClick", at = @At(value = "INVOKE",
 		target = "Lnl/requios/effortlessbuilding/network/PacketHandler;sendToServer(Lnl/requios/effortlessbuilding/network/PlaceBuildModePacket;)V"))
@@ -44,18 +45,29 @@ abstract class BuildPipelineClientMixin {
 		if (!BuildingPlannerClient.active()) {
 			return !BuildingPlannerClient.off();
 		}
-		EffortlessShapes.place(blocks);
+		if (ClickRule.boxAwaited()) {
+			EffortlessShapes.boxDrawn(blocks);
+		} else {
+			EffortlessShapes.place(blocks);
+		}
 		return false;
 	}
 
-	/** Hook E2: a shape drawn with the break click erases its ghost blocks. */
+	/**
+	 * Hook E2: a shape drawn with the break click erases its ghost blocks, or, while a box is awaited, is the box, so
+	 * marking a box never erases.
+	 */
 	@WrapWithCondition(method = "handleClick", at = @At(value = "INVOKE",
 		target = "Lnl/requios/effortlessbuilding/network/PacketHandler;sendToServer(Lnl/requios/effortlessbuilding/network/BreakBuildModePacket;)V"))
 	private static boolean buildingplanner$erase(BreakBuildModePacket packet, @Local BlockSet blocks) {
 		if (!BuildingPlannerClient.active()) {
 			return !BuildingPlannerClient.off();
 		}
-		EffortlessShapes.erase(blocks);
+		if (ClickRule.boxAwaited()) {
+			EffortlessShapes.boxDrawn(blocks);
+		} else {
+			EffortlessShapes.erase(blocks);
+		}
 		return false;
 	}
 
@@ -82,7 +94,7 @@ abstract class BuildPipelineClientMixin {
 	@ModifyReturnValue(method = {"shouldInterceptPlacing", "shouldInterceptBreaking"}, at = @At("RETURN"), require = 2)
 	private static boolean buildingplanner$onlyWithPlaceables(boolean intercept) {
 		return intercept && (!BuildingPlannerClient.ownsShapes() || BuildPipelineClient.getBuildState() != null
-			|| ClickRule.holdsPlaceable());
+			|| ClickRule.startsShapes());
 	}
 
 	/** Hook E8: ghost blocks don't use up items, so the preview shows none missing. */
@@ -117,6 +129,15 @@ abstract class BuildPipelineClientMixin {
 		Operation<BlockHitResult> original) {
 		BlockHitResult real = original.call(level, context);
 		return BuildingPlannerClient.active() ? EffortlessShapes.nearerHit(real, context) : real;
+	}
+
+	/**
+	 * Hook E17: while a box is awaited for a copy, the cube starts on the block aimed at, as Effortless Building's break
+	 * click does, not beside it, so the box takes in the blocks the player points at.
+	 */
+	@ModifyReturnValue(method = "resolveFirstClickPos", at = @At("RETURN"))
+	private static BlockPos buildingplanner$boxOnAimedBlock(BlockPos pos, @Local(argsOnly = true) BlockHitResult hit) {
+		return BuildingPlannerClient.active() && ClickRule.boxAwaited() ? hit.getBlockPos() : pos;
 	}
 
 	/** Hook E9: a shape started on a ghost block goes beside it, as on a real block. */

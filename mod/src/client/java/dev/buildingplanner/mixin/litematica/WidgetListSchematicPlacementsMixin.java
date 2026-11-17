@@ -8,11 +8,11 @@ import java.util.Collection;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 
-/** Hook L5: Litematica's placement list leaves tiles out. */
+/** Hook L5: Litematica's placement list leaves out the tiles and the copy. */
 @Mixin(value = WidgetListSchematicPlacements.class, remap = false)
 abstract class WidgetListSchematicPlacementsMixin {
 	@ModifyReturnValue(method = "getAllEntries", at = @At("RETURN"))
 	private Collection<SchematicPlacement> buildingplanner$withoutTiles(Collection<SchematicPlacement> placements) {
-		return BuildingPlannerClient.withoutTiles(placements);
+		return BuildingPlannerClient.withoutOurs(placements);
 	}
 }

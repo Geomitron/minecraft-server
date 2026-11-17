@@ -9,9 +9,7 @@ import fi.dy.masa.litematica.schematic.placement.SchematicPlacementManager;
 import fi.dy.masa.litematica.schematic.placement.SubRegionPlacement;
 import fi.dy.masa.litematica.selection.AreaSelection;
 import fi.dy.masa.litematica.selection.Box;
-import fi.dy.masa.litematica.tool.ToolMode;
 import fi.dy.masa.litematica.util.PositionUtils;
-import fi.dy.masa.litematica.util.RayTraceUtils;
 import fi.dy.masa.malilib.gui.Message;
 import fi.dy.masa.malilib.gui.interfaces.IMessageConsumer;
 import fi.dy.masa.malilib.util.InfoUtils;
@@ -22,20 +20,18 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.phys.BlockHitResult;
-import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * The player's copy of some ghost blocks: a Litematica placement of a schematic kept in memory, which only this player
- * sees. Litematica doesn't save it, since it has no file.
+ * The player's copy of some blocks: a Litematica placement of a schematic kept in memory, which only this player sees.
+ * Litematica doesn't save it, since it has no file; hooks L4 and L5 keep it out of Litematica's selection and placement
+ * list, as for tiles. Its origin, the corner with the lowest coordinates when it's made, follows where the player
+ * aims.
  */
 final class Clipboard {
-	/** How far the copy can be placed where the player aims. */
-	private static final double AIM_DISTANCE = 64;
 	private static final String REGION = "Copy";
 
 	private SchematicPlacement placement;
@@ -52,12 +48,16 @@ final class Clipboard {
 		return placement;
 	}
 
+	/** Whether the placement is the copy's. */
+	boolean holds(SchematicPlacement placement) {
+		return placement != null && placement == this.placement;
+	}
+
 	/**
 	 * Replaces any copy with one of {@code blocks} (world positions and states as the world shows them), with its
-	 * origin on the block beside the face the player aims at, or else over the blocks; selects it, with Litematica's tool
-	 * in its placement mode. Never the Paste tool, which places real blocks in creative mode.
+	 * origin at {@code origin}, or over the blocks when that's null.
 	 */
-	void place(Map<BlockPos, BlockState> blocks) {
+	void place(Map<BlockPos, BlockState> blocks, BlockPos origin) {
 		clear();
 		BlockPos min = null;
 		BlockPos max = null;
@@ -87,10 +87,17 @@ final class Clipboard {
 		BlockPos corner = min;
 		blocks.forEach((pos, state) -> container.set(pos.getX() - corner.getX(), pos.getY() - corner.getY(),
 			pos.getZ() - corner.getZ(), state));
-		placement = SchematicPlacement.createFor(schematic, aimed(mc, min), name, true, true);
+		// Known as the copy before it's added, so hook L4 keeps Litematica from selecting it.
+		placement = SchematicPlacement.createFor(schematic, origin != null ? origin : min, name, true, true);
 		manager().addSchematicPlacement(placement, false);
-		manager().setSelectedSchematicPlacement(placement);
-		DataManager.setToolMode(ToolMode.SCHEMATIC_PLACEMENT);
+	}
+
+	/** Moves the copy's origin to {@code origin}, when it isn't there already. */
+	void follow(BlockPos origin) {
+		if (!origin.equals(placement.getOrigin())) {
+			placement.setOrigin(origin,
+				message -> InfoUtils.showGuiOrInGameMessage(Message.MessageType.WARNING, message));
+		}
 	}
 
 	/** The copy's blocks other than its empty space, at the world positions where Litematica draws them, with their states turned. */
@@ -130,18 +137,14 @@ final class Clipboard {
 
 	/**
 	 * Adds the copy again, so Litematica, which draws placements in the order they were added, draws it over the tiles
-	 * added since. It stays selected if it was.
+	 * added since.
 	 */
 	void raise() {
 		if (!exists()) {
 			return;
 		}
-		boolean selected = manager().getSelectedSchematicPlacement() == placement;
 		manager().removeSchematicPlacement(placement, false);
 		manager().addSchematicPlacement(placement, false);
-		if (selected) {
-			manager().setSelectedSchematicPlacement(placement);
-		}
 	}
 
 	/** The world position of a container position, as Litematica places a region's blocks. */
@@ -194,15 +197,6 @@ final class Clipboard {
 			InfoUtils.showGuiOrInGameMessage(type, lifeTime, message, args);
 		}
 	};
-
-	private static BlockPos aimed(Minecraft mc, BlockPos otherwise) {
-		if (mc.level == null || mc.getCameraEntity() == null) {
-			return otherwise;
-		}
-		HitResult hit = RayTraceUtils.getRayTraceFromEntity(mc.level, mc.getCameraEntity(), false, AIM_DISTANCE);
-		return hit instanceof BlockHitResult block && hit.getType() == HitResult.Type.BLOCK
-			? block.getBlockPos().relative(block.getDirection()) : otherwise;
-	}
 
 	private static SchematicPlacementManager manager() {
 		return DataManager.getSchematicPlacementManager();

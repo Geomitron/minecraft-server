@@ -76,7 +76,7 @@ final class EffortlessDriver {
 		List<Box> ours = new ArrayList<>();
 		List<Box> theirs = new ArrayList<>();
 		for (GuiEventListener child : screen.children()) {
-			if (child instanceof AbstractWidget w) {
+			if (child instanceof AbstractWidget w && w.visible) {
 				(w instanceof RadialButton ? ours : theirs).add(new Box(w.getMessage().getString(), w.getX(), w.getY(),
 					w.getX() + w.getWidth(), w.getY() + w.getHeight()));
 			}

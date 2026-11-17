@@ -1,7 +1,7 @@
 # Step 9's in-game checks: showing and hiding ghost blocks with N and the radial menu's button, drawing while they're
-# hidden, the choice kept across a restart, and where the radial menu's buttons sit, with screenshots. Below them,
-# build steps 10 and 11's checks (copy and paste, and the material list), which don't run until those steps build
-# them, and the keys on a server without Building Planner. Sourced by inside.sh, which provides drv, val, check, keys,
+# hidden, the choice kept across a restart, where the radial menu's buttons sit, with screenshots, and copy and
+# paste. Below them, build step 11's checks (the material list), which don't run until that step builds them, and the
+# keys on a server without Building Planner. Sourced by inside.sh, which provides drv, val, check, keys,
 # xdo, click, use_click, attack_click, client_said, start_server, stop_server, start_client, stop_client,
 # no_planner_message and $ADDON. Players stand on the flat world's grass, whose top is at y -61.
 
@@ -206,162 +206,251 @@ done
 check "ghost blocks still show after the hover shots" eval '[[ $(val 1 ghosts) == "shown, "* ]]'
 drv 1 "window 854 480 2" "wait 20" > /dev/null
 
-# Copy and paste, as they worked on separate plans: build step 10 rewrites these for the shared layer, with Copy's box
-# drawn with the "Cube" shape and the copy following the aim, and its radial menu buttons.
-if pending 10 "copy and paste"; then
-	# Copy from one plan: the marked area's 8 plan blocks become a copy placed on the block Planner1 looks down at,
-	# selected, with Litematica's tool in its placement mode, and no real block is placed.
-	drv 1 "select 3 -60 3 5 -59 4" "cmd tp @s 5.5 -60 20.5 0 90" "wait 40" > /dev/null
-	press 1 j
-	check "J copies the marked area's plan blocks, with a message" client_said 1 "Copied 8 blocks. Press K to paste them."
-	shot 1 copy-message
-	check "the copy sits on the aimed block, selected" drv 1 "await copy origin 5,-60,20 NONE NONE selected Building Planner copy"
-	check "with Litematica's tool in its placement mode" eval '[[ $(val 1 toolmode) == SCHEMATIC_PLACEMENT ]]'
-	check "the copy shows the plan's blocks as they were" eval 'state_has 1 "5 -59 20" "oak_stairs" &&
-		state_has 1 "5 -59 20" "facing=north" && [[ $(val 1 "get 6 -59 20") == minecraft:glowstone ]] &&
-		[[ $(val 1 "get 7 -60 21") == minecraft:stone_bricks ]] && [[ $(val 1 "get 7 -59 21") == minecraft:air ]]'
-	check "and places no real block" eval '[[ $(val 1 "real 5 -59 20") == minecraft:air ]]'
-	check "and isn't shared" eval 'drv 2 "wait 20" > /dev/null && [[ $(val 2 "get 5 -59 20") == minecraft:air ]]'
-	drv 1 "cmd tp @s 6.5 -59 26.5 180 30" "wait 40" > /dev/null
-	shot 1 copy-placed
+# Copy and paste. Boxes are drawn with three real clicks of Effortless Building's "Cube" shape, aimed with the driver's
+# lookat, which turns the player as a mouse move would.
+# half <n>: n + 0.5, for negative n too.
+half() {
+	awk -v n="$1" 'BEGIN { print n + 0.5 }'
+}
+# aim <client> <x y z>: the player looks at the middle of the top of the block below x y z, so the copy's corner goes
+# there.
+aim() {
+	drv "$1" "lookat $(half "$2") $3 $(half "$4")" "wait 5" > /dev/null
+}
+# cube <client> <x y z> <x2 z2> <y3> [<shot>]: draws a cube: the first click on the top of the block at x y z, which
+# becomes a corner (hook E17); the second on the floor at x2 z2 (Effortless Building's level through that corner); the
+# third at height y3 on the line above x2 z2. With a shot name, shoots the box before the third click.
+cube() {
+	drv "$1" "lookat $(half "$2") $(($3 + 1)) $(half "$4")" "wait 5" > /dev/null
+	use_click "$1"
+	drv "$1" "lookat $(half "$5") $3 $(half "$6")" "wait 5" > /dev/null
+	use_click "$1"
+	drv "$1" "lookat $5 $(half "$7") $6" "wait 10" > /dev/null
+	[[ -z ${8:-} ]] || shot "$1" "$8"
+	use_click "$1"
+	drv "$1" "wait 5" > /dev/null
+}
+# copy_is <client> <pattern>: the copy, as the driver's copy describes it, matches the extended regular expression.
+copy_is() {
+	[[ $(val "$1" copy) =~ $2 ]]
+}
 
-	# Moving it with a real click of Litematica's tool on the grass at 30 -61 20.
-	drv 1 "cmd item replace entity @s weapon.mainhand with minecraft:stick" "cmd tp @s 30.5 -60 20.5 0 90" "wait 40" \
-		> /dev/null
-	attack_click 1
-	check "a click with Litematica's tool moves the copy" \
-		eval 'drv 1 "wait 20" > /dev/null && [[ $(val 1 copy) =~ ^origin\ 30,-6[01],20\ NONE\ NONE\ selected ]]'
-	echo "  the tool click put the copy's origin at: $(val 1 copy)" >> /out/checks.log
-	drv 1 "movecopy 30 -60 20" "cmd tp @s 30.5 -58 26.5 180 30" "wait 40" > /dev/null
+# Both players fly, so each stays where a teleport puts them. Flying stops on the ground, so each is lifted first.
+drv 1 "cmd tp @s ~ ~10 ~" "wait 5" "fly true" > /dev/null
+drv 1 "cmd execute as Planner2 at @s run tp @s ~ ~10 ~" > /dev/null
+drv 2 "wait 5" "fly true" > /dev/null
 
-	# U gives it a quarter turn clockwise around its origin: the stairs now face east.
-	press 1 u
-	check "U turns the copy a quarter turn clockwise" drv 1 "await copy origin 30,-60,20 NONE CLOCKWISE_90 selected"
-	check "its blocks turn with it" eval 'state_has 1 "30 -59 20" "facing=east" &&
-		[[ $(val 1 "get 30 -59 21") == minecraft:glowstone ]] && [[ $(val 1 "get 29 -60 22") == minecraft:stone_bricks ]]'
-	shot 1 copy-turned
+# J, then a cube from the stone brick at 5 -60 4 to 3 -59 3, around 6 stone bricks, the stairs and the glowstone.
+drv 1 "ebmode SINGLE" "cmd tp @s 8.5 -56 9.5 0 30" "wait 40" > /dev/null
+press 1 j
+check "J waits for a box in Effortless Building's Cube mode" eval '[[ $(val 1 boxwait) == "true CUBE" ]]'
+check "with a message" client_said 1 "Draw a box around the ghost blocks to copy."
+shot 1 copy-draw-box-message
+cube 1 5 -60 4 3 3 -59 copy-box
+check "the cube's last click copies the 8 ghost blocks in the box, with a message" \
+	client_said 1 "Copied 8 blocks. Press K to paste them."
+check "and puts back the player's mode" eval '[[ $(val 1 boxwait) == "false SINGLE" ]]'
+check "and places no real block, leaving the ghost blocks" eval '[[ $(val 1 "real 4 -59 3") == minecraft:air ]] &&
+	[[ $(val 1 "real 5 -60 4") == minecraft:air ]] && [[ $(val 1 "layer 4 -59 3") == minecraft:glowstone ]] &&
+	[[ $(val 2 "get 5 -60 4") == minecraft:stone_bricks ]]'
 
-	# H flips it left to right for Planner1, who faces south: the stairs face west, and the copy's floor moves from
-	# 29..30 to 30..31 east to west.
-	drv 1 "cmd tp @s 30.5 -58 14.5 0 30" "wait 40" > /dev/null
-	press 1 h
-	check "H mirrors the copy left to right" drv 1 "await copy origin 30,-60,20 FRONT_BACK COUNTERCLOCKWISE_90 selected"
-	check "its blocks flip with it" eval 'state_has 1 "30 -59 20" "facing=west" &&
-		[[ $(val 1 "get 31 -60 22") == minecraft:stone_bricks ]] && [[ $(val 1 "get 29 -60 22") == minecraft:air ]]'
-	shot 1 copy-mirrored
-	# Without the tool item in hand, Litematica's tool display leaves the chat clear for the screenshots below.
-	drv 1 "cmd clear @s" > /dev/null
+# The copy follows the aim: its corner goes on the block beside the face aimed at.
+drv 1 "cmd tp @s 5.5 -57 25.5 180 30" "wait 40" > /dev/null
+aim 1 5 -60 20
+check "the copy's corner sits on the aimed block" drv 1 "await copy origin 5,-60,20 NONE NONE unselected 8 blocks"
+check "the copy shows the ghost blocks as they were" eval 'state_has 1 "5 -59 20" "oak_stairs" &&
+	state_has 1 "5 -59 20" "facing=north" && [[ $(val 1 "get 6 -59 20") == minecraft:glowstone ]] &&
+	[[ $(val 1 "get 7 -60 21") == minecraft:stone_bricks ]] && [[ $(val 1 "get 7 -59 21") == minecraft:air ]]'
+check "and places no real block" eval '[[ $(val 1 "real 5 -59 20") == minecraft:air ]]'
+check "and isn't shared" eval 'drv 2 "wait 20" > /dev/null && [[ $(val 2 "get 5 -59 20") == minecraft:air ]]'
+check "Litematica neither selects the copy nor lists it" eval '[[ $(val 1 selected) != "the copy" ]] &&
+	[[ $(val 1 placementlist) == *"others: none" ]]'
+drv 1 "close" "cmd tp @s 30.5 -57 26.5 180 30" "wait 40" > /dev/null
+aim 1 30 -60 20
+check "the copy moves with the aim" drv 1 "await copy origin 30,-60,20 NONE NONE unselected"
+shot 1 copy-follows-aim
 
-	# Barn gets glass where the copy has empty space, and a gold block where the copy has stone bricks; the copy moves
-	# over them.
-	drv 1 "fill 15 -58 4 15 -58 6 minecraft:glass" "place 14 -58 6 minecraft:glass" "place 15 -59 5 minecraft:gold_block" \
-		> /dev/null
-	check "client 2 sees Barn's glass and gold block" drv 2 "await block 14 -58 6 minecraft:glass" \
-		"await block 15 -59 5 minecraft:gold_block"
-	drv 1 "movecopy 14 -59 4" "cmd tp @s 14.5 -57 11.5 180 30" "wait 40" > /dev/null
-	check "the copy moves over Barn" drv 1 "await copy origin 14,-59,4 FRONT_BACK COUNTERCLOCKWISE_90 selected"
-	# Where the copy and a plan overlap, Litematica shows one block; the log records which.
-	echo "  where the copy overlaps Barn: 15 -59 5 shows $(val 1 "get 15 -59 5") (copy stone_bricks, Barn gold_block);" \
-		"15 -58 4 shows $(val 1 "get 15 -58 4") (copy empty, Barn glass)" >> /out/checks.log
-	check "the copy's empty space shows Barn's glass" eval '[[ $(val 1 "get 15 -58 4") == minecraft:glass ]] &&
-		[[ $(val 1 "get 15 -59 5") == minecraft:stone_bricks ]]'
-	shot 1 copy-over-plan
+# U gives it a quarter turn clockwise around its origin: the stairs now face east.
+press 1 u
+check "U turns the copy a quarter turn clockwise" drv 1 "await copy origin 30,-60,20 NONE CLOCKWISE_90"
+check "its blocks turn with it" eval 'state_has 1 "30 -59 20" "facing=east" &&
+	[[ $(val 1 "get 30 -59 21") == minecraft:glowstone ]] && [[ $(val 1 "get 29 -60 22") == minecraft:stone_bricks ]]'
+shot 1 copy-turned
 
-	# K pastes it into Barn, where its corner is: its 8 blocks, the stairs still facing west, and its empty space leaves
-	# Barn's glass.
-	drv 1 "cmd tp Planner2 18.5 -57 11.5 150 30" "wait 40" > /dev/null
-	press 1 k
-	check "K pastes the copy into the plan at its corner, for the other player" drv 2 \
-		"await block 14 -58 4 minecraft:oak_stairs" "await block 14 -58 5 minecraft:glowstone" \
-		"await block 15 -59 5 minecraft:stone_bricks" "await block 14 -59 6 minecraft:stone_bricks"
-	check "glowing with Planner1's name" drv 2 "await glow Planner1:8"
-	shot 2 paste-seen
-	check "turned and mirrored as the copy showed it" state_has 2 "14 -58 4" "facing=west"
-	check "the copy's empty space leaves Barn's blocks" eval '[[ $(val 2 "get 15 -58 4") == minecraft:glass ]] &&
-		[[ $(val 2 "get 15 -58 6") == minecraft:glass ]] && [[ $(val 2 "get 14 -58 6") == minecraft:glass ]]'
-	check "Barn keeps its size" drv 2 "await area Barn 0,0,0..4,2,4"
-	check "and the copy stays for another paste" drv 1 "await copy origin 14,-59,4 FRONT_BACK COUNTERCLOCKWISE_90 selected"
+# H flips it left to right for Planner1, who faces south: the stairs face west, and the copy's floor moves from
+# 29..30 to 30..31 east to west.
+drv 1 "cmd tp @s 30.5 -57 14.5 0 30" "wait 40" > /dev/null
+aim 1 30 -60 20
+press 1 h
+check "H mirrors the copy left to right" drv 1 "await copy origin 30,-60,20 FRONT_BACK COUNTERCLOCKWISE_90"
+check "its blocks flip with it" eval 'state_has 1 "30 -59 20" "facing=west" &&
+	[[ $(val 1 "get 31 -60 22") == minecraft:stone_bricks ]] && [[ $(val 1 "get 29 -60 22") == minecraft:air ]]'
+shot 1 copy-mirrored
 
-	# One Ctrl+Z undoes the whole paste; Ctrl+Y redoes it.
-	drv 1 "close" > /dev/null
-	keys 1 keydown ctrl key z sleep 0.3 keyup ctrl
-	check "Ctrl+Z undoes the whole paste" drv 2 "await block 14 -58 4 minecraft:air" "await block 14 -58 5 minecraft:air" \
-		"await block 15 -59 5 minecraft:gold_block" "await block 14 -59 6 minecraft:air" "await block 15 -58 4 minecraft:glass"
-	keys 1 keydown ctrl key y sleep 0.3 keyup ctrl
-	check "Ctrl+Y redoes it" drv 2 "await block 14 -58 4 minecraft:oak_stairs" "await block 15 -59 5 minecraft:stone_bricks" \
-		"await block 14 -59 6 minecraft:stone_bricks"
+# Ghost glass where the copy will have empty space, and a ghost gold block where it will have stone bricks, on the
+# oak planks; the copy moves over them.
+drv 1 "edit 15 -58 4 15 -58 6 minecraft:glass" "edit 14 -58 6 14 -58 6 minecraft:glass" \
+	"edit 15 -59 5 15 -59 5 minecraft:gold_block" > /dev/null
+check "client 2 sees the glass and the gold block" drv 2 "await block 14 -58 6 minecraft:glass" \
+	"await block 15 -59 5 minecraft:gold_block"
+drv 1 "cmd tp @s 11.5 -55 1.5 0 30" "wait 40" > /dev/null
+aim 1 14 -59 4
+check "the copy moves over them" drv 1 "await copy origin 14,-59,4 FRONT_BACK COUNTERCLOCKWISE_90"
+# Where the copy and the layer overlap, Litematica shows one block; the log records which.
+echo "  where the copy overlaps ghost blocks: 15 -59 5 shows $(val 1 "get 15 -59 5") (copy stone_bricks, layer" \
+	"gold_block); 15 -58 4 shows $(val 1 "get 15 -58 4") (copy empty, layer glass)" >> /out/checks.log
+check "the copy's blocks show where they overlap, and the glass in its empty space" eval '
+	[[ $(val 1 "get 15 -58 4") == minecraft:glass ]] && [[ $(val 1 "get 15 -59 5") == minecraft:stone_bricks ]]'
+shot 1 copy-over-ghosts
 
-	# Repeated pastes into Hall: the first's stairs rise above Hall, which grows by a layer.
-	drv 1 "movecopy 4 -57 6" > /dev/null
-	press 1 k
-	check "a second paste goes into Hall, which grows to fit it" drv 2 "await block 4 -56 6 minecraft:oak_stairs" \
-		"await area Hall 0,0,0..6,4,6"
-	drv 1 "movecopy 6 -57 2" > /dev/null
-	press 1 k
-	check "and a third" drv 2 "await block 6 -56 2 minecraft:oak_stairs" "await block 7 -57 4 minecraft:stone_bricks" \
-		"await area Hall 0,0,0..6,4,6"
+# K pastes it where it shows: its 8 blocks, the stairs still facing west, and its empty space leaves the glass.
+drv 1 "cmd tp Planner2 18.5 -57 11.5 150 30" "wait 40" > /dev/null
+press 1 k
+check "K pastes the copy where it shows, for the other player" drv 2 \
+	"await block 14 -58 4 minecraft:oak_stairs" "await block 14 -58 5 minecraft:glowstone" \
+	"await block 15 -59 5 minecraft:stone_bricks" "await block 14 -59 6 minecraft:stone_bricks"
+check "glowing with Planner1's name" drv 2 "await glow Planner1:8"
+shot 2 paste-seen
+check "turned and mirrored as the copy showed it" state_has 2 "14 -58 4" "facing=west"
+check "the copy's empty space leaves the ghost blocks under it" eval '[[ $(val 2 "get 15 -58 4") == minecraft:glass ]] &&
+	[[ $(val 2 "get 15 -58 6") == minecraft:glass ]] && [[ $(val 2 "get 14 -58 6") == minecraft:glass ]]'
+check "and the copy stays for another paste" copy_is 1 " FRONT_BACK COUNTERCLOCKWISE_90 unselected 8 blocks$"
+echo "  after the paste, the copy, which now meets the pasted blocks in the aim: $(val 1 copy)" >> /out/checks.log
 
-	# Copy from two plans: 6 of Hall's stone bricks and 4 of Barn's oak planks. Pasted outside every plan, the copy goes
-	# into Hall, which most of its blocks came from, and Hall grows to fit it.
-	drv 1 "select 6 -60 4 13 -60 5" > /dev/null
-	press 1 j
-	check "an area over two plans copies both" client_said 1 "Copied 10 blocks. Press K to paste them."
-	drv 1 "movecopy 2 -60 20" > /dev/null
-	check "the new copy replaces the old" eval '[[ $(val 1 copy) == "origin 2,-60,20 NONE NONE selected Building Planner copy" ]] &&
-		[[ $(val 1 placements) != *"Building Planner copy"*"Building Planner copy"* ]]'
-	press 1 k
-	check "outside every plan, the paste goes into the plan it came from" drv 2 "await area Hall 0,0,0..7,4,19" \
-		"await block 4 -60 21 minecraft:stone_bricks" "await block 9 -60 21 minecraft:oak_planks"
+# One Ctrl+Z undoes the whole paste; Ctrl+Y redoes it.
+drv 1 "close" > /dev/null
+keys 1 keydown ctrl key z sleep 0.3 keyup ctrl
+check "Ctrl+Z undoes the whole paste" drv 2 "await block 14 -58 4 minecraft:air" "await block 14 -58 5 minecraft:air" \
+	"await block 15 -59 5 minecraft:gold_block" "await block 14 -59 6 minecraft:air" "await block 15 -58 4 minecraft:glass"
+keys 1 keydown ctrl key y sleep 0.3 keyup ctrl
+check "Ctrl+Y redoes it" drv 2 "await block 14 -58 4 minecraft:oak_stairs" "await block 15 -59 5 minecraft:stone_bricks" \
+	"await block 14 -59 6 minecraft:stone_bricks"
 
-	# The copy's messages: an area with no plan blocks, and a single block. A refused copy leaves the earlier one.
-	drv 1 "select 40 -60 40 42 -59 42" > /dev/null
-	press 1 j
-	check "J over no plan blocks gives a message" client_said 1 "There are no plan blocks in the marked area to copy."
-	shot 1 copy-nothing-message
-	check "and keeps the earlier copy" eval '[[ $(val 1 copy) == "origin 2,-60,20 "* ]]'
-	drv 1 "select 4 -59 3 4 -59 3" > /dev/null
-	press 1 j
-	check "a single block has its own message" client_said 1 "Copied 1 block. Press K to paste it."
-	shot 1 copy-one-message
+# The radial menu's copy buttons, with the helpers above. radial_click <name>: a real click on the open menu's button of
+# that name, after which letting the key go acts on nothing.
+radial_click() {
+	radial_point "$1"
+	xdo 1 click 1
+	drv 1 "wait 5" > /dev/null
+}
 
-	# Delete clears the copy; so does removing its placement in Litematica.
-	press 1 Delete
-	check "Delete clears the copy" eval 'drv 1 "await copy none" > /dev/null &&
-		[[ $(val 1 placements) != *"Building Planner copy"* ]]'
-	press 1 k
-	check "K with no copy gives a message" \
-		client_said 1 "Nothing to paste. Mark an area over a plan and press J to copy it."
-	shot 1 paste-nothing-message
-	press 1 j
-	check "J copies again" drv 1 "await copy origin"
-	drv 1 "removecopy" > /dev/null
-	check "removing the copy's placement in Litematica clears the copy" drv 1 "await copy none"
+# "Copy real blocks", from the radial menu, around a real house of oak planks, hollow, with a glass window: 26 blocks.
+drv 1 "cmd fill 50 -60 10 52 -58 12 minecraft:oak_planks hollow" "cmd setblock 51 -59 10 minecraft:glass" \
+	"cmd tp @s 46.5 -56 6.5 0 30" "wait 40" > /dev/null
+check "the house is real" eval '[[ $(val 1 "real 51 -59 10") == minecraft:glass ]] &&
+	[[ $(val 1 "real 51 -59 11") == minecraft:air ]] && [[ $(val 1 "layer 50 -60 10") == minecraft:air ]]'
+radial_open
+radial_click "Copy real blocks"
+check "the radial menu's Copy real blocks button waits for a box" eval '[[ $(val 1 boxwait) == "true CUBE" ]]'
+radial_let_go
+check "with a message" client_said 1 "Draw a box around the real blocks to copy."
+cube 1 52 -58 12 50 10 -60 copy-real-box
+check "the cube's last click copies the house's 26 blocks" client_said 1 "Copied 26 blocks. Press K to paste them."
+drv 1 "cmd tp @s 51.5 -56 27.5 180 30" "wait 40" > /dev/null
+aim 1 50 -60 20
+check "the copy shows the house" eval 'drv 1 "await copy origin 50,-60,20 NONE NONE unselected 26 blocks" > /dev/null &&
+	[[ $(val 1 "get 51 -59 20") == minecraft:glass ]] && [[ $(val 1 "get 51 -59 21") == minecraft:air ]] &&
+	[[ $(val 1 "get 52 -58 22") == minecraft:oak_planks ]]'
+radial_open
+radial_point "Paste"
+radial_let_go
+check "letting the menu's key go over its Paste button pastes the house as ghost blocks" drv 2 \
+	"await block 50 -60 20 minecraft:oak_planks" "await block 52 -58 22 minecraft:oak_planks" \
+	"await block 51 -59 20 minecraft:glass"
+check "and no real blocks" eval '[[ $(val 1 "real 51 -59 20") == minecraft:air ]] &&
+	[[ $(val 1 "layer 51 -59 21") == minecraft:air ]]'
+shot 1 copy-real-pasted
 
-	# With the copy outside every plan and the plan it came from unloaded, K gives a message.
-	drv 1 "select 12 -60 2 12 -60 2" > /dev/null
-	press 1 j
-	drv 1 "await copy origin" "movecopy 40 -60 40" > /dev/null
-	drv 1 "syncgui" "wait 20" > /dev/null
-	read -r x y < <(val 1 "button Barn Unload")
-	click 1 "$x" "$y"
-	check "Planner1 unloads Barn" drv 1 "await noplacement Barn" "close"
-	press 1 k
-	check "K with no plan for the paste gives a message" \
-		client_said 1 "Move the copy's corner into a plan first. The plan it came from isn't loaded."
-	shot 1 paste-no-plan-message
+# With a copy, the menu shows Turn, Mirror and Clear, in the row above the others; shot at 1920 by 1080, GUI scales 2
+# and 4, with the pointer off the buttons, and failing unless the buttons meet nothing.
+radial_copy_shot() {
+	local result
+	drv 1 "window 1920 1080 $1" "wait 20" > /dev/null
+	radial_open
+	xdo 1 mousemove --window %w 5 5
+	drv 1 "wait 10" "notoasts" "wait 5" "notoasts" "shot radial-copy-1920x1080-gui$1" > /dev/null
+	echo "  radial-copy-1920x1080-gui$1 buttons: $(val 1 buttons)" >> /out/checks.log
+	result=$(val 1 radialclear)
+	echo "  radial-copy-1920x1080-gui$1: $result" >> /out/checks.log
+	radial_let_go
+	[[ $result == clear ]]
+}
+check "with a copy, the menu shows Turn, Mirror and Clear, meeting nothing at 1920 by 1080, GUI scale 2" \
+	eval 'radial_copy_shot 2 && grep -q "radial-copy-1920x1080-gui2 buttons: .*Turn the copy.*Mirror the copy.*Clear the copy" /out/checks.log'
+check "nor at GUI scale 4" radial_copy_shot 4
+drv 1 "window 854 480 2" "wait 20" > /dev/null
 
-	# The copy limit: Big's 51,200 plan blocks, filled in two halves, are more than the server's 50,000 for one edit.
-	drv 1 "cmd tp @s 80 -60 -6 0 10" "cmd tp Planner2 81 -60 -6 0 10" "wait 40" > /dev/null
-	check "Planner1 starts Big" start_plan Big "60 -60 2" "99 -29 41"
-	drv 1 "fill 60 -60 2 99 -45 41 minecraft:stone" "wait 100" "fill 60 -44 2 99 -29 41 minecraft:stone" > /dev/null
-	check "client 2 sees all of Big's blocks" drv 2 "await block 60 -60 2 minecraft:stone" "await block 99 -29 41 minecraft:stone"
-	drv 1 "select 60 -60 2 99 -29 41" > /dev/null
-	press 1 j
-	check "J over more blocks than the server's limit gives a message" \
-		client_said 1 "That area has 51200 plan blocks, more than the server's limit of 50000."
-	shot 1 copy-too-many-message
-	check "and keeps the earlier copy" eval '[[ $(val 1 copy) == "origin 40,-60,40 "* ]]'
-fi
+# The radial menu's Turn, Mirror and Copy buttons, each by a click.
+radial_open
+radial_click "Turn the copy"
+check "the radial menu's Turn button turns the copy" copy_is 1 " NONE CLOCKWISE_90 unselected 26 blocks$"
+radial_click "Mirror the copy"
+check "its Mirror button mirrors it" copy_is 1 " (FRONT_BACK|LEFT_RIGHT) [A-Z_0-9]+ unselected 26 blocks$"
+radial_click "Copy"
+check "its Copy button waits for a box" eval '[[ $(val 1 boxwait) == "true CUBE" ]]'
+radial_click "Copy"
+check "and pressed again, stops waiting and puts back the mode" eval '[[ $(val 1 boxwait) == "false SINGLE" ]]'
+radial_let_go
+earlier=$(val 1 copy | cut -d' ' -f3-)
+
+# J over no ghost blocks: a cube on the grass, from 42 -61 42 to 40 -60 40.
+drv 1 "cmd tp @s 45.5 -57 45.5 0 30" "wait 40" > /dev/null
+press 1 j
+cube 1 42 -61 42 40 40 -60
+check "J over no ghost blocks gives a message" client_said 1 "There are no ghost blocks in that box to copy."
+shot 1 copy-nothing-message
+check "keeps the earlier copy and puts back the mode" eval '[[ $(val 1 copy | cut -d" " -f3-) == "$earlier" ]] &&
+	[[ $(val 1 boxwait) == "false SINGLE" ]]'
+
+# The block cap: Big's 51,200 ghost blocks, added in two halves, are more than the server's 50,000 for one edit.
+drv 1 "cmd tp @s 55.5 -20 -3.5 0 30" "cmd tp Planner2 56.5 -20 -3.5 0 30" "wait 40" > /dev/null
+drv 1 "edit 60 -60 2 99 -45 41 minecraft:stone" "wait 100" "edit 60 -44 2 99 -29 41 minecraft:stone" > /dev/null
+check "client 2 sees all of Big's blocks" drv 2 "await block 60 -60 2 minecraft:stone" "await block 99 -29 41 minecraft:stone"
+press 1 j
+cube 1 99 -29 41 60 2 -60
+check "a cube over more blocks than the server's limit gives a message" \
+	client_said 1 "That box has 51200 blocks, more than the server's limit of 50000."
+shot 1 copy-too-many-message
+check "and keeps the earlier copy" eval '[[ $(val 1 copy | cut -d" " -f3-) == "$earlier" ]]'
+
+# Delete clears the copy; K with no copy gives a message.
+press 1 Delete
+check "Delete clears the copy" drv 1 "await copy none"
+press 1 k
+check "K with no copy gives a message" client_said 1 "Nothing to paste. Press J to copy ghost blocks first."
+shot 1 paste-nothing-message
+
+# A box of one block: the cube's three clicks on the glowstone at 4 -59 3.
+drv 1 "cmd tp @s 8.5 -56 9.5 0 30" "wait 40" > /dev/null
+press 1 j
+cube 1 4 -59 3 4 3 -59
+check "a single block has its own message" client_said 1 "Copied 1 block. Press K to paste it."
+shot 1 copy-one-message
+
+# The radial menu's Clear button, then its Paste button with no copy; the copy's own buttons go with the copy.
+radial_open
+radial_click "Clear the copy"
+check "the radial menu's Clear button clears the copy" drv 1 "await copy none"
+check "and the menu hides Turn, Mirror and Clear" eval '[[ $(val 1 "widget 0 Turn the copy") == none ]] &&
+	[[ $(val 1 "widget 0 Mirror the copy") == none ]] && [[ $(val 1 "widget 0 Clear the copy") == none ]] &&
+	[[ $(val 1 "widget 0 Paste") != none ]]'
+radial_click "Paste"
+check "its Paste button with no copy gives the message" eval \
+	'(($(grep -cF "[CHAT] Nothing to paste. Press J to copy ghost blocks first." /out/client1.log) >= 2))'
+radial_let_go
+
+# Stopping a wait: J again, Delete, or another mode, which stays.
+press 1 j
+press 1 j
+check "J pressed again stops waiting and puts back the mode" eval '[[ $(val 1 boxwait) == "false SINGLE" ]]'
+press 1 j
+press 1 Delete
+check "Delete stops waiting too" eval '[[ $(val 1 boxwait) == "false SINGLE" ]]'
+press 1 j
+drv 1 "ebmode LINE" "wait 5" > /dev/null
+check "and choosing another mode ends the wait, keeping that mode" eval '[[ $(val 1 boxwait) == "false LINE" ]]'
+drv 1 "ebmode SINGLE" "fly false" > /dev/null
+drv 2 "fly false" > /dev/null
 
 # The material list for a box drawn with the "Cube" shape, and its radial menu button: build step 11 writes these, as
 # the spec's list of step9.sh's checks describes them.
@@ -380,7 +469,7 @@ check "the server starts without Building Planner" eval 'start_server "$ADDON" s
 start_client 1
 # The loading screen swallows key presses, so wait for it to close.
 check "client 1 starts no session" drv 1 "await noscreen" "wait 40" "await nosession"
-drv 1 "cmd tp @s 5 -60 -3 0 10" "select 2 -60 2 8 -57 8" "wait 20" > /dev/null
+drv 1 "cmd tp @s 5 -60 -3 0 10" "wait 20" > /dev/null
 for key in n j k u h Delete; do
 	press 1 "$key"
 done

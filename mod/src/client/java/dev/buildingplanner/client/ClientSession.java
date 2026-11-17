@@ -10,10 +10,6 @@ import dev.buildingplanner.sync.LayerChange;
 import dev.buildingplanner.sync.LayerReplica;
 import dev.buildingplanner.sync.Payloads;
 import dev.buildingplanner.sync.PlayerMessage;
-import fi.dy.masa.litematica.data.DataManager;
-import fi.dy.masa.litematica.selection.AreaSelection;
-import fi.dy.masa.litematica.selection.Box;
-import fi.dy.masa.litematica.util.PositionUtils;
 import it.unimi.dsi.fastutil.longs.LongSet;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -29,6 +25,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
@@ -103,7 +100,7 @@ final class ClientSession {
 
 	/**
 	 * Once a client tick: removes old plans' placements when due, asks for the columns that loaded and lets go of those
-	 * that unloaded.
+	 * that unloaded, and moves the copy to where the player aims.
 	 */
 	void tick() {
 		if (removeOldPlans && Minecraft.getInstance().level != null) {
@@ -111,6 +108,12 @@ final class ClientSession {
 			OldPlans.remove();
 		}
 		sendWatches();
+		if (clipboard.exists()) {
+			BlockPos origin = GhostAim.copyOrigin(replica.layer(), tiles.shown());
+			if (origin != null) {
+				clipboard.follow(origin);
+			}
+		}
 	}
 
 	void close() {
@@ -211,28 +214,30 @@ final class ClientSession {
 	}
 
 	/**
-	 * Copies the ghost blocks in the area marked with Litematica's area tool; {@code pasteKey} is the Paste key's name,
-	 * for the message.
+	 * Makes the copy from a box drawn for Copy (the ghost blocks in it, from the player's copy of the layer) or for
+	 * "Copy real blocks" (every block in it other than air, from the player's world, without block entity contents);
+	 * {@code pasteKey} is the Paste key's name, for the message. A box with nothing to copy, or more blocks than the
+	 * server's cap for an edit, which its paste would exceed, leaves any earlier copy, with a message.
 	 */
-	void copy(String pasteKey) {
-		AreaSelection area = markedArea();
-		if (area == null) {
-			show(PlayerMessage.noAreaMarked());
-			return;
-		}
+	void copy(BlockPos min, BlockPos max, boolean real, String pasteKey) {
 		Map<BlockPos, BlockState> blocks = new LinkedHashMap<>();
-		for (Box box : PositionUtils.getValidBoxes(area)) {
-			if (box.getPos1() != null && box.getPos2() != null) {
-				replica.layer().forEachIn(PositionUtils.getMinCorner(box.getPos1(), box.getPos2()),
-					PositionUtils.getMaxCorner(box.getPos1(), box.getPos2()), blocks::put);
+		Level level = Minecraft.getInstance().level;
+		if (!real) {
+			replica.layer().forEachIn(min, max, blocks::put);
+		} else if (level != null) {
+			for (BlockPos pos : BlockPos.betweenClosed(min, max)) {
+				BlockState state = level.getBlockState(pos);
+				if (!state.isAir()) {
+					blocks.put(pos.immutable(), state);
+				}
 			}
 		}
-		Optional<PlayerMessage> refusal = CopyRules.refusal(blocks.size(), maxEditBlocks);
+		Optional<PlayerMessage> refusal = CopyRules.refusal(blocks.size(), maxEditBlocks, real);
 		if (refusal.isPresent()) {
 			show(refusal.get());
 			return;
 		}
-		clipboard.place(blocks);
+		clipboard.place(blocks, GhostAim.copyOrigin(replica.layer(), tiles.shown()));
 		if (clipboard.exists()) {
 			show(PlayerMessage.copied(blocks.size(), pasteKey));
 		}
@@ -261,18 +266,6 @@ final class ClientSession {
 
 	void clearCopy() {
 		clipboard.clear();
-	}
-
-	/** The area the player marked with Litematica's area tool, or null when they haven't marked one. */
-	private static AreaSelection markedArea() {
-		AreaSelection area = DataManager.getSelectionManager().getCurrentSelection();
-		// Litematica's Simple mode keeps one box with both corners at 0,0,0 until the player marks an area
-		// (AreaSelectionSimple.createDefaultBoxIfNeeded), so a box like that is no area.
-		if (area == null || PositionUtils.getValidBoxes(area).stream()
-			.allMatch(box -> BlockPos.ZERO.equals(box.getPos1()) && BlockPos.ZERO.equals(box.getPos2()))) {
-			return null;
-		}
-		return area;
 	}
 
 	/** Shows one of Building Planner's messages in the player's chat. */
