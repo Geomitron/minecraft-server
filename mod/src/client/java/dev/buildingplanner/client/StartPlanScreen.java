@@ -1,5 +1,9 @@
 package dev.buildingplanner.client;
 
+import ch.endte.syncmatica.Context;
+import ch.endte.syncmatica.communication.ClientCommunicationManager;
+import ch.endte.syncmatica.communication.exchange.ShareLitematicExchange;
+import ch.endte.syncmatica.litematica.LitematicManager;
 import dev.buildingplanner.sync.PlayerMessage;
 import fi.dy.masa.litematica.data.DataManager;
 import fi.dy.masa.litematica.data.SchematicHolder;
@@ -42,7 +46,7 @@ final class StartPlanScreen extends Screen {
 	static void open() {
 		AreaSelection area = markedArea();
 		if (area == null) {
-			LitematicaPlans.showMessage(PlayerMessage.noAreaMarked());
+			ClientSession.show(PlayerMessage.noAreaMarked());
 			return;
 		}
 		Minecraft.getInstance().setScreenAndShow(new StartPlanScreen(area));
@@ -109,7 +113,20 @@ final class StartPlanScreen extends Screen {
 		SchematicPlacement placement = SchematicPlacement.createFor(schematic, area.getEffectiveOrigin(), planName,
 			true, true);
 		DataManager.getSchematicPlacementManager().addSchematicPlacement(placement, false);
-		ClientSession.share(placement);
+		share(placement);
+	}
+
+	/**
+	 * Shares a new plan's placement through Syncmatica, as its Share button does, when Syncmatica is connected. Its
+	 * file must be saved, since Syncmatica uploads the file.
+	 */
+	private static void share(SchematicPlacement placement) {
+		Context context = LitematicManager.getInstance().getActiveContext();
+		if (context == null || !context.isStarted()) {
+			return;
+		}
+		ClientCommunicationManager communication = (ClientCommunicationManager) context.getCommunicationManager();
+		communication.startExchange(new ShareLitematicExchange(placement, communication.getServer(), context));
 	}
 
 	/** A file name from the plan's name that no file in {@code folder} has yet. */

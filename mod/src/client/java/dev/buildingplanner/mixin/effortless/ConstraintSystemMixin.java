@@ -7,7 +7,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 
 /**
- * Hook E7: shapes drawn into plans skip the checks on real blocks: survival's (placed by the player, hardness,
+ * Hook E7: shapes drawn as ghost blocks skip the checks on real blocks: survival's (placed by the player, hardness,
  * tools) and protected block entities. The world border, build height and the block cap still apply.
  */
 @Mixin(value = ConstraintSystem.class, remap = false)

@@ -4,9 +4,7 @@ import dev.buildingplanner.input.MixRule;
 import dev.buildingplanner.sync.EditKind;
 import fi.dy.masa.litematica.util.RayTraceUtils;
 import fi.dy.masa.litematica.world.SchematicWorldHandler;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
@@ -30,7 +28,7 @@ import nl.requios.effortlessbuilding.utilities.BlockEntry;
 import nl.requios.effortlessbuilding.utilities.BlockSet;
 
 /**
- * Effortless Building's side of shapes: a finished shape's blocks for the plan, and aiming at ghost blocks. Only the
+ * Effortless Building's side of shapes: a finished shape's blocks for the layer, and aiming at ghost blocks. Only the
  * hooks into Effortless Building load this class, so it's never loaded without that mod.
  */
 public final class EffortlessShapes {
@@ -76,33 +74,20 @@ public final class EffortlessShapes {
 				new BlockPlaceContext(player, InteractionHand.MAIN_HAND, stack, blockHit));
 			states.put(pos, entry.applyTransforms(state != null ? state : item.getBlock().defaultBlockState()));
 		}
-		BuildingPlannerClient.captureShape(EditKind.SHAPE, states, starts(blocks, first));
+		BuildingPlannerClient.captureShape(EditKind.SHAPE, states);
 	}
 
-	/** Hook E2: the player finished a shape with the break click, which erases its blocks from the plan. */
+	/** Hook E2: the player finished a shape with the break click, which erases its ghost blocks. */
 	public static void erase(BlockSet blocks) {
 		Map<BlockPos, BlockState> states = new LinkedHashMap<>();
 		for (BlockPos pos : blocks.validPositions()) {
 			states.put(pos, Blocks.AIR.defaultBlockState());
 		}
-		BuildingPlannerClient.captureShape(EditKind.ERASE, states, starts(blocks,
-			BuildPipelineClient.getFirstClickHit()));
-	}
-
-	/** Where a shape starts, which picks its plan: its first block, then the block first clicked. */
-	private static List<BlockPos> starts(BlockSet blocks, BlockHitResult first) {
-		List<BlockPos> starts = new ArrayList<>();
-		if (blocks.firstPos != null) {
-			starts.add(blocks.firstPos);
-		}
-		if (first != null) {
-			starts.add(first.getBlockPos());
-		}
-		return starts;
+		BuildingPlannerClient.captureShape(EditKind.ERASE, states);
 	}
 
 	/**
-	 * Hook E9: aims at the nearer of the real block Effortless Building found and a plan's ghost block, so shapes can
+	 * Hook E9: aims at the nearer of the real block Effortless Building found and a ghost block, so shapes can
 	 * start on ghost blocks.
 	 */
 	public static BlockHitResult nearerHit(BlockHitResult real, ClipContext context) {

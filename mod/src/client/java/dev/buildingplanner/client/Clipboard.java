@@ -6,6 +6,7 @@ import fi.dy.masa.litematica.schematic.LitematicaSchematic;
 import fi.dy.masa.litematica.schematic.container.LitematicaBlockStateContainer;
 import fi.dy.masa.litematica.schematic.placement.SchematicPlacement;
 import fi.dy.masa.litematica.schematic.placement.SchematicPlacementManager;
+import fi.dy.masa.litematica.schematic.placement.SubRegionPlacement;
 import fi.dy.masa.litematica.selection.AreaSelection;
 import fi.dy.masa.litematica.selection.Box;
 import fi.dy.masa.litematica.tool.ToolMode;
@@ -16,7 +17,6 @@ import fi.dy.masa.malilib.gui.interfaces.IMessageConsumer;
 import fi.dy.masa.malilib.util.InfoUtils;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.UUID;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -25,11 +25,13 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.Mirror;
+import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * The player's copy of part of the plans: a Litematica placement of a schematic kept in memory, which only this
- * player sees. Litematica doesn't save it, since it has no file, and Syncmatica doesn't share it.
+ * The player's copy of some ghost blocks: a Litematica placement of a schematic kept in memory, which only this player
+ * sees. Litematica doesn't save it, since it has no file.
  */
 final class Clipboard {
 	/** How far the copy can be placed where the player aims. */
@@ -37,20 +39,13 @@ final class Clipboard {
 	private static final String REGION = "Copy";
 
 	private SchematicPlacement placement;
-	/** The plan most of the copy's blocks came from. */
-	private UUID source;
 
 	/** Whether there's a copy; forgets it once Litematica no longer has its placement. */
 	boolean exists() {
 		if (placement != null && !manager().getAllSchematicsPlacements().contains(placement)) {
 			placement = null;
-			source = null;
 		}
 		return placement != null;
-	}
-
-	UUID source() {
-		return source;
 	}
 
 	SchematicPlacement placement() {
@@ -62,7 +57,7 @@ final class Clipboard {
 	 * origin on the block beside the face the player aims at, or else over the blocks; selects it, with Litematica's tool
 	 * in its placement mode. Never the Paste tool, which places real blocks in creative mode.
 	 */
-	void place(Map<BlockPos, BlockState> blocks, UUID sourcePlan) {
+	void place(Map<BlockPos, BlockState> blocks) {
 		clear();
 		BlockPos min = null;
 		BlockPos max = null;
@@ -82,7 +77,7 @@ final class Clipboard {
 		schematic.getMetadata().setName(name);
 		LitematicaBlockStateContainer container = schematic.getSubRegionContainer(REGION);
 		// Structure void, not air, fills the copy's empty space: Litematica skips it when it draws placements into its
-		// schematic world, so the plans' blocks there stay visible under the copy.
+		// schematic world, so the ghost blocks there stay visible under the copy.
 		Vec3i size = container.getSize();
 		BlockState empty = Blocks.STRUCTURE_VOID.defaultBlockState();
 		for (BlockPos pos : BlockPos.betweenClosed(BlockPos.ZERO,
@@ -93,7 +88,6 @@ final class Clipboard {
 		blocks.forEach((pos, state) -> container.set(pos.getX() - corner.getX(), pos.getY() - corner.getY(),
 			pos.getZ() - corner.getZ(), state));
 		placement = SchematicPlacement.createFor(schematic, aimed(mc, min), name, true, true);
-		source = sourcePlan;
 		manager().addSchematicPlacement(placement, false);
 		manager().setSelectedSchematicPlacement(placement);
 		DataManager.setToolMode(ToolMode.SCHEMATIC_PLACEMENT);
@@ -108,9 +102,9 @@ final class Clipboard {
 			new BlockPos(size.getX() - 1, size.getY() - 1, size.getZ() - 1))) {
 			BlockState state = container.get(pos.getX(), pos.getY(), pos.getZ());
 			if (!state.isAir() && !state.is(Blocks.STRUCTURE_VOID)) {
-				BlockPos world = LitematicaPlans.worldPosition(placement, REGION, pos);
+				BlockPos world = worldPosition(placement, REGION, pos);
 				if (world != null) {
-					blocks.put(world, LitematicaPlans.transformed(placement, REGION, state));
+					blocks.put(world, transformed(placement, REGION, state));
 				}
 			}
 		}
@@ -132,7 +126,54 @@ final class Clipboard {
 			manager().removeSchematicPlacement(placement);
 		}
 		placement = null;
-		source = null;
+	}
+
+	/**
+	 * Adds the copy again, so Litematica, which draws placements in the order they were added, draws it over the tiles
+	 * added since. It stays selected if it was.
+	 */
+	void raise() {
+		if (!exists()) {
+			return;
+		}
+		boolean selected = manager().getSelectedSchematicPlacement() == placement;
+		manager().removeSchematicPlacement(placement, false);
+		manager().addSchematicPlacement(placement, false);
+		if (selected) {
+			manager().setSelectedSchematicPlacement(placement);
+		}
+	}
+
+	/** The world position of a container position, as Litematica places a region's blocks. */
+	private static BlockPos worldPosition(SchematicPlacement placement, String regionName, BlockPos containerPos) {
+		SubRegionPlacement region = placement.getRelativeSubRegionPlacement(regionName);
+		BlockPos size = placement.getSchematic().getAreaSize(regionName);
+		if (region == null || size == null) {
+			return null;
+		}
+		BlockPos regionPos = region.getPos();
+		BlockPos minRel = PositionUtils.getMinCorner(regionPos,
+			regionPos.offset(PositionUtils.getRelativeEndPositionFromAreaSize(size)));
+		BlockPos withinRegion = minRel.subtract(regionPos).offset(containerPos);
+		return PositionUtils.getTransformedPlacementPosition(withinRegion, placement, region)
+			.offset(PositionUtils.getTransformedBlockPos(regionPos, placement.getMirror(), placement.getRotation()))
+			.offset(placement.getOrigin());
+	}
+
+	/**
+	 * A block state as a placement shows it in the world: the inverse of Litematica's
+	 * {@code SchematicUtils.getUntransformedBlockState}, which mirrors by the placement, then by the sub-region (on the
+	 * other axis while the placement is turned a quarter), then turns by both.
+	 */
+	private static BlockState transformed(SchematicPlacement placement, String region, BlockState state) {
+		SubRegionPlacement sub = placement.getRelativeSubRegionPlacement(region);
+		Mirror subMirror = sub == null ? Mirror.NONE : sub.getMirror();
+		Rotation rotation = sub == null ? placement.getRotation() : placement.getRotation().getRotated(sub.getRotation());
+		if (subMirror != Mirror.NONE && (placement.getRotation() == Rotation.CLOCKWISE_90
+			|| placement.getRotation() == Rotation.COUNTERCLOCKWISE_90)) {
+			subMirror = subMirror == Mirror.FRONT_BACK ? Mirror.LEFT_RIGHT : Mirror.FRONT_BACK;
+		}
+		return state.mirror(placement.getMirror()).mirror(subMirror).rotate(rotation);
 	}
 
 	/** Litematica refuses to change a locked placement, with its own message. */

@@ -54,11 +54,6 @@ public record PlayerMessage(String key, List<String> args) {
 		return new PlayerMessage(PREFIX + "start.no_area", List.of());
 	}
 
-	/** The player drew a shape outside every plan with no plan selected in Litematica. */
-	public static PlayerMessage noPlanForShape() {
-		return new PlayerMessage(PREFIX + "shape.no_plan", List.of());
-	}
-
 	/** The player turned the block mix on in the picker; {@code key} is the picker key's name. */
 	public static PlayerMessage mixOn(String key) {
 		return new PlayerMessage(PREFIX + "mix.on", List.of(key));
@@ -88,10 +83,5 @@ public record PlayerMessage(String key, List<String> args) {
 	/** The player pressed Paste with no copy; {@code copyKey} is the Copy key's name. */
 	public static PlayerMessage nothingToPaste(String copyKey) {
 		return new PlayerMessage(PREFIX + "paste.nothing", List.of(copyKey));
-	}
-
-	/** The copy's origin is in no plan, and the player doesn't have the plan it came from loaded. */
-	public static PlayerMessage noPlanForPaste() {
-		return new PlayerMessage(PREFIX + "paste.no_plan", List.of());
 	}
 }

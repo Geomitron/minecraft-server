@@ -26,14 +26,14 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 
 /**
- * Effortless Building's client pipeline, on a server with Building Planner: a finished shape goes into a plan instead
- * of to the server as real blocks (hooks E1 to E3), the mix starts shapes (E6), the preview has no "missing items"
+ * Effortless Building's client pipeline, on a server with Building Planner: a finished shape goes into the layer
+ * instead of to the server as real blocks (hooks E1 to E3), the mix starts shapes (E6), the preview has no "missing items"
  * tint (E8), and shapes can start on ghost blocks (E9).
  */
 @Mixin(value = BuildPipelineClient.class, remap = false)
 abstract class BuildPipelineClientMixin {
 	/**
-	 * Hook E1: the finished shape goes into the plan, not to the server as real blocks; with Building Planner off on
+	 * Hook E1: the finished shape goes into the layer, not to the server as real blocks; with Building Planner off on
 	 * a server, it goes nowhere.
 	 */
 	@WrapWithCondition(method = "handleClick", at = @At(value = "INVOKE",
@@ -46,7 +46,7 @@ abstract class BuildPipelineClientMixin {
 		return false;
 	}
 
-	/** Hook E2: a shape drawn with the break click erases its blocks from the plan. */
+	/** Hook E2: a shape drawn with the break click erases its ghost blocks. */
 	@WrapWithCondition(method = "handleClick", at = @At(value = "INVOKE",
 		target = "Lnl/requios/effortlessbuilding/network/PacketHandler;sendToServer(Lnl/requios/effortlessbuilding/network/BreakBuildModePacket;)V"))
 	private static boolean buildingplanner$erase(BreakBuildModePacket packet, @Local BlockSet blocks) {
@@ -71,7 +71,7 @@ abstract class BuildPipelineClientMixin {
 		return isRandomizer || EffortlessShapes.mixApplies();
 	}
 
-	/** Hook E8: plans don't use up items, so the preview shows none missing. */
+	/** Hook E8: ghost blocks don't use up items, so the preview shows none missing. */
 	@WrapOperation(method = "updateDisplayTrackers", at = @At(value = "INVOKE",
 		target = "Lnl/requios/effortlessbuilding/utilities/ItemUsageTracker;compute(Lnet/minecraft/world/entity/player/Player;Lnl/requios/effortlessbuilding/utilities/BlockSet;Z)V"))
 	private static void buildingplanner$noMissingMix(ItemUsageTracker tracker, Player player, BlockSet blocks,
@@ -95,7 +95,7 @@ abstract class BuildPipelineClientMixin {
 		}
 	}
 
-	/** Hook E9: aim at the nearer of the real block and a plan's ghost block. */
+	/** Hook E9: aim at the nearer of the real block and a ghost block. */
 	@WrapOperation(method = {"handleClick", "getPreviewBlocks"}, at = @At(value = "INVOKE",
 		target = "Lnet/minecraft/client/multiplayer/ClientLevel;clip(Lnet/minecraft/world/level/ClipContext;)Lnet/minecraft/world/phys/BlockHitResult;"),
 		require = 2)

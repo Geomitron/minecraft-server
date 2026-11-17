@@ -2,15 +2,18 @@ package dev.buildingplanner.client;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.buildingplanner.BuildingPlanner;
+import dev.buildingplanner.layer.Layer;
 import dev.buildingplanner.sync.EditKind;
 import dev.buildingplanner.sync.Payloads;
-import dev.buildingplanner.sync.PlanPayloads;
 import dev.buildingplanner.sync.PlayerMessage;
-import fi.dy.masa.litematica.schematic.container.LitematicaBlockStateContainer;
 import fi.dy.masa.malilib.event.RenderEventHandler;
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
+import it.unimi.dsi.fastutil.longs.LongSet;
 import java.util.List;
 import java.util.Map;
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientChunkEvents;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLevelEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
@@ -18,9 +21,11 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -48,14 +53,16 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	private static final BlockMix MIX = new BlockMix();
 
 	/** The payloads a session sends; a server that can't receive them all doesn't run Building Planner. */
-	private static final List<CustomPacketPayload.Type<?>> SERVERBOUND = List.of(PlanPayloads.Subscribe.TYPE,
-		PlanPayloads.Unsubscribe.TYPE, PlanPayloads.Edit.TYPE, PlanPayloads.Undo.TYPE, PlanPayloads.Redo.TYPE);
+	private static final List<CustomPacketPayload.Type<?>> SERVERBOUND = List.of(Payloads.Watch.TYPE,
+		Payloads.Unwatch.TYPE, Payloads.Edit.TYPE, Payloads.Undo.TYPE, Payloads.Redo.TYPE);
 
 	/**
 	 * Null while not connected to a server with Building Planner: on any other server, Building Planner is off, so
-	 * Litematica's edits stay on the player's screen and Effortless Building's shapes and undo send nothing.
+	 * Effortless Building's shapes and undo send nothing.
 	 */
 	private static ClientSession session;
+	/** The chunks of the game's level loaded now, by {@link Layer#key}, which a session watches from its start. */
+	private static final LongSet LOADED = new LongOpenHashSet();
 
 	/** Hold to repeat in Effortless Building's Single mode; null without Effortless Building, whose classes it uses. */
 	private static HeldClicks heldClicks;
@@ -71,22 +78,52 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		KeyMappingHelper.registerKeyMapping(BLOCK_MIX);
 		List.of(COPY, PASTE, TURN, MIRROR, CLEAR).forEach(KeyMappingHelper::registerKeyMapping);
 		RenderEventHandler.getInstance().registerWorldLastRenderer(GLOW);
-		PlanPayloads.register();
-		ClientPlayNetworking.registerGlobalReceiver(PlanPayloads.Hello.TYPE, (hello, context) -> hello(hello));
+		ClientPlayNetworking.registerGlobalReceiver(Payloads.Hello.TYPE, (hello, context) -> hello(hello));
 		// A singleplayer or LAN host's own world runs no server side.
 		ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
 			if (!client.isLocalServer() && !SERVERBOUND.stream().allMatch(ClientPlayNetworking::canSend)) {
 				BuildingPlanner.LOGGER.info("The server doesn't run Building Planner, so it's off");
 			}
 		});
-		ClientPlayNetworking.registerGlobalReceiver(PlanPayloads.Snapshot.TYPE, (payload, context) -> receive(payload));
-		ClientPlayNetworking.registerGlobalReceiver(PlanPayloads.Applied.TYPE, (payload, context) -> receive(payload));
-		ClientPlayNetworking.registerGlobalReceiver(PlanPayloads.Rejected.TYPE, (payload, context) -> receive(payload));
-		ClientPlayNetworking.registerGlobalReceiver(Payloads.Notice.TYPE, (payload, context) -> receive(payload));
-		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
+		ClientPlayNetworking.registerGlobalReceiver(Payloads.Columns.TYPE, (payload, context) -> {
 			if (session != null) {
-				session.close();
-				session = null;
+				session.receive(payload);
+			}
+		});
+		ClientPlayNetworking.registerGlobalReceiver(Payloads.Applied.TYPE, (payload, context) -> {
+			if (session != null) {
+				session.receive(payload);
+			}
+		});
+		ClientPlayNetworking.registerGlobalReceiver(Payloads.Rejected.TYPE, (payload, context) -> {
+			if (session != null) {
+				ClientSession.show(payload.reason());
+			}
+		});
+		ClientPlayNetworking.registerGlobalReceiver(Payloads.Notice.TYPE, (payload, context) -> {
+			if (session != null) {
+				ClientSession.show(payload.message());
+			}
+		});
+		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> endSession());
+		// Litematica draws only in loaded chunks, so the game watches the columns of the chunks it has loaded. Events
+		// from a level the game has left are ignored.
+		ClientChunkEvents.CHUNK_LOAD.register((level, chunk) -> {
+			ChunkPos pos = chunk.getPos();
+			if (level == Minecraft.getInstance().level && LOADED.add(Layer.key(pos.x(), pos.z())) && session != null) {
+				session.chunkLoaded(pos.x(), pos.z());
+			}
+		});
+		ClientChunkEvents.CHUNK_UNLOAD.register((level, chunk) -> {
+			ChunkPos pos = chunk.getPos();
+			if (level == Minecraft.getInstance().level && LOADED.remove(Layer.key(pos.x(), pos.z())) && session != null) {
+				session.chunkUnloaded(pos.x(), pos.z());
+			}
+		});
+		ClientLevelEvents.AFTER_CLIENT_LEVEL_CHANGE.register((client, level) -> {
+			LOADED.clear();
+			if (session != null) {
+				session.levelChanged(dimension(level));
 			}
 		});
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
@@ -144,51 +181,50 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	 * The server's {@code hello}: starts a session when the server speaks this client's protocol version, and otherwise
 	 * leaves Building Planner off.
 	 */
-	static void hello(PlanPayloads.Hello hello) {
-		if (hello.protocolVersion() == PlanPayloads.PROTOCOL_VERSION) {
-			session = new ClientSession(hello.limits(), GLOW, MIX);
+	static void hello(Payloads.Hello hello) {
+		endSession();
+		if (hello.protocolVersion() == Payloads.PROTOCOL_VERSION) {
+			session = new ClientSession(hello.maxEditBlocks(), GLOW, dimension(Minecraft.getInstance().level), LOADED);
 		} else {
 			BuildingPlanner.LOGGER.warn("The server runs Building Planner protocol {}, this client {}",
-				hello.protocolVersion(), PlanPayloads.PROTOCOL_VERSION);
+				hello.protocolVersion(), Payloads.PROTOCOL_VERSION);
 		}
 	}
 
-	private static void receive(CustomPacketPayload payload) {
+	private static void endSession() {
 		if (session != null) {
-			session.receive(payload);
+			session.close();
+			session = null;
 		}
+	}
+
+	private static Identifier dimension(ClientLevel level) {
+		return level == null ? null : level.dimension().identifier();
 	}
 
 	/** The mix key: turns the mix off while it's on, or else opens the picker. */
 	private static void toggleMix() {
 		if (MIX.isOn()) {
 			MIX.turnOff();
-			LitematicaPlans.showMessage(PlayerMessage.mixOff());
+			ClientSession.show(PlayerMessage.mixOff());
 		} else {
-			BlockMixScreen.open(MIX, () -> LitematicaPlans.showMessage(
+			BlockMixScreen.open(MIX, () -> ClientSession.show(
 				PlayerMessage.mixOn(BLOCK_MIX.getTranslatedKeyMessage().getString())));
 		}
 	}
 
-	/**
-	 * Hook L1: Litematica is about to write {@code state} into {@code container}. Returns the state to write, which the
-	 * mix may have changed.
-	 */
-	public static BlockState captureWrite(LitematicaBlockStateContainer container, int x, int y, int z, BlockState state) {
-		return session == null ? state : session.captureWrite(container, x, y, z, state);
-	}
-
-	/** Whether Building Planner is on for this server, so Effortless Building's hooks draw into plans. */
+	/** Whether Building Planner is on for this server, so Effortless Building's hooks draw ghost blocks. */
 	public static boolean active() {
 		return session != null;
 	}
 
 	/**
 	 * Whether Building Planner is off on a server (the player isn't in a singleplayer or LAN host's own world and has no
-	 * session), so Effortless Building's packets that change real blocks must not be sent: its shapes edit only plans.
+	 * session), so Effortless Building's packets that change real blocks must not be sent: its shapes edit only ghost
+	 * blocks.
 	 */
 	public static boolean off() {
-		return session == null &&!Minecraft.getInstance().isLocalServer();
+		return session == null && !Minecraft.getInstance().isLocalServer();
 	}
 
 	/** Whether the player's mix is on, with a session. Hooks E5 and E6 also ask {@code EffortlessShapes.mixApplies}. */
@@ -201,19 +237,16 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		return MIX.blockAt(pos);
 	}
 
-	/**
-	 * Hooks E1 and E2: a shape the player drew, as world positions and states in the order drawn, and the positions it
-	 * started at, which pick its plan.
-	 */
-	public static void captureShape(EditKind kind, Map<BlockPos, BlockState> blocks, List<BlockPos> starts) {
+	/** Hooks E1 and E2: a shape the player drew, as world positions and states in the order drawn (air to erase). */
+	public static void captureShape(EditKind kind, Map<BlockPos, BlockState> blocks) {
 		if (session != null) {
-			session.captureShape(kind, blocks, starts);
+			session.sendShape(kind, blocks);
 		}
 	}
 
 	/**
-	 * Hook E4: undoes the player's newest plan edit. Returns whether Effortless Building's own undo packet is held
-	 * back: always while Building Planner is on or off on a server, never in a singleplayer world without it.
+	 * Hook E4: undoes the player's newest edit to the layer. Returns whether Effortless Building's own undo packet is
+	 * held back: always while Building Planner is on or off on a server, never in a singleplayer world without it.
 	 */
 	public static boolean undo() {
 		if (session == null) {
@@ -223,7 +256,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		return true;
 	}
 
-	/** Hook E4: redoes the player's newest undone plan edit; returns whether the packet is held back, as for undo. */
+	/** Hook E4: redoes the player's newest undone edit; returns whether the packet is held back, as for undo. */
 	public static boolean redo() {
 		if (session == null) {
 			return off();

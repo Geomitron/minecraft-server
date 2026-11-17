@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import dev.buildingplanner.plan.PackedBlocks;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.Bootstrap;
@@ -32,6 +33,24 @@ class LayerTest {
 		stone = Blocks.STONE.defaultBlockState();
 		dirt = Blocks.DIRT.defaultBlockState();
 		glass = Blocks.GLASS.defaultBlockState();
+	}
+
+	@Test
+	void forEachInVisitsTheGhostBlocksInsideABoxAcrossColumnsAndSections() {
+		Layer layer = new Layer();
+		List<BlockPos> inside = List.of(new BlockPos(-1, 15, 3), new BlockPos(-1, 16, 3), new BlockPos(16, 20, 5));
+		inside.forEach(pos -> layer.set(pos, stone));
+		layer.set(new BlockPos(-2, 16, 3), dirt);
+		layer.set(new BlockPos(17, 20, 5), dirt);
+		layer.set(new BlockPos(0, 21, 3), dirt);
+
+		List<BlockPos> found = new ArrayList<>();
+		layer.forEachIn(new BlockPos(-1, 10, 0), new BlockPos(16, 20, 5), (pos, state) -> {
+			assertEquals(stone, state);
+			found.add(pos);
+		});
+		assertEquals(Set.copyOf(inside), Set.copyOf(found));
+		assertEquals(inside.size(), found.size());
 	}
 
 	@Test

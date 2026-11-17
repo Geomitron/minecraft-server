@@ -64,8 +64,8 @@ class LayerStoreTest {
 		Game blair = restarted.join("Blair");
 		blair.watchAround(2);
 		restarted.settle();
-		assertEquals(stone, blair.copy.get(A));
-		assertEquals(glass, blair.copy.get(B));
+		assertEquals(stone, blair.copy().get(A));
+		assertEquals(glass, blair.copy().get(B));
 		restarted.assertSameAsServer(blair);
 		assertEquals(glass, restarted.server.get(NETHER, A));
 		assertEquals(stone, restarted.server.get(OVERWORLD, A));

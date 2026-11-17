@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
  * Hook E4: Effortless Building's undo and redo (Ctrl+Z, Ctrl+Y and its radial menu's buttons) undo and redo the
- * player's plan edits instead, on a server with Building Planner, and send nothing on a server without it.
+ * player's edits to the layer instead, on a server with Building Planner, and send nothing on a server without it.
  */
 @Mixin(value = PacketHandler.class, remap = false)
 abstract class PacketHandlerMixin {

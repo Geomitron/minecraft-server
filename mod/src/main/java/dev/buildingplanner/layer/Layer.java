@@ -1,11 +1,13 @@
 package dev.buildingplanner.layer;
 
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMaps;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongSet;
 import java.util.List;
+import java.util.function.BiConsumer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -68,6 +70,37 @@ public final class Layer {
 	/** A column holding ghost blocks, or null. */
 	public LayerColumn column(int chunkX, int chunkZ) {
 		return columns.get(key(chunkX, chunkZ));
+	}
+
+	/** Calls {@code action} for each ghost block in the box from {@code min} to {@code max}, both corners inside it. */
+	public void forEachIn(BlockPos min, BlockPos max, BiConsumer<BlockPos, BlockState> action) {
+		for (int chunkX = min.getX() >> LayerSection.SHIFT; chunkX <= max.getX() >> LayerSection.SHIFT; chunkX++) {
+			for (int chunkZ = min.getZ() >> LayerSection.SHIFT; chunkZ <= max.getZ() >> LayerSection.SHIFT; chunkZ++) {
+				LayerColumn column = column(chunkX, chunkZ);
+				if (column == null) {
+					continue;
+				}
+				int x0 = Math.max(min.getX(), chunkX << LayerSection.SHIFT);
+				int x1 = Math.min(max.getX(), (chunkX << LayerSection.SHIFT) + LayerSection.SIDE - 1);
+				int z0 = Math.max(min.getZ(), chunkZ << LayerSection.SHIFT);
+				int z1 = Math.min(max.getZ(), (chunkZ << LayerSection.SHIFT) + LayerSection.SIDE - 1);
+				for (Int2ObjectMap.Entry<LayerSection> entry : column.sections().int2ObjectEntrySet()) {
+					int bottom = entry.getIntKey() << LayerSection.SHIFT;
+					int y0 = Math.max(min.getY(), bottom);
+					int y1 = Math.min(max.getY(), bottom + LayerSection.SIDE - 1);
+					for (int y = y0; y <= y1; y++) {
+						for (int z = z0; z <= z1; z++) {
+							for (int x = x0; x <= x1; x++) {
+								BlockState state = entry.getValue().get(LayerSection.index(x, y, z));
+								if (!state.isAir()) {
+									action.accept(new BlockPos(x, y, z), state);
+								}
+							}
+						}
+					}
+				}
+			}
+		}
 	}
 
 	/** Every column holding ghost blocks, by {@link #key}. */

@@ -15,7 +15,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
  * Hook E5: while the mix applies, each position of a shape gets its block from the mix, by a fixed hash of the
- * position, so the preview and the plan agree.
+ * position, so the preview and the ghost blocks agree.
  */
 @Mixin(value = RandomizerSystem.class, remap = false)
 abstract class RandomizerSystemMixin {

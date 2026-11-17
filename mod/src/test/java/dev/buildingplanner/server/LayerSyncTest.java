@@ -94,7 +94,7 @@ class LayerSyncTest {
 		assertEquals(alex.id, applied.author());
 		network.assertSameAsServer(alex);
 		network.assertSameAsServer(blair);
-		assertEquals(dirt, blair.copy.get(B));
+		assertEquals(dirt, blair.copy().get(B));
 	}
 
 	@Test
@@ -106,7 +106,7 @@ class LayerSyncTest {
 		network.settle();
 
 		assertEquals(List.of(), blair.applied());
-		assertEquals(stone, blair.copy.get(A));
+		assertEquals(stone, blair.copy().get(A));
 		network.assertSameAsServer(blair);
 	}
 
@@ -181,12 +181,10 @@ class LayerSyncTest {
 
 	@Test
 	void aWatchOfAnotherDimensionOrOutOfRangeIsIgnored() {
-		blair.dimension = NETHER;
-		blair.watch(new ChunkPos(0, 0));
+		blair.send(new Payloads.Watch(NETHER, List.of(new ChunkPos(0, 0))));
 		network.settle();
 		assertEquals(List.of(), blair.received);
 
-		blair.dimension = OVERWORLD;
 		int range = LayerNetwork.VIEW_DISTANCE + LayerSync.WATCH_MARGIN;
 		blair.watch(new ChunkPos(range, -range), new ChunkPos(range + 1, 0));
 		network.settle();

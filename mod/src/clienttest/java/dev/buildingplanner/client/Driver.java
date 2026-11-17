@@ -3,16 +3,13 @@ package dev.buildingplanner.client;
 import ch.endte.syncmatica.data.ServerPlacement;
 import ch.endte.syncmatica.litematica.LitematicManager;
 import ch.endte.syncmatica.litematica.gui.GuiSyncmaticaServerPlacementList;
-import dev.buildingplanner.sync.BlockChange;
 import dev.buildingplanner.sync.EditKind;
-import dev.buildingplanner.sync.PlanPayloads;
-import dev.buildingplanner.sync.PlanReplicas;
+import dev.buildingplanner.sync.Payloads;
 import dev.buildingplanner.sync.SyncLimits;
 import fi.dy.masa.litematica.config.Configs;
 import fi.dy.masa.litematica.data.DataManager;
 import fi.dy.masa.litematica.schematic.placement.SchematicPlacement;
 import fi.dy.masa.litematica.selection.AreaSelection;
-import fi.dy.masa.litematica.selection.Box;
 import fi.dy.masa.litematica.util.PositionUtils;
 import fi.dy.masa.litematica.util.SchematicUtils;
 import fi.dy.masa.litematica.world.SchematicWorldHandler;
@@ -30,16 +27,18 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Supplier;
 import net.fabricmc.api.ClientModInitializer;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
 import net.minecraft.client.tutorial.TutorialSteps;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.events.GuiEventListener;
+import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.commands.arguments.blocks.BlockStateParser;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -63,7 +62,6 @@ public final class Driver implements ClientModInitializer {
 	public void onInitializeClient() {
 		ClientTickEvents.START_CLIENT_TICK.register(mc -> SentPackets.startTick());
 		ClientTickEvents.END_CLIENT_TICK.register(this::tick);
-		ClientLifecycleEvents.CLIENT_STARTED.register(mc -> LayerProbe.register());
 	}
 
 	private void tick(Minecraft mc) {
@@ -201,18 +199,38 @@ public final class Driver implements ClientModInitializer {
 			case "toolmode" -> {
 				return DataManager.getToolMode().name();
 			}
-			case "shape" -> {
-				// shape <plan> x y z block: one block in the plan's first region, in plan coordinates, as a SHAPE edit
-				// (the kind Effortless Building's capture sends), which can grow the plan.
-				PlanReplicas replicas = replicas();
-				ServerPlacement server = server(a[1]);
-				String region = replicas.plan(server.getId()).orElseThrow().firstRegion().name();
-				List<BlockChange> changes = new ArrayList<>();
-				changes.add(new BlockChange(region, pos(a, 2), state(a[5])));
-				return "seq " + replicas.edit(server.getId(), EditKind.SHAPE, changes);
+			case "edit" -> {
+				// edit x1 y1 z1 x2 y2 z2 block: every position of the box as one edit to the layer, as a shape sends it;
+				// air erases.
+				BlockState state = state(a[7]);
+				Map<BlockPos, BlockState> blocks = new LinkedHashMap<>();
+				for (BlockPos pos : BlockPos.betweenClosed(pos(a, 1), pos(a, 4))) {
+					blocks.put(pos.immutable(), state);
+				}
+				BuildingPlannerClient.captureShape(state.isAir() ? EditKind.ERASE : EditKind.SHAPE, blocks);
+				return "ok";
 			}
-			case "area" -> {
-				return area(a[1]);
+			case "layer" -> {
+				// layer x y z: the ghost block in this game's copy of the layer there.
+				return BuiltInRegistries.BLOCK.getKey(session().replica().layer().get(pos(a, 1)).getBlock()).toString();
+			}
+			case "tile" -> {
+				// tile <chunk x> <chunk z>: that column's tile as its lowest..highest block y, or none.
+				return tile(Integer.parseInt(a[1]), Integer.parseInt(a[2]));
+			}
+			case "tiles" -> {
+				// tiles: how many tiles there are, and how many placements Litematica has.
+				return session().tiles().count() + " tiles, "
+					+ DataManager.getSchematicPlacementManager().getAllSchematicsPlacements().size() + " placements";
+			}
+			case "uuid" -> {
+				// uuid <player>: that player's id, from the player list.
+				for (PlayerInfo info : mc.getConnection().getOnlinePlayers()) {
+					if (info.getProfile().name().equals(a[1])) {
+						return info.getProfile().id().toString();
+					}
+				}
+				return "none";
 			}
 			case "glows" -> {
 				return glows();
@@ -341,12 +359,8 @@ public final class Driver implements ClientModInitializer {
 			}
 			case "hello" -> {
 				// hello <version>: handles a server hello with that protocol version, as one from another release would be.
-				BuildingPlannerClient.hello(new PlanPayloads.Hello(Integer.parseInt(a[1]), SyncLimits.DEFAULT));
+				BuildingPlannerClient.hello(new Payloads.Hello(Integer.parseInt(a[1]), SyncLimits.DEFAULT.maxEditBlocks()));
 				return "ok";
-			}
-			case "layerwatch" -> {
-				// layerwatch <file>: asks the server for the columns of the ghost blocks the file in the game folder lists.
-				return "watching " + LayerProbe.watch(mc, mc.gameDirectory.toPath().resolve(a[1])) + " columns";
 			}
 			case "shot" -> {
 				Screenshot.grab(mc.gameDirectory, a[1] + ".png", mc.gameRenderer.mainRenderTarget(), 1, c -> {
@@ -375,7 +389,7 @@ public final class Driver implements ClientModInitializer {
 			case "notshared" -> !sharedNames().contains(what.substring(10));
 			case "block" -> List.of(a[4].split("\\|")).contains(blockId(pos(a, 1)));
 			case "real" -> realBlockId(pos(a, 1)).equals(a[4]);
-			case "area" -> area(a[1]).equals(a[2]);
+			case "tile" -> String.valueOf(tile(Integer.parseInt(a[1]), Integer.parseInt(a[2]))).equals(a[3]);
 			case "glow" -> glows().contains(what.substring(5));
 			case "copy" -> copy().startsWith(what.substring(5));
 			case "noglow" -> glows().isEmpty();
@@ -390,7 +404,7 @@ public final class Driver implements ClientModInitializer {
 			return switch (a[1]) {
 				case "block" -> blockId(pos(a, 2));
 				case "real" -> realBlockId(pos(a, 2));
-				case "area" -> area(a[2]);
+				case "tile" -> tile(Integer.parseInt(a[2]), Integer.parseInt(a[3]));
 				case "glow" -> glows();
 				case "copy" -> copy();
 				case "layer" -> LayerProbe.compare(Minecraft.getInstance().gameDirectory.toPath().resolve(a[2]));
@@ -422,13 +436,10 @@ public final class Driver implements ClientModInitializer {
 		return null;
 	}
 
-	/** The plan's areas as {@code min..max;min..max}, in plan coordinates. */
-	private static String area(String name) {
-		List<String> boxes = new ArrayList<>();
-		for (Box b : placement(name).getSchematic().getAreas().values()) {
-			boxes.add(b.getPos1().toShortString().replace(" ", "") + ".." + b.getPos2().toShortString().replace(" ", ""));
-		}
-		return String.join(";", boxes);
+	/** A column's tile as {@code lowest..highest} block y, or {@code none}. */
+	private static String tile(int chunkX, int chunkZ) throws Exception {
+		String tile = session().tiles().describe(chunkX, chunkZ);
+		return tile == null ? "none" : tile;
 	}
 
 	private static List<String> sharedNames() {
@@ -437,15 +448,6 @@ public final class Driver implements ClientModInitializer {
 			names.add(p.getName());
 		}
 		return names;
-	}
-
-	private static ServerPlacement server(String name) {
-		for (ServerPlacement p : LitematicManager.getInstance().getActiveContext().getSyncmaticManager().getAll()) {
-			if (p.getName().equals(name)) {
-				return p;
-			}
-		}
-		throw new IllegalArgumentException("no shared plan " + name);
 	}
 
 	/** The glows showing now, as {@code editor:blocks} pairs. */
@@ -503,16 +505,14 @@ public final class Driver implements ClientModInitializer {
 		return (BlockMix) f.get(null);
 	}
 
-	private static ClientSession session() throws Exception {
+	static ClientSession session() throws Exception {
 		Field f = BuildingPlannerClient.class.getDeclaredField("session");
 		f.setAccessible(true);
 		return (ClientSession) f.get(null);
 	}
 
 	private static Clipboard clipboard() throws Exception {
-		Field f = ClientSession.class.getDeclaredField("clipboard");
-		f.setAccessible(true);
-		return (Clipboard) f.get(session());
+		return session().clipboard();
 	}
 
 	/**
@@ -531,12 +531,6 @@ public final class Driver implements ClientModInitializer {
 		boolean selected = DataManager.getSchematicPlacementManager().getSelectedSchematicPlacement() == p;
 		return "origin " + p.getOrigin().toShortString().replace(" ", "") + " " + p.getMirror() + " " + p.getRotation()
 			+ (selected ? " selected " : " unselected ") + p.getName();
-	}
-
-	private static PlanReplicas replicas() throws Exception {
-		Field f = ClientSession.class.getDeclaredField("replicas");
-		f.setAccessible(true);
-		return (PlanReplicas) f.get(session());
 	}
 
 	private static BlockPos pos(String[] a, int i) {

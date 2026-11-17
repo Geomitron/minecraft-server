@@ -6,11 +6,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import dev.buildingplanner.layer.Layer;
 import dev.buildingplanner.layer.LayerSection;
 import dev.buildingplanner.sync.EditKind;
+import dev.buildingplanner.sync.LayerReplica;
 import dev.buildingplanner.sync.LayerChange;
 import dev.buildingplanner.sync.Payloads;
 import dev.buildingplanner.sync.PlayerMessage;
-import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
-import it.unimi.dsi.fastutil.longs.LongSet;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -105,14 +104,14 @@ final class LayerNetwork {
 
 	/** Asserts the game's copy of each column it holds matches the server's layer, block for block. */
 	void assertSameAsServer(Game game) {
-		for (long key : game.held) {
+		for (long key : game.replica.heldColumns()) {
 			int chunkX = Layer.keyX(key);
 			int chunkZ = Layer.keyZ(key);
 			for (int y = -64; y < 320; y++) {
 				for (int x = 0; x < LayerSection.SIDE; x++) {
 					for (int z = 0; z < LayerSection.SIDE; z++) {
 						BlockPos pos = new BlockPos(chunkX * LayerSection.SIDE + x, y, chunkZ * LayerSection.SIDE + z);
-						assertEquals(server.get(game.dimension, pos), game.copy.get(pos), game + " at " + pos);
+						assertEquals(server.get(game.dimension(), pos), game.copy().get(pos), game + " at " + pos);
 					}
 				}
 			}
@@ -121,9 +120,8 @@ final class LayerNetwork {
 	}
 
 	/**
-	 * One player's game with the add-on, as the design describes it: it holds the columns whose snapshot arrived, until
-	 * it unwatches them or changes dimension, applies each {@code applied} to the columns it holds, and ignores the
-	 * rest.
+	 * One player's game with the add-on: its copy of the layer is the client's own {@link LayerReplica}, and the test
+	 * says which chunks it loads and unloads.
 	 */
 	final class Game {
 		final UUID id = UUID.randomUUID();
@@ -134,9 +132,8 @@ final class LayerNetwork {
 		final List<CustomPacketPayload> received = new ArrayList<>();
 		final Deque<CustomPacketPayload> inbox = new ArrayDeque<>();
 		private final Deque<CustomPacketPayload> outbox = new ArrayDeque<>();
-		Identifier dimension = OVERWORLD;
-		Layer copy = new Layer();
-		final LongSet held = new LongOpenHashSet();
+		final LayerReplica replica = new LayerReplica(OVERWORLD, (chunkX, chunkZ, column, changed) -> {
+		});
 		boolean connected = true;
 		private int clientSeq;
 
@@ -144,11 +141,24 @@ final class LayerNetwork {
 			this.name = name;
 		}
 
-		void watch(ChunkPos... columns) {
-			outbox.add(new Payloads.Watch(dimension, List.of(columns)));
+		Identifier dimension() {
+			return replica.dimension();
 		}
 
-		/** Watches every column within {@code radius} of column 0, 0. */
+		/** The game's copy of the layer. */
+		Layer copy() {
+			return replica.layer();
+		}
+
+		/** The game loads these chunks, and sends what its copy of the layer asks for. */
+		void watch(ChunkPos... columns) {
+			for (ChunkPos column : columns) {
+				replica.chunkLoaded(column.x(), column.z());
+			}
+			flush();
+		}
+
+		/** Loads every chunk within {@code radius} of column 0, 0. */
 		void watchAround(int radius) {
 			List<ChunkPos> columns = new ArrayList<>();
 			for (int x = -radius; x <= radius; x++) {
@@ -159,31 +169,35 @@ final class LayerNetwork {
 			watch(columns.toArray(ChunkPos[]::new));
 		}
 
+		/** The game unloads these chunks. */
 		void unwatch(ChunkPos... columns) {
 			for (ChunkPos column : columns) {
-				held.remove(Layer.key(column.x(), column.z()));
-				copy.replaceColumn(column.x(), column.z(), List.of());
+				replica.chunkUnloaded(column.x(), column.z());
 			}
-			outbox.add(new Payloads.Unwatch(dimension, List.of(columns)));
+			flush();
+		}
+
+		/** Sends a message as it is, such as one a game with other rules would send. */
+		void send(CustomPacketPayload payload) {
+			outbox.add(payload);
 		}
 
 		/** The player goes to another dimension: the server notes it at once, and the game drops every column. */
 		void moveTo(Identifier newDimension) {
 			places.put(id, new LayerSync.Place(newDimension, new ChunkPos(0, 0)));
 			server.changedDimension(id);
-			dimension = newDimension;
-			copy = new Layer();
-			held.clear();
+			replica.levelChanged(newDimension);
+			flush();
 		}
 
 		/** The player walks to another column of their dimension. */
 		void standIn(ChunkPos column) {
-			places.put(id, new LayerSync.Place(dimension, column));
+			places.put(id, new LayerSync.Place(dimension(), column));
 		}
 
 		/** Sends an edit in the game's dimension and returns its client sequence. */
 		int edit(LayerChange... changes) {
-			return edit(dimension, changes);
+			return edit(dimension(), changes);
 		}
 
 		int edit(Identifier editDimension, LayerChange... changes) {
@@ -214,6 +228,10 @@ final class LayerNetwork {
 			moveTo(OVERWORLD);
 		}
 
+		private void flush() {
+			outbox.addAll(replica.takeMessages());
+		}
+
 		/** The server reads this game's next message; false when there was none. */
 		boolean serverReadsOne() {
 			CustomPacketPayload payload = outbox.poll();
@@ -239,15 +257,8 @@ final class LayerNetwork {
 			}
 			received.add(payload);
 			switch (payload) {
-				case Payloads.Columns p when p.dimension().equals(dimension) -> p.columns().forEach(column -> {
-					copy.replaceColumn(column.pos().x(), column.pos().z(), column.sections());
-					held.add(Layer.key(column.pos().x(), column.pos().z()));
-				});
-				case Payloads.Applied p when p.dimension().equals(dimension) -> p.changes().forEach(change -> {
-					if (held.contains(Layer.key(change.pos().getX() >> 4, change.pos().getZ() >> 4))) {
-						copy.set(change.pos(), change.state());
-					}
-				});
+				case Payloads.Columns p -> replica.receive(p);
+				case Payloads.Applied p -> replica.receive(p);
 				case Payloads.Rejected p -> rejections.add(p);
 				case Payloads.Notice p -> notices.add(p.message());
 				default -> {
