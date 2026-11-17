@@ -106,6 +106,40 @@ drv 1 "place 4 -59 4 minecraft:stone" > /dev/null
 check "Litematica's place takes the mix's block, on both clients" \
 	eval 'drv 1 "await block 4 -59 4 $expected" && drv 2 "await block 4 -59 4 $expected"'
 
+# The mix applies only while the main hand holds a block. With the mix on, a pickaxe or an apple in hand draws no ghost
+# block with the place click, and an apple's break click breaks the real block as without mods. Planner1 stands within
+# vanilla's reach (5 blocks) of it and looks down 45 degrees south, at the real ground at 4 -61 6.
+drv 1 "ebarray 0" "cmd clear @s" "cmd give @s minecraft:cobblestone 5" "cmd give @s minecraft:mossy_cobblestone 5" \
+	"cmd tp @s 4.5 -60 4.5 0 45" "wait 20" > /dev/null
+for item in iron_pickaxe apple; do
+	drv 1 "cmd item replace entity @s weapon.mainhand with minecraft:$item" "wait 10" > /dev/null
+	use_click 1
+	check "with the mix on and the $item held, the place click draws no ghost block, on both clients" \
+		eval 'drv 1 "wait 20" "await block 4 -60 6 minecraft:air" && drv 2 "await block 4 -60 6 minecraft:air"'
+	check "and places no real block" eval '[[ $(val 1 "real 4 -60 6") == minecraft:air ]]'
+done
+drv 1 "cmd setblock 4 -60 6 minecraft:stone" "wait 10" "await real 4 -60 6 minecraft:stone" > /dev/null
+attack_click 1
+check "with the mix on and an apple held, the break click breaks the real block" drv 1 "await real 4 -60 6 minecraft:air"
+drv 1 "notoasts" "wait 5" "shot mix-with-apple" > /dev/null
+
+# In Disable, with the mix on and a block held, every click is vanilla's: the place click puts a real cobblestone at
+# 4 -60 10 and draws no ghost block, and the use click on a door opens it.
+drv 1 "cmd item replace entity @s weapon.mainhand with minecraft:cobblestone" "ebmode DISABLED" \
+	"cmd tp @s 4.5 -60 8.5 0 45" "wait 20" > /dev/null
+check "in Disable the mix is still on" eval '[[ $(val 1 mix) == on* ]]'
+use_click 1
+check "in Disable with the mix on, the place click places a real block" drv 1 "await real 4 -60 10 minecraft:cobblestone"
+check "and draws no ghost block, on both clients" \
+	eval 'drv 1 "await block 4 -60 10 minecraft:air" && drv 2 "await block 4 -60 10 minecraft:air"'
+drv 1 "cmd setblock 30 -60 0 minecraft:oak_door[half=lower,facing=north,open=false]" \
+	"cmd setblock 30 -59 0 minecraft:oak_door[half=upper,facing=north,open=false]" \
+	"cmd tp @s 30.5 -60 -2 0 30" "wait 20" "await real 30 -60 0 minecraft:oak_door" > /dev/null
+use_click 1
+check "in Disable with the mix on, the use click opens a door" \
+	eval 'drv 1 "wait 10" > /dev/null; [[ $(val 1 "realstate 30 -60 0") == *open=true* ]]'
+drv 1 "notoasts" "wait 5" "shot disable-with-mix" "ebmode SINGLE" > /dev/null
+
 # B again turns the mix off.
 drv 1 "cmd tp @s 2 -58 -5 0 5" "wait 20" > /dev/null
 keys 1 key b

@@ -1,5 +1,6 @@
 package dev.buildingplanner.client;
 
+import dev.buildingplanner.input.MixRule;
 import dev.buildingplanner.sync.EditKind;
 import fi.dy.masa.litematica.util.RayTraceUtils;
 import fi.dy.masa.litematica.world.SchematicWorldHandler;
@@ -22,6 +23,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import nl.requios.effortlessbuilding.buildmode.BuildModeEnum;
+import nl.requios.effortlessbuilding.buildmode.BuildModes;
 import nl.requios.effortlessbuilding.buildpipeline.BuildPipelineClient;
 import nl.requios.effortlessbuilding.utilities.BlockEntry;
 import nl.requios.effortlessbuilding.utilities.BlockSet;
@@ -32,6 +35,17 @@ import nl.requios.effortlessbuilding.utilities.BlockSet;
  */
 public final class EffortlessShapes {
 	private EffortlessShapes() {
+	}
+
+	/**
+	 * Hooks E5 and E6: whether the block mix applies now: the mix is on, the main hand holds a block, and Effortless
+	 * Building's mode isn't Disable (see {@link MixRule}).
+	 */
+	public static boolean mixApplies() {
+		Player player = Minecraft.getInstance().player;
+		return MixRule.applies(BuildingPlannerClient.mixOn(),
+			player != null && player.getMainHandItem().getItem() instanceof BlockItem,
+			BuildModes.CLIENT.getBuildMode() == BuildModeEnum.DISABLED);
 	}
 
 	/**
@@ -47,7 +61,7 @@ public final class EffortlessShapes {
 		Vec3 hit = first != null ? first.getLocation() : Vec3.atCenterOf(blocks.firstPos);
 		double yFraction = hit.y - Math.floor(hit.y);
 		ItemStack held = player.getMainHandItem();
-		boolean mix = BuildingPlannerClient.mixOn();
+		boolean mix = mixApplies();
 		Map<BlockPos, BlockState> states = new LinkedHashMap<>();
 		for (Map.Entry<BlockPos, BlockEntry> e : blocks.validEntries()) {
 			BlockPos pos = e.getKey();

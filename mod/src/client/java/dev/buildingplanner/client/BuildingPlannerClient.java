@@ -189,7 +189,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		return session == null &&!Minecraft.getInstance().isLocalServer();
 	}
 
-	/** Hooks E5 and E6: whether shapes take their blocks from the mix. */
+	/** Whether the player's mix is on, with a session. Hooks E5 and E6 also ask {@code EffortlessShapes.mixApplies}. */
 	public static boolean mixOn() {
 		return session != null && MIX.isOn();
 	}

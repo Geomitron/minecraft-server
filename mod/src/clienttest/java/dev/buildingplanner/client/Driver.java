@@ -280,6 +280,10 @@ public final class Driver implements ClientModInitializer {
 			case "real" -> {
 				return realBlockId(pos(a, 1));
 			}
+			case "realstate" -> {
+				// realstate x y z: the full state of the real block there, such as a door's open property.
+				return mc.level.getBlockState(pos(a, 1)).toString();
+			}
 			case "mix" -> {
 				// The player's mix: on or off, then each block and its weight.
 				BlockMix mix = mix();

@@ -64,11 +64,11 @@ abstract class BuildPipelineClientMixin {
 		return !BuildingPlannerClient.active();
 	}
 
-	/** Hook E6: while the mix is on, the held item counts as Effortless Building's Randomizer. */
+	/** Hook E6: while the mix applies, the held block counts as Effortless Building's Randomizer. */
 	@ModifyExpressionValue(method = {"shouldInterceptPlacing", "updateDisplayTrackers"}, at = @At(value = "CONSTANT",
 		args = "classValue=nl/requios/effortlessbuilding/item/RandomizerToolItem"), require = 2)
 	private static boolean buildingplanner$mixIsRandomizer(boolean isRandomizer) {
-		return isRandomizer || BuildingPlannerClient.mixOn();
+		return isRandomizer || EffortlessShapes.mixApplies();
 	}
 
 	/** Hook E8: plans don't use up items, so the preview shows none missing. */
