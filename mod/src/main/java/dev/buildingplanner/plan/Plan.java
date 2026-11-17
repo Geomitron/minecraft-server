@@ -60,6 +60,11 @@ public final class Plan {
 		return metadata.getStringOr("Author", "");
 	}
 
+	/** Litematica's {@code TimeCreated}, in milliseconds; 0 when the file has none. */
+	public long timeCreated() {
+		return metadata.getLongOr("TimeCreated", 0L);
+	}
+
 	/** Regions in the file's order; the first is where blocks outside every region go. */
 	public Collection<PlanRegion> regions() {
 		return Collections.unmodifiableCollection(regions.values());

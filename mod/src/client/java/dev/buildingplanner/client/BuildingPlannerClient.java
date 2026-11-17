@@ -71,6 +71,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		KeyMappingHelper.registerKeyMapping(BLOCK_MIX);
 		List.of(COPY, PASTE, TURN, MIRROR, CLEAR).forEach(KeyMappingHelper::registerKeyMapping);
 		RenderEventHandler.getInstance().registerWorldLastRenderer(GLOW);
+		PlanPayloads.register();
 		ClientPlayNetworking.registerGlobalReceiver(PlanPayloads.Hello.TYPE, (hello, context) -> hello(hello));
 		// A singleplayer or LAN host's own world runs no server side.
 		ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {

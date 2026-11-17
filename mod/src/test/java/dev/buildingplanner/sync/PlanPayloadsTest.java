@@ -60,7 +60,7 @@ class PlanPayloadsTest {
 	@Test
 	void serverPayloadsRoundTrip() {
 		UUID plan = UUID.randomUUID();
-		PlanPayloads.Hello hello = new PlanPayloads.Hello(PlanPayloads.PROTOCOL_VERSION, new SyncLimits(1234, 99));
+		PlanPayloads.Hello hello = new PlanPayloads.Hello(PlanPayloads.PROTOCOL_VERSION, new SyncLimits(1234));
 		assertEquals(hello, roundTrip(PlanPayloads.Hello.CODEC, hello));
 
 		PlanPayloads.Applied applied = new PlanPayloads.Applied(plan, 7, UUID.randomUUID(), PlanPayloads.NO_CLIENT_SEQ,
@@ -68,7 +68,7 @@ class PlanPayloadsTest {
 			List.of(new BlockChange("Main", new BlockPos(-4, 0, 0), stairs)));
 		assertEquals(applied, roundTrip(PlanPayloads.Applied.CODEC, applied));
 
-		PlanPayloads.Rejected rejected = new PlanPayloads.Rejected(plan, 3, PlayerMessage.planTooLarge(600, 512));
+		PlanPayloads.Rejected rejected = new PlanPayloads.Rejected(plan, 3, PlayerMessage.tooManyBlocks(600, 512));
 		assertEquals(rejected, roundTrip(PlanPayloads.Rejected.CODEC, rejected));
 	}
 

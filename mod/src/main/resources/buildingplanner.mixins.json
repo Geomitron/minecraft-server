@@ -4,9 +4,7 @@
 	"package": "dev.buildingplanner.mixin",
 	"plugin": "dev.buildingplanner.BuildingPlannerMixinPlugin",
 	"compatibilityLevel": "JAVA_25",
-	"mixins": [
-		"syncmatica.ServerCommunicationManagerMixin"
-	],
+	"mixins": [],
 	"client": [
 		"effortless.BlockPreviewRendererMixin",
 		"effortless.BuildPipelineClientMixin",

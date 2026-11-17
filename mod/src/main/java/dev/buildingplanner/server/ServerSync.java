@@ -3,15 +3,14 @@ package dev.buildingplanner.server;
 import dev.buildingplanner.BuildingPlanner;
 import dev.buildingplanner.layer.Layer;
 import dev.buildingplanner.sync.Payloads;
-import dev.buildingplanner.sync.PlanPayloads;
 import dev.buildingplanner.sync.SyncLimits;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import com.mojang.authlib.GameProfile;
 import net.fabricmc.fabric.api.entity.event.v1.ServerEntityLevelChangeEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
@@ -29,29 +28,16 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.storage.LevelResource;
 
 /**
- * Connects the server's shared layer ({@link LayerSync}, protocol 3) and the named plans ({@link PlanSync}, protocol 2,
- * which the client still speaks) to the game: one of each per running server, fed by the payload handlers (which
- * Fabric runs on the server thread) and sending only to players who can receive Building Planner's payloads. The layer
- * lives in {@code <world>/building-planner/layer/}; the plans are kept in step with Syncmatica's placements and saved
- * in {@code <world>/building-planner/plans/}. Runs only on a dedicated server.
+ * Connects the server's shared layer ({@link LayerSync}, protocol 3) to the game: one per running server, fed by the
+ * payload handlers (which Fabric runs on the server thread) and sending only to players who can receive Building
+ * Planner's payloads. The layer lives in {@code <world>/building-planner/layer/}; before that folder exists, the server
+ * builds it from the plans Syncmatica shared ({@link PlanImport}). Runs only on a dedicated server.
  */
 public final class ServerSync {
-	private static PlanSync current;
-	private static SyncmaticaPlans plans;
 	private static LayerSync layer;
 	private static LayerStore layerStore;
 
 	private ServerSync() {
-	}
-
-	/** The running server's sync. */
-	public static Optional<PlanSync> current() {
-		return Optional.ofNullable(current);
-	}
-
-	/** The delete check (hook S1); true where Building Planner's server side isn't running. */
-	public static boolean mayDelete(GameProfile sender, UUID placementId) {
-		return plans == null || plans.mayDelete(sender, placementId);
 	}
 
 	public static void register() {
@@ -62,8 +48,17 @@ public final class ServerSync {
 			throw new UncheckedIOException("Couldn't read Building Planner's config file", e);
 		}
 		ServerLifecycleEvents.SERVER_STARTING.register(server -> {
-			Path root = server.getWorldPath(LevelResource.ROOT).resolve("building-planner").normalize();
-			layerStore = new LayerStore(root.resolve("layer"), System.currentTimeMillis());
+			Path worldDir = server.getWorldPath(LevelResource.ROOT).normalize();
+			Path layerRoot = worldDir.resolve("building-planner").resolve("layer");
+			if (!Files.exists(layerRoot)) {
+				try {
+					PlanImport.run(worldDir, FabricLoader.getInstance().getGameDir(), layerRoot);
+				} catch (IOException e) {
+					// Starting without the import would leave an empty layer, and the plans would never move into it.
+					throw new UncheckedIOException("Couldn't move the shared plans into Building Planner's layer", e);
+				}
+			}
+			layerStore = new LayerStore(layerRoot, System.currentTimeMillis());
 			Map<Identifier, Layer> layers;
 			try {
 				layers = layerStore.load();
@@ -73,17 +68,10 @@ public final class ServerSync {
 			}
 			layer = new LayerSync(limits.maxEditBlocks(), layers, (player, payload) -> send(server, player, payload),
 				world(server));
-			current = new PlanSync(limits, (player, payload) -> send(server, player, payload));
-			PlanStore store = new PlanStore(root, System.currentTimeMillis());
-			plans = new SyncmaticaPlans(server, current, store, (player, payload) -> send(server, player, payload),
-				System::currentTimeMillis);
 		});
 		ServerTickEvents.START_SERVER_TICK.register(server -> {
 			if (layer != null) {
 				layerStore.tick(layer, System.currentTimeMillis());
-			}
-			if (plans != null) {
-				plans.tick();
 			}
 		});
 		// Players are still connected, but the server reads no more edits.
@@ -92,15 +80,10 @@ public final class ServerSync {
 				layerStore.save(layer);
 				layerStore.close();
 			}
-			if (plans != null) {
-				plans.stop();
-			}
 		});
 		ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
 			layer = null;
 			layerStore = null;
-			current = null;
-			plans = null;
 		});
 
 		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
@@ -110,16 +93,11 @@ public final class ServerSync {
 				&& ServerPlayNetworking.canSend(handler, Payloads.Columns.TYPE)) {
 				sender.sendPacket(new Payloads.Hello(Payloads.PROTOCOL_VERSION, limits.maxEditBlocks()));
 			}
-			if (ServerPlayNetworking.canSend(handler, PlanPayloads.Hello.TYPE)) {
-				sender.sendPacket(new PlanPayloads.Hello(PlanPayloads.PROTOCOL_VERSION, limits));
-			}
 		});
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
-			UUID player = handler.getPlayer().getUUID();
 			if (layer != null) {
-				layer.disconnect(player);
+				layer.disconnect(handler.getPlayer().getUUID());
 			}
-			current().ifPresent(sync -> sync.disconnect(player));
 		});
 		ServerEntityLevelChangeEvents.AFTER_PLAYER_CHANGE_LEVEL.register((player, from, to) -> {
 			if (layer != null) {
@@ -152,20 +130,7 @@ public final class ServerSync {
 				layer.redo(context.player().getUUID());
 			}
 		});
-
-		ServerPlayNetworking.registerGlobalReceiver(PlanPayloads.Subscribe.TYPE, (payload, context) ->
-			current().ifPresent(sync -> sync.subscribe(context.player().getUUID(), payload.plan())));
-		ServerPlayNetworking.registerGlobalReceiver(PlanPayloads.Unsubscribe.TYPE, (payload, context) ->
-			current().ifPresent(sync -> sync.unsubscribe(context.player().getUUID(), payload.plan())));
-		ServerPlayNetworking.registerGlobalReceiver(PlanPayloads.Edit.TYPE, (payload, context) ->
-			current().ifPresent(sync -> sync.edit(context.player().getUUID(), payload.plan(), payload.clientSeq(),
-				payload.kind(), payload.changes())));
-		ServerPlayNetworking.registerGlobalReceiver(PlanPayloads.Undo.TYPE, (payload, context) ->
-			current().ifPresent(sync -> sync.undo(context.player().getUUID())));
-		ServerPlayNetworking.registerGlobalReceiver(PlanPayloads.Redo.TYPE, (payload, context) ->
-			current().ifPresent(sync -> sync.redo(context.player().getUUID())));
-		BuildingPlanner.LOGGER.info("Building Planner live sync: {} blocks an edit, {} blocks a plan side",
-			limits.maxEditBlocks(), limits.maxPlanSide());
+		BuildingPlanner.LOGGER.info("Building Planner live sync: {} blocks an edit", limits.maxEditBlocks());
 	}
 
 	private static void send(MinecraftServer server, UUID playerId, CustomPacketPayload payload) {

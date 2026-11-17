@@ -13,14 +13,6 @@ public record PlayerMessage(String key, List<String> args) {
 		args = List.copyOf(args);
 	}
 
-	public static PlayerMessage planGone() {
-		return new PlayerMessage(PREFIX + "rejected.plan_gone", List.of());
-	}
-
-	public static PlayerMessage planNotLoaded() {
-		return new PlayerMessage(PREFIX + "rejected.not_loaded", List.of());
-	}
-
 	public static PlayerMessage tooManyBlocks(int blocks, int max) {
 		return new PlayerMessage(PREFIX + "rejected.too_many_blocks", List.of(Integer.toString(blocks), Integer.toString(max)));
 	}
@@ -41,15 +33,6 @@ public record PlayerMessage(String key, List<String> args) {
 
 	public static PlayerMessage outsideWorldBorder() {
 		return new PlayerMessage(PREFIX + "rejected.world_border", List.of());
-	}
-
-	public static PlayerMessage planTooLarge(int side, int max) {
-		return new PlayerMessage(PREFIX + "rejected.too_large", List.of(Integer.toString(side), Integer.toString(max)));
-	}
-
-	/** An edit no client should send: a region the plan lacks, or a Litematica write outside the plan's box. */
-	public static PlayerMessage editDoesNotFit() {
-		return new PlayerMessage(PREFIX + "rejected.does_not_fit", List.of());
 	}
 
 	public static PlayerMessage nothingToUndo() {
@@ -110,10 +93,5 @@ public record PlayerMessage(String key, List<String> args) {
 	/** The copy's origin is in no plan, and the player doesn't have the plan it came from loaded. */
 	public static PlayerMessage noPlanForPaste() {
 		return new PlayerMessage(PREFIX + "paste.no_plan", List.of());
-	}
-
-	/** The delete check stopped a player deleting a plan someone else shared. */
-	public static PlayerMessage notYourPlan(String owner) {
-		return new PlayerMessage(PREFIX + "delete.not_yours", List.of(owner));
 	}
 }

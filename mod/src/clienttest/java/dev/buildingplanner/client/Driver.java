@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
@@ -62,6 +63,7 @@ public final class Driver implements ClientModInitializer {
 	public void onInitializeClient() {
 		ClientTickEvents.START_CLIENT_TICK.register(mc -> SentPackets.startTick());
 		ClientTickEvents.END_CLIENT_TICK.register(this::tick);
+		ClientLifecycleEvents.CLIENT_STARTED.register(mc -> LayerProbe.register());
 	}
 
 	private void tick(Minecraft mc) {
@@ -342,6 +344,10 @@ public final class Driver implements ClientModInitializer {
 				BuildingPlannerClient.hello(new PlanPayloads.Hello(Integer.parseInt(a[1]), SyncLimits.DEFAULT));
 				return "ok";
 			}
+			case "layerwatch" -> {
+				// layerwatch <file>: asks the server for the columns of the ghost blocks the file in the game folder lists.
+				return "watching " + LayerProbe.watch(mc, mc.gameDirectory.toPath().resolve(a[1])) + " columns";
+			}
 			case "shot" -> {
 				Screenshot.grab(mc.gameDirectory, a[1] + ".png", mc.gameRenderer.mainRenderTarget(), 1, c -> {
 				});
@@ -373,6 +379,7 @@ public final class Driver implements ClientModInitializer {
 			case "glow" -> glows().contains(what.substring(5));
 			case "copy" -> copy().startsWith(what.substring(5));
 			case "noglow" -> glows().isEmpty();
+			case "layer" -> LayerProbe.matches(mc.gameDirectory.toPath().resolve(a[1]));
 			default -> throw new IllegalArgumentException(what);
 		};
 	}
@@ -386,6 +393,7 @@ public final class Driver implements ClientModInitializer {
 				case "area" -> area(a[2]);
 				case "glow" -> glows();
 				case "copy" -> copy();
+				case "layer" -> LayerProbe.compare(Minecraft.getInstance().gameDirectory.toPath().resolve(a[2]));
 				case "shared", "notshared" -> sharedNames().toString();
 				case "screen", "noscreen" -> String.valueOf(Minecraft.getInstance().gui.screen());
 				default -> "";

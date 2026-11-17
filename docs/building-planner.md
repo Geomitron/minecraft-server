@@ -7,9 +7,10 @@ behind it are in [plan.md](plan.md) ("Decisions").
 
 **What's built.** Players run Building Planner 0.2.1, and the server 0.2.0, which keep ghost blocks in separate named
 plans shared through Syncmatica. Built on `main` since then: hold to repeat at fixed speeds (hook E10), the look of
-ghost blocks, the layer's storage and files, and the server's side of the layer and protocol 3, which the server runs
-beside protocol 2's named plans (payload ids starting `plan_`) and which no client speaks until the player's layer is
-built. Everything else this spec describes waits on the build steps in [plan.md](plan.md) ("Agent-ready work"), which
+ghost blocks, the layer's storage and files, the server's side of the layer and protocol 3, and the one-time import of
+the plans Syncmatica shared. The server's side no longer uses Syncmatica or speaks protocol 2's named plans (payload ids
+starting `plan_`), which the client still speaks, so no client shares ghost blocks with the dev server until the
+player's layer is built. Everything else this spec describes waits on the build steps in [plan.md](plan.md) ("Agent-ready work"), which
 end with the release. The build reuses what still fits: Effortless Building's hooks E1 to E10 (E1, E2 and E6 change),
 the rules of undo and redo, the edit glow, the block mix screen's layout, the check for a server without the add-on, and
 the in-game check harness.
@@ -163,10 +164,12 @@ Fabric API: `PayloadTypeRegistry` (`registerLarge` for column snapshots), `Serve
 ordering below relies on. Fabric splits a payload registered with `registerLarge` into packets of at most 1 MiB to
 players and joins them on arrival.
 
-The build steps remove what the shared layer replaces from today's code: hooks S1 to S3 into Syncmatica (the delete
-check, each plan's own schematic, and Syncmatica's packets on the main thread) with `remove-loaded.sh`, L2 (plan
-coordinates without clamping) and L3 (growing a plan's region in place), the L1 capture of Edit Schematic writes, the
-"Start a plan" screen and key, and Syncmatica in `fabric.mod.json`, the build and the dev server.
+The build steps remove what the shared layer replaces from the client's code: hooks S2 and S3 into Syncmatica (each
+plan's own schematic, and Syncmatica's packets on the main thread) with `remove-loaded.sh`, L2 (plan coordinates
+without clamping) and L3 (growing a plan's region in place), the L1 capture of Edit Schematic writes, the "Start a
+plan" screen and key, protocol 2's payloads, and Syncmatica on the dev clients' classpath (`clientImplementation` in
+`build.gradle`). The server's side has none of them: `fabric.mod.json` doesn't name Syncmatica, and the dev server
+runs without it.
 
 ### Tiles: how Litematica draws the layer
 
@@ -282,14 +285,20 @@ Building Planner's own file `<world>/building-planner/plans/<id>.litematic`, or,
 stored file `syncmatics/<hash>.litematic` in the server's folder. Each non-air block goes to the world position where
 Litematica drew it: its position from the region's corner, mirrored and turned by the plan's placement and then by the
 region's own (from `subregionData` when a player moved or turned the region), plus the region's position (also from
-`subregionData` when moved) mirrored and turned by the plan's, plus the plan's origin, with its state mirrored and
-turned the same way (`LitematicaSchematic.placeBlocksToWorld`, `PositionUtils.getTransformedPlacementPosition`).
+`subregionData` when moved) mirrored and turned by the plan's, plus the plan's origin. Its state is mirrored by the
+plan's mirror, then by the region's (east-west and north-south swapped when the plan's turn is a quarter turn), then
+turned by both turns (`LitematicaSchematic.placeBlocksToWorld`, `PositionUtils.getTransformedPlacementPosition`).
 Structure void is skipped, like air.
 
 Where plans overlap, the later plan's blocks win: plans go in the order of their metadata's `TimeCreated`, then their
-id, and a later plan's air leaves an earlier plan's blocks. A plan whose file can't be read is logged and skipped. The
-import writes the layer's files, then logs how many plans and blocks it moved. It leaves `plans/`, `deleted/`,
-`syncmatica/` and `syncmatics/` where they are, unread from then on.
+id, and a later plan's air leaves an earlier plan's blocks. A plan whose file can't be read is logged and skipped,
+including one whose own file is damaged, which is never replaced by Syncmatica's; an entry of the list that lacks a
+field or has a bad value is logged and skipped too. A list that can't be read at all stops the server, since starting
+would make an empty layer and the plans would never move. The import writes the layer's files to
+`building-planner/layer-import/` and then renames it `layer/`, so a crash part way leaves no layer and the next start
+imports again; with no shared plans, `layer/` starts empty. It then logs how many plans and blocks it moved: "Building
+Planner moved <plans> of <shared> shared plans into the layer: <blocks> ghost blocks". It leaves `plans/`, `deleted/`, `syncmatica/` and
+`syncmatics/` where they are, unread from then on.
 
 ### Undo
 
@@ -542,9 +551,13 @@ real buttons with xdotool while Planner1 is teleported one block every two ticks
 - A player's own change (off and 0.3) survives a restart. With the line gone and the server stopped, so the client
   joins nothing, a start sets only the option still at its default (on) and keeps the 0.3.
 
-The import has unit tests rather than an in-game check: they build the layer from a copy of the files Syncmatica and
-Building Planner write (a `placements.json` with turned, mirrored and overlapping plans, one with a moved sub-region)
-and compare each block with where Litematica's own code places it.
+The import's unit tests (`PlanImportTest`) build the layer from files the writers' own code makes: a `placements.json`
+from Syncmatica's `ServerPlacement.toJson`, with turned, mirrored and overlapping plans and one with a moved and turned
+sub-region of negative size; plans in Building Planner's own files and in Syncmatica's stored files written by
+Litematica; a plan with no file and one with a damaged file. They compare each block with where Litematica's own
+arithmetic and reader place it. `import.sh` copies that fixture into the dev server's world: the server, without
+Syncmatica, logs the import's counts, and Planner1's driver asks for the plans' columns with protocol 3's `watch` and
+finds every expected ghost block and no other, again after a restart, which doesn't import again.
 
 ## Unverified
 
@@ -565,4 +578,5 @@ and compare each block with where Litematica's own code places it.
 - A real server running another protocol version; the check hands the client a made-up `hello`.
 - That Effortless Building places real blocks as usual in singleplayer and in a LAN host's own world.
 - Mirror in the game for a player facing east or west; the unit tests cover it.
-- The import on the server's real plans: the unit tests use files made in the dev setup.
+- The import on the server's real plans: the unit tests and `import.sh` use files the writers' own code makes in a
+  test, not files from players' sessions.

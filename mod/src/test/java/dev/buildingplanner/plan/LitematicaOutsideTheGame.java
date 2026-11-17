@@ -18,13 +18,13 @@ import sun.misc.Unsafe;
  * game directory from {@code Minecraft.getInstance()}. This bootstraps the vanilla registries, hands them to
  * Litematica, and installs a bare, never-started {@link Minecraft} whose only set field is the game directory.
  */
-final class LitematicaOutsideTheGame {
+public final class LitematicaOutsideTheGame {
 	private static boolean ready;
 
 	private LitematicaOutsideTheGame() {
 	}
 
-	static synchronized void setUp() throws Exception {
+	public static synchronized void setUp() throws Exception {
 		if (ready) {
 			return;
 		}

@@ -22,9 +22,10 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
 
 /**
- * The payloads of protocol version 2, for named plans, which the client still speaks. Their ids start
- * with {@code plan_}, so they're registered beside protocol 3's ({@link Payloads}), and its {@code notice} is protocol
- * 3's. Block states travel as ids in the block-state registry; both sides run the same vanilla blocks.
+ * The payloads of protocol version 2, for named plans, which the client still speaks and the server no longer takes,
+ * so only the client registers them. Their ids start with {@code plan_}, so they're registered beside protocol 3's
+ * ({@link Payloads}), and its {@code notice} is protocol 3's. Block states travel as ids in the block-state registry;
+ * both sides run the same vanilla blocks.
  */
 public final class PlanPayloads {
 	/** Raised whenever a payload's layout changes; a client that sees another version turns Building Planner off. */
@@ -113,9 +114,8 @@ public final class PlanPayloads {
 			(buf, p) -> {
 				buf.writeVarInt(p.protocolVersion);
 				buf.writeVarInt(p.limits.maxEditBlocks());
-				buf.writeVarInt(p.limits.maxPlanSide());
 			},
-			buf -> new Hello(buf.readVarInt(), new SyncLimits(buf.readVarInt(), buf.readVarInt())));
+			buf -> new Hello(buf.readVarInt(), new SyncLimits(buf.readVarInt())));
 
 		@Override
 		public Type<Hello> type() {

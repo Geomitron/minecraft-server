@@ -45,8 +45,8 @@ loom {
 	}
 
 	runs {
-		// Dev server: offline mode, port 25565 (see prepareDevServer). Loads the add-on, Fabric API and Syncmatica;
-		// the client-only mods stay off its classpath.
+		// Dev server: offline mode, port 25565 (see prepareDevServer). Loads the add-on and Fabric API; the client-only
+		// mods stay off its classpath.
 		server {
 			server()
 			runDir 'run/server'
@@ -75,9 +75,9 @@ dependencies {
 
 	// Both sides.
 	implementation "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}"
-	implementation "maven.modrinth:syncmatica:${syncmatica_version}"
 
 	// Players' computers only.
+	clientImplementation "maven.modrinth:syncmatica:${syncmatica_version}"
 	clientImplementation "maven.modrinth:litematica:${litematica_version}"
 	clientImplementation "maven.modrinth:malilib:${malilib_version}"
 	clientImplementation "maven.modrinth:effortless-building:${effortless_building_version}"
@@ -87,9 +87,11 @@ dependencies {
 	testImplementation platform('org.junit:junit-bom:5.13.4')
 	testImplementation 'org.junit.jupiter:junit-jupiter'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-	// Litematica's own writer and reader check the add-on's .litematic files.
+	// Litematica's own writer and reader check the add-on's .litematic files, and Syncmatica's own writer makes the
+	// import's list of placements.
 	testImplementation "maven.modrinth:litematica:${litematica_version}"
 	testImplementation "maven.modrinth:malilib:${malilib_version}"
+	testImplementation "maven.modrinth:syncmatica:${syncmatica_version}"
 }
 
 processResources {
