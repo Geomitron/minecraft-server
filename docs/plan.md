@@ -235,8 +235,10 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it, not
   lines are inconsistent, and the shapes could be refined"), and Geo picks again. OpenAI's image models join that
   round, with Geo's OpenRouter account allowing them for the run (738 Q10 A).
 - Geo approved the texts players see in 0.3.0 as 742 showed them (the chat messages, the button and key names, and
-  the material list's title), other than the texts for Copy, which change with the one Copy above, and with the mod's
-  description in Geo's wording: "Plan builds together using ghost blocks that everyone on the server can see."
+  the material list's title), with Copy's texts as revision 2 showed them for the one Copy above, and the mod's
+  description in Geo's wording: "Plan builds together using ghost blocks that everyone on the server can see." Geo saw
+  the radial menu without "Copy real blocks", with "Material list" in its slot, and the rule that where a ghost block
+  stands over a different real block, Copy takes the ghost block (742 revision 2).
 - The shared layer replaces the decisions above that concern separate plans: named plans that move and turn as a whole
   (411 Q1), plan growth (411 Q2), who deletes a plan (411 Q3, 420 Q9), starting a plan with N (420 Q1, 469 Q1), hiding
   a plan with Litematica or Syncmatica (420 Q2, 469 Q2), the paste's target plan (485 Q3), Litematica's Edit Schematic
@@ -290,9 +292,9 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it, not
     with the radial menu's Material list button waiting for a "Cube" box as Copy does; `step9.sh`'s material list
     checks pass).
 12. **Texts for Geo**: every text players see that the steps added or changed (messages, key names, button and slider
-    labels, the panel) goes to Geo as editable text, and Geo's version is built in. Geo's answer (742) also makes Copy
-    take ghost blocks and real blocks together, without "Copy real blocks"; the texts for Copy, and the radial menu
-    without that button, go back to Geo. Done when the game shows Geo's wording.
+    labels, the panel) goes to Geo as editable text, and Geo's version is built in. Built: the game shows the wording
+    Geo approved in 742 (`en_us.json`, and the description in `fabric.mod.json`), with `step9.sh` and `step10.sh`
+    checking the texts exactly.
 13. **The release**, which goes to Geo for approval first: version 0.3.0. On the server, while no one is online, back
     up the world beside the others (`minecraft-backup-<date>-pre-building-planner-0.3.0.tar.gz`), replace the jar,
     remove Syncmatica's jar and restart; the log shows the import's counts. Then the pack: Building Planner 0.3.0 in,
