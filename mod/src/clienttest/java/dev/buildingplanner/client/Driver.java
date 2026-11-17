@@ -356,6 +356,23 @@ public final class Driver implements ClientModInitializer {
 			case "mixat" -> {
 				return BuiltInRegistries.BLOCK.getKey(mix().blockAt(pos(a, 1))).toString();
 			}
+			case "panel" -> {
+				// panel: the mix panel's lines, separated by " | ", or hidden.
+				Field f = BuildingPlannerClient.class.getDeclaredField("mixPanel");
+				f.setAccessible(true);
+				return ((MixPanel) f.get(null)).text();
+			}
+			case "pickermix" -> {
+				// pickermix: the mix the open picker shows, each block and its weight.
+				Field f = BlockMixScreen.class.getDeclaredField("parts");
+				f.setAccessible(true);
+				List<String> parts = new ArrayList<>();
+				for (Object part : (List<?>) f.get(mc.gui.screen())) {
+					BlockMix.Part p = (BlockMix.Part) part;
+					parts.add(BuiltInRegistries.BLOCK.getKey(p.block()) + ":" + p.weight());
+				}
+				return String.join(",", parts);
+			}
 			case "pickershown" -> {
 				Field shown = BlockMixScreen.class.getDeclaredField("shown");
 				shown.setAccessible(true);

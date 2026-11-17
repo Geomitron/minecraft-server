@@ -59,7 +59,7 @@ public record PlayerMessage(String key, List<String> args) {
 		return new PlayerMessage(PREFIX + "mix.on", List.of(key));
 	}
 
-	/** The player turned the block mix off with the picker key. */
+	/** The player turned the block mix off with the picker's "Turn off". */
 	public static PlayerMessage mixOff() {
 		return new PlayerMessage(PREFIX + "mix.off", List.of());
 	}

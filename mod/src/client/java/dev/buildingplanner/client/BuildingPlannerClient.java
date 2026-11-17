@@ -21,6 +21,7 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -75,6 +76,8 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	private static HeldClicks heldClicks;
 	/** Whether Litematica's ghost block look has been set this run (see {@link LitematicaLook}). */
 	private static boolean lookSet;
+	/** The mix panel; null without Effortless Building, whose mode the mix rule reads. */
+	private static MixPanel mixPanel;
 
 	@Override
 	public void onInitializeClient() {
@@ -88,6 +91,8 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		}
 		if (loader.isModLoaded("effortlessbuilding")) {
 			heldClicks = new HeldClicks(config);
+			mixPanel = new MixPanel(MIX, EffortlessShapes::mixApplies, BLOCK_MIX::getTranslatedKeyMessage);
+			HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(BuildingPlanner.MOD_ID, "mix_panel"), mixPanel);
 		}
 		KeyMappingHelper.registerKeyMapping(BLOCK_MIX);
 		List.of(COPY, PASTE, TURN, MIRROR, CLEAR).forEach(KeyMappingHelper::registerKeyMapping);
@@ -143,7 +148,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			while (BLOCK_MIX.consumeClick()) {
 				if (session != null) {
-					toggleMix();
+					openMix();
 				}
 			}
 			while (COPY.consumeClick()) {
@@ -216,15 +221,11 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		return level == null ? null : level.dimension().identifier();
 	}
 
-	/** The mix key: turns the mix off while it's on, or else opens the picker. */
-	private static void toggleMix() {
-		if (MIX.isOn()) {
-			MIX.turnOff();
-			ClientSession.show(PlayerMessage.mixOff());
-		} else {
-			BlockMixScreen.open(MIX, () -> ClientSession.show(
-				PlayerMessage.mixOn(BLOCK_MIX.getTranslatedKeyMessage().getString())));
-		}
+	/** The mix key: opens the picker on the player's mix, to choose it, change it or turn it off. */
+	private static void openMix() {
+		BlockMixScreen.open(MIX,
+			() -> ClientSession.show(PlayerMessage.mixOn(BLOCK_MIX.getTranslatedKeyMessage().getString())),
+			() -> ClientSession.show(PlayerMessage.mixOff()));
 	}
 
 	/** Whether Building Planner is on for this server, so Effortless Building's hooks draw ghost blocks. */

@@ -28,6 +28,7 @@ import net.minecraft.world.level.block.Block;
 /**
  * The block-mix picker: every block in the game, with search and a toggle that limits the list to the blocks in the
  * player's inventory. Clicking a block adds it to the mix (up to nine), each with a share; "Use mix" turns the mix on.
+ * Opened while the mix is on, it shows the mix to change, and "Turn off" turns it off.
  */
 final class BlockMixScreen extends Screen {
 	private static final int CELL = 18;
@@ -36,6 +37,7 @@ final class BlockMixScreen extends Screen {
 
 	private final BlockMix mix;
 	private final Runnable onUse;
+	private final Runnable onTurnOff;
 	/** The mix being edited; the player's mix changes only on "Use mix". */
 	private final List<BlockMix.Part> parts;
 	/** Every block that has an item of its own, in the registry's order. */
@@ -45,10 +47,11 @@ final class BlockMixScreen extends Screen {
 	private boolean inventoryOnly;
 	private Button use;
 
-	private BlockMixScreen(BlockMix mix, Runnable onUse) {
+	private BlockMixScreen(BlockMix mix, Runnable onUse, Runnable onTurnOff) {
 		super(Component.translatable("buildingplanner.ui.block_mix.title"));
 		this.mix = mix;
 		this.onUse = onUse;
+		this.onTurnOff = onTurnOff;
 		this.parts = new ArrayList<>(mix.parts());
 		this.allBlocks = BuiltInRegistries.BLOCK.stream()
 			.filter(block -> block.asItem() instanceof BlockItem item && item.getBlock() == block)
@@ -56,9 +59,12 @@ final class BlockMixScreen extends Screen {
 		this.shown = allBlocks;
 	}
 
-	/** Opens the picker on the player's mix; {@code onUse} runs after "Use mix" turns it on. */
-	static void open(BlockMix mix, Runnable onUse) {
-		Minecraft.getInstance().setScreenAndShow(new BlockMixScreen(mix, onUse));
+	/**
+	 * Opens the picker on the player's mix; {@code onUse} runs after "Use mix" turns it on, and {@code onTurnOff} after
+	 * "Turn off", which shows only while the mix is on, turns it off.
+	 */
+	static void open(BlockMix mix, Runnable onUse, Runnable onTurnOff) {
+		Minecraft.getInstance().setScreenAndShow(new BlockMixScreen(mix, onUse, onTurnOff));
 	}
 
 	private int contentWidth() {
@@ -116,21 +122,32 @@ final class BlockMixScreen extends Screen {
 			addRenderableWidget(share);
 		}
 
-		int buttonWidth = (contentWidth - 8) / 3;
-		int buttonTop = height - 24;
-		use = addRenderableWidget(Button.builder(Component.translatable("buildingplanner.ui.block_mix.use"),
-			button -> {
-				mix.use(parts.stream().filter(part -> part.weight() > 0).toList());
-				onClose();
-				onUse.run();
-			}).bounds(left, buttonTop, buttonWidth, 20).build());
+		List<Button> buttons = new ArrayList<>();
+		use = Button.builder(Component.translatable("buildingplanner.ui.block_mix.use"), button -> {
+			mix.use(parts.stream().filter(part -> part.weight() > 0).toList());
+			onClose();
+			onUse.run();
+		}).build();
 		use.active = canUse();
-		addRenderableWidget(Button.builder(Component.translatable("buildingplanner.ui.block_mix.clear"), button -> {
+		buttons.add(use);
+		if (mix.isOn()) {
+			buttons.add(Button.builder(Component.translatable("buildingplanner.ui.block_mix.turn_off"), button -> {
+				mix.turnOff();
+				onClose();
+				onTurnOff.run();
+			}).build());
+		}
+		buttons.add(Button.builder(Component.translatable("buildingplanner.ui.block_mix.clear"), button -> {
 			parts.clear();
 			rebuildWidgets();
-		}).bounds(left + buttonWidth + 4, buttonTop, buttonWidth, 20).build());
-		addRenderableWidget(Button.builder(CommonComponents.GUI_CANCEL, button -> onClose())
-			.bounds(left + 2 * (buttonWidth + 4), buttonTop, buttonWidth, 20).build());
+		}).build());
+		buttons.add(Button.builder(CommonComponents.GUI_CANCEL, button -> onClose()).build());
+		int buttonWidth = (contentWidth - 4 * (buttons.size() - 1)) / buttons.size();
+		for (int i = 0; i < buttons.size(); i++) {
+			Button button = buttons.get(i);
+			button.setRectangle(buttonWidth, 20, left + i * (buttonWidth + 4), height - 24);
+			addRenderableWidget(button);
+		}
 		setInitialFocus(searchBox);
 	}
 
@@ -147,7 +164,7 @@ final class BlockMixScreen extends Screen {
 		int total = parts.stream().mapToInt(BlockMix.Part::weight).sum();
 		int slotWidth = contentWidth() / BlockMix.MAX_BLOCKS;
 		for (int i = 0; i < parts.size(); i++) {
-			String percent = total == 0 ? "0%" : Math.round(100.0 * parts.get(i).weight() / total) + "%";
+			String percent = BlockMix.percent(parts.get(i).weight(), total);
 			graphics.centeredText(font, percent, left + i * slotWidth + slotWidth / 2, mixTop + CELL + 18, GREY);
 		}
 	}

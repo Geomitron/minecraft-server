@@ -39,12 +39,19 @@ final class BlockMix {
 		on = false;
 	}
 
+	/** The sum of the blocks' weights. */
+	int total() {
+		return parts.stream().mapToInt(Part::weight).sum();
+	}
+
+	/** A weight's share of {@code total} as a whole percentage, such as "80%"; "0%" when the total is 0. */
+	static String percent(int weight, int total) {
+		return total == 0 ? "0%" : Math.round(100.0 * weight / total) + "%";
+	}
+
 	/** The mix's block at a position. Only call while the mix is on. */
 	Block blockAt(BlockPos pos) {
-		long total = 0;
-		for (Part part : parts) {
-			total += part.weight();
-		}
+		long total = total();
 		long pick = Math.floorMod(HashCommon.mix(pos.asLong()), total);
 		for (Part part : parts) {
 			pick -= part.weight();

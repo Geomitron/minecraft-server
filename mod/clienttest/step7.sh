@@ -1,8 +1,9 @@
 # Step 7's in-game checks: Effortless Building's shapes drawn as ghost blocks, in Single mode with the array modifier
 # and as a Line, starting on ghost blocks and erasing, the block-mix picker and its inventory toggle, the mix in
-# shapes, what clicks do with a pickaxe, an apple or nothing in hand, and a client without Effortless Building.
-# Sourced by inside.sh, which provides drv, val, check, keys, click, use_click, attack_click, client_said, start_client
-# and stop_client. Shapes are drawn with Planner1 looking straight down, so each block's position is known.
+# shapes, the mix panel and the picker's "Turn off", what clicks do with a pickaxe, an apple or nothing in hand, and a
+# client without Effortless Building. Sourced by inside.sh, which provides drv, val, check, keys, click, use_click,
+# attack_click, client_said, start_client and stop_client. Shapes are drawn with Planner1 looking straight down, so
+# each block's position is known.
 
 check "client 1 starts a session on hello" drv 1 "await session" "await noscreen"
 check "client 2 starts a session on hello" drv 2 "await session" "await noscreen"
@@ -45,6 +46,7 @@ drv 1 "cmd clear @s" "cmd give @s minecraft:cobblestone 5" "cmd give @s minecraf
 keys 1 key b
 check "B opens the block-mix picker" drv 1 "await screen Block mix"
 check "the picker lists every block in the game" eval '(( $(val 1 pickershown) > 1000 ))'
+check "with the mix off, the picker has no Turn off button" eval '[[ $(val 1 texts) != *"Turn off"* ]]'
 drv 1 "notoasts" "wait 5" "shot picker-all" > /dev/null
 read -r x y < <(val 1 "widget 0 Only my inventory")
 click 1 "$x" "$y"
@@ -63,8 +65,18 @@ read -r x y < <(val 1 "widget 0 Use mix")
 click 1 "$x" "$y"
 check "Use mix turns the mix on, 80 cobblestone to 20 mossy cobblestone" \
 	eval '[[ $(val 1 mix) == "on minecraft:cobblestone:80,minecraft:mossy_cobblestone:20" ]]'
-check "with a message" client_said 1 "Block mix on. Press B to turn it off."
+check "with a message" client_said 1 "Block mix on. Press B to change it or turn it off."
 drv 1 "notoasts" "wait 5" "shot mix-on-message" > /dev/null
+
+# The mix panel shows while the mix applies: with cobblestone held in Single mode, and no screen open.
+panel="Block mix | Cobblestone 80% | Mossy Cobblestone 20% | B: change or turn off"
+check "the panel shows the mix's blocks, their percentages and the key line" \
+	eval '[[ $(val 1 panel) == "$panel" ]]'
+keys 1 key F1
+check "the panel hides while the HUD is hidden (F1)" eval 'drv 1 "wait 5" > /dev/null; [[ $(val 1 panel) == hidden ]]'
+keys 1 key F1
+check "and shows again with the HUD" eval 'drv 1 "wait 5" > /dev/null; [[ $(val 1 panel) == "$panel" ]]'
+drv 1 "cmd tp @s 6 -58 -4 0 30" "wait 40" "notoasts" "wait 5" "shot mix-panel" > /dev/null
 
 # With the mix on, each block of a shape comes from the mix: a row of 20 from 3 -60 7 eastward.
 declare -A mix_at
@@ -95,6 +107,10 @@ drv 1 "ebarray 0" "cmd clear @s" "cmd give @s minecraft:cobblestone 5" "cmd give
 	"cmd tp @s 4.5 -60 4.5 0 45" "wait 20" > /dev/null
 for item in iron_pickaxe apple; do
 	drv 1 "cmd item replace entity @s weapon.mainhand with minecraft:$item" "wait 10" > /dev/null
+	check "with the mix on and the $item held, the panel hides" eval '[[ $(val 1 panel) == hidden ]]'
+	if [[ $item == iron_pickaxe ]]; then
+		drv 1 "notoasts" "wait 5" "shot mix-panel-pickaxe" > /dev/null
+	fi
 	use_click 1
 	check "with the mix on and the $item held, the place click draws no ghost block, on both clients" \
 		eval 'drv 1 "wait 20" "await block 4 -60 6 minecraft:air" && drv 2 "await block 4 -60 6 minecraft:air"'
@@ -110,6 +126,7 @@ drv 1 "notoasts" "wait 5" "shot mix-with-apple" > /dev/null
 drv 1 "cmd item replace entity @s weapon.mainhand with minecraft:cobblestone" "ebmode DISABLED" \
 	"cmd tp @s 4.5 -60 8.5 0 45" "wait 20" > /dev/null
 check "in Disable the mix is still on" eval '[[ $(val 1 mix) == on* ]]'
+check "and the panel hides" eval '[[ $(val 1 panel) == hidden ]]'
 use_click 1
 check "in Disable with the mix on, the place click places a real block" drv 1 "await real 4 -60 10 minecraft:cobblestone"
 check "and draws no ghost block, on both clients" \
@@ -122,10 +139,25 @@ check "in Disable with the mix on, the use click opens a door" \
 	eval 'drv 1 "wait 10" > /dev/null; [[ $(val 1 "realstate 30 -60 0") == *open=true* ]]'
 drv 1 "notoasts" "wait 5" "shot disable-with-mix" "ebmode SINGLE" > /dev/null
 
-# B again turns the mix off.
-drv 1 "cmd tp @s 2 -58 -5 0 5" "wait 20" > /dev/null
+# B with the mix on opens the picker on the mix, with a Turn off button, which turns the mix off. The panel, back with
+# cobblestone in hand, hides while the picker is open.
+drv 1 "cmd item replace entity @s weapon.mainhand with minecraft:cobblestone" "cmd tp @s 2 -58 -5 0 5" "wait 20" \
+	> /dev/null
+check "back in Single mode with cobblestone held, the panel shows" eval '[[ $(val 1 panel) == "$panel" ]]'
 keys 1 key b
-check "B turns the mix off, with a message" eval 'client_said 1 "Block mix off." && [[ $(val 1 mix) == off* ]]'
+check "B with the mix on opens the picker" drv 1 "await screen Block mix"
+check "on the mix, 80 cobblestone to 20 mossy cobblestone" \
+	eval '[[ $(val 1 pickermix) == "minecraft:cobblestone:80,minecraft:mossy_cobblestone:20" ]]'
+check "with a Turn off button" eval '[[ $(val 1 texts) == *"Turn off"* ]]'
+check "the panel hides while the picker is open" eval '[[ $(val 1 panel) == hidden ]]'
+check "and the mix stays on until a button is pressed" eval '[[ $(val 1 mix) == on* ]]'
+drv 1 "notoasts" "wait 5" "shot mix-picker-turn-off" > /dev/null
+read -r x y < <(val 1 "widget 0 Turn off")
+click 1 "$x" "$y"
+check "Turn off turns the mix off and closes the picker" \
+	eval 'drv 1 "await noscreen" > /dev/null && [[ $(val 1 mix) == off* ]]'
+check "with a message" client_said 1 "Block mix off."
+check "and the panel hides" eval '[[ $(val 1 panel) == hidden ]]'
 drv 1 "notoasts" "wait 5" "shot mix-off-message" > /dev/null
 
 # What clicks do in Single mode, with the mix off, while the main hand holds a pickaxe, an apple or nothing: each
