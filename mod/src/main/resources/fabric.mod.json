@@ -3,7 +3,7 @@
 	"id": "buildingplanner",
 	"version": "${version}",
 	"name": "Building Planner",
-	"description": "Plan builds together as shared Litematica plans, drawn with Effortless Building's shapes.",
+	"description": "Plan builds together using ghost blocks that everyone on the server can see.",
 	"license": "MIT",
 	"environment": "*",
 	"entrypoints": {
