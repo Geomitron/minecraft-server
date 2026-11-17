@@ -27,6 +27,9 @@ import net.minecraft.world.level.block.state.BlockState;
  *
  * <p>Litematica rebuilds what it draws one chunk column at a time, so an edit writes its blocks into the tile and
  * rebuilds only that column. An edit that needs another height, or empties the column, replaces or removes the tile.
+ *
+ * <p>While the player hides ghost blocks, the tiles stay up to date but out of Litematica, so showing them needs no
+ * reload.
  */
 final class Tiles implements LayerReplica.Listener {
 	/** The name of each tile's placement, schematic and region in Litematica. */
@@ -40,8 +43,14 @@ final class Tiles implements LayerReplica.Listener {
 	private final Long2ObjectOpenHashMap<Tile> tiles = new Long2ObjectOpenHashMap<>();
 	/** Every tile's placement and container, for the hooks that keep tiles out of Litematica's screens and edits. */
 	private final ReferenceOpenHashSet<Object> parts = new ReferenceOpenHashSet<>();
-	/** Whether a tile was added since {@link #takeAdded}. */
+	/** Whether a tile was added to Litematica since {@link #takeAdded}. */
 	private boolean added;
+	/** Whether the tiles are in Litematica, which draws them. */
+	private boolean shown;
+
+	Tiles(boolean shown) {
+		this.shown = shown;
+	}
 
 	@Override
 	public void columnChanged(int chunkX, int chunkZ, LayerColumn column, List<BlockPos> changed) {
@@ -62,7 +71,9 @@ final class Tiles implements LayerReplica.Listener {
 				tile.container().set(pos.getX() & LayerSection.SIDE - 1, pos.getY() - bottom,
 					pos.getZ() & LayerSection.SIDE - 1, state.isAir() ? EMPTY : state);
 			}
-			manager().markChunkForRebuild(chunkX, chunkZ);
+			if (shown) {
+				manager().markChunkForRebuild(chunkX, chunkZ);
+			}
 			return;
 		}
 		if (tile != null) {
@@ -76,8 +87,14 @@ final class Tiles implements LayerReplica.Listener {
 		tiles.put(key, tile);
 		parts.add(tile.placement());
 		parts.add(tile.container());
-		manager().addSchematicPlacement(tile.placement(), false);
-		added = true;
+		if (shown) {
+			manager().addSchematicPlacement(tile.placement(), false);
+			added = true;
+		} else {
+			// Setting the placement up registers its chunks with Litematica (SchematicPlacement.onModified calls
+			// onPostPlacementChange), which draws it though it was never added; removing it releases them.
+			manager().removeSchematicPlacement(tile.placement());
+		}
 	}
 
 	/** Whether the placement or block container is a tile's. */
@@ -91,12 +108,35 @@ final class Tiles implements LayerReplica.Listener {
 
 	private void remove(long key) {
 		Tile tile = tiles.remove(key);
-		manager().removeSchematicPlacement(tile.placement());
+		if (shown) {
+			manager().removeSchematicPlacement(tile.placement());
+		}
 		parts.remove(tile.placement());
 		parts.remove(tile.container());
 	}
 
-	/** Whether a tile was added since the last call, which would draw over the player's copy. */
+	/** Whether ghost blocks show: whether the tiles are in Litematica. */
+	boolean shown() {
+		return shown;
+	}
+
+	/** Shows or hides ghost blocks: puts every tile into Litematica, or takes every tile out. */
+	void setShown(boolean shown) {
+		if (shown == this.shown) {
+			return;
+		}
+		this.shown = shown;
+		for (Tile tile : tiles.values()) {
+			if (shown) {
+				manager().addSchematicPlacement(tile.placement(), false);
+				added = true;
+			} else {
+				manager().removeSchematicPlacement(tile.placement());
+			}
+		}
+	}
+
+	/** Whether a tile was added to Litematica since the last call, which would draw over the player's copy. */
 	boolean takeAdded() {
 		boolean was = added;
 		added = false;
@@ -117,8 +157,10 @@ final class Tiles implements LayerReplica.Listener {
 
 	/** Removes every tile from Litematica, as the player leaves the server. */
 	void clear() {
-		for (Tile tile : tiles.values()) {
-			manager().removeSchematicPlacement(tile.placement());
+		if (shown) {
+			for (Tile tile : tiles.values()) {
+				manager().removeSchematicPlacement(tile.placement());
+			}
 		}
 		tiles.clear();
 		parts.clear();

@@ -4,6 +4,7 @@ import com.mojang.blaze3d.platform.InputConstants;
 import dev.buildingplanner.BuildingPlanner;
 import dev.buildingplanner.ClientConfig;
 import dev.buildingplanner.layer.Layer;
+import dev.buildingplanner.look.GhostsShown;
 import dev.buildingplanner.sync.EditKind;
 import dev.buildingplanner.sync.Payloads;
 import dev.buildingplanner.sync.PlayerMessage;
@@ -42,10 +43,12 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		KeyMapping.Category.register(Identifier.fromNamespaceAndPath(BuildingPlanner.MOD_ID, "main"));
 	private static final KeyMapping BLOCK_MIX =
 		new KeyMapping("key.buildingplanner.block_mix", InputConstants.KEY_B, CATEGORY);
+	static final KeyMapping SHOW_HIDE =
+		new KeyMapping("key.buildingplanner.show_hide", InputConstants.KEY_N, CATEGORY);
 	// Copy and paste. None of these keys is a default key, or in a default key combination, of Minecraft, Litematica,
 	// MaLiLib, Effortless Building or Freecam.
-	private static final KeyMapping COPY = new KeyMapping("key.buildingplanner.copy", InputConstants.KEY_J, CATEGORY);
-	private static final KeyMapping PASTE = new KeyMapping("key.buildingplanner.paste", InputConstants.KEY_K, CATEGORY);
+	static final KeyMapping COPY = new KeyMapping("key.buildingplanner.copy", InputConstants.KEY_J, CATEGORY);
+	static final KeyMapping PASTE = new KeyMapping("key.buildingplanner.paste", InputConstants.KEY_K, CATEGORY);
 	private static final KeyMapping TURN = new KeyMapping("key.buildingplanner.turn", InputConstants.KEY_U, CATEGORY);
 	private static final KeyMapping MIRROR = new KeyMapping("key.buildingplanner.mirror", InputConstants.KEY_H, CATEGORY);
 	private static final KeyMapping CLEAR =
@@ -95,6 +98,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 			HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(BuildingPlanner.MOD_ID, "mix_panel"), mixPanel);
 		}
 		KeyMappingHelper.registerKeyMapping(BLOCK_MIX);
+		KeyMappingHelper.registerKeyMapping(SHOW_HIDE);
 		List.of(COPY, PASTE, TURN, MIRROR, CLEAR).forEach(KeyMappingHelper::registerKeyMapping);
 		glow = EditGlow.registered();
 		ClientPlayNetworking.registerGlobalReceiver(Payloads.Hello.TYPE, (hello, context) -> hello(hello));
@@ -151,6 +155,11 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 					openMix();
 				}
 			}
+			while (SHOW_HIDE.consumeClick()) {
+				if (session != null) {
+					session.toggleGhosts();
+				}
+			}
 			while (COPY.consumeClick()) {
 				if (session != null) {
 					session.copy(PASTE.getTranslatedKeyMessage().getString());
@@ -184,6 +193,10 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 			if (session != null) {
 				session.tick();
 				if (heldClicks != null) {
+					// A shape started while ghost blocks are hidden shows them, so the player sees what it joins.
+					if (EffortlessShapes.shapeUnderWay()) {
+						session.showForDrawing();
+					}
 					heldClicks.tick(client);
 				}
 			}
@@ -198,7 +211,8 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	static void hello(Payloads.Hello hello) {
 		endSession();
 		if (hello.protocolVersion() == Payloads.PROTOCOL_VERSION) {
-			session = new ClientSession(hello.maxEditBlocks(), glow, dimension(Minecraft.getInstance().level), LOADED);
+			session = new ClientSession(hello.maxEditBlocks(), glow, dimension(Minecraft.getInstance().level), LOADED,
+				config, () -> SHOW_HIDE.getTranslatedKeyMessage().getString());
 		} else {
 			BuildingPlanner.LOGGER.warn("The server runs Building Planner protocol {}, this client {}",
 				hello.protocolVersion(), Payloads.PROTOCOL_VERSION);
@@ -226,6 +240,18 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		BlockMixScreen.open(MIX,
 			() -> ClientSession.show(PlayerMessage.mixOn(BLOCK_MIX.getTranslatedKeyMessage().getString())),
 			() -> ClientSession.show(PlayerMessage.mixOff()));
+	}
+
+	/** Whether ghost blocks show for this player, as the switch is set, with or without a session. */
+	public static boolean ghostsShown() {
+		return session == null ? GhostsShown.get(config) : session.ghostsShown();
+	}
+
+	/** The radial menu's show or hide button, as the key: does nothing while Building Planner is off. */
+	public static void toggleGhosts() {
+		if (session != null) {
+			session.toggleGhosts();
+		}
 	}
 
 	/** Whether Building Planner is on for this server, so Effortless Building's hooks draw ghost blocks. */

@@ -128,7 +128,7 @@ drv 1 "window 854 480 2" "wait 20" > /dev/null
 
 xdo 1 keydown Alt_L
 check "the radial menu shows both sliders at their first settings" eval 'drv 1 "await screen Build Modes" > /dev/null &&
-	[[ $(val 1 texts) == "Build speed: 5 blocks/s | Break speed: 3.33 blocks/s" ]]'
+	[[ $(val 1 texts) == "Build speed: 5 blocks/s | Break speed: 3.33 blocks/s | Show or hide ghost blocks" ]]'
 read -r x y < <(val 1 "sliderat 2 Build speed")
 xdo 1 mousemove --window %w "$x" "$y" click 1
 read -r x y < <(val 1 "sliderat 6 Break speed")
@@ -136,7 +136,7 @@ read -r x2 y2 < <(val 1 "sliderat 10 Break speed")
 xdo 1 mousemove --window %w "$x" "$y" mousedown 1 mousemove --window %w $(((x + x2) / 2)) "$y" sleep 0.2 \
 	mousemove --window %w "$x2" "$y2" sleep 0.2 mouseup 1
 check "the click and the drag set them to 10 and 2 blocks a second" \
-	eval '[[ $(val 1 texts) == "Build speed: 10 blocks/s | Break speed: 2 blocks/s" ]]'
+	eval '[[ $(val 1 texts) == "Build speed: 10 blocks/s | Break speed: 2 blocks/s | Show or hide ghost blocks" ]]'
 xdo 1 mousemove --window %w 600 300
 drv 1 "wait 10" "shot radial-moved" > /dev/null
 xdo 1 keyup Alt_L
@@ -172,7 +172,7 @@ check "after a restart, hold to repeat keeps both settings" eval '[[ $(val 1 rep
 drv 1 "cmd tp @s 20 -58 -5 0 30" "wait 20" > /dev/null
 xdo 1 keydown Alt_L
 check "and so do the sliders" eval 'drv 1 "await screen Build Modes" > /dev/null &&
-	[[ $(val 1 texts) == "Build speed: 10 blocks/s | Break speed: 2 blocks/s" ]]'
+	[[ $(val 1 texts) == "Build speed: 10 blocks/s | Break speed: 2 blocks/s | Show or hide ghost blocks" ]]'
 xdo 1 keyup Alt_L
 drv 1 "await noscreen" "ebmode SINGLE" > /dev/null
 check "holding use after the restart sends an edit 4 ticks after it goes down, then every 2 ticks" hold_at 3 use 2
@@ -189,7 +189,7 @@ for slider in "Build speed" "Break speed"; do
 		mousemove --window %w $((x2 + 4)) "$y2" sleep 0.2 mouseup 1
 done
 check "both sliders now read 20 blocks a second" \
-	eval '[[ $(val 1 texts) == "Build speed: 20 blocks/s | Break speed: 20 blocks/s" ]]'
+	eval '[[ $(val 1 texts) == "Build speed: 20 blocks/s | Break speed: 20 blocks/s | Show or hide ghost blocks" ]]'
 xdo 1 keyup Alt_L
 drv 1 "await noscreen" "ebmode SINGLE" > /dev/null
 check "hold to repeat takes a repeat every tick" eval '[[ $(val 1 repeat) == "place=1 erase=1" ]]'

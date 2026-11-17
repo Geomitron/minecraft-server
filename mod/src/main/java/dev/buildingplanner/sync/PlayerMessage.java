@@ -80,6 +80,14 @@ public record PlayerMessage(String key, List<String> args) {
 			: new PlayerMessage(PREFIX + "copy.done", List.of(Integer.toString(blocks), pasteKey));
 	}
 
+	/**
+	 * Ghost blocks were hidden and the player drew, which shows them again; {@code key} is the show or hide key's
+	 * name.
+	 */
+	public static PlayerMessage ghostsShownAgain(String key) {
+		return new PlayerMessage(PREFIX + "ghosts.shown_again", List.of(key));
+	}
+
 	/** The player pressed Paste with no copy; {@code copyKey} is the Copy key's name. */
 	public static PlayerMessage nothingToPaste(String copyKey) {
 		return new PlayerMessage(PREFIX + "paste.nothing", List.of(copyKey));

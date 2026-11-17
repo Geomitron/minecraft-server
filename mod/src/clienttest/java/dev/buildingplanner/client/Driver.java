@@ -440,6 +440,49 @@ public final class Driver implements ClientModInitializer {
 				}
 				return String.join(" | ", texts);
 			}
+			case "buttonlayout" -> {
+				// buttonlayout <A|B|C|D>: the radial menu buttons' layout the menu takes the next time it opens.
+				System.setProperty(RadialMenuWidgets.LAYOUT_PROPERTY, a[1]);
+				return "ok";
+			}
+			case "buttonicons" -> {
+				// buttonicons <lucide|items>: the radial menu buttons' icons the menu takes the next time it opens.
+				System.setProperty(RadialMenuWidgets.ICONS_PROPERTY, a[1]);
+				return "ok";
+			}
+			case "draftbuttons" -> {
+				// draftbuttons <true|false>: whether the menu shows build steps 10 and 11's buttons, which do nothing yet.
+				System.setProperty(RadialMenuWidgets.DRAFT_PROPERTY, a[1]);
+				return "ok";
+			}
+			case "radialclear" -> {
+				// radialclear: "clear" when Building Planner's buttons in the open radial menu meet nothing of the menu's,
+				// the sliders, each other or the screen's edges, else each meeting.
+				return EffortlessDriver.radialConflicts(mc.gui.screen());
+			}
+			case "buttons" -> {
+				// buttons: each of Building Planner's buttons on the open screen as its name and its window box (x y width
+				// height), separated by " | ", for outlining them in a screenshot.
+				double scale = mc.getWindow().getGuiScale();
+				List<String> boxes = new ArrayList<>();
+				for (GuiEventListener child : mc.gui.screen().children()) {
+					if (child instanceof RadialButton w) {
+						boxes.add(w.getMessage().getString() + ": " + scaled(mc, w.getX(), w.getY()) + " "
+							+ (int) (w.getWidth() * scale) + " " + (int) (w.getHeight() * scale));
+					}
+				}
+				return String.join(" | ", boxes);
+			}
+			case "ghosts" -> {
+				// ghosts: whether ghost blocks show, with how many tiles there are and how many placements Litematica has.
+				return (BuildingPlannerClient.ghostsShown() ? "shown, " : "hidden, ") + session().tiles().count()
+					+ " tiles, " + DataManager.getSchematicPlacementManager().getAllSchematicsPlacements().size()
+					+ " placements";
+			}
+			case "toolitem" -> {
+				// toolitem: whether Litematica's tool item is on.
+				return String.valueOf(Configs.Generic.TOOL_ITEM_ENABLED.getBooleanValue());
+			}
 			case "repeat" -> {
 				// repeat: the ticks between repeats that hold to repeat uses now, for placing and for erasing.
 				return "place=" + RepeatSpeed.PLACING.ticks(BuildingPlannerClient.config())

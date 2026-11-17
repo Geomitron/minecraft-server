@@ -48,6 +48,11 @@ public final class EffortlessShapes {
 			BuildModes.CLIENT.getBuildMode() == BuildModeEnum.DISABLED);
 	}
 
+	/** Whether the player has started a shape that isn't finished yet, read once a client tick. */
+	public static boolean shapeUnderWay() {
+		return BuildPipelineClient.getBuildState() != null;
+	}
+
 	/**
 	 * Hook E1: the player finished a shape with the place click. Each valid entry gets the block Effortless Building
 	 * would place: the mix's (set by hook E5) or the held block, by its placement rules with the first click's face,

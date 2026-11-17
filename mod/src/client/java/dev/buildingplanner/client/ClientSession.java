@@ -1,6 +1,9 @@
 package dev.buildingplanner.client;
 
+import dev.buildingplanner.BuildingPlanner;
+import dev.buildingplanner.ClientConfig;
 import dev.buildingplanner.layer.Layer;
+import dev.buildingplanner.look.GhostsShown;
 import dev.buildingplanner.sync.CopyRules;
 import dev.buildingplanner.sync.EditKind;
 import dev.buildingplanner.sync.LayerChange;
@@ -12,11 +15,13 @@ import fi.dy.masa.litematica.selection.AreaSelection;
 import fi.dy.masa.litematica.selection.Box;
 import fi.dy.masa.litematica.util.PositionUtils;
 import it.unimi.dsi.fastutil.longs.LongSet;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Supplier;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
@@ -34,7 +39,7 @@ import net.minecraft.world.level.block.state.BlockState;
 final class ClientSession {
 	private final int maxEditBlocks;
 	private final EditGlow glow;
-	private final Tiles tiles = new Tiles();
+	private final Tiles tiles;
 	private final LayerReplica replica;
 	private final Clipboard clipboard = new Clipboard();
 	private int clientSeq;
@@ -43,14 +48,25 @@ final class ClientSession {
 	 * since Litematica restores each dimension's saved placements when the player enters it.
 	 */
 	private boolean removeOldPlans = true;
+	/** The player's settings, which keep the show or hide switch. */
+	private final ClientConfig config;
+	/** The show or hide key's name, for the message when drawing shows ghost blocks again. */
+	private final Supplier<String> showHideKey;
+	/** Whether drawing has shown hidden ghost blocks again in this session, which says so only the first time. */
+	private boolean toldShownAgain;
 
 	/**
 	 * {@code dimension} is the game's dimension now (null before it has a level), and {@code loadedChunks} the chunks of
-	 * its level already loaded, by {@code Layer.key}.
+	 * its level already loaded, by {@code Layer.key}. Ghost blocks show or stay hidden as {@code config} keeps the
+	 * switch.
 	 */
-	ClientSession(int maxEditBlocks, EditGlow glow, Identifier dimension, LongSet loadedChunks) {
+	ClientSession(int maxEditBlocks, EditGlow glow, Identifier dimension, LongSet loadedChunks, ClientConfig config,
+		Supplier<String> showHideKey) {
 		this.maxEditBlocks = maxEditBlocks;
 		this.glow = glow;
+		this.config = config;
+		this.showHideKey = showHideKey;
+		this.tiles = new Tiles(GhostsShown.get(config));
 		this.replica = new LayerReplica(dimension, tiles);
 		for (long key : loadedChunks) {
 			replica.chunkLoaded(Layer.keyX(key), Layer.keyZ(key));
@@ -108,24 +124,68 @@ final class ClientSession {
 		raiseCopy();
 	}
 
-	/** An edit the server applied: into the copy and the tiles, glowing when someone else made it. */
+	/**
+	 * An edit the server applied: into the copy and the tiles, glowing when someone else made it, while ghost blocks
+	 * show.
+	 */
 	void receive(Payloads.Applied applied) {
 		List<LayerChange> changes = replica.receive(applied);
 		raiseCopy();
 		Minecraft minecraft = Minecraft.getInstance();
-		if (!changes.isEmpty() && minecraft.player != null && !applied.author().equals(minecraft.player.getUUID())) {
+		if (!changes.isEmpty() && tiles.shown() && minecraft.player != null
+			&& !applied.author().equals(minecraft.player.getUUID())) {
 			glow.add(changes.stream().map(LayerChange::pos).toList(), applied.author());
 		}
 	}
 
+	/** Whether ghost blocks show for this player. */
+	boolean ghostsShown() {
+		return tiles.shown();
+	}
+
+	/** The show or hide switch: hides ghost blocks while they show, and shows them while they're hidden. */
+	void toggleGhosts() {
+		setGhostsShown(!tiles.shown());
+	}
+
 	/**
-	 * Sends a shape the player drew as one edit, {@code blocks} being world positions and states in the order drawn
-	 * (air to erase). A shape over the server's block cap isn't sent, with the server's message.
+	 * Shows hidden ghost blocks before the player draws (a shape starting or finishing, or a paste), saying so the first
+	 * time in a session.
+	 */
+	void showForDrawing() {
+		if (tiles.shown()) {
+			return;
+		}
+		setGhostsShown(true);
+		if (!toldShownAgain) {
+			toldShownAgain = true;
+			show(PlayerMessage.ghostsShownAgain(showHideKey.get()));
+		}
+	}
+
+	private void setGhostsShown(boolean shown) {
+		tiles.setShown(shown);
+		if (!shown) {
+			glow.clear();
+		}
+		raiseCopy();
+		try {
+			GhostsShown.set(config, shown);
+		} catch (IOException e) {
+			BuildingPlanner.LOGGER.warn("Couldn't save whether ghost blocks show", e);
+		}
+	}
+
+	/**
+	 * Sends a shape the player drew, or a paste, as one edit, {@code blocks} being world positions and states in the
+	 * order drawn (air to erase), after showing hidden ghost blocks. A shape over the server's block cap isn't sent,
+	 * with the server's message.
 	 */
 	void sendShape(EditKind kind, Map<BlockPos, BlockState> blocks) {
 		if (blocks.isEmpty() || replica.dimension() == null) {
 			return;
 		}
+		showForDrawing();
 		if (blocks.size() > maxEditBlocks) {
 			show(PlayerMessage.tooManyBlocks(blocks.size(), maxEditBlocks));
 			return;

@@ -137,6 +137,8 @@ val() {
 }
 
 failed=0
+# Sections of checks a script leaves for a later build step (step9.sh's pending), which don't run.
+pending_sections=0
 # check <description> <command>...: records PASS or FAIL for the command.
 check() {
 	if "${@:2}" > /dev/null; then
@@ -231,4 +233,8 @@ if ((failed)); then
 	echo "Some checks failed; see checks.log."
 	exit 1
 fi
-echo "All checks passed."
+if ((pending_sections)); then
+	echo "All checks that ran passed; $pending_sections sections wait on later build steps."
+else
+	echo "All checks passed."
+fi
