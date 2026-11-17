@@ -192,7 +192,9 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it, not
 - The material list counts the ghost blocks in an area the player marks with the "Cube" shape, as copy does (672 Q3 A).
 - A key and a button in Effortless Building's menu both show or hide the ghost blocks (672 Q4 C).
 - Drawing a shape while the ghost blocks are hidden shows them again, then draws (672 Q5 C).
-- "Copy real blocks": the "Cube" shape marks real blocks, which become a copy to paste as ghost blocks (672 Q6 B).
+- Copy takes the ghost blocks and the real blocks in its "Cube" box together, as one copy to paste as ghost blocks,
+  with no separate "Copy real blocks" (742 note: "I actually just want one copy operation that copies both at the same
+  time, regardless of what was in the copy box that you drew").
 - The first release of the shared layer moves every current plan into it, including plans players have hidden; where
   plans overlap, the later plan's blocks win (672 Q7 A).
 - While the mix is on, the block mix key (B) opens the mix screen to change the mix; the screen gains a "Turn off"
@@ -216,8 +218,7 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it, not
 - Ghost blocks only add blocks to a build; planning which real blocks to remove waits for a later design (677 Q4 A).
 - Building Planner turns Litematica's tool item off once, since the stick plays no part in planning ("no need for
   Litematica's controls or the stick", 608 note). Geo saw this in 677 without a comment, with the agent's other
-  choices: old plans leave Litematica's list while their files stay; "Copy real blocks" and "Material list" are
-  buttons without keys; the speed sliders run from 1 to 20 blocks a second; the mix panel sits at the right edge;
+  choices: old plans leave Litematica's list while their files stay; "Material list" is a button without a key; the speed sliders run from 1 to 20 blocks a second; the mix panel sits at the right edge;
   Copy switches Effortless Building to "Cube" to mark the area, then back.
 - Building Planner's buttons in the radial menu sit above Effortless Building's wrench, undo and redo, in the same
   columns, with the Turn, Mirror and Clear row above them while a copy exists (729 Q1 B). They act when the player
@@ -229,10 +230,13 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it, not
   pixelated at about the same resolution with black borders. Maybe there's something in my opencode provider that
   can do a good job at this? I'd want to pick from multiple generated options." (729 Q2, over Lucide's line icons
   and Minecraft items). Geo picked each icon from every generated variant (738): show and hide from Set 14, Copy and
-  Paste from Set 16, "Copy real blocks" from Set 18, "Material list" from Set 3, Turn from Set 31, Mirror from Set
-  5 and Clear from Set 6. The buttons use these picks while cleaned-up variations of all but Clear are made, as
-  Geo's notes ask (such as "the lines are inconsistent, and the shapes could be refined"), and Geo picks again.
-  OpenAI's image models join that round, with Geo's OpenRouter account allowing them for the run (738 Q10 A).
+  Paste from Set 16, "Material list" from Set 3, Turn from Set 31, Mirror from Set 5 and Clear from Set 6. The
+  buttons use these picks while cleaned-up variations of all but Clear are made, as Geo's notes ask (such as "the
+  lines are inconsistent, and the shapes could be refined"), and Geo picks again. OpenAI's image models join that
+  round, with Geo's OpenRouter account allowing them for the run (738 Q10 A).
+- Geo approved the texts players see in 0.3.0 as 742 showed them (the chat messages, the button and key names, and
+  the material list's title), other than the texts for Copy, which change with the one Copy above, and with the mod's
+  description in Geo's wording: "Plan builds together using ghost blocks that everyone on the server can see."
 - The shared layer replaces the decisions above that concern separate plans: named plans that move and turn as a whole
   (411 Q1), plan growth (411 Q2), who deletes a plan (411 Q3, 420 Q9), starting a plan with N (420 Q1, 469 Q1), hiding
   a plan with Litematica or Syncmatica (420 Q2, 469 Q2), the paste's target plan (485 Q3), Litematica's Edit Schematic
@@ -286,8 +290,9 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it, not
     with the radial menu's Material list button waiting for a "Cube" box as Copy does; `step9.sh`'s material list
     checks pass).
 12. **Texts for Geo**: every text players see that the steps added or changed (messages, key names, button and slider
-    labels, the panel) goes to Geo as editable text, and Geo's version is built in. Done when the game shows Geo's
-    wording.
+    labels, the panel) goes to Geo as editable text, and Geo's version is built in. Geo's answer (742) also makes Copy
+    take ghost blocks and real blocks together, without "Copy real blocks"; the texts for Copy, and the radial menu
+    without that button, go back to Geo. Done when the game shows Geo's wording.
 13. **The release**, which goes to Geo for approval first: version 0.3.0. On the server, while no one is online, back
     up the world beside the others (`minecraft-backup-<date>-pre-building-planner-0.3.0.tar.gz`), replace the jar,
     remove Syncmatica's jar and restart; the log shows the import's counts. Then the pack: Building Planner 0.3.0 in,
