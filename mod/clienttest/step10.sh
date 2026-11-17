@@ -100,14 +100,38 @@ done
 # The radial menu's sliders, opened with the menu's key (left Alt) held: a click on the placing slider sets 10 blocks
 # a second (2 ticks), and a drag of the erasing slider's handle sets 2 a second (10 ticks).
 drv 1 "ebmode SINGLE" "cmd tp @s 20 -58 -5 0 30" "wait 20" "notoasts" > /dev/null
+
+# radial_at <layout> <width> <height> <gui scale>: opens the radial menu with the sliders in that layout (A wider, B on
+# two lines; see RadialMenuWidgets), in a window of that size at that GUI scale, with the pointer over "Single" (about
+# 33 right of the menu's middle and 35 above it) so its description shows 100 below the middle, and shoots it as
+# radial-<layout>-<width>x<height>. The sliders' boxes go to the log. It fails unless both sliders end above the
+# description and start on the screen.
+radial_at() {
+	local bx by bw bh kx ky kw kh
+	drv 1 "sliderlayout $1" "window $2 $3 $4" "wait 20" > /dev/null
+	xdo 1 keydown Alt_L
+	drv 1 "await screen Build Modes" "wait 10" > /dev/null
+	xdo 1 mousemove --window %w $(($2 / 2 + 33 * $4)) $(($3 / 2 - 35 * $4))
+	drv 1 "wait 10" "notoasts" "shot radial-$1-$2x$3" > /dev/null
+	read -r bx by bw bh < <(val 1 "box Build speed")
+	read -r kx ky kw kh < <(val 1 "box Break speed")
+	echo "  layout $1 at $2x$3, GUI scale $4: the sliders' boxes $bx $by $bw $bh and $kx $ky $kw $kh" >> /out/checks.log
+	xdo 1 keyup Alt_L
+	drv 1 "await noscreen" > /dev/null
+	((ky + kh <= $3 / 2 + 100 * $4 && bx >= 0 && kx >= 0))
+}
+check "in layout B, the sliders end above a mode's description" radial_at B 854 480 2
+check "in layout A, the sliders end above it and stay on the screen" radial_at A 854 480 2
+check "at GUI scale 4, in layout B too" radial_at B 1920 1080 4
+check "and in layout A" radial_at A 1920 1080 4
+# Layout A at 1024 by 768, GUI scale 3: 341 across, about the narrowest GUI at which the menu's buttons fit (334), where
+# the wider sliders run off the screen's left edge. Logged and shot for Geo's choice, not checked.
+radial_at A 1024 768 3 || echo "  layout A at 1024x768 runs off the screen" >> /out/checks.log
+drv 1 "sliderlayout B" "window 854 480 2" "wait 20" > /dev/null
+
 xdo 1 keydown Alt_L
 check "the radial menu shows both sliders at their first settings" eval 'drv 1 "await screen Build Modes" > /dev/null &&
 	[[ $(val 1 texts) == "Build speed: 5 blocks/s | Break speed: 3.33 blocks/s" ]]'
-drv 1 "wait 20" "shot radial-first" > /dev/null
-echo "  the sliders' boxes: $(val 1 "box Build speed") and $(val 1 "box Break speed")" >> /out/checks.log
-# The pointer over "Single", whose description shows under the menu.
-xdo 1 mousemove --window %w 493 170
-drv 1 "wait 10" "shot radial-single-description" > /dev/null
 read -r x y < <(val 1 "sliderat 2 Build speed")
 xdo 1 mousemove --window %w "$x" "$y" click 1
 read -r x y < <(val 1 "sliderat 6 Break speed")

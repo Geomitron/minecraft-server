@@ -455,6 +455,11 @@ public final class Driver implements ClientModInitializer {
 				mc.getTutorial().setStep(TutorialSteps.NONE);
 				return "ok";
 			}
+			case "sliderlayout" -> {
+				// sliderlayout <A|B>: the speed sliders' layout the radial menu takes the next time it opens.
+				System.setProperty(RadialMenuWidgets.LAYOUT_PROPERTY, a[1]);
+				return "ok";
+			}
 			case "window" -> {
 				// window <width> <height> <gui scale>: resizes the window and sets the GUI scale, for screenshots at other
 				// sizes.
