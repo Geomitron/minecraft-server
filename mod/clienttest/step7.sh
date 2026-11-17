@@ -1,54 +1,42 @@
-# Step 7's in-game checks: Effortless Building's shapes drawn into plans, starting on ghost blocks and erasing, the
-# plan a shape goes into, the block-mix picker and its inventory toggle, the mix in shapes and in Litematica's
-# edits, and a client without Effortless Building. Sourced by inside.sh, which provides drv, val, check, keys, click,
-# use_click, attack_click, client_said, start_client and stop_client. Shapes are drawn in Effortless Building's Single
-# mode with its array modifier, with Planner1 looking straight down, so each block's position is known.
+# Step 7's in-game checks: Effortless Building's shapes drawn as ghost blocks, in Single mode with the array modifier
+# and as a Line, starting on ghost blocks and erasing, the block-mix picker and its inventory toggle, the mix in
+# shapes, and a client without Effortless Building. Sourced by inside.sh, which provides drv, val, check, keys, click,
+# use_click, attack_click, client_said, start_client and stop_client. Shapes are drawn with Planner1 looking straight
+# down, so each block's position is known.
 
 check "client 1 starts a session on hello" drv 1 "await session" "await noscreen"
 check "client 2 starts a session on hello" drv 2 "await session" "await noscreen"
 
-# Planner1 starts the plan Hall (2 -60 2 to 8 -57 8); both players stand south of it.
-drv 1 "cmd tp @s 5 -60 -3 0 10" "cmd tp Planner2 6 -60 -3 0 10" "wait 40" "select 2 -60 2 8 -57 8" > /dev/null
-keys 1 key n
-drv 1 "await screen Start a plan" > /dev/null
-keys 1 type Hall
-keys 1 key Return
-check "Planner1 starts Hall and client 2 sees it" \
-	eval 'drv 1 "await placement Hall" && drv 2 "await placement Hall" "await area Hall 0,0,0..6,3,6"'
-
-# A shape goes into the plan it starts in, as ghost blocks for both players, and grows the plan where it crosses the
-# edge: eight stone bricks from 5 -60 5 eastward, past Hall's edge at x 8.
-drv 1 "cmd clear @s" "cmd item replace entity @s weapon.mainhand with minecraft:stone_bricks" "ebmode SINGLE" \
-	"ebarray 7 1 0 0" "cmd tp @s 5 -55 5 0 90" "wait 20" > /dev/null
+# Single mode with the array modifier: eight stone bricks from 5 -60 5 eastward, with Planner2 south of them.
+drv 1 "cmd tp Planner2 6 -60 -3 0 10" "cmd clear @s" "cmd item replace entity @s weapon.mainhand with minecraft:stone_bricks" \
+	"ebmode SINGLE" "ebarray 7 1 0 0" "cmd tp @s 5 -55 5 0 90" "wait 40" > /dev/null
 use_click 1
-check "a shape goes into the plan it starts in, which grows to fit it" drv 1 "await area Hall 0,0,0..10,3,6" \
-	"await block 5 -60 5 minecraft:stone_bricks" "await block 12 -60 5 minecraft:stone_bricks"
-check "client 2 sees the shape at once, glowing with Planner1's name" drv 2 "await area Hall 0,0,0..10,3,6" \
-	"await block 12 -60 5 minecraft:stone_bricks" "await glow Planner1:8" "notoasts" "wait 5" "shot shape-seen"
+check "a shape adds ghost blocks" drv 1 "await block 5 -60 5 minecraft:stone_bricks" "await block 12 -60 5 minecraft:stone_bricks"
+check "client 2 sees the shape at once, glowing with Planner1's name" drv 2 "await block 12 -60 5 minecraft:stone_bricks" \
+	"await glow Planner1:8" "notoasts" "wait 5" "shot shape-seen"
 check "the shape placed no real blocks" eval '[[ $(val 1 "real 5 -60 5") == minecraft:air ]]'
 drv 1 "cmd tp @s 2 -58 -5 0 5" "wait 40" "notoasts" "wait 5" "shot shape-drawn" > /dev/null
 
-# A shape can start on a plan's ghost block: a click on the ghost block at 8 -60 5 puts the block on top of it, and
-# the break click erases it again, leaving the real ground.
+# A shape can start on a ghost block: a click on the ghost block at 8 -60 5 puts the block on top of it, and the break
+# click erases it again, leaving the real ground.
 drv 1 "ebarray 0" "cmd tp @s 8 -55 5 0 90" "wait 20" > /dev/null
 use_click 1
 check "a shape started on a ghost block goes on top of it" \
 	eval 'drv 1 "await block 8 -59 5 minecraft:stone_bricks" && drv 2 "await block 8 -59 5 minecraft:stone_bricks"'
 attack_click 1
-check "the break click erases the ghost block from the plan" \
+check "the break click erases the ghost block" \
 	eval 'drv 1 "await block 8 -59 5 minecraft:air" && drv 2 "await block 8 -59 5 minecraft:air"'
 check "and leaves the real blocks" eval 'drv 1 "await real 8 -61 5 minecraft:grass_block" "await block 8 -60 5 minecraft:stone_bricks"'
 
-# A shape that starts outside every plan goes into the plan selected in Litematica; with none selected, the player
-# gets a message.
-drv 1 "selectplacement" "cmd tp @s 20 -55 5 0 90" "wait 20" > /dev/null
+# A Line: the first click on the ground at 5 -61 9, the second with Planner1 above 10 -60 9.
+drv 1 "ebmode LINE" "cmd tp @s 5 -55 9 0 90" "wait 20" > /dev/null
 use_click 1
-check "outside every plan, with none selected, the shape gives a message" \
-	client_said 1 "Start the shape inside a plan, or select a plan in Litematica first."
-drv 1 "notoasts" "wait 5" "shot no-plan-message" "selectplacement Hall" > /dev/null
+drv 1 "cmd tp @s 10 -55 9 0 90" "wait 20" > /dev/null
 use_click 1
-check "with Hall selected, the shape goes into Hall, which grows to fit it" \
-	eval 'drv 1 "await area Hall 0,0,0..18,3,6" "await block 20 -60 5 minecraft:stone_bricks" && drv 2 "await block 20 -60 5 minecraft:stone_bricks"'
+check "a Line adds its ghost blocks on both clients" eval 'drv 1 "await block 5 -60 9 minecraft:stone_bricks" \
+	"await block 10 -60 9 minecraft:stone_bricks" && drv 2 "await block 5 -60 9 minecraft:stone_bricks" "await block 10 -60 9 minecraft:stone_bricks"'
+check "and no real blocks" eval '[[ $(val 1 "real 7 -60 9") == minecraft:air ]]'
+drv 1 "ebmode SINGLE" > /dev/null
 
 # The block-mix picker: B opens it with every block; the toggle limits it to the player's inventory, cobblestone and
 # mossy cobblestone; Planner1 picks both, at 80 to 20, and turns the mix on.
@@ -100,12 +88,6 @@ check "and on client 2" row_is_mix 2
 drv 1 "cmd tp Planner2 12 -56 -6 0 20" > /dev/null
 drv 2 "wait 40" "notoasts" "wait 5" "shot mix-shape-seen" > /dev/null
 
-# Litematica's place uses the mix too: the block placed at 4 -59 4 (plan position 2 1 2) is the mix's block there.
-expected=$(val 1 "mixat 2 1 2")
-drv 1 "place 4 -59 4 minecraft:stone" > /dev/null
-check "Litematica's place takes the mix's block, on both clients" \
-	eval 'drv 1 "await block 4 -59 4 $expected" && drv 2 "await block 4 -59 4 $expected"'
-
 # The mix applies only while the main hand holds a block. With the mix on, a pickaxe or an apple in hand draws no ghost
 # block with the place click, and an apple's break click breaks the real block as without mods. Planner1 stands within
 # vanilla's reach (5 blocks) of it and looks down 45 degrees south, at the real ground at 4 -61 6.
@@ -154,11 +136,8 @@ start_client 2 effortless-building
 check "client 2 without Effortless Building starts a session" drv 2 "await session" "await noscreen"
 check "and loaded without Effortless Building or mixin errors" eval \
 	'! grep -qE "^\s+- effortlessbuilding " /out/client2.log && ! grep -qiE "InvalidInjection|Mixin apply.*failed|MixinApplyError" /out/client2.log'
-drv 2 "await placement Hall" > /dev/null
-drv 2 "place 6 -58 6 minecraft:glowstone" > /dev/null
-check "its Litematica edits reach client 1" drv 1 "await block 6 -58 6 minecraft:glowstone"
-drv 1 "fill 3 -58 3 3 -57 3 minecraft:oak_planks" > /dev/null
-check "and client 1's edits reach it" drv 2 "await block 3 -57 3 minecraft:oak_planks"
+drv 1 "edit 6 -58 6 6 -58 6 minecraft:glowstone" > /dev/null
+check "and keeps receiving client 1's edits" drv 2 "await block 6 -58 6 minecraft:glowstone"
 keys 2 key b
 check "its block-mix picker opens" drv 2 "await screen Block mix"
 drv 2 "close" > /dev/null

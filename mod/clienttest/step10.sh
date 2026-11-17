@@ -49,14 +49,8 @@ hold_ok() {
 	[[ -z $gaps ]] || [[ $(tr ',' '\n' <<< "$gaps" | sort -u) == "$3" ]]
 }
 
-# Planner1 starts the plan Yard (0 -60 2 to 40 -57 8); both players stand south of it.
-drv 1 "cmd tp @s 5 -60 -3 0 10" "cmd tp Planner2 6 -60 -3 0 10" "wait 40" "select 0 -60 2 40 -57 8" > /dev/null
-keys 1 key n
-drv 1 "await screen Start a plan" > /dev/null
-keys 1 type Yard
-keys 1 key Return
-check "Planner1 starts Yard and client 2 sees it" \
-	eval 'drv 1 "await placement Yard" && drv 2 "await placement Yard"'
+# Both players stand south of the row.
+drv 1 "cmd tp @s 5 -60 -3 0 10" "cmd tp Planner2 6 -60 -3 0 10" "wait 40" > /dev/null
 
 # Holding the use button in Single mode keeps placing: stone bricks in a row, one new block each repeat.
 drv 1 "cmd clear @s" "cmd item replace entity @s weapon.mainhand with minecraft:stone_bricks" "ebmode SINGLE" \
@@ -68,7 +62,7 @@ echo "  hold use: $placed_log" >> /out/checks.log
 check "holding use sends an edit when it goes down and every 4 ticks after" hold_ok "$placed_log" use 4
 placed=${placed_log#*edits=}
 placed=${placed%% *}
-check "each repeat put a ghost block in the plan, on client 1 and on client 2" eval \
+check "each repeat put a ghost block in the row, on client 1 and on client 2" eval \
 	'drv 1 "await block 2 -60 5 minecraft:stone_bricks" > /dev/null &&
 	 [[ $(val 1 "countblocks 2 40 -60 5 minecraft:stone_bricks") == '"$placed"' ]] &&
 	 [[ $(val 2 "countblocks 2 40 -60 5 minecraft:stone_bricks") == '"$placed"' ]]'
@@ -76,7 +70,7 @@ check "and placed no real block" eval '[[ $(val 1 "real 2 -60 5") == minecraft:a
 drv 1 "cmd tp @s 20 -55 -5 0 40" "wait 20" "notoasts" "wait 5" "shot hold-placed" > /dev/null
 
 # Holding the attack button keeps erasing: the whole row is filled first, so every repeat has a block to erase.
-drv 1 "fill 2 -60 5 40 -60 5 minecraft:stone_bricks" "await block 40 -60 5 minecraft:stone_bricks" \
+drv 1 "edit 2 -60 5 40 -60 5 minecraft:stone_bricks" "await block 40 -60 5 minecraft:stone_bricks" \
 	"cmd tp @s 2.5 -55 5.5 0 90" "wait 30" "holdreset" > /dev/null
 hold_while_walking 1
 drv 1 "wait 20" > /dev/null
