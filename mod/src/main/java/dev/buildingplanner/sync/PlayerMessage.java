@@ -112,4 +112,14 @@ public record PlayerMessage(String key, List<String> args) {
 	public static PlayerMessage nothingToPaste(String copyKey) {
 		return new PlayerMessage(PREFIX + "paste.nothing", List.of(copyKey));
 	}
+
+	/** The material list waits for a box around ghost blocks. */
+	public static PlayerMessage drawBoxToList() {
+		return new PlayerMessage(PREFIX + "material_list.draw_box", List.of());
+	}
+
+	/** The box drawn for the material list holds no ghost blocks. */
+	public static PlayerMessage nothingToList() {
+		return new PlayerMessage(PREFIX + "material_list.nothing", List.of());
+	}
 }

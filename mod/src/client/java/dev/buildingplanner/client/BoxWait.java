@@ -5,10 +5,10 @@ import nl.requios.effortlessbuilding.buildmode.BuildModes;
 import nl.requios.effortlessbuilding.buildpipeline.BuildPipelineClient;
 
 /**
- * Copy and "Copy real blocks" waiting for a box drawn with Effortless Building's "Cube" shape: the wait switches
- * Effortless Building to "Cube", remembering the player's mode, and puts that mode back when the box is drawn or the
- * wait is stopped. Choosing another mode ends the wait and keeps that mode. Only made with Effortless Building loaded,
- * whose classes it uses; its methods take and return none of them.
+ * Copy, "Copy real blocks" and the material list waiting for a box drawn with Effortless Building's "Cube" shape: the
+ * wait switches Effortless Building to "Cube", remembering the player's mode, and puts that mode back when the box is
+ * drawn or the wait is stopped. Choosing another mode ends the wait and keeps that mode. Only made with Effortless
+ * Building loaded, whose classes it uses; its methods take and return none of them.
  */
 final class BoxWait {
 	/** What the box is for. */
@@ -16,7 +16,9 @@ final class BoxWait {
 		/** The ghost blocks in the box become the copy. */
 		COPY,
 		/** The real blocks in the box become the copy. */
-		COPY_REAL
+		COPY_REAL,
+		/** Litematica's material list opens for the ghost blocks in the box. */
+		MATERIAL_LIST
 	}
 
 	private Purpose purpose;

@@ -17,8 +17,8 @@ public final class ClickRule {
 	/** Whether the pick under way leaves Effortless Building's reach out (hook E15). Only the client thread uses it. */
 	private static boolean vanillaPick;
 	/**
-	 * Whether Copy or "Copy real blocks" waits for a box drawn with Effortless Building's "Cube" shape, which any held
-	 * item, or none, then draws (hooks E13 to E15).
+	 * Whether Copy, "Copy real blocks" or the material list waits for a box drawn with Effortless Building's "Cube"
+	 * shape, which any held item, or none, then draws (hooks E13 to E15).
 	 */
 	private static boolean boxAwaited;
 
@@ -41,7 +41,7 @@ public final class ClickRule {
 		return player != null && placeable(player.getMainHandItem());
 	}
 
-	/** Whether a box is awaited for a copy, so any held item, or none, draws the cube. */
+	/** Whether a box is awaited, so any held item, or none, draws the cube. */
 	public static boolean boxAwaited() {
 		return boxAwaited;
 	}

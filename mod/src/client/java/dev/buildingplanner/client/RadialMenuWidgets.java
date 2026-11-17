@@ -29,12 +29,12 @@ import net.minecraft.resources.Identifier;
  * <p>Building Planner's buttons ({@link RadialButton}) sit above the wrench, undo and redo, in the same columns (middles
  * 157, 131 and 105 left of the menu's middle), in rows 39 and 65 above the middle: "Show or hide ghost blocks", Copy and
  * Paste, then "Copy real blocks" and "Material list"; and in the row 91 above the middle, Turn, Mirror and Clear, which
- * show only while a copy exists. Each does what its key does. "Material list" comes with build step 11; until then it
- * shows, doing nothing, only while the development system property {@value #DRAFT_PROPERTY} is {@code true}, which
- * also shows Turn, Mirror and Clear without a copy. Each icon is a texture of its own ({@link RadialButton#icon}).
+ * show only while a copy exists, or while the development system property {@value #ALL_BUTTONS_PROPERTY} is
+ * {@code true}, so the in-game checks can place all eight. Each does what its key does; "Material list" has no key.
+ * Each icon is a texture of its own ({@link RadialButton#icon}).
  */
 public final class RadialMenuWidgets {
-	static final String DRAFT_PROPERTY = "buildingplanner.draftButtons";
+	static final String ALL_BUTTONS_PROPERTY = "buildingplanner.allButtons";
 	/** Where the sliders end, from the middle: just outside the menu's ring. */
 	private static final int RIGHT = -65;
 	private static final int SLIDERS_TOP = 29;
@@ -69,9 +69,9 @@ public final class RadialMenuWidgets {
 			new RepeatSlider(x, top, sliderWidth, HEIGHT, RepeatSpeed.PLACING, BUILD, BuildingPlannerClient.config()),
 			new RepeatSlider(x, top + HEIGHT + SLIDER_GAP, sliderWidth, HEIGHT, RepeatSpeed.ERASING, BREAK,
 				BuildingPlannerClient.config())));
-		boolean draft = Boolean.getBoolean(DRAFT_PROPERTY);
 		BooleanSupplier always = () -> true;
-		BooleanSupplier withCopy = draft ? always : BuildingPlannerClient::copyExists;
+		BooleanSupplier withCopy = Boolean.getBoolean(ALL_BUTTONS_PROPERTY) ? always
+			: BuildingPlannerClient::copyExists;
 		widgets.add(button(width, height, SLOTS[0], Component.translatable(BuildingPlannerClient.SHOW_HIDE.getName()),
 			BuildingPlannerClient.SHOW_HIDE, () -> BuildingPlannerClient.ghostsShown() ? SHOWN : HIDDEN,
 			BuildingPlannerClient::toggleGhosts, always));
@@ -81,11 +81,8 @@ public final class RadialMenuWidgets {
 			BuildingPlannerClient.PASTE, () -> PASTE, BuildingPlannerClient::paste, always));
 		widgets.add(button(width, height, SLOTS[3], Component.translatable("buildingplanner.ui.radial.copy_real"),
 			BuildingPlannerClient.COPY_REAL, () -> COPY_REAL, BuildingPlannerClient::copyReal, always));
-		if (draft) {
-			widgets.add(button(width, height, SLOTS[4],
-				Component.translatable("buildingplanner.ui.radial.material_list"), null, () -> MATERIAL_LIST, () -> {
-				}, always));
-		}
+		widgets.add(button(width, height, SLOTS[4], Component.translatable("buildingplanner.ui.radial.material_list"),
+			null, () -> MATERIAL_LIST, BuildingPlannerClient::materialList, always));
 		widgets.add(button(width, height, SLOTS[5], Component.translatable(BuildingPlannerClient.TURN.getName()),
 			BuildingPlannerClient.TURN, () -> TURN, BuildingPlannerClient::turnCopy, withCopy));
 		widgets.add(button(width, height, SLOTS[6], Component.translatable(BuildingPlannerClient.MIRROR.getName()),

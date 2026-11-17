@@ -84,8 +84,8 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	/** The mix panel; null without Effortless Building, whose mode the mix rule reads. */
 	private static MixPanel mixPanel;
 	/**
-	 * Copy and "Copy real blocks" waiting for a box drawn with Effortless Building's "Cube" shape; null without
-	 * Effortless Building, whose classes it uses, so neither copies then.
+	 * Copy, "Copy real blocks" and the material list waiting for a box drawn with Effortless Building's "Cube" shape;
+	 * null without Effortless Building, whose classes it uses, so none of them takes a box then.
 	 */
 	private static BoxWait boxWait;
 
@@ -278,6 +278,15 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		awaitBox(BoxWait.Purpose.COPY_REAL);
 	}
 
+	/**
+	 * The radial menu's "Material list" button: as {@link #copy()}, for a box whose ghost blocks Litematica's material
+	 * list then counts.
+	 */
+	static void materialList() {
+		awaitBox(BoxWait.Purpose.MATERIAL_LIST);
+	}
+
+	/** Starts waiting for a box, with its message, or stops a wait under way, whatever it was for. */
 	private static void awaitBox(BoxWait.Purpose purpose) {
 		if (session == null || boxWait == null) {
 			return;
@@ -287,15 +296,22 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 			return;
 		}
 		boxWait.start(purpose);
-		ClientSession.show(purpose == BoxWait.Purpose.COPY ? PlayerMessage.drawBoxToCopy()
-			: PlayerMessage.drawBoxToCopyReal());
+		ClientSession.show(switch (purpose) {
+			case COPY -> PlayerMessage.drawBoxToCopy();
+			case COPY_REAL -> PlayerMessage.drawBoxToCopyReal();
+			case MATERIAL_LIST -> PlayerMessage.drawBoxToList();
+		});
 	}
 
-	/** Hooks E1 and E2: the box awaited for a copy, by its lowest and highest corners. */
+	/** Hooks E1 and E2: the box awaited, by its lowest and highest corners. */
 	public static void boxDrawn(BlockPos min, BlockPos max) {
-		if (session != null && boxWait != null && boxWait.purpose() != null) {
-			boolean real = boxWait.take() == BoxWait.Purpose.COPY_REAL;
-			session.copy(min, max, real, PASTE.getTranslatedKeyMessage().getString());
+		if (session == null || boxWait == null || boxWait.purpose() == null) {
+			return;
+		}
+		switch (boxWait.take()) {
+			case COPY -> session.copy(min, max, false, PASTE.getTranslatedKeyMessage().getString());
+			case COPY_REAL -> session.copy(min, max, true, PASTE.getTranslatedKeyMessage().getString());
+			case MATERIAL_LIST -> session.materialList(min, max);
 		}
 	}
 

@@ -10,6 +10,9 @@ import dev.buildingplanner.sync.LayerChange;
 import dev.buildingplanner.sync.LayerReplica;
 import dev.buildingplanner.sync.Payloads;
 import dev.buildingplanner.sync.PlayerMessage;
+import fi.dy.masa.litematica.data.DataManager;
+import fi.dy.masa.litematica.gui.GuiMaterialList;
+import fi.dy.masa.malilib.gui.GuiBase;
 import it.unimi.dsi.fastutil.longs.LongSet;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -241,6 +244,25 @@ final class ClientSession {
 		if (clipboard.exists()) {
 			show(PlayerMessage.copied(blocks.size(), pasteKey));
 		}
+	}
+
+	/**
+	 * Opens Litematica's material list for the ghost blocks in the box from {@code min} to {@code max}, after showing
+	 * hidden ghost blocks, and makes it the list Litematica's own material list key opens. A box with no ghost blocks
+	 * opens nothing, with a message.
+	 */
+	void materialList(BlockPos min, BlockPos max) {
+		if (replica.dimension() == null) {
+			return;
+		}
+		showForDrawing();
+		GhostMaterialList list = new GhostMaterialList(replica.dimension(), min, max);
+		if (list.getCountTotal() == 0) {
+			show(PlayerMessage.nothingToList());
+			return;
+		}
+		DataManager.setMaterialList(list);
+		GuiBase.openGui(new GuiMaterialList(list));
 	}
 
 	/** Pastes the copy as one shape edit. It names only the copy's blocks, so its empty space leaves the layer's. */

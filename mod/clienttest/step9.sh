@@ -1,8 +1,7 @@
 # Step 9's in-game checks: showing and hiding ghost blocks with N and the radial menu's button, drawing while they're
-# hidden, the choice kept across a restart, where the radial menu's buttons sit, with screenshots, and copy and
-# paste. Below them, build step 11's checks (the material list), which don't run until that step builds them, and the
-# keys on a server without Building Planner. Sourced by inside.sh, which provides drv, val, check, keys,
-# xdo, click, use_click, attack_click, client_said, start_server, stop_server, start_client, stop_client,
+# hidden, the choice kept across a restart, where the radial menu's buttons sit, with screenshots, copy and paste, the
+# material list, and the keys on a server without Building Planner. Sourced by inside.sh, which provides drv, val,
+# check, keys, xdo, click, use_click, attack_click, client_said, start_server, stop_server, start_client, stop_client,
 # no_planner_message and $ADDON. Players stand on the flat world's grass, whose top is at y -61.
 
 check "client 1 starts a session on hello" drv 1 "await session" "await noscreen"
@@ -27,14 +26,6 @@ state_has() {
 # shot <client> <name>: a screenshot with the game's pop-ups cleared, written before the call returns.
 shot() {
 	drv "$1" "notoasts" "wait 5" "shot $2" "wait 20" > /dev/null
-}
-
-# pending <step> <what>: the checks it guards belong to build step <step>, which isn't built yet. They don't run, and
-# are logged as failing until that step builds them and takes this out.
-pending() {
-	echo "FAIL (until build step $1) $2: not run" | tee -a /out/checks.log
-	pending_sections=$((pending_sections + 1))
-	return 1
 }
 
 # chat_count <client> <text>: how many lines of that client's chat have been exactly the text.
@@ -171,8 +162,8 @@ check "after a restart, client 1 starts a session with ghost blocks still hidden
 press 1 n
 check "and N shows them" drv 1 "await block 4 -59 3 minecraft:glowstone"
 
-# Where the radial menu's buttons sit, with build steps 10 and 11's buttons shown too, in Circle mode, whose options
-# fill two rows right of the ring, set before each opening since letting the key go over "Single" chooses it.
+# Where the radial menu's buttons sit, with Turn, Mirror and Clear shown too, without a copy, in Circle mode, whose
+# options fill two rows right of the ring, set before each opening since letting the key go over "Single" chooses it.
 # radial_shot <width> <height> <gui scale> <name> opens the menu in a window of that size at that GUI scale, with the
 # pointer over "Single" (about 33 right of the menu's middle and 35 above it) so its name and description show, and
 # shoots it as <name>. The buttons' boxes go to the log, for outlining. It fails unless the buttons meet nothing the
@@ -190,15 +181,15 @@ radial_shot() {
 	[[ $result == clear ]]
 }
 # With ghost blocks hidden, so these shots and the hover shots below show every icon between them.
-drv 1 "draftbuttons true" "cmd tp @s 20.5 -58 -2.5 0 40" "wait 20" > /dev/null
+drv 1 "allbuttons true" "cmd tp @s 20.5 -58 -2.5 0 40" "wait 20" > /dev/null
 press 1 n
-check "the buttons meet nothing at 854 by 480, GUI scale 2" radial_shot 854 480 2 radial-draft-854x480-gui2
-check "nor at 1920 by 1080, GUI scale 2" radial_shot 1920 1080 2 radial-draft-1920x1080-gui2
-check "nor at GUI scale 4" radial_shot 1920 1080 4 radial-draft-1920x1080-gui4
+check "the buttons meet nothing at 854 by 480, GUI scale 2" radial_shot 854 480 2 radial-all-854x480-gui2
+check "nor at 1920 by 1080, GUI scale 2" radial_shot 1920 1080 2 radial-all-1920x1080-gui2
+check "nor at GUI scale 4" radial_shot 1920 1080 4 radial-all-1920x1080-gui4
 press 1 n
-# The show or hide button's hover text, with only the buttons built so far. The pointer leaves the button before the
+# The show or hide button's hover text, without a copy's buttons. The pointer leaves the button before the
 # key is let go, so closing the menu leaves ghost blocks shown.
-drv 1 "draftbuttons false" "ebmode SINGLE" > /dev/null
+drv 1 "allbuttons false" "ebmode SINGLE" > /dev/null
 for scale in 2 4; do
 	drv 1 "window 1920 1080 $scale" "wait 20" > /dev/null
 	radial_open
@@ -457,11 +448,84 @@ check "and choosing another mode ends the wait, keeping that mode" eval '[[ $(va
 drv 1 "ebmode SINGLE" "fly false" > /dev/null
 drv 2 "fly false" > /dev/null
 
-# The material list for a box drawn with the "Cube" shape, and its radial menu button: build step 11 writes these, as
-# the spec's list of step9.sh's checks describes them.
-if pending 11 "the material list"; then
-	:
-fi
+# The material list. Its radial menu button's hover text, shot at 1920 by 1080, GUI scales 2 and 4; the pointer leaves
+# the button before the key is let go, so closing the menu starts no wait.
+for scale in 2 4; do
+	drv 1 "window 1920 1080 $scale" "wait 20" > /dev/null
+	radial_open
+	radial_point "Material list"
+	drv 1 "wait 10" "notoasts" "shot radial-material-list-hover-1920x1080-gui$scale" > /dev/null
+	echo "  radial-material-list-hover-1920x1080-gui$scale buttons: $(val 1 buttons)" >> /out/checks.log
+	xdo 1 mousemove --window %w 5 5
+	radial_let_go
+done
+check "the hover shots start no wait" eval '[[ $(val 1 boxwait) == "false SINGLE" ]]'
+drv 1 "window 854 480 2" "wait 20" > /dev/null
+
+# A row of 10 ghost stone bricks, 4 of them built for real. Both players fly again, lifted first.
+drv 1 "cmd tp @s 24.5 -51 -4.5 180 30" "cmd tp Planner2 24.5 -51 -3.5 180 30" "wait 40" "fly true" > /dev/null
+drv 2 "fly true" > /dev/null
+drv 1 "cmd tp @s 24.5 -56 -4.5 180 30" "edit 20 -60 -10 29 -60 -10 minecraft:stone_bricks" \
+	"cmd fill 20 -60 -10 23 -60 -10 minecraft:stone_bricks" "wait 40" > /dev/null
+check "the row shows, 4 of its bricks real" eval 'drv 1 "await block 29 -60 -10 minecraft:stone_bricks" > /dev/null &&
+	[[ $(val 1 "real 23 -60 -10") == minecraft:stone_bricks ]] && [[ $(val 1 "real 24 -60 -10") == minecraft:air ]]'
+
+# A copy of the row, which follows the aim over the box below, and ghost blocks hidden.
+press 1 j
+cube 1 20 -60 -10 29 -10 -60
+check "a copy of the row" client_said 1 "Copied 10 blocks. Press K to paste them."
+press 1 n
+check "ghost blocks are hidden" eval 'drv 1 "wait 5" > /dev/null && [[ $(val 1 ghosts) == "hidden, "* ]]'
+
+# Letting the menu's key go over its Material list button waits for a box, with a message; a cube two blocks high
+# around the row, starting on its first real brick, opens Litematica's material list. The list's screen takes the
+# button from the game as it opens, so the game never sees the third click held: it's a plain press, held for 10 ticks.
+radial_open
+radial_point "Material list"
+radial_let_go
+check "letting the menu's key go over its Material list button waits for a box in Cube mode" eval \
+	'[[ $(val 1 boxwait) == "true CUBE" ]]'
+check "with a message" client_said 1 "Draw a box around the ghost blocks to list their materials."
+drv 1 "lookat 20.5 -59 -9.5" "wait 5" > /dev/null
+use_click 1
+drv 1 "lookat 29.5 -60 -9.5" "wait 5" > /dev/null
+use_click 1
+drv 1 "lookat 29 -58.5 -10" "wait 10" > /dev/null
+xdo 1 mousedown 3
+drv 1 "wait 10" > /dev/null
+xdo 1 mouseup 3
+drv 1 "wait 10" > /dev/null
+echo "  the material list: $(val 1 matlist); the copy: $(val 1 copy)" >> /out/checks.log
+check "the cube opens Litematica's material list: 10 stone bricks in all, 6 missing" eval '[[ $(val 1 matlist) == \
+	"open Material list for the ghost blocks in the box: total 10 missing 6 wrong 0 | minecraft:stone_bricks 10/6" ]]'
+check "ghost blocks show first" eval '[[ $(val 1 ghosts) == "shown, "* ]]'
+check "the cube places and erases nothing, and puts back the player's mode" eval '
+	[[ $(val 1 "real 24 -60 -10") == minecraft:air ]] && [[ $(val 1 "real 20 -59 -10") == minecraft:air ]] &&
+	[[ $(val 1 "layer 20 -60 -10") == minecraft:stone_bricks ]] && [[ $(val 1 boxwait) == "false SINGLE" ]]'
+check "and leaves the copy" copy_is 1 " 10 blocks$"
+for scale in 2 4; do
+	drv 1 "window 1920 1080 $scale" "wait 20" "notoasts" "shot material-list-1920x1080-gui$scale" > /dev/null
+done
+drv 1 "window 854 480 2" "wait 20" "close" "wait 5" > /dev/null
+
+# A box with no ghost blocks opens nothing, with a message; the Material list button during a Copy wait stops it.
+# The box is the one "J over no ghost blocks" draws, from 42 -61 42 to 40 -60 40.
+press 1 Delete
+drv 1 "cmd tp @s 45.5 -57 45.5 0 30" "wait 40" > /dev/null
+radial_open
+radial_click "Material list"
+radial_let_go
+cube 1 42 -61 42 40 40 -60
+check "a box with no ghost blocks gives a message" client_said 1 "There are no ghost blocks in that box to list."
+check "and opens nothing" eval 'drv 1 "wait 10" > /dev/null && [[ $(val 1 matlist) == closed:* ]]'
+press 1 j
+radial_open
+radial_click "Material list"
+check "the Material list button during a Copy wait stops it, starting no other" eval \
+	'[[ $(val 1 boxwait) == "false SINGLE" ]]'
+radial_let_go
+drv 1 "fly false" > /dev/null
+drv 2 "fly false" > /dev/null
 
 # On the same server with Building Planner left out, the six keys do nothing.
 stop_client 1

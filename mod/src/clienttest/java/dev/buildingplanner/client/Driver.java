@@ -7,7 +7,10 @@ import dev.buildingplanner.sync.SyncLimits;
 import fi.dy.masa.litematica.config.Configs;
 import fi.dy.masa.litematica.data.DataManager;
 import fi.dy.masa.litematica.data.SchematicHolder;
+import fi.dy.masa.litematica.gui.GuiMaterialList;
 import fi.dy.masa.litematica.gui.GuiSchematicPlacementsList;
+import fi.dy.masa.litematica.materials.MaterialListBase;
+import fi.dy.masa.litematica.materials.MaterialListEntry;
 import fi.dy.masa.litematica.render.LitematicaRenderer;
 import fi.dy.masa.litematica.render.OverlayRenderer;
 import fi.dy.masa.litematica.schematic.LitematicaSchematic;
@@ -38,6 +41,7 @@ import net.minecraft.client.Screenshot;
 import net.minecraft.client.tutorial.TutorialSteps;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.events.GuiEventListener;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.commands.arguments.EntityAnchorArgument;
 import net.minecraft.commands.arguments.blocks.BlockStateParser;
@@ -190,12 +194,30 @@ public final class Driver implements ClientModInitializer {
 				return "ok";
 			}
 			case "boxwait" -> {
-				// boxwait: whether Copy or "Copy real blocks" waits for a box, and Effortless Building's mode now.
+				// boxwait: whether Copy, "Copy real blocks" or the material list waits for a box, and Effortless
+				// Building's mode now.
 				return ClickRule.boxAwaited() + " " + EffortlessDriver.mode();
 			}
 			case "presses" -> {
 				// presses: how many key and mouse button presses the game has handled, for "await pressedafter".
 				return String.valueOf(SentPackets.presses());
+			}
+			case "matlist" -> {
+				// matlist: Litematica's material list as the title of the open screen when it's the list, or "closed",
+				// then its counts ("total 10 missing 6 wrong 0") and each entry's item, total and missing.
+				Screen screen = mc.gui.screen();
+				MaterialListBase list = DataManager.getMaterialList();
+				StringBuilder out = new StringBuilder(screen instanceof GuiMaterialList open
+					? "open " + open.getMaterialList().getTitle() : "closed");
+				if (list != null) {
+					out.append(": total ").append(list.getCountTotal()).append(" missing ")
+						.append(list.getCountMissing()).append(" wrong ").append(list.getCountMismatched());
+					for (MaterialListEntry entry : list.getMaterialsAll()) {
+						out.append(" | ").append(BuiltInRegistries.ITEM.getKey(entry.getStack().getItem())).append(' ')
+							.append(entry.getCountTotal()).append('/').append(entry.getCountMissing());
+					}
+				}
+				return out.toString();
 			}
 			case "placements" -> {
 				List<String> names = new ArrayList<>();
@@ -449,9 +471,9 @@ public final class Driver implements ClientModInitializer {
 				}
 				return String.join(" | ", texts);
 			}
-			case "draftbuttons" -> {
-				// draftbuttons <true|false>: whether the menu shows build steps 10 and 11's buttons, which do nothing yet.
-				System.setProperty(RadialMenuWidgets.DRAFT_PROPERTY, a[1]);
+			case "allbuttons" -> {
+				// allbuttons <true|false>: whether the menu shows Turn, Mirror and Clear without a copy too.
+				System.setProperty(RadialMenuWidgets.ALL_BUTTONS_PROPERTY, a[1]);
 				return "ok";
 			}
 			case "radialclear" -> {

@@ -29,9 +29,9 @@ import org.spongepowered.asm.mixin.injection.At;
 
 /**
  * Effortless Building's client pipeline, on a server with Building Planner: a finished shape goes into the layer
- * instead of to the server as real blocks (hooks E1 to E3), or marks a box for a copy, the mix starts shapes (E6), the
- * preview has no "missing items" tint (E8), shapes can start on ghost blocks (E9), clicks without a placeable item stay
- * vanilla's (E14), and a box for a copy starts on the block aimed at (E17).
+ * instead of to the server as real blocks (hooks E1 to E3), or marks a box for a copy or the material list, the mix
+ * starts shapes (E6), the preview has no "missing items" tint (E8), shapes can start on ghost blocks (E9), clicks
+ * without a placeable item stay vanilla's (E14), and an awaited box starts on the block aimed at (E17).
  */
 @Mixin(value = BuildPipelineClient.class, remap = false)
 abstract class BuildPipelineClientMixin {
@@ -132,7 +132,7 @@ abstract class BuildPipelineClientMixin {
 	}
 
 	/**
-	 * Hook E17: while a box is awaited for a copy, the cube starts on the block aimed at, as Effortless Building's break
+	 * Hook E17: while a box is awaited, the cube starts on the block aimed at, as Effortless Building's break
 	 * click does, not beside it, so the box takes in the blocks the player points at.
 	 */
 	@ModifyReturnValue(method = "resolveFirstClickPos", at = @At("RETURN"))

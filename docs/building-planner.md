@@ -14,9 +14,9 @@ with its tiles, shapes and erasing in world positions, and the edit glow, hooks 
 of Litematica's screens and edits, the removal of old plans' placements, showing or hiding ghost blocks, with its
 key, its radial menu button, and Litematica's tool item off at a first start, and copy and paste: Copy and "Copy real
 blocks" with a box drawn in the "Cube" shape (hooks E1, E2, E13 to E15 and E17), the copy following the aim, Paste,
-Turn, Mirror and Clear, their keys and radial menu buttons, and the copy kept out of Litematica's selection and
-placement list (L4, L5). Neither side
-speaks protocol 2's named plans or uses Syncmatica any more. Everything else this spec describes waits on the build
+Turn, Mirror and Clear, their keys and radial menu buttons, the copy kept out of Litematica's selection and
+placement list (L4, L5), and the material list for a box drawn in the "Cube" shape, from its radial menu button.
+Neither side speaks protocol 2's named plans or uses Syncmatica any more. Everything else this spec describes waits on the build
 steps in [plan.md](plan.md) ("Agent-ready work"), which end with the release. The build reuses what still fits:
 Effortless Building's hooks E1 to E10 (E1, E2 and E6 change), the rules of undo and redo, the edit glow, the block mix
 screen's layout, the check for a server without the add-on, and the in-game check harness.
@@ -68,7 +68,7 @@ screen's layout, the check for a server without the add-on, and the in-game chec
   more pastes until the player clears it (Delete). Each key also has a radial menu button.
 - **Material list.** The player presses the Material list button in the radial menu and draws a box with the "Cube"
   shape: Litematica's material list opens for the ghost blocks inside, with how many of each block are still missing
-  in the world.
+  in the world. A box with no ghost blocks gives a message instead.
 - **How ghost blocks look.** On each player's computer, once, Building Planner turns on Litematica's "render blocks as
   translucent" and sets its ghost block alpha to 0.8, so ghost blocks draw see-through. It sets each only if the player
   hasn't changed it from Litematica's default (off, and 0.5), and never again, so a player's own later change stays.
@@ -165,13 +165,15 @@ Litematica, under `src/main/java/fi/dy/masa/litematica/`:
 | L7 | `render/schematic/ChunkRendererSchematicVbo.java`, `getOverlayType(BlockState, BlockState)` | `@ModifyReturnValue` | While Building Planner has a session, turn `EXTRA` into `NONE`. Litematica marks a real block as extra wherever a placement's box holds air there (`schematicOverlayTypeExtra`, on by default), and a tile's box is a whole chunk column's sections, so every real block in it would be marked. The layer holds only blocks to place, so no real block is extra. Missing and wrong blocks keep their colours. |
 
 Public Litematica API the add-on calls: `LitematicaSchematic.createEmptySchematic`, `getSubRegionContainer`,
-`getAreaSize`; `LitematicaBlockStateContainer`'s `get` and `set`; `SchematicPlacement.createFor`, `createTemporary`,
+`getAreaSize`; `LitematicaBlockStateContainer`'s `get` and `set`; `SchematicPlacement.createFor`,
 `setShouldBeSaved`, `getSchematic`, `getOrigin`, `setOrigin`, `getRotation`, `setRotation`, `getMirror`, `setMirror`;
 `SchematicPlacementManager.getAllSchematicsPlacements`, `addSchematicPlacement`, `removeSchematicPlacement`,
 `setSelectedSchematicPlacement`, `markChunkForRebuild`; `AreaSelection`'s constructor and `addSubRegionBox`; `Box`'s
 constructor; `PositionUtils.getTransformedBlockPos`, `getMinCorner`, `getMaxCorner`;
-`SchematicWorldHandler.getSchematicWorld`; `MaterialListPlacement`'s constructor, `DataManager.setMaterialList`,
-`GuiMaterialList`'s constructor and MaLiLib's `GuiBase.openGui`; `Configs.Visuals.RENDER_BLOCKS_AS_TRANSLUCENT`,
+`SchematicWorldHandler.getSchematicWorld`; `MaterialListBase` (extended, with `setMaterialListEntries`),
+`MaterialListUtils.getMaterialList`, `DataManager.setMaterialList`, `GuiMaterialList`'s constructor and MaLiLib's
+`GuiBase.openGui`; `BlockUtils.areStatesEqualIgnoringAge`, `Configs.Generic.MATERIAL_LIST_IGNORE_STATE`,
+`Configs.Visuals.IGNORE_CROP_AGE`; `Configs.Visuals.RENDER_BLOCKS_AS_TRANSLUCENT`,
 `GHOST_BLOCK_ALPHA`, `Configs.Generic.TOOL_ITEM_ENABLED` and `Configs.saveToFile`. From MaLiLib:
 `RenderEventHandler.registerWorldLastRenderer` and `RenderUtils`' batched box and text-plate drawing.
 
@@ -430,9 +432,9 @@ menu's quiet click (`RadialMenu.playRadialMenuSound`). The buttons sit above the
 columns (157, 131 and 105 left of the middle), in rows 39 and 65 above the middle: "Show or hide ghost blocks", Copy
 and Paste, then "Copy real blocks" and "Material list"; and in the row 91 above the middle, in the same columns, Turn,
 Mirror and Clear, which show only while a copy exists. Copy, Paste, "Copy real blocks", Turn, Mirror and Clear do what
-their keys do (see "Copy and paste"). "Material list" comes with step 11; until then it shows, doing nothing, only while
-the development system property `buildingplanner.draftButtons` is `true`, which also shows Turn, Mirror and Clear
-without a copy, so the checks can place all eight.
+their keys do (see "Copy and paste"), and "Material list", which has no key, waits for a box (see "The material
+list"). The development system property `buildingplanner.allButtons`, while `true`, shows Turn, Mirror and Clear
+without a copy too, so the checks can place all eight.
 
 Each icon is a 16 by 16 image of its own in `mod/src/main/resources/assets/buildingplanner/textures/gui/radial/`,
 named by what it shows: `ghost_blocks_shown`, `ghost_blocks_hidden`, `copy`, `paste`, `copy_real_blocks`,
@@ -483,8 +485,8 @@ the player had, with a message saying to draw a box around what to copy. The cub
 itself as a corner (hook E17), its preview shows as usual, and its last click, with either button (hooks E1 and E2),
 makes the copy, places or erases nothing, and puts back the player's mode at the next client tick (switching back
 within the click would sound as a cancelled shape). While a box is awaited, any held item, or none, draws the cube
-(E13 to E15). Pressing Copy or "Copy real blocks" while a box is awaited, choosing another mode, which stays, or Clear
-stops the wait, without a message. Copy takes the ghost blocks in the box from the player's copy of the layer;
+(E13 to E15). Pressing Copy, "Copy real blocks" or Material list while a box is awaited, choosing another mode, which
+stays, or Clear stops the wait, without a message. Copy takes the ghost blocks in the box from the player's copy of the layer;
 "Copy real blocks" takes the real blocks in the box from the player's world (`ClientLevel.getBlockState`), every
 non-air block state, without block entity contents. Each block keeps its world position relative to the box. The
 copy's box is the smallest box around the copied blocks, and its schematic holds structure void in every position
@@ -510,14 +512,21 @@ with no copy do nothing. Clear removes the copy; leaving the server or changing 
 
 ### The material list
 
-The Material list button waits for a box as Copy does, with its own message. When the cube finishes, Building Planner
-makes an empty schematic of the box (`createEmptySchematic` over one `Box`), a temporary placement of it at the box's
-corner (`SchematicPlacement.createTemporary`), which it never adds to Litematica, and a `MaterialListPlacement` for it,
-which it sets as Litematica's material list (`DataManager.setMaterialList`) and opens (`GuiMaterialList`). Litematica
-counts the ghost blocks it draws inside the placement's box against the real world
-(`TaskCountBlocksPlacement.countAtPosition`): the total of each block, how many are missing, and how many are the wrong
-block. It counts only chunks loaded on the player's computer, which are the columns the player watches. Asking for a
-material list while ghost blocks are hidden shows them first, since Litematica counts what it draws.
+The Material list button waits for a box as Copy does, with its own message ("Draw a box around the ghost blocks to
+list their materials."), and the same ways to stop the wait: pressing Copy, "Copy real blocks" or Material list while
+any box is awaited stops that wait and starts none. When the cube finishes, ghost blocks show again first if they're
+hidden, as for a shape. Building Planner then counts the ghost blocks in the box in the player's copy of the layer,
+which holds the columns the player watches, the chunks loaded on their computer, against the player's world
+(`MaterialCount`), by the rule Litematica's own list uses for a placement (`TaskCountBlocksPlacement.countAtPosition`):
+each block's total; missing where the world has air; missing and the wrong block where it has another block, unless
+Litematica's "materialListIgnoreState" (the same block in another state) or "ignoreCropAge" options count it as built.
+The counts become a Litematica material list of Building Planner's own (`GhostMaterialList`, a `MaterialListBase`
+filled through `MaterialListUtils.getMaterialList`), titled "Material list for the ghost blocks in the box", which it
+sets as Litematica's material list (`DataManager.setMaterialList`), so Litematica's material list key reopens it, and
+opens (`GuiMaterialList`). Litematica's Refresh button counts the same box again, while the player is still in its
+dimension. Counting the layer rather than Litematica's schematic world leaves out the copy, which Litematica also
+draws and which sits on the box while the player aims at it; the copy stays as it was. A box with no ghost blocks
+opens nothing, with the message "There are no ghost blocks in that box to list."
 
 ### When the server lacks the mod
 
@@ -603,9 +612,7 @@ add-on's classes off the classpath) and checks:
 - A `hello` with another protocol version, which the driver hands to the client, starts no session and shows no
   message.
 
-`step9.sh`, show or hide, the radial menu's buttons, copy and paste and the material list. Each check of the material
-list waits on build step 11: until then its section logs one failure marked with that step and doesn't run. Boxes are
-drawn with three real clicks of the "Cube" shape, aimed with the driver's `lookat`, while the players fly so they stay
+`step9.sh`, show or hide, the radial menu's buttons, copy and paste and the material list. Boxes are drawn with three real clicks of the "Cube" shape, aimed with the driver's `lookat`, while the players fly so they stay
 where they're teleported.
 
 - N hides every ghost block for that player alone, saying "Ghost blocks hidden." in chat: the game keeps them in its
@@ -639,8 +646,12 @@ where they're teleported.
   keeps the earlier copy; Delete clears the copy; K with no copy gives its message; a box of one block has its own
   message.
 - J again, Delete, or another mode stops a wait; the other mode stays.
-- The Material list button, then a cube around 10 ghost stone bricks, 4 of them built for real, opens Litematica's
-  material list with 10 in all and 6 missing.
+- Letting the radial menu's key go over its Material list button waits for a box, with its message; then, with ghost
+  blocks hidden and a copy of the bricks following the aim, a cube around 10 ghost stone bricks, 4 of them built for
+  real, shows the ghost blocks and opens Litematica's material list with 10 in all and 6 missing, places and erases
+  nothing, puts back the player's mode and leaves the copy. Litematica's list and the button's hover text are shot at
+  1920 by 1080, GUI scales 2 and 4. A box with no ghost blocks gives its message and opens nothing, and a click on the
+  button during a Copy wait stops it.
 - A click on the radial menu's Turn, Mirror, Copy (twice), Clear or Paste button does what its key does, and Turn,
   Mirror and Clear go when the copy does.
 - On the same server with Building Planner left out, N, J, K, U, H and Delete make no copy, open nothing and leave
@@ -688,8 +699,6 @@ other in the game's own copy of the layer, again after a restart, which doesn't 
 - The removal of old plans' placements after a change of dimension: the checks cover a session's start.
 - How the radial menu's widgets fit at sizes other than the checks' (854 by 480 at GUI scale 2, 1920 by 1080 at 4);
   their positions follow the menu's middle, so larger screens leave more room.
-- The material list on a placement never added to Litematica (read in `MaterialListPlacement` and
-  `TaskCountBlocksPlacement`, not run).
 - Shapes drawn with Effortless Building's multi-click modes other than Line, and its mirror and radial mirror; the
   checks draw Single and Line shapes with the array, which take the same capture.
 - How block states turn out for blocks whose placement depends on their neighbours (stairs, fences, slabs).

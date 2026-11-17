@@ -282,7 +282,9 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it, not
     `ClientSession`, with the radial menu's Copy, Paste and "Copy real blocks" buttons in layout B's slots, and Turn,
     Mirror and Clear in the row above them while a copy exists, with step 9's triggers and icons; `step9.sh`'s copy
     and paste checks pass).
-11. **The material list for a marked area.** Done when `step9.sh`'s material list check passes.
+11. **The material list for a marked area.** Built (`MaterialCount`, with its unit tests, and `GhostMaterialList`,
+    with the radial menu's Material list button waiting for a "Cube" box as Copy does; `step9.sh`'s material list
+    checks pass).
 12. **Texts for Geo**: every text players see that the steps added or changed (messages, key names, button and slider
     labels, the panel) goes to Geo as editable text, and Geo's version is built in. Done when the game shows Geo's
     wording.

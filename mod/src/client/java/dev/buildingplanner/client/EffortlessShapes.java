@@ -164,7 +164,7 @@ public final class EffortlessShapes {
 	/**
 	 * Hooks E1 and E2 while a box is awaited: the cube's opposite corners, which modifiers don't move, the last kept
 	 * within Effortless Building's limit on a side as the cube's own blocks are ({@code ThreeClicksBuildMode
-	 * .findCoordinates}). The box is the copy's; nothing is placed or erased.
+	 * .findCoordinates}). The box is for a copy or the material list; nothing is placed or erased.
 	 */
 	public static void boxDrawn(BlockSet blocks) {
 		Player player = Minecraft.getInstance().player;
