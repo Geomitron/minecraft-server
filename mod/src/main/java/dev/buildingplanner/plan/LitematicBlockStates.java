@@ -13,11 +13,11 @@ import net.minecraft.world.level.block.state.properties.Property;
  * as a string when the block has properties. (Vanilla 26.3 spells these {@code id} and {@code properties}; the data
  * fixer's output is read in either spelling.)
  */
-final class LitematicBlockStates {
+public final class LitematicBlockStates {
 	private LitematicBlockStates() {
 	}
 
-	static CompoundTag write(BlockState state) {
+	public static CompoundTag write(BlockState state) {
 		CompoundTag tag = new CompoundTag();
 		tag.putString("Name", BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString());
 		if (!state.getProperties().isEmpty()) {
@@ -31,7 +31,7 @@ final class LitematicBlockStates {
 	}
 
 	/** Reads a palette entry; an unknown block reads as air, and an unknown property or value keeps the default. */
-	static BlockState read(CompoundTag tag) {
+	public static BlockState read(CompoundTag tag) {
 		String name = tag.getString("Name").or(() -> tag.getString("id")).orElse("");
 		Identifier id = Identifier.tryParse(name);
 		Block block = id == null ? null : BuiltInRegistries.BLOCK.getOptional(id).orElse(null);
