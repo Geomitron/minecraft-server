@@ -483,8 +483,9 @@ on the dev server; [plan.md](plan.md) says which build step makes or rewrites ea
   both, typing their shares and "Use mix" turns the mix on and closes the screen, with its message, and the panel
   shows both blocks, their percentages and the key line.
 - With the mix on and a block held, each block of a 20-block shape is the mix's block at its position, on both
-  clients. With a pickaxe held the panel hides and a click breaks the real block as without mods. In Disable, with a
-  block held, a click places that real block, and the mix doesn't apply.
+  clients. With the mix on and a pickaxe or an apple held, the place click draws no ghost block and places no real
+  one, and an apple's break click breaks the real block as without mods. In Disable, with the mix on and a block held, the place
+  click puts a real block and no ghost block, and the use click opens a door.
 - The mix key while the mix is on opens the screen with the mix in it; "Turn off" turns it off, with its message.
 - A client without Effortless Building (its jar left off the classpath) loads without it or mixin errors, keeps
   receiving the other player's edits, and opens the mix screen.

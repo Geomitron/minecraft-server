@@ -204,9 +204,8 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 677 after it, not
 are built (`step10.sh`). The steps below come in this order, each small enough for one child, which pushes it to
 `main` once its check passes (inbox request 429).
 
-1. **The block mix's rules.** The mix applies only while the main hand holds a block, and in Disable every click is
-   vanilla's (hooks E5 and E6). Done when `step7.sh`'s checks with a pickaxe held and in Disable pass with the rest of
-   it.
+1. **The block mix's rules.** Built (`step7.sh`): the mix applies only while the main hand holds a block, and in
+   Disable every click is vanilla's (hooks E5 and E6).
 2. **The mix screen's "Turn off" and the mix panel.** Done when `step7.sh`'s panel and
    "Turn off" checks pass, and screenshots of the panel and the changed screen, with the changes outlined in red, have
    gone to Geo.
