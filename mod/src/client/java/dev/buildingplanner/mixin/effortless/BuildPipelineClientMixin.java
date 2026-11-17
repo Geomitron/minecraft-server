@@ -68,7 +68,7 @@ abstract class BuildPipelineClientMixin {
 	@ModifyExpressionValue(method = {"shouldInterceptPlacing", "updateDisplayTrackers"}, at = @At(value = "CONSTANT",
 		args = "classValue=nl/requios/effortlessbuilding/item/RandomizerToolItem"), require = 2)
 	private static boolean buildingplanner$mixIsRandomizer(boolean isRandomizer) {
-		return isRandomizer || EffortlessShapes.mixApplies();
+		return isRandomizer || BuildingPlannerClient.active() && EffortlessShapes.mixApplies();
 	}
 
 	/** Hook E8: ghost blocks don't use up items, so the preview shows none missing. */

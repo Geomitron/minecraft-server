@@ -29,7 +29,8 @@ import nl.requios.effortlessbuilding.utilities.BlockSet;
 
 /**
  * Effortless Building's side of shapes: a finished shape's blocks for the layer, and aiming at ghost blocks. Only the
- * hooks into Effortless Building load this class, so it's never loaded without that mod.
+ * hooks into Effortless Building load this class, and only while Building Planner is on, so it's never loaded without
+ * that mod, Litematica or MaLiLib: the verifier would load Litematica's classes with it.
  */
 public final class EffortlessShapes {
 	private EffortlessShapes() {

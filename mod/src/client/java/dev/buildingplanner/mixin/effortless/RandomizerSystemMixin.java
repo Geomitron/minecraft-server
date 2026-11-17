@@ -22,7 +22,7 @@ abstract class RandomizerSystemMixin {
 	@Inject(method = "processBlocks", at = @At("HEAD"), cancellable = true)
 	private void buildingplanner$mix(BlockSet blocks, Player player, BuildPipeline.BuildState action,
 		CallbackInfo ci) {
-		if (action != BuildPipeline.BuildState.PLACING || !EffortlessShapes.mixApplies()) {
+		if (action != BuildPipeline.BuildState.PLACING || !BuildingPlannerClient.active() || !EffortlessShapes.mixApplies()) {
 			return;
 		}
 		for (BlockEntry entry : blocks.values()) {

@@ -1,6 +1,7 @@
 package dev.buildingplanner.mixin.effortless;
 
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
+import dev.buildingplanner.client.BuildingPlannerClient;
 import dev.buildingplanner.client.EffortlessShapes;
 import nl.requios.effortlessbuilding.buildpipeline.BuildPipeline;
 import org.spongepowered.asm.mixin.Mixin;
@@ -12,6 +13,6 @@ abstract class BuildPipelineMixin {
 	@ModifyExpressionValue(method = "isBuildTriggerItem", at = @At(value = "CONSTANT",
 		args = "classValue=nl/requios/effortlessbuilding/item/RandomizerToolItem"))
 	private static boolean buildingplanner$mixIsRandomizer(boolean isRandomizer) {
-		return isRandomizer || EffortlessShapes.mixApplies();
+		return isRandomizer || BuildingPlannerClient.active() && EffortlessShapes.mixApplies();
 	}
 }
