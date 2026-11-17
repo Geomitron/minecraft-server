@@ -142,7 +142,7 @@ Building Planner as built, from inbox requests 469, 473, 477, 482, 483, 485, 570
   me through using all the features we have available, with space for me to provide feedback and suggestions on how to
   adjust the experience of using the mod. Once I'm happy with it, we can publish a guide on how to use it.").
 
-From Geo's walkthrough (inbox request 608) and requests 669 to 704 after it, not built yet:
+From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it, not built yet:
 
 - Ghost blocks show see-through at 0.8 opacity by default: "render blocks as translucent is true", "ghostBlockAlpha
   default to 0.8" (608 note). A player's own change to either stays.
@@ -195,7 +195,11 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 704 after it, not
 - The first release of the shared layer moves every current plan into it, including plans players have hidden; where
   plans overlap, the later plan's blocks win (672 Q7 A).
 - While the mix is on, the block mix key (B) opens the mix screen to change the mix; the screen gains a "Turn off"
-  button, and the panel reads "B: change or turn off" (677 Q1 A).
+  button (677 Q1 A).
+- The mix panel, as Geo approved it with changes (inbox request 709): the heading "Block mix", then each block's icon
+  with its share only ("80%"), then "B: close", with B the key as bound. It is narrow and drawn smaller: "note that my
+  changes allow it to be significantly vertically narrower, which I want. Maybe scale the whole thing down to like
+  70% too, if possible". "Use mix" leaves the chat message "Block mix on. Press B to change it or turn it off."
 - The copy follows where the player aims: its corner sits on the block they look at, until they paste or clear it
   (677 Q2 A).
 - N shows or hides the ghost blocks, since "Start a plan" no longer needs it (677 Q3 A).
