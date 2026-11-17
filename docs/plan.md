@@ -230,12 +230,15 @@ are built (`step10.sh`). The steps below come in this order, each small enough f
    messages and protocol version 3. Done when unit tests over the simulated network cover a snapshot then later edits
    in order, every rejection, undo and redo across dimensions, and a save and reload. Built (`LayerSync` and
    `LayerStore` in `dev.buildingplanner.server`, the payloads in `dev.buildingplanner.sync.Payloads`, with unit
-   tests). Protocol 2's payloads (`PlanPayloads`, ids starting `plan_`), `PlanSync` and their tests stay beside it
-   while the client speaks protocol 2; the steps that take out the named plans remove them.
+   tests).
 6. **The import, and Syncmatica off the server**: the one-time import, and removing hook S1, `SyncmaticaPlans`, the
    delete check, the plan files' archive, `max-plan-side` and Syncmatica from `fabric.mod.json`, the build and the dev
    server. Done when the import's unit tests pass and the dev server, started on a dev world with shared plans and
-   without Syncmatica, logs the import and serves the same blocks.
+   without Syncmatica, logs the import and serves the same blocks. Built (`PlanImport` in
+   `dev.buildingplanner.server`, with `PlanImportTest` and the in-game check `import.sh`). The server speaks only
+   protocol 3; the client keeps protocol 2 (`PlanPayloads`, which only the client registers, `PlanReplicas` and
+   `SyncLimits`) until the steps that take out the named plans remove it. The driver's `LayerProbe` takes `columns`
+   only while the client has no receiver of its own.
 7. **The player's layer and its tiles**: the copy of the layer, column watching, tiles, shapes and erasing in world
    positions, and the edit glow on the layer. Done when `step6.sh` (all but its checks on hidden tiles) and
    `step7.sh` pass.
