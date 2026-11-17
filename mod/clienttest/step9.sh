@@ -8,10 +8,15 @@
 check "client 1 starts a session on hello" drv 1 "await session" "await noscreen"
 check "client 2 starts a session on hello" drv 2 "await session" "await noscreen"
 
-# press <client> <key>: a real key press with no screen open.
+# press <client> <key>: a real key press with no screen open. The game handles key events once a frame, which can come
+# after several ticks, so it returns only once the game has handled the press and two ticks have passed, by which
+# Building Planner's tick has acted on it.
 press() {
+	local before
 	drv "$1" "close" "wait 5" > /dev/null
+	before=$(val "$1" presses)
 	keys "$1" key "$2"
+	drv "$1" "await pressedafter $before" "wait 2" > /dev/null
 }
 
 # state_has <client> <x y z> <text>: the state Litematica shows there contains the text.

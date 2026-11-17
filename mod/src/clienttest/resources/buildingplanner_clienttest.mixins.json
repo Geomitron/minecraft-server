@@ -4,6 +4,7 @@
 	"package": "dev.buildingplanner.client.mixin",
 	"compatibilityLevel": "JAVA_25",
 	"client": [
-		"ConnectionMixin"
+		"ConnectionMixin",
+		"KeyMappingMixin"
 	]
 }

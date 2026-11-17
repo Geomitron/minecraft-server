@@ -16,6 +16,8 @@ public final class SentPackets {
 	private static volatile int tick;
 	private static int useDown;
 	private static int attackDown;
+	/** Key and mouse button presses the game has handled, on the render thread. */
+	private static int presses;
 
 	private SentPackets() {
 	}
@@ -49,6 +51,16 @@ public final class SentPackets {
 		synchronized (EDITS) {
 			return (use ? useDown : attackDown) > 0;
 		}
+	}
+
+	/** The game handled a key or mouse button press (KeyMappingMixin). */
+	public static void pressed() {
+		presses++;
+	}
+
+	/** How many key and mouse button presses the game has handled since it started. */
+	static int presses() {
+		return presses;
 	}
 
 	/** Starts the hold log again. */

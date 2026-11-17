@@ -193,6 +193,10 @@ public final class Driver implements ClientModInitializer {
 				// boxwait: whether Copy or "Copy real blocks" waits for a box, and Effortless Building's mode now.
 				return ClickRule.boxAwaited() + " " + EffortlessDriver.mode();
 			}
+			case "presses" -> {
+				// presses: how many key and mouse button presses the game has handled, for "await pressedafter".
+				return String.valueOf(SentPackets.presses());
+			}
 			case "placements" -> {
 				List<String> names = new ArrayList<>();
 				for (SchematicPlacement p : DataManager.getSchematicPlacementManager().getAllSchematicsPlacements()) {
@@ -537,6 +541,7 @@ public final class Driver implements ClientModInitializer {
 			case "copy" -> copy().startsWith(what.substring(5));
 			case "noglow" -> glows().isEmpty();
 			case "held" -> SentPackets.held(a[1].equals("use"));
+			case "pressedafter" -> SentPackets.presses() > Integer.parseInt(a[1]);
 			case "layer" -> LayerProbe.matches(mc.gameDirectory.toPath().resolve(a[1]));
 			default -> throw new IllegalArgumentException(what);
 		};
@@ -546,18 +551,48 @@ public final class Driver implements ClientModInitializer {
 		String[] a = awaitLine.split(" ");
 		try {
 			return switch (a[1]) {
-				case "block" -> blockId(pos(a, 2));
+				case "block" -> blockId(pos(a, 2)) + " (layer " + BuiltInRegistries.BLOCK.getKey(
+					session().replica().layer().get(pos(a, 2)).getBlock()) + ", tile "
+					+ tile(pos(a, 2).getX() >> 4, pos(a, 2).getZ() >> 4) + ", tile block " + tileBlock(pos(a, 2))
+					+ ")";
 				case "real" -> realBlockId(pos(a, 2));
 				case "tile" -> tile(Integer.parseInt(a[2]), Integer.parseInt(a[3]));
 				case "glow" -> glows();
 				case "copy" -> copy();
 				case "layer" -> LayerProbe.compare(Minecraft.getInstance().gameDirectory.toPath().resolve(a[2]));
 				case "screen", "noscreen" -> String.valueOf(Minecraft.getInstance().gui.screen());
+				case "held" -> "screen " + Minecraft.getInstance().gui.screen() + ", use down "
+					+ Minecraft.getInstance().options.keyUse.isDown() + ", attack down "
+					+ Minecraft.getInstance().options.keyAttack.isDown() + ", mouse grabbed "
+					+ Minecraft.getInstance().mouseHandler.isMouseGrabbed() + ", window active "
+					+ Minecraft.getInstance().isWindowActive();
 				default -> "";
 			};
 		} catch (Throwable t) {
 			return t.toString();
 		}
+	}
+
+	/**
+	 * The block in the container of the tile whose box holds the position, as Litematica would draw it there, or none:
+	 * against blockId, it tells a tile that's out of date from a schematic world that hasn't drawn it yet.
+	 */
+	private static String tileBlock(BlockPos pos) {
+		for (SchematicPlacement p : DataManager.getSchematicPlacementManager().getAllSchematicsPlacements()) {
+			if (!BuildingPlannerClient.isTile(p)) {
+				continue;
+			}
+			BlockPos origin = p.getOrigin();
+			var container = p.getSchematic().getSubRegionContainer(Tiles.NAME);
+			var size = container.getSize();
+			int x = pos.getX() - origin.getX();
+			int y = pos.getY() - origin.getY();
+			int z = pos.getZ() - origin.getZ();
+			if (x >= 0 && y >= 0 && z >= 0 && x < size.getX() && y < size.getY() && z < size.getZ()) {
+				return BuiltInRegistries.BLOCK.getKey(container.get(x, y, z).getBlock()).toString();
+			}
+		}
+		return "none";
 	}
 
 	private static String blockId(BlockPos pos) {
