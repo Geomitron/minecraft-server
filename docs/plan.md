@@ -114,7 +114,7 @@ Building Planner as built, from inbox requests 469, 473, 477, 482, 483, 485, 570
 - B opens the block-mix picker (477 Q1 A). The picker keeps its layout: search and the inventory switch at the top,
   the blocks, then the mix with a share box under each block, and the buttons (Q2 A).
 - A player's mix lasts until they close the game (Q3 A). While it's on, every right-click draws into a plan, even with
-  no Effortless Building mode chosen (Q4 A).
+  no Effortless Building mode chosen (Q4 A); Geo reversed this after the walkthrough (below).
 - Geo kept step 7's texts as written, except two: the empty mix row reads "Click blocks above to add them. (up to
   nine)", and each share box's tooltip reads "Percentage of the mix" (477).
 - Building Planner works around Syncmatica's crash when a plan another player has loaded is removed (482 Q1 A). The
@@ -141,6 +141,27 @@ Building Planner as built, from inbox requests 469, 473, 477, 482, 483, 485, 570
   game from a runbook with room for feedback (Geo, inbox request 578: "Build a runbook to teach me how it works, walk
   me through using all the features we have available, with space for me to provide feedback and suggestions on how to
   adjust the experience of using the mod. Once I'm happy with it, we can publish a guide on how to use it.").
+
+From Geo's walkthrough (inbox request 608) and the reply after it, not built yet:
+
+- Ghost blocks show see-through at 0.8 opacity by default: "render blocks as translucent is true", "ghostBlockAlpha
+  default to 0.8" (608 note). A player's own change to either stays.
+- In Effortless Building's "Single" mode, holding the button keeps placing or erasing ghost blocks: "I want to be able
+  to place or destroy quickly" (608 note).
+- With "Disable" chosen in Effortless Building, clicks act as they do without mods, even with the block mix on. The
+  mix must never be on without the player knowing: "I don't want that feature of block mix; I'd rather deliberately
+  select which blocks to use with the block mix UI open... either that or some much clearer "block mix selection mode"
+  that makes it much clearer that I'm in a special mode for that and it's clear what's happening (such as it
+  displaying the current block mix and the keys or controls to save, cancel)" (Geo, replying to inbox request 669).
+  How the mix shows is open with Geo (670).
+- Ghost blocks stay shared live with everyone on the server, as one layer rather than separate plans, and each player
+  shows or hides all of them with one switch (Geo, comment c1 on inbox request 670: "it's still very important for
+  ghost blocks to be synced and shared for users on the same server, where each player can choose whether to see
+  active ghost blocks or not. But we don't need to group them into different schematics either; it can be a simple
+  toggle control for the user to see all ghost blocks or hide all ghost blocks").
+- Whether Building Planner keeps Litematica and Syncmatica, or plans with Effortless Building alone, is open with Geo,
+  from the 608 note's question: "Maybe the best option is to just get rid of Litematica / Syncmatica and just
+  implement that aspect ourselves?"
 
 ## Agent-ready work
 
