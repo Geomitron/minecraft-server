@@ -49,9 +49,9 @@ public record PlayerMessage(String key, List<String> args) {
 		return new PlayerMessage(PREFIX + "redo.nothing", List.of());
 	}
 
-	/** The player pressed the key to start a plan without an area marked with Litematica's area tool. */
+	/** The player pressed the Copy key without an area marked with Litematica's area tool. */
 	public static PlayerMessage noAreaMarked() {
-		return new PlayerMessage(PREFIX + "start.no_area", List.of());
+		return new PlayerMessage(PREFIX + "copy.no_area", List.of());
 	}
 
 	/** The player turned the block mix on in the picker; {@code key} is the picker key's name. */

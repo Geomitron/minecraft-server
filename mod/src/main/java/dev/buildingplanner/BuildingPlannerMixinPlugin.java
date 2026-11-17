@@ -9,12 +9,13 @@ import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 
 /**
- * Skips the hooks into Effortless Building when that mod isn't installed: it runs only on players' computers, and
- * players may leave it out.
+ * Skips the hooks into a mod that isn't installed: Effortless Building's without it, and Litematica's without Litematica
+ * or MaLiLib. They run only on players' computers, and players may leave them out.
  */
 public final class BuildingPlannerMixinPlugin implements IMixinConfigPlugin {
 	static final String EFFORTLESS_MIXIN_PACKAGE = "dev.buildingplanner.mixin.effortless.";
 	static final String EFFORTLESS_MOD_ID = "effortlessbuilding";
+	static final String LITEMATICA_MIXIN_PACKAGE = "dev.buildingplanner.mixin.litematica.";
 
 	private final Predicate<String> modLoaded;
 
@@ -28,7 +29,13 @@ public final class BuildingPlannerMixinPlugin implements IMixinConfigPlugin {
 
 	@Override
 	public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
-		return !mixinClassName.startsWith(EFFORTLESS_MIXIN_PACKAGE) || modLoaded.test(EFFORTLESS_MOD_ID);
+		if (mixinClassName.startsWith(EFFORTLESS_MIXIN_PACKAGE)) {
+			return modLoaded.test(EFFORTLESS_MOD_ID);
+		}
+		if (mixinClassName.startsWith(LITEMATICA_MIXIN_PACKAGE)) {
+			return modLoaded.test("litematica") && modLoaded.test("malilib");
+		}
+		return true;
 	}
 
 	@Override

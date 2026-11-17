@@ -36,21 +36,25 @@ cat > run/server/ops.json << 'EOF'
 EOF
 
 # start <run> <folder> <log> [program args...]: starts a captured dev run in the background; its pid goes to
-# /tmp/<log>.pid. With LEAVE_OUT set, the classpath leaves out each entry whose path matches it as a glob, anywhere in
-# the path.
+# /tmp/<log>.pid. With LEAVE_OUT set to one or more globs separated by spaces, the classpath leaves out each entry whose
+# path matches one of them, anywhere in the path.
 start() {
 	local run=$1 dir=$2 log=$3
 	shift 3
-	local a i entry entries kept
+	local a i entry entries kept pattern patterns
 	mapfile -t a < "/tmp/args/$run.args"
 	if [[ -n ${LEAVE_OUT:-} ]]; then
+		read -ra patterns <<< "$LEAVE_OUT"
 		for i in "${!a[@]}"; do
 			[[ ${a[i]} == -cp ]] || continue
 			kept=()
 			IFS=: read -ra entries <<< "${a[i + 1]}"
 			for entry in "${entries[@]}"; do
-				# shellcheck disable=SC2053
-				[[ $entry == *$LEAVE_OUT* ]] || kept+=("$entry")
+				for pattern in "${patterns[@]}"; do
+					# shellcheck disable=SC2053
+					[[ $entry == *$pattern* ]] && continue 2
+				done
+				kept+=("$entry")
 			done
 			a[i + 1]=$(IFS=:; echo "${kept[*]}")
 		done
@@ -67,8 +71,9 @@ wait_for() {
 }
 
 # The add-on's own classes and resources on the classpath, and the driver's, for start_server and start_client to
-# leave out.
+# leave out; and the driver's alone.
 ADDON="$work/build/*/"
+DRIVER="$work/build/*/clienttest"
 
 # start_server [left-out] [log]: starts the dev server, logging to /out/<log>.log (server.log unless given), and
 # waits until it's ready; the optional first argument leaves the classpath entries matching it out ($ADDON, say).
@@ -87,7 +92,7 @@ stop_server() {
 }
 
 # start_client <n> [left-out]: starts dev client n, playing as Planner<n>; the optional second argument leaves the
-# classpath entries matching it out (effortless-building, say).
+# classpath entries matching it out (effortless-building, say, or several globs separated by spaces).
 start_client() {
 	local n=$1
 	mkdir -p "run/client$n"
@@ -156,7 +161,7 @@ xdo() {
 	return "${PIPESTATUS[0]}"
 }
 
-# keys <client> <xdotool command>...: real key presses in that client's window, e.g. keys 2 key n.
+# keys <client> <xdotool command>...: real key presses in that client's window, e.g. keys 2 key b.
 keys() {
 	xdo "$@"
 }
@@ -166,13 +171,22 @@ click() {
 	xdo "$1" mousemove --window %w "$2" "$3" click 1
 }
 
-# use_click <client> and attack_click <client>: the right (use) and left (attack) mouse buttons, held long enough for
-# a client tick to see them down, as Effortless Building checks.
+# use_click <client> and attack_click <client>: the right (use) and left (attack) mouse buttons, held until the
+# driver has seen them down in a client tick, as Effortless Building checks, and let go at once, well before the 4
+# ticks after which a held button repeats. A held time would make a click repeat when the game runs fast.
 use_click() {
-	xdo "$1" mousedown 3 sleep 0.3 mouseup 3
+	held_click "$1" 3 use
 }
 attack_click() {
-	xdo "$1" mousedown 1 sleep 0.3 mouseup 1
+	held_click "$1" 1 attack
+}
+held_click() {
+	local status=0
+	drv "$1" "holdreset" > /dev/null
+	xdo "$1" mousedown "$2"
+	drv "$1" "await held $3" > /dev/null || status=$?
+	xdo "$1" mouseup "$2"
+	return "$status"
 }
 
 # client_said <client> <text>: the client's chat showed the text.

@@ -7,6 +7,7 @@ import dev.buildingplanner.sync.LayerChange;
 import dev.buildingplanner.sync.LayerReplica;
 import dev.buildingplanner.sync.Payloads;
 import dev.buildingplanner.sync.PlayerMessage;
+import fi.dy.masa.litematica.data.DataManager;
 import fi.dy.masa.litematica.selection.AreaSelection;
 import fi.dy.masa.litematica.selection.Box;
 import fi.dy.masa.litematica.util.PositionUtils;
@@ -37,6 +38,11 @@ final class ClientSession {
 	private final LayerReplica replica;
 	private final Clipboard clipboard = new Clipboard();
 	private int clientSeq;
+	/**
+	 * Whether to remove old plans' placements at the next tick: at the session's start, and after each change of level,
+	 * since Litematica restores each dimension's saved placements when the player enters it.
+	 */
+	private boolean removeOldPlans = true;
 
 	/**
 	 * {@code dimension} is the game's dimension now (null before it has a level), and {@code loadedChunks} the chunks of
@@ -73,13 +79,21 @@ final class ClientSession {
 
 	/** The game's level changed; Litematica clears every placement then, the tiles among them. */
 	void levelChanged(Identifier dimension) {
+		removeOldPlans = true;
 		replica.levelChanged(dimension);
 		clipboard.clear();
 		glow.clear();
 	}
 
-	/** Once a client tick: asks for the columns that loaded and lets go of those that unloaded. */
+	/**
+	 * Once a client tick: removes old plans' placements when due, asks for the columns that loaded and lets go of those
+	 * that unloaded.
+	 */
 	void tick() {
+		if (removeOldPlans && Minecraft.getInstance().level != null) {
+			removeOldPlans = false;
+			OldPlans.remove();
+		}
 		sendWatches();
 	}
 
@@ -136,7 +150,7 @@ final class ClientSession {
 	 * for the message.
 	 */
 	void copy(String pasteKey) {
-		AreaSelection area = StartPlanScreen.markedArea();
+		AreaSelection area = markedArea();
 		if (area == null) {
 			show(PlayerMessage.noAreaMarked());
 			return;
@@ -182,6 +196,18 @@ final class ClientSession {
 
 	void clearCopy() {
 		clipboard.clear();
+	}
+
+	/** The area the player marked with Litematica's area tool, or null when they haven't marked one. */
+	private static AreaSelection markedArea() {
+		AreaSelection area = DataManager.getSelectionManager().getCurrentSelection();
+		// Litematica's Simple mode keeps one box with both corners at 0,0,0 until the player marks an area
+		// (AreaSelectionSimple.createDefaultBoxIfNeeded), so a box like that is no area.
+		if (area == null || PositionUtils.getValidBoxes(area).stream()
+			.allMatch(box -> BlockPos.ZERO.equals(box.getPos1()) && BlockPos.ZERO.equals(box.getPos2()))) {
+			return null;
+		}
+		return area;
 	}
 
 	/** Shows one of Building Planner's messages in the player's chat. */

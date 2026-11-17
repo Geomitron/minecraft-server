@@ -1,44 +1,71 @@
-# Step 8's in-game checks: a client without the add-on on a server with it, clients with the add-on on the same
-# server with Building Planner left out (Syncmatica still in), and a hello with another protocol version. Sourced by
-# inside.sh, which provides drv, val, check, keys, click, use_click, attack_click, client_said, start_server, stop_server,
-# start_client, stop_client, no_planner_message and $ADDON.
+# Step 8's in-game checks: clients without the add-on, or without Litematica and MaLiLib, on a server with it; clients
+# with the add-on on the same server with Building Planner left out; and a hello with another protocol version. Sourced
+# by inside.sh, which provides drv, val, check, xdo, keys, use_click, attack_click, wait_for, start_server, stop_server,
+# start_client, stop_client, no_planner_message, $ADDON and $DRIVER.
 
-# On a server with the add-on: sessions start. Planner1 starts the plan Hall (2 -60 2 to 8 -57 8),
-# which Syncmatica keeps for the server without the add-on below.
+# said_since <line> <text>: returns when the server log, after that line, has a line containing the text.
+said_since() {
+	timeout 300 grep -q -m1 -F -- "$2" <(tail -n +$(($1 + 1)) -F /out/server.log)
+}
+
+# joined_since <line>: the server log, after that line, says Planner2 joined.
+joined_since() {
+	said_since "$1" "Planner2 joined the game"
+}
+
+# stayed_since <line>: the server log, after that line, doesn't say Planner2's connection ended.
+stayed_since() {
+	! tail -n +$(($1 + 1)) /out/server.log | grep -qE "Planner2 lost connection|Disconnecting Planner2"
+}
+
+# rejoin_2 [left-out]: stops client 2 and starts it again with the classpath entries matching the argument left out;
+# sets joined to the server log's line count from before it rejoins, after the server logged this leaving.
+rejoin_2() {
+	local before
+	before=$(wc -l < /out/server.log)
+	stop_client 2
+	said_since "$before" "Planner2 left the game"
+	joined=$(wc -l < /out/server.log)
+	start_client 2 "${1:-}"
+}
+
+# On a server with the add-on, both clients start a session.
 check "client 1 starts a session on hello" drv 1 "await session" "await noscreen"
 check "client 2 starts a session on hello" drv 2 "await session" "await noscreen"
-drv 1 "cmd tp @s 5 -60 -3 0 10" "cmd tp Planner2 6 -60 -3 0 10" "wait 40" "select 2 -60 2 8 -57 8" > /dev/null
-keys 1 key n
-drv 1 "await screen Start a plan" > /dev/null
-keys 1 type Hall
-keys 1 key Return
-check "Planner1 starts Hall and client 2 sees it" \
-	eval 'drv 1 "await placement Hall" && drv 2 "await placement Hall"'
+cp /out/client2.log /out/client2-with-addon.log
 
 # A client without the add-on (its classes and the driver's left off the classpath) joins the server with it and
 # plays: it stays connected and places a real block.
-cp /out/client2.log /out/client2-with-addon.log
-# The server logs the old connection's end before Planner2 rejoins; the later checks read the lines after it.
-stop_client 2
-wait_for /out/server.log "Planner2 left the game"
-joined=$(wc -l < /out/server.log)
-start_client 2 "$ADDON"
-check "a client without the add-on joins the server with it" \
-	timeout 300 grep -q -m1 -F "Planner2 joined the game" <(tail -n +$((joined + 1)) -F /out/server.log)
+rejoin_2 "$ADDON"
+check "a client without the add-on joins the server with it" joined_since "$joined"
 check "and loaded without the add-on" eval '! grep -qE "^\s+- buildingplanner " /out/client2.log'
-# Planner2 stands north of 20 -60 20, looking down at it, and places a block there with a real right-click.
-drv 1 "wait 200" "cmd clear Planner2" "cmd item replace entity Planner2 weapon.mainhand with minecraft:gold_block" \
-	"cmd tp Planner2 20.5 -60 18.5 0 45" "wait 60" > /dev/null
-use_click 2
+# Planner2 stands north of 20 -60 20, looking down at it, and places a block there with a real right-click, held for a
+# time since the client has no driver.
+drv 1 "cmd tp @s 5 -60 -3 0 10" "wait 200" "cmd clear Planner2" \
+	"cmd item replace entity Planner2 weapon.mainhand with minecraft:gold_block" "cmd tp Planner2 20.5 -60 18.5 0 45" \
+	"wait 60" > /dev/null
+xdo 2 mousedown 3 sleep 0.3 mouseup 3
 check "and places a real block" drv 1 "await real 20 -60 20 minecraft:gold_block"
-check "and stays connected" eval \
-	'! tail -n +$((joined + 1)) /out/server.log | grep -qE "Planner2 lost connection|Disconnecting Planner2"'
+check "and stays connected" stayed_since "$joined"
+cp /out/client2.log /out/client2-without-addon.log
 
-# The same server with Building Planner left out, Syncmatica still in; both clients have the add-on.
+# A client with the add-on and Effortless Building but without Litematica and MaLiLib (and the driver, which uses
+# them) loads, with Building Planner off, and plays on the server with the add-on.
+rejoin_2 "litematica malilib $DRIVER"
+check "a client without Litematica and MaLiLib joins the server with the add-on" joined_since "$joined"
+check "and loaded with the add-on and Effortless Building but not Litematica" eval 'grep -qE "^\s+- buildingplanner " /out/client2.log &&
+	grep -qE "^\s+- effortlessbuilding " /out/client2.log && ! grep -qE "^\s+- (litematica|malilib) " /out/client2.log'
+check "and Building Planner is off on it" grep -qF "Litematica or MaLiLib is missing, so Building Planner is off" /out/client2.log
+drv 1 "cmd tp Planner2 21.5 -60 18.5 0 45" "wait 200" > /dev/null
+check "and it stays connected, with no mixin error" eval 'stayed_since "$joined" && kill -0 "$(cat /tmp/client2.pid)" &&
+	! grep -qE "Mixin apply|MixinApplyError|InvalidInjectionException|InvalidMixinException|NoClassDefFoundError|Game crashed" \
+		/out/client2.log'
+cp /out/client2.log /out/client2-without-litematica.log
+
+# The same server with Building Planner left out; both clients have the add-on.
 stop_client 1
 stop_client 2
 cp /out/client1.log /out/client1-with-addon.log
-cp /out/client2.log /out/client2-without-addon.log
 stop_server
 check "the server starts without Building Planner" eval 'start_server "$ADDON" server-without-addon &&
 	! grep -qF "Building Planner loaded" /out/server-without-addon.log'
@@ -47,36 +74,19 @@ start_client 2
 # The loading screen swallows key presses, so wait for it to close.
 check "client 1 starts no session" drv 1 "await noscreen" "wait 40" "await nosession"
 check "client 2 starts no session" drv 2 "await noscreen" "wait 40" "await nosession"
-keys 1 key n
 keys 1 key b
-check "N and B open nothing" drv 1 "wait 20" "await noscreen"
-drv 1 "notoasts" "wait 5" "shot off-not-on-server" > /dev/null
+check "the block mix key opens nothing" drv 1 "wait 20" "await noscreen"
+keys 1 key j
+keys 1 key k
+drv 1 "wait 20" "notoasts" "wait 5" "shot off-not-on-server" > /dev/null
 
-# load <client>: loads Hall from Syncmatica's list, with its Load button (or Download, without the file).
-load() {
-	local x y
-	drv "$1" "syncgui" "wait 20" > /dev/null
-	read -r x y < <(val "$1" "button Hall Load")
-	if [[ $x == none ]]; then
-		read -r x y < <(val "$1" "button Hall Download")
-	fi
-	click "$1" "$x" "$y"
-	drv "$1" "await placement Hall" "close"
-}
-check "client 1 loads Hall from Syncmatica" load 1
-check "client 2 loads Hall from Syncmatica" load 2
-
-# Litematica's edits stay on that player's screen.
-drv 1 "fill 2 -60 2 8 -60 8 minecraft:stone_bricks" > /dev/null
-check "client 1's Litematica fill shows on its own screen" drv 1 "await block 8 -60 8 minecraft:stone_bricks"
-check "and not on client 2's" eval 'drv 2 "wait 100" && [[ $(val 2 "get 8 -60 8") == minecraft:air ]]'
-
-# Effortless Building's shapes place nothing: four oak planks from 4 -60 5 eastward, in Hall's stone-brick layer, add
-# no ghost blocks and no real ones, and the player stays connected.
+# Effortless Building's shapes place nothing: four oak planks from 4 -60 5 eastward add no ghost blocks and no real
+# ones, and the player stays connected.
 drv 1 "cmd clear @s" "cmd item replace entity @s weapon.mainhand with minecraft:oak_planks" "ebmode SINGLE" \
 	"ebarray 3 1 0 0" "cmd tp @s 4 -55 5 0 90" "wait 40" > /dev/null
 use_click 1
-check "a shape adds no ghost blocks" eval 'drv 1 "wait 60" && [[ $(val 1 "get 4 -60 5") == minecraft:stone_bricks ]]'
+check "a shape adds no ghost blocks" eval 'drv 1 "wait 60" > /dev/null && [[ $(val 1 "get 4 -60 5") == minecraft:air &&
+	$(val 1 "get 7 -60 5") == minecraft:air ]]'
 check "and places no real blocks" \
 	eval '[[ $(val 1 "real 4 -60 5") == minecraft:air && $(val 1 "real 7 -60 5") == minecraft:air ]]'
 check "and the player stays connected" \

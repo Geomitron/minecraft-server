@@ -13,6 +13,7 @@ import fi.dy.masa.litematica.selection.AreaSelection;
 import fi.dy.masa.litematica.selection.Box;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
 import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.Blocks;
@@ -37,6 +38,8 @@ final class Tiles implements LayerReplica.Listener {
 	}
 
 	private final Long2ObjectOpenHashMap<Tile> tiles = new Long2ObjectOpenHashMap<>();
+	/** Every tile's placement and container, for the hooks that keep tiles out of Litematica's screens and edits. */
+	private final ReferenceOpenHashSet<Object> parts = new ReferenceOpenHashSet<>();
 	/** Whether a tile was added since {@link #takeAdded}. */
 	private boolean added;
 
@@ -46,8 +49,7 @@ final class Tiles implements LayerReplica.Listener {
 		Tile tile = tiles.get(key);
 		if (column == null || column.isEmpty()) {
 			if (tile != null) {
-				tiles.remove(key);
-				manager().removeSchematicPlacement(tile.placement());
+				remove(key);
 			}
 			return;
 		}
@@ -64,16 +66,34 @@ final class Tiles implements LayerReplica.Listener {
 			return;
 		}
 		if (tile != null) {
-			manager().removeSchematicPlacement(tile.placement());
+			remove(key);
 		}
 		tile = create(chunkX, chunkZ, column, lowest, highest);
 		if (tile == null) {
-			tiles.remove(key);
 			return;
 		}
+		// Known as a tile before Litematica sees it, which selects a new placement when none is selected (hook L4).
 		tiles.put(key, tile);
+		parts.add(tile.placement());
+		parts.add(tile.container());
 		manager().addSchematicPlacement(tile.placement(), false);
 		added = true;
+	}
+
+	/** Whether the placement or block container is a tile's. */
+	boolean holds(SchematicPlacement placement) {
+		return parts.contains(placement);
+	}
+
+	boolean holds(LitematicaBlockStateContainer container) {
+		return parts.contains(container);
+	}
+
+	private void remove(long key) {
+		Tile tile = tiles.remove(key);
+		manager().removeSchematicPlacement(tile.placement());
+		parts.remove(tile.placement());
+		parts.remove(tile.container());
 	}
 
 	/** Whether a tile was added since the last call, which would draw over the player's copy. */
@@ -101,6 +121,7 @@ final class Tiles implements LayerReplica.Listener {
 			manager().removeSchematicPlacement(tile.placement());
 		}
 		tiles.clear();
+		parts.clear();
 	}
 
 	private static Tile create(int chunkX, int chunkZ, LayerColumn column, int lowest, int highest) {

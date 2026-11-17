@@ -12,10 +12,11 @@
 		"effortless.ConstraintSystemMixin",
 		"effortless.PacketHandlerMixin",
 		"effortless.RandomizerSystemMixin",
-		"litematica.LitematicaSchematicAccessor",
-		"litematica.SchematicUtilsInvoker",
-		"syncmatica.ClientPlayHandlerMixin",
-		"syncmatica.LitematicManagerMixin"
+		"litematica.ChunkRendererSchematicVboMixin",
+		"litematica.OverlayRendererMixin",
+		"litematica.SchematicPlacementManagerMixin",
+		"litematica.SchematicUtilsMixin",
+		"litematica.WidgetListSchematicPlacementsMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

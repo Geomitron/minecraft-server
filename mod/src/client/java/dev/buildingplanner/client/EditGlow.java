@@ -4,6 +4,7 @@ import com.mojang.renderpearl.api.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.MeshData;
+import fi.dy.masa.malilib.event.RenderEventHandler;
 import fi.dy.masa.malilib.interfaces.IRenderer;
 import fi.dy.masa.malilib.render.MaLiLibPipelines;
 import fi.dy.masa.malilib.render.RenderContext;
@@ -38,6 +39,13 @@ final class EditGlow implements IRenderer {
 	}
 
 	private final List<Glow> glows = new ArrayList<>();
+
+	/** A glow drawn after the world each frame. */
+	static EditGlow registered() {
+		EditGlow glow = new EditGlow();
+		RenderEventHandler.getInstance().registerWorldLastRenderer(glow);
+		return glow;
+	}
 
 	/** Starts a glow on {@code blocks} (world positions), changed by {@code author}. */
 	void add(List<BlockPos> blocks, UUID author) {

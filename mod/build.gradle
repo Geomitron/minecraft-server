@@ -77,7 +77,6 @@ dependencies {
 	implementation "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}"
 
 	// Players' computers only.
-	clientImplementation "maven.modrinth:syncmatica:${syncmatica_version}"
 	clientImplementation "maven.modrinth:litematica:${litematica_version}"
 	clientImplementation "maven.modrinth:malilib:${malilib_version}"
 	clientImplementation "maven.modrinth:effortless-building:${effortless_building_version}"

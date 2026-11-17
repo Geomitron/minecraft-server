@@ -6,9 +6,11 @@ import dev.buildingplanner.layer.Layer;
 import dev.buildingplanner.sync.EditKind;
 import dev.buildingplanner.sync.Payloads;
 import dev.buildingplanner.sync.PlayerMessage;
-import fi.dy.masa.malilib.event.RenderEventHandler;
+import fi.dy.masa.litematica.schematic.container.LitematicaBlockStateContainer;
+import fi.dy.masa.litematica.schematic.placement.SchematicPlacement;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongSet;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import net.fabricmc.api.ClientModInitializer;
@@ -36,8 +38,6 @@ import net.minecraft.world.level.block.state.BlockState;
 public final class BuildingPlannerClient implements ClientModInitializer {
 	private static final KeyMapping.Category CATEGORY =
 		KeyMapping.Category.register(Identifier.fromNamespaceAndPath(BuildingPlanner.MOD_ID, "main"));
-	private static final KeyMapping START_PLAN =
-		new KeyMapping("key.buildingplanner.start_plan", InputConstants.KEY_N, CATEGORY);
 	private static final KeyMapping BLOCK_MIX =
 		new KeyMapping("key.buildingplanner.block_mix", InputConstants.KEY_B, CATEGORY);
 	// Copy and paste. None of these keys is a default key, or in a default key combination, of Minecraft, Litematica,
@@ -48,7 +48,11 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	private static final KeyMapping MIRROR = new KeyMapping("key.buildingplanner.mirror", InputConstants.KEY_H, CATEGORY);
 	private static final KeyMapping CLEAR =
 		new KeyMapping("key.buildingplanner.clear", InputConstants.KEY_DELETE, CATEGORY);
-	private static final EditGlow GLOW = new EditGlow();
+	/**
+	 * The edit glow, drawn through MaLiLib; null while Building Planner is off for want of Litematica or MaLiLib, so this
+	 * class never loads their classes then.
+	 */
+	private static EditGlow glow;
 	/** The player's block mix, kept while the game runs, across servers. */
 	private static final BlockMix MIX = new BlockMix();
 
@@ -71,13 +75,19 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 
 	@Override
 	public void onInitializeClient() {
-		if (FabricLoader.getInstance().isModLoaded("effortlessbuilding")) {
+		FabricLoader loader = FabricLoader.getInstance();
+		// The mixin plugin skips the Litematica hooks without Litematica or MaLiLib; with no session, Effortless
+		// Building's shapes send nothing on a server, as on a server without the add-on.
+		if (!loader.isModLoaded("litematica") || !loader.isModLoaded("malilib")) {
+			BuildingPlanner.LOGGER.info("Litematica or MaLiLib is missing, so Building Planner is off");
+			return;
+		}
+		if (loader.isModLoaded("effortlessbuilding")) {
 			heldClicks = new HeldClicks();
 		}
-		KeyMappingHelper.registerKeyMapping(START_PLAN);
 		KeyMappingHelper.registerKeyMapping(BLOCK_MIX);
 		List.of(COPY, PASTE, TURN, MIRROR, CLEAR).forEach(KeyMappingHelper::registerKeyMapping);
-		RenderEventHandler.getInstance().registerWorldLastRenderer(GLOW);
+		glow = EditGlow.registered();
 		ClientPlayNetworking.registerGlobalReceiver(Payloads.Hello.TYPE, (hello, context) -> hello(hello));
 		// A singleplayer or LAN host's own world runs no server side.
 		ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
@@ -127,11 +137,6 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 			}
 		});
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
-			while (START_PLAN.consumeClick()) {
-				if (session != null) {
-					StartPlanScreen.open();
-				}
-			}
 			while (BLOCK_MIX.consumeClick()) {
 				if (session != null) {
 					toggleMix();
@@ -184,7 +189,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	static void hello(Payloads.Hello hello) {
 		endSession();
 		if (hello.protocolVersion() == Payloads.PROTOCOL_VERSION) {
-			session = new ClientSession(hello.maxEditBlocks(), GLOW, dimension(Minecraft.getInstance().level), LOADED);
+			session = new ClientSession(hello.maxEditBlocks(), glow, dimension(Minecraft.getInstance().level), LOADED);
 		} else {
 			BuildingPlanner.LOGGER.warn("The server runs Building Planner protocol {}, this client {}",
 				hello.protocolVersion(), Payloads.PROTOCOL_VERSION);
@@ -216,6 +221,25 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	/** Whether Building Planner is on for this server, so Effortless Building's hooks draw ghost blocks. */
 	public static boolean active() {
 		return session != null;
+	}
+
+	/** Hooks L4 and L6: whether the placement is one of the tiles that hand the layer to Litematica. */
+	public static boolean isTile(SchematicPlacement placement) {
+		return session != null && session.tiles().holds(placement);
+	}
+
+	/** Hook L1: whether Litematica's block container is a tile's. */
+	public static boolean isTileContainer(LitematicaBlockStateContainer container) {
+		return session != null && session.tiles().holds(container);
+	}
+
+	/** Hooks L5 and L6: the placements without the tiles. */
+	public static List<SchematicPlacement> withoutTiles(Collection<SchematicPlacement> placements) {
+		if (session == null) {
+			return placements instanceof List<SchematicPlacement> list ? list : List.copyOf(placements);
+		}
+		Tiles tiles = session.tiles();
+		return placements.stream().filter(placement -> !tiles.holds(placement)).toList();
 	}
 
 	/**

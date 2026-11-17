@@ -44,6 +44,13 @@ public final class SentPackets {
 		}
 	}
 
+	/** Whether the use (or else the attack) button was down in a client tick since the hold log started. */
+	static boolean held(boolean use) {
+		synchronized (EDITS) {
+			return (use ? useDown : attackDown) > 0;
+		}
+	}
+
 	/** Starts the hold log again. */
 	static void resetHoldLog() {
 		synchronized (EDITS) {

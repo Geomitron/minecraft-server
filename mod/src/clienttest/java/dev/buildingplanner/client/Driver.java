@@ -1,25 +1,24 @@
 package dev.buildingplanner.client;
 
-import ch.endte.syncmatica.data.ServerPlacement;
-import ch.endte.syncmatica.litematica.LitematicManager;
-import ch.endte.syncmatica.litematica.gui.GuiSyncmaticaServerPlacementList;
 import dev.buildingplanner.sync.EditKind;
 import dev.buildingplanner.sync.Payloads;
 import dev.buildingplanner.sync.SyncLimits;
 import fi.dy.masa.litematica.config.Configs;
 import fi.dy.masa.litematica.data.DataManager;
+import fi.dy.masa.litematica.data.SchematicHolder;
+import fi.dy.masa.litematica.gui.GuiSchematicPlacementsList;
+import fi.dy.masa.litematica.render.LitematicaRenderer;
+import fi.dy.masa.litematica.render.OverlayRenderer;
+import fi.dy.masa.litematica.schematic.LitematicaSchematic;
 import fi.dy.masa.litematica.schematic.placement.SchematicPlacement;
 import fi.dy.masa.litematica.selection.AreaSelection;
+import fi.dy.masa.litematica.selection.Box;
 import fi.dy.masa.litematica.util.PositionUtils;
 import fi.dy.masa.litematica.util.SchematicUtils;
 import fi.dy.masa.litematica.world.SchematicWorldHandler;
 import fi.dy.masa.malilib.gui.GuiBase;
 import fi.dy.masa.malilib.gui.GuiListBase;
-import fi.dy.masa.malilib.gui.button.ButtonBase;
-import fi.dy.masa.malilib.gui.widgets.WidgetBase;
-import fi.dy.masa.malilib.gui.widgets.WidgetContainer;
 import fi.dy.masa.malilib.gui.widgets.WidgetListBase;
-import fi.dy.masa.malilib.gui.widgets.WidgetListEntryBase;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
@@ -27,6 +26,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -235,14 +235,59 @@ public final class Driver implements ClientModInitializer {
 			case "glows" -> {
 				return glows();
 			}
-			case "syncgui" -> {
-				GuiBase.openGui(new GuiSyncmaticaServerPlacementList());
-				return "ok";
+			case "selected" -> {
+				// selected: Litematica's selected placement: none, a tile, or another placement's name.
+				SchematicPlacement p = DataManager.getSchematicPlacementManager().getSelectedSchematicPlacement();
+				return p == null ? "none" : BuildingPlannerClient.isTile(p) ? "a tile" : p.getName();
 			}
-			case "button" -> {
-				// button <plan> <label>: the window position of the centre of that button on the plan's row in the
-				// open list, for a real click.
-				return button(mc, a[1], line.substring(a[0].length() + a[1].length() + 2));
+			case "selecttile" -> {
+				// selecttile: asks Litematica to select a tile, as its placement list or aim would.
+				for (SchematicPlacement p : DataManager.getSchematicPlacementManager().getAllSchematicsPlacements()) {
+					if (BuildingPlannerClient.isTile(p)) {
+						DataManager.getSchematicPlacementManager().setSelectedSchematicPlacement(p);
+						return "ok";
+					}
+				}
+				return "no tile";
+			}
+			case "placementlist" -> {
+				// placementlist: opens Litematica's placement list and says how many of its entries are tiles, and the
+				// other entries' names.
+				GuiBase.openGui(new GuiSchematicPlacementsList());
+				Method getList = GuiListBase.class.getDeclaredMethod("getListWidget");
+				getList.setAccessible(true);
+				return describe(((WidgetListBase<?, ?>) getList.invoke(mc.gui.screen())).getCurrentEntries());
+			}
+			case "boxes" -> {
+				// boxes: the placements whose boxes Litematica draws, as placementlist describes them.
+				OverlayRenderer.getInstance().updatePlacementCache();
+				Field placements = OverlayRenderer.class.getDeclaredField("placements");
+				placements.setAccessible(true);
+				return describe(((Map<?, ?>) placements.get(OverlayRenderer.getInstance())).keySet());
+			}
+			case "overlay" -> {
+				// overlay x y z: the mark Litematica's chunk renderer gives the real block there against its ghost block.
+				Object renderer = LitematicaRenderer.getInstance().getWorldRenderer();
+				Field infos = renderer.getClass().getDeclaredField("renderInfos");
+				infos.setAccessible(true);
+				List<?> chunks = (List<?>) infos.get(renderer);
+				if (chunks.isEmpty()) {
+					return "no chunk renderer";
+				}
+				Method overlay = chunks.getFirst().getClass().getDeclaredMethod("getOverlayType", BlockState.class,
+					BlockState.class);
+				overlay.setAccessible(true);
+				return String.valueOf(overlay.invoke(chunks.getFirst(),
+					SchematicWorldHandler.getSchematicWorld().getBlockState(pos(a, 1)), mc.level.getBlockState(pos(a, 1))));
+			}
+			case "oldplans" -> {
+				// oldplans x y z: an empty plan's file each in Syncmatica's client folder and in "Start a plan"'s, with a
+				// placement of each that Litematica saves, as for plans players shared before the layer.
+				oldPlan(mc.gameDirectory.toPath().resolve("schematics").resolve("sync"), "Old shared plan", pos(a, 1));
+				oldPlan(DataManager.getSchematicsBaseDirectory().resolve("Building Planner"), "Old started plan",
+					pos(a, 1).east(4));
+				DataManager.save();
+				return "ok";
 			}
 			case "ebmode" -> {
 				// ebmode <mode>: Effortless Building's build mode, as its radial menu sets it.
@@ -289,12 +334,6 @@ public final class Driver implements ClientModInitializer {
 				Configs.Visuals.RENDER_BLOCKS_AS_TRANSLUCENT.setBooleanValue(Boolean.parseBoolean(a[1]));
 				Configs.Visuals.GHOST_BLOCK_ALPHA.setDoubleValue(Double.parseDouble(a[2]));
 				Configs.saveToFile();
-				return "ok";
-			}
-			case "selectplacement" -> {
-				// selectplacement [plan]: selects that plan in Litematica's placement list, or nothing.
-				DataManager.getSchematicPlacementManager().setSelectedSchematicPlacement(
-					a.length > 1 ? placement(a[1]) : null);
 				return "ok";
 			}
 			case "real" -> {
@@ -385,14 +424,13 @@ public final class Driver implements ClientModInitializer {
 			case "noscreen" -> mc.gui.screen() == null;
 			case "placement" -> placement(a[1]) != null;
 			case "noplacement" -> placement(a[1]) == null;
-			case "shared" -> sharedNames().contains(what.substring(7));
-			case "notshared" -> !sharedNames().contains(what.substring(10));
 			case "block" -> List.of(a[4].split("\\|")).contains(blockId(pos(a, 1)));
 			case "real" -> realBlockId(pos(a, 1)).equals(a[4]);
 			case "tile" -> String.valueOf(tile(Integer.parseInt(a[1]), Integer.parseInt(a[2]))).equals(a[3]);
 			case "glow" -> glows().contains(what.substring(5));
 			case "copy" -> copy().startsWith(what.substring(5));
 			case "noglow" -> glows().isEmpty();
+			case "held" -> SentPackets.held(a[1].equals("use"));
 			case "layer" -> LayerProbe.matches(mc.gameDirectory.toPath().resolve(a[1]));
 			default -> throw new IllegalArgumentException(what);
 		};
@@ -408,7 +446,6 @@ public final class Driver implements ClientModInitializer {
 				case "glow" -> glows();
 				case "copy" -> copy();
 				case "layer" -> LayerProbe.compare(Minecraft.getInstance().gameDirectory.toPath().resolve(a[2]));
-				case "shared", "notshared" -> sharedNames().toString();
 				case "screen", "noscreen" -> String.valueOf(Minecraft.getInstance().gui.screen());
 				default -> "";
 			};
@@ -429,7 +466,7 @@ public final class Driver implements ClientModInitializer {
 
 	private static SchematicPlacement placement(String name) {
 		for (SchematicPlacement p : DataManager.getSchematicPlacementManager().getAllSchematicsPlacements()) {
-			if (p.getName().equals(name) && LitematicManager.getInstance().getRenderingSyncmatic(p) != null) {
+			if (p.getName().equals(name)) {
 				return p;
 			}
 		}
@@ -442,17 +479,37 @@ public final class Driver implements ClientModInitializer {
 		return tile == null ? "none" : tile;
 	}
 
-	private static List<String> sharedNames() {
-		List<String> names = new ArrayList<>();
-		for (ServerPlacement p : LitematicManager.getInstance().getActiveContext().getSyncmaticManager().getAll()) {
-			names.add(p.getName());
+	/** Placements as how many are tiles, then the others' names. */
+	private static String describe(Collection<?> placements) {
+		int tiles = 0;
+		List<String> others = new ArrayList<>();
+		for (Object p : placements) {
+			if (BuildingPlannerClient.isTile((SchematicPlacement) p)) {
+				tiles++;
+			} else {
+				others.add(((SchematicPlacement) p).getName());
+			}
 		}
-		return names;
+		return tiles + " tiles; others: " + (others.isEmpty() ? "none" : String.join(",", others));
+	}
+
+	/** Saves an empty 3 by 1 by 3 plan named {@code name} in {@code folder} and adds a placement of it at {@code corner}. */
+	private static void oldPlan(Path folder, String name, BlockPos corner) {
+		AreaSelection area = new AreaSelection();
+		area.addSubRegionBox(new Box(corner, corner.offset(2, 0, 2), name), false);
+		LitematicaSchematic schematic = LitematicaSchematic.createEmptySchematic(area, "");
+		schematic.getMetadata().setName(name);
+		if (!schematic.writeToFile(folder, name, true)) {
+			throw new IllegalStateException("couldn't write " + name);
+		}
+		LitematicaSchematic loaded = SchematicHolder.getInstance().getOrLoad(folder.resolve(name + ".litematic"));
+		DataManager.getSchematicPlacementManager().addSchematicPlacement(
+			SchematicPlacement.createFor(loaded, corner, name, true, true), false);
 	}
 
 	/** The glows showing now, as {@code editor:blocks} pairs. */
 	private static String glows() throws Exception {
-		Field glowField = BuildingPlannerClient.class.getDeclaredField("GLOW");
+		Field glowField = BuildingPlannerClient.class.getDeclaredField("glow");
 		glowField.setAccessible(true);
 		Object glow = glowField.get(null);
 		Field listField = glow.getClass().getDeclaredField("glows");
@@ -466,32 +523,6 @@ public final class Driver implements ClientModInitializer {
 			out.add(editor.invoke(g) + ":" + ((List<?>) blocks.invoke(g)).size());
 		}
 		return String.join(",", out);
-	}
-
-	private static String button(Minecraft mc, String plan, String label) throws Exception {
-		Method getList = GuiListBase.class.getDeclaredMethod("getListWidget");
-		getList.setAccessible(true);
-		Object list = getList.invoke(mc.gui.screen());
-		Field entries = WidgetListBase.class.getDeclaredField("listWidgets");
-		entries.setAccessible(true);
-		Field children = WidgetContainer.class.getDeclaredField("subWidgets");
-		children.setAccessible(true);
-		Field text = ButtonBase.class.getDeclaredField("displayString");
-		text.setAccessible(true);
-		for (Object entry : (List<?>) entries.get(list)) {
-			if (!(((WidgetListEntryBase<?>) entry).getEntry() instanceof ServerPlacement p) || !p.getName().equals(plan)) {
-				continue;
-			}
-			for (Object child : (List<?>) children.get(entry)) {
-				if (child instanceof ButtonBase b && label.equals(text.get(b))) {
-					WidgetBase w = b;
-					double scale = mc.getWindow().getGuiScale();
-					return (int) ((w.getX() + w.getWidth() / 2.0) * scale) + " "
-						+ (int) ((w.getY() + w.getHeight() / 2.0) * scale);
-				}
-			}
-		}
-		return "none";
 	}
 
 	private static String scaled(Minecraft mc, double x, double y) {
