@@ -6,11 +6,13 @@ Building; Litematica draws the ghost blocks, out of sight. It hooks into unchang
 behind it are in [plan.md](plan.md) ("Decisions").
 
 **What's built.** Players run Building Planner 0.2.1, and the server 0.2.0, which keep ghost blocks in separate named
-plans shared through Syncmatica. Built on `main` since then: hold to repeat at fixed speeds (hook E10), the look of
-ghost blocks, the layer's storage and files, the server's side of the layer and protocol 3, the one-time import of
-the plans Syncmatica shared, the player's copy of the layer with its tiles, shapes and erasing in world positions,
-and the edit glow, hooks L1 and L4 to L7, which keep tiles out of Litematica's screens and edits, and the removal of old
-plans' placements. Neither side speaks protocol 2's named plans or uses Syncmatica any more. Everything else this spec
+plans shared through Syncmatica. Built on `main` since then: hold to repeat (hook E10) with its speed sliders in the
+radial menu (E11, E12), the look of ghost blocks, the block mix's rules, its panel and its "Turn off", clicks as
+without mods with anything but an item that places a block (E13 to E15), the layer's storage and files, the server's
+side of the layer and protocol 3, the one-time import of the plans Syncmatica shared, the player's copy of the layer
+with its tiles, shapes and erasing in world positions, and the edit glow, hooks L1 and L4 to L7, which keep tiles out
+of Litematica's screens and edits, and the removal of old plans' placements. Neither side speaks protocol 2's named
+plans or uses Syncmatica any more. Everything else this spec
 describes waits on the build steps in [plan.md](plan.md) ("Agent-ready work"), which end with the release. The build reuses what still fits: Effortless Building's hooks E1 to E10 (E1, E2 and E6 change),
 the rules of undo and redo, the edit glow, the block mix screen's layout, the check for a server without the add-on, and
 the in-game check harness.
@@ -45,8 +47,9 @@ the in-game check harness.
   player picks up to nine blocks, each with a share (say 80 cobblestone to 20 mossy cobblestone), and turns the mix on.
   The screen closes, and the mix then applies to Effortless Building's shapes, in every mode but Disable, while the
   player holds an item that places a block; with anything else in hand, clicks act as without mods. While the mix
-  applies, a small panel at the right edge of the screen shows each block's icon and share, and the mix key; with the mix on, that key opens the screen again, which then has a "Turn off" button. A mix of
-  one block lets a survival player plan with a block they don't have.
+  applies, a small panel at the right edge of the screen shows each block's icon and share. With the mix on, the mix
+  key opens the screen again, which then has a "Turn off" button. A mix of one block lets a survival player plan with
+  a block they don't have.
 - **Undo and redo.** Undo takes back only that player's own changes, newest first: a whole shape or paste at a time,
   in any dimension. A block someone else has changed since stays as they left it. Effortless Building's Ctrl+Z (and
   the undo button in its radial menu) undoes, and its Ctrl+Y (and the redo button) redoes the newest undone change,
@@ -436,8 +439,7 @@ slider labels, draws at the smallest size at or above 70% of the game's at which
 whole number of screen pixels (`SmallText`), since at 70% they come out uneven and hard to read: ceil(GUI scale × 0.7)
 / GUI scale, which is full size at GUI scales 1 to 3, 75% at 4, 80% at 5 and 5/6 at 6. It hides while the mix doesn't
 apply (`MixRule`), while a screen is open, and while
-the game's HUD is hidden (F1). Without Effortless Building, whose mode the rule reads, it never shows. Its look and
-text are drafted for Geo's review, with screenshots.
+the game's HUD is hidden (F1). Without Effortless Building, whose mode the rule reads, it never shows.
 
 ### Copy and paste
 
@@ -624,8 +626,8 @@ other in the game's own copy of the layer, again after a restart, which doesn't 
 - That Litematica restores, without Syncmatica, the placements Syncmatica made, which the client removes at its start;
   `step6.sh` checks placements Litematica made itself of files in the same folders.
 - The removal of old plans' placements after a change of dimension: the checks cover a session's start.
-- How the radial menu's widgets fit at GUI scales other than 2 on a window 854 by 480 (240 high), where the checks
-  run; their positions follow the menu's middle, so larger screens leave more room.
+- How the radial menu's widgets fit at sizes other than the checks' (854 by 480 at GUI scale 2, 1920 by 1080 at 4);
+  their positions follow the menu's middle, so larger screens leave more room.
 - The material list on a placement never added to Litematica (read in `MaterialListPlacement` and
   `TaskCountBlocksPlacement`, not run).
 - Shapes drawn with Effortless Building's multi-click modes other than Line, and its mirror and radial mirror; the

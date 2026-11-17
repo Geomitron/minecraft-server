@@ -227,17 +227,19 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it, not
 ## Agent-ready work
 
 **Building Planner 0.3.0, the shared layer** (the decisions above from inbox request 608 on;
-[building-planner.md](building-planner.md) is the design). Hold to repeat at fixed speeds and the look of ghost blocks
-are built (`step10.sh`). The steps below come in this order, each small enough for one child, which pushes it to
+[building-planner.md](building-planner.md) is the design). Hold to repeat and the look of ghost blocks are built
+(`step10.sh`). The steps below come in this order, each small enough for one child, which pushes it to
 `main` once its check passes (inbox request 429).
 
 1. **The block mix's rules.** Built (`step7.sh`): the mix applies only while the main hand holds a block, and in
-   Disable every click is vanilla's (hooks E5 and E6).
-2. **The mix screen's "Turn off" and the mix panel.** Done when `step7.sh`'s panel and
-   "Turn off" checks pass, and screenshots of the panel and the changed screen, with the changes outlined in red, have
-   gone to Geo.
+   Disable every click is vanilla's (hooks E5 and E6). With anything but an item that places a block in hand, every
+   click acts as without mods, in every mode (hooks E13 to E15, 704).
+2. **The mix screen's "Turn off" and the mix panel.** Built (`MixPanel`, `SmallText` and `BlockMixScreen` in the
+   client; `step7.sh` passes), as Geo approved them in 709.
 3. **The radial menu's widgets and the two speed sliders** (hooks E11 and E12; the sliders set E10's gaps and are kept
-   in the client config). Done when `step10.sh`'s slider check passes and screenshots of the menu have gone to Geo.
+   in the client config). Built (`RadialMenuWidgets` and `RepeatSlider` in the client, `RepeatSpeed`, with its
+   unit tests, and `ClientConfig`; `step10.sh` passes), in the layout Geo chose in 709. The radial menu's
+   buttons come with steps 9 and 10.
 4. **The layer's storage and files** (common): columns of 16-block sections with palettes, and the area files. Built
    (`dev.buildingplanner.layer`, with its unit tests).
 5. **The server's layer**: the store, column watching, edits in world positions with their checks, undo and redo,
