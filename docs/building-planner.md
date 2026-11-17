@@ -425,9 +425,11 @@ the mix's blocks stay in the screen for the next time. The buttons share the row
 
 While the mix applies, a panel at the right edge of the screen (`MixPanel`, drawn through `HudElementRegistry`),
 centred top to bottom on a dark see-through box, shows the heading "Block mix", then each of the mix's blocks as its
-icon and its percentage ("80%"), and under them, in grey, the line "B: close", with the key as the player has bound it
-(the key opens the mix screen). The box is as wide as its widest line, and the whole panel draws at 0.7 of the game's
-size, as the radial menu's slider labels do, where a line of text is still about 13 pixels high at GUI scale 2. It hides while the mix doesn't apply (`MixRule`), while a screen is open, and while
+icon and its percentage ("80%"). The box is as wide as its widest line. The whole panel, like the radial menu's
+slider labels, draws at the smallest size at or above 70% of the game's at which each of the font's pixels covers a
+whole number of screen pixels (`SmallText`), since at 70% they come out uneven and hard to read: ceil(GUI scale × 0.7)
+/ GUI scale, which is full size at GUI scales 1 to 3, 75% at 4, 80% at 5 and 5/6 at 6. It hides while the mix doesn't
+apply (`MixRule`), while a screen is open, and while
 the game's HUD is hidden (F1). Without Effortless Building, whose mode the rule reads, it never shows. Its look and
 text are drafted for Geo's review, with screenshots.
 
@@ -527,7 +529,8 @@ on the dev server; [plan.md](plan.md) says which build step makes or rewrites ea
 - A shape started on a ghost block goes on top of it.
 - The mix key opens the mix screen, without "Turn off", listing every block; the switch limits it to the inventory's
   two blocks; clicking both, typing their shares and "Use mix" turns the mix on and closes the screen, with its
-  message, and the panel shows both blocks' percentages ("80%", "20%") and the key line ("B: close"). F1 hides the panel and shows it again.
+  message, and the panel shows both blocks' percentages ("80%", "20%"). F1 hides the panel and shows it again. The
+  panel is shot at GUI scale 2 and, in a window of 1920 by 1080, at 4.
 - With the mix on and a block held, each block of a 20-block shape is the mix's block at its position, on both
   clients. With the mix on and a pickaxe or an apple held, the panel hides, the place click draws no ghost block and
   places no real one, and an apple's break click breaks the real block as without mods. In Disable, with the mix on and

@@ -455,6 +455,15 @@ public final class Driver implements ClientModInitializer {
 				mc.getTutorial().setStep(TutorialSteps.NONE);
 				return "ok";
 			}
+			case "window" -> {
+				// window <width> <height> <gui scale>: resizes the window and sets the GUI scale, for screenshots at other
+				// sizes.
+				mc.getWindow().setWindowed(Integer.parseInt(a[1]), Integer.parseInt(a[2]));
+				mc.options.guiScale().set(Integer.parseInt(a[3]));
+				mc.resizeGui();
+				return mc.getWindow().getWidth() + "x" + mc.getWindow().getHeight() + " at "
+					+ mc.getWindow().getGuiScale();
+			}
 			case "hello" -> {
 				// hello <version>: handles a server hello with that protocol version, as one from another release would be.
 				BuildingPlannerClient.hello(new Payloads.Hello(Integer.parseInt(a[1]), SyncLimits.DEFAULT.maxEditBlocks()));

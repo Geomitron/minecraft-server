@@ -212,8 +212,9 @@ finish() {
 }
 trap finish EXIT
 
-Xvfb :1 -screen 0 1024x768x24 -nolisten tcp > /out/xvfb1.log 2>&1 &
-Xvfb :2 -screen 0 1024x768x24 -nolisten tcp > /out/xvfb2.log 2>&1 &
+# Screens of 1920 by 1080, so a check can grow a window to that size (the driver's window command).
+Xvfb :1 -screen 0 1920x1080x24 -nolisten tcp > /out/xvfb1.log 2>&1 &
+Xvfb :2 -screen 0 1920x1080x24 -nolisten tcp > /out/xvfb2.log 2>&1 &
 
 echo "Starting the dev server..."
 start_server || exit 1
