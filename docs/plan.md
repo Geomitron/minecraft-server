@@ -267,8 +267,7 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it, not
    `dev.buildingplanner.server`, with `PlanImportTest` and the in-game check `import.sh`).
 7. **The player's layer and its tiles**: the copy of the layer, column watching, tiles, shapes and erasing in world
    positions, and the edit glow on the layer. Built (`LayerReplica` in `dev.buildingplanner.sync`, with its unit
-   tests, and `Tiles` and `ClientSession` in the client; `step6.sh`, `step7.sh` and `import.sh` pass). Copy and
-   paste use the layer through Litematica's marked area until step 10.
+   tests, and `Tiles` and `ClientSession` in the client; `step6.sh`, `step7.sh` and `import.sh` pass).
 8. **Tiles out of sight, and Syncmatica off the client**: hooks L4 to L7, L1 as a guard, removing S2, S3, L2, L3,
    "Start a plan" and `remove-loaded.sh`, the removal of old plan placements at a session's start, and the mixin
    plugin's Litematica rule. Built (the hooks in `dev.buildingplanner.mixin.litematica`, `OldPlans` in the client;
@@ -278,8 +277,10 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it, not
    `RadialButton` and `RadialMenuWidgets` in the client, with the buttons' place, triggers and icons as Geo chose them
    in 729 and 732; `step9.sh`'s checks other than copy, paste and the material list, and `step10.sh`, pass).
 10. **Copy and paste on the layer**: the "Cube" box for Copy and "Copy real blocks" (E1, E6), the copy following the
-    aim, and the radial menu's buttons. Done when `step9.sh`'s copy and paste checks
-    pass.
+    aim, and the radial menu's buttons. Built (`BoxWait`, `GhostAim`, hook E17 and the copy in `Clipboard` and
+    `ClientSession`, with the radial menu's Copy, Paste and "Copy real blocks" buttons in layout B's slots, and Turn,
+    Mirror and Clear in the row above them while a copy exists, with step 9's triggers and icons; `step9.sh`'s copy
+    and paste checks pass).
 11. **The material list for a marked area.** Done when `step9.sh`'s material list check passes.
 12. **Texts for Geo**: every text players see that the steps added or changed (messages, key names, button and slider
     labels, the panel) goes to Geo as editable text, and Geo's version is built in. Done when the game shows Geo's
