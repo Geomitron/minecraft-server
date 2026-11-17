@@ -1,5 +1,5 @@
 # Step 9's in-game checks: showing and hiding ghost blocks with N and the radial menu's button, drawing while they're
-# hidden, the choice kept across a restart, and the radial menu's buttons in each layout drafted for Geo. Below them,
+# hidden, the choice kept across a restart, and where the radial menu's buttons sit, with screenshots. Below them,
 # build steps 10 and 11's checks (copy and paste, and the material list), which don't run until those steps build
 # them, and the keys on a server without Building Planner. Sourced by inside.sh, which provides drv, val, check, keys,
 # xdo, click, use_click, attack_click, client_said, start_server, stop_server, start_client, stop_client,
@@ -32,6 +32,17 @@ pending() {
 	return 1
 }
 
+# chat_count <client> <text>: how many lines of that client's chat have been exactly the text.
+chat_count() {
+	tr -d '\r' < "/out/client$1.log" |
+		awk -v t="[CHAT] $2" 'length($0) >= length(t) && substr($0, length($0) - length(t) + 1) == t' | wc -l
+}
+
+# said_once_more <client> <text> <count>: that client's chat has shown the text once more than <count> times.
+said_once_more() {
+	(($(chat_count "$1" "$2") == $3 + 1))
+}
+
 config=run/client1/config/buildingplanner-client.properties
 
 # Ghost blocks in the shared layer: a floor of stone bricks with oak stairs and glowstone on it, and oak planks.
@@ -46,9 +57,11 @@ check "both clients show the ghost blocks" eval 'drv 1 "await block 4 -59 3 mine
 drv 1 "cmd tp @s 9.5 -58 -3.5 20 25" "wait 40" > /dev/null
 check "ghost blocks show at first" eval '[[ $(val 1 ghosts) == "shown, "* ]]'
 shot 1 ghosts-shown
+hidden_lines=$(chat_count 1 "Ghost blocks hidden.")
 press 1 n
 check "N hides them: Litematica has no tile, though the game keeps them" \
 	eval 'drv 1 "wait 5" > /dev/null && [[ $(val 1 ghosts) =~ ^hidden,\ [1-9][0-9]*\ tiles,\ 0\ placements$ ]]'
+check "and says so in chat" said_once_more 1 "Ghost blocks hidden." "$hidden_lines"
 check "and shows none of them" eval '[[ $(val 1 "get 4 -59 3") == minecraft:air ]] &&
 	[[ $(val 1 "get 12 -60 2") == minecraft:air ]] && [[ $(val 1 "layer 4 -59 3") == minecraft:glowstone ]]'
 check "for that player alone" eval '[[ $(val 2 "get 4 -59 3") == minecraft:glowstone ]]'
@@ -63,42 +76,73 @@ check "Planner2's edits reach Planner1's copy of the layer while hidden" eval 'd
 	[[ $(val 1 "layer 6 -59 6") == minecraft:gold_block ]] && [[ $(val 1 "get 6 -59 6") == minecraft:air ]] &&
 	[[ $(val 1 "layer 40 -60 5") == minecraft:gold_block ]] && [[ $(val 1 "get 40 -60 5") == minecraft:air ]]'
 check "and don't glow" eval '[[ -z $(val 1 glows) ]]'
+shown_lines=$(chat_count 1 "Ghost blocks shown.")
 press 1 n
 check "N shows them again, Planner2's edits with them" drv 1 "await block 6 -59 6 minecraft:gold_block" \
 	"await block 40 -60 5 minecraft:gold_block" "await block 4 -59 3 minecraft:glowstone"
+check "and says so in chat" said_once_more 1 "Ghost blocks shown." "$shown_lines"
 check "and the config keeps that" grep -q "^ghost-blocks-shown=true" "$config"
 
-# The radial menu's button does what N does. The menu opens with its key (left Alt) held.
-# radial_click <name>: a real click on the radial menu's button of that name, with the menu open.
-radial_click() {
+# The radial menu's button does what N does. As with Effortless Building's own buttons, it acts when the menu's key
+# (left Alt) is let go with the pointer over it, and on a click, after which letting the key go doesn't act again.
+# radial_open: opens the radial menu by holding its key down. radial_point <name>: puts the pointer on the menu's
+# button of that name. radial_let_go: lets the key go, which closes the menu.
+radial_open() {
+	xdo 1 keydown Alt_L
+	drv 1 "await screen Build Modes" "wait 10" > /dev/null
+}
+radial_point() {
 	local x y
 	read -r x y < <(val 1 "widget 0 $1")
-	xdo 1 mousemove --window %w "$x" "$y" click 1
+	xdo 1 mousemove --window %w "$x" "$y"
 	drv 1 "wait 5" > /dev/null
 }
+radial_let_go() {
+	xdo 1 keyup Alt_L
+	drv 1 "await noscreen" "wait 5" > /dev/null
+}
 drv 1 "ebmode SINGLE" "notoasts" > /dev/null
-xdo 1 keydown Alt_L
-drv 1 "await screen Build Modes" "wait 10" > /dev/null
-radial_click "Show or hide ghost blocks"
-check "the radial menu's button hides ghost blocks" eval '[[ $(val 1 ghosts) == "hidden, "* ]] &&
+hidden_lines=$(chat_count 1 "Ghost blocks hidden.")
+radial_open
+radial_point "Show or hide ghost blocks"
+check "with the pointer on the radial menu's button, ghost blocks still show" eval \
+	'[[ $(val 1 ghosts) == "shown, "* ]]'
+radial_let_go
+check "letting the menu's key go over the button hides ghost blocks" eval '[[ $(val 1 ghosts) == "hidden, "* ]] &&
 	[[ $(val 1 "get 4 -59 3") == minecraft:air ]]'
-drv 1 "wait 5" "shot radial-button-hidden" > /dev/null
-radial_click "Show or hide ghost blocks"
-check "and shows them again" eval '[[ $(val 1 ghosts) == "shown, "* ]] &&
+check "and says so in chat" said_once_more 1 "Ghost blocks hidden." "$hidden_lines"
+check "and leaves Effortless Building's mode as it was" eval '[[ $(val 1 ebmode) == SINGLE ]]'
+shown_lines=$(chat_count 1 "Ghost blocks shown.")
+radial_open
+radial_point "Show or hide ghost blocks"
+radial_let_go
+check "and again shows them" eval '[[ $(val 1 ghosts) == "shown, "* ]] &&
 	drv 1 "await block 4 -59 3 minecraft:glowstone" > /dev/null'
-xdo 1 keyup Alt_L
-check "the menu closes when its key is let go, ghost blocks still showing" eval 'drv 1 "await noscreen" > /dev/null &&
-	[[ $(val 1 ghosts) == "shown, "* ]]'
+check "and says so in chat" said_once_more 1 "Ghost blocks shown." "$shown_lines"
+hidden_lines=$(chat_count 1 "Ghost blocks hidden.")
+radial_open
+radial_point "Show or hide ghost blocks"
+xdo 1 click 1
+drv 1 "wait 5" > /dev/null
+check "a click on the button hides them, the menu staying open" eval '[[ $(val 1 ghosts) == "hidden, "* ]] &&
+	drv 1 "await screen Build Modes" > /dev/null'
+radial_let_go
+check "and letting the key go over it then doesn't act again" eval '[[ $(val 1 ghosts) == "hidden, "* ]] &&
+	said_once_more 1 "Ghost blocks hidden." "$hidden_lines"'
+press 1 n
+check "N shows them" drv 1 "await block 4 -59 3 minecraft:glowstone"
 
 # Drawing a shape while ghost blocks are hidden shows them again, then draws, with a message the first time only.
 drv 1 "cmd clear @s" "cmd item replace entity @s weapon.mainhand with minecraft:stone_bricks" "ebarray 0" > /dev/null
 press 1 n
 drv 1 "cmd tp @s 20.5 -55 5.5 0 90" "wait 30" > /dev/null
 check "ghost blocks are hidden before the shape" eval '[[ $(val 1 ghosts) == "hidden, "* ]]'
+shown_lines=$(chat_count 1 "Ghost blocks shown.")
 use_click 1
 check "with ghost blocks hidden, a shape shows them again, then draws" drv 1 \
 	"await block 4 -59 3 minecraft:glowstone" "await block 20 -60 5 minecraft:stone_bricks"
 check "and says so" client_said 1 "Ghost blocks shown again. Press N to hide them."
+check "without the switch's own line" eval '(($(chat_count 1 "Ghost blocks shown.") == shown_lines))'
 check "and the config keeps them shown" grep -q "^ghost-blocks-shown=true" "$config"
 drv 1 "cmd tp @s 20.5 -58 -2.5 0 40" "wait 20" > /dev/null
 shot 1 shown-again
@@ -122,44 +166,45 @@ check "after a restart, client 1 starts a session with ghost blocks still hidden
 press 1 n
 check "and N shows them" drv 1 "await block 4 -59 3 minecraft:glowstone"
 
-# The radial menu's buttons, in each layout drafted for Geo, with build steps 10 and 11's buttons shown too, in
-# Circle mode, whose options fill two rows right of the ring, set before each opening since letting the key go over
-# "Single" chooses it. radial_layout <layout> <width> <height> <gui scale>
-# [<icons>] opens the menu in a window of that size at that GUI scale, with the pointer over "Single" (about 33 right
-# of the menu's middle and 35 above it) so its name and description show, and shoots it as
-# radial-<layout>[-<icons>]-<width>x<height>. The buttons' boxes go to the log, for outlining. It fails unless the
-# buttons meet nothing the menu draws, the sliders, each other or the screen's edges.
-radial_layout() {
-	local name=radial-$1${5:+-$5}-$2x$3 result
-	drv 1 "ebmode CIRCLE" "buttonlayout $1" "buttonicons ${5:-lucide}" "window $2 $3 $4" "wait 20" > /dev/null
-	xdo 1 keydown Alt_L
-	drv 1 "await screen Build Modes" "wait 10" > /dev/null
-	xdo 1 mousemove --window %w $(($2 / 2 + 33 * $4)) $(($3 / 2 - 35 * $4))
-	drv 1 "wait 10" "notoasts" "wait 5" "notoasts" "shot $name" > /dev/null
-	echo "  $name buttons: $(val 1 buttons)" >> /out/checks.log
+# Where the radial menu's buttons sit, with build steps 10 and 11's buttons shown too, in Circle mode, whose options
+# fill two rows right of the ring, set before each opening since letting the key go over "Single" chooses it.
+# radial_shot <width> <height> <gui scale> <name> opens the menu in a window of that size at that GUI scale, with the
+# pointer over "Single" (about 33 right of the menu's middle and 35 above it) so its name and description show, and
+# shoots it as <name>. The buttons' boxes go to the log, for outlining. It fails unless the buttons meet nothing the
+# menu draws, the sliders, each other or the screen's edges.
+radial_shot() {
+	local result
+	drv 1 "ebmode CIRCLE" "window $1 $2 $3" "wait 20" > /dev/null
+	radial_open
+	xdo 1 mousemove --window %w $(($1 / 2 + 33 * $3)) $(($2 / 2 - 35 * $3))
+	drv 1 "wait 10" "notoasts" "wait 5" "notoasts" "shot $4" > /dev/null
+	echo "  $4 buttons: $(val 1 buttons)" >> /out/checks.log
 	result=$(val 1 radialclear)
-	echo "  $name: $result" >> /out/checks.log
-	xdo 1 keyup Alt_L
-	drv 1 "await noscreen" > /dev/null
+	echo "  $4: $result" >> /out/checks.log
+	radial_let_go
 	[[ $result == clear ]]
 }
+# With ghost blocks hidden, so these shots and the hover shots below show every icon between them.
 drv 1 "draftbuttons true" "cmd tp @s 20.5 -58 -2.5 0 40" "wait 20" > /dev/null
-for layout in A B C D; do
-	check "layout $layout's buttons meet nothing at GUI scale 2" radial_layout $layout 854 480 2
-	check "nor at GUI scale 4" radial_layout $layout 1920 1080 4
+press 1 n
+check "the buttons meet nothing at 854 by 480, GUI scale 2" radial_shot 854 480 2 radial-draft-854x480-gui2
+check "nor at 1920 by 1080, GUI scale 2" radial_shot 1920 1080 2 radial-draft-1920x1080-gui2
+check "nor at GUI scale 4" radial_shot 1920 1080 4 radial-draft-1920x1080-gui4
+press 1 n
+# The show or hide button's hover text, with only the buttons built so far. The pointer leaves the button before the
+# key is let go, so closing the menu leaves ghost blocks shown.
+drv 1 "draftbuttons false" "ebmode SINGLE" > /dev/null
+for scale in 2 4; do
+	drv 1 "window 1920 1080 $scale" "wait 20" > /dev/null
+	radial_open
+	radial_point "Show or hide ghost blocks"
+	drv 1 "wait 10" "notoasts" "shot radial-hover-1920x1080-gui$scale" > /dev/null
+	echo "  radial-hover-1920x1080-gui$scale buttons: $(val 1 buttons)" >> /out/checks.log
+	xdo 1 mousemove --window %w 5 5
+	radial_let_go
 done
-# The icons as vanilla items, for Geo to compare with Lucide's, next to Effortless Building's own buttons.
-check "layout B with vanilla items as icons meets nothing" radial_layout B 1920 1080 4 items
-# The show or hide button's hover text.
-drv 1 "buttonlayout B" "buttonicons lucide" > /dev/null
-xdo 1 keydown Alt_L
-drv 1 "await screen Build Modes" "wait 10" > /dev/null
-read -r x y < <(val 1 "widget 0 Show or hide ghost blocks")
-xdo 1 mousemove --window %w "$x" "$y"
-drv 1 "wait 10" "notoasts" "shot radial-hover-1920x1080" > /dev/null
-echo "  radial-hover-1920x1080 buttons: $(val 1 buttons)" >> /out/checks.log
-xdo 1 keyup Alt_L
-drv 1 "await noscreen" "draftbuttons false" "ebmode SINGLE" "window 854 480 2" "wait 20" > /dev/null
+check "ghost blocks still show after the hover shots" eval '[[ $(val 1 ghosts) == "shown, "* ]]'
+drv 1 "window 854 480 2" "wait 20" > /dev/null
 
 # Copy and paste, as they worked on separate plans: build step 10 rewrites these for the shared layer, with Copy's box
 # drawn with the "Cube" shape and the copy following the aim, and its radial menu buttons.

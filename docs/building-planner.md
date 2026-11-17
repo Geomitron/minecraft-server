@@ -12,7 +12,7 @@ without mods with anything but an item that places a block (E13 to E15), the lay
 side of the layer and protocol 3, the one-time import of the plans Syncmatica shared, the player's copy of the layer
 with its tiles, shapes and erasing in world positions, and the edit glow, hooks L1 and L4 to L7, which keep tiles out
 of Litematica's screens and edits, the removal of old plans' placements, and showing or hiding ghost blocks, with its
-key, its radial menu button in four drafted places, and Litematica's tool item off at a first start. Neither side
+key, its radial menu button, and Litematica's tool item off at a first start. Neither side
 speaks protocol 2's named plans or uses Syncmatica any more. Everything else this spec describes waits on the build
 steps in [plan.md](plan.md) ("Agent-ready work"), which end with the release. The build reuses what still fits:
 Effortless Building's hooks E1 to E10 (E1, E2 and E6 change), the rules of undo and redo, the edit glow, the block mix
@@ -24,9 +24,9 @@ screen's layout, the check for a server without the add-on, and the in-game chec
   reaches everyone as it's made, and several players can draw at once, even on the same blocks. There are no plans to
   start, name, move or delete. Ghost blocks show see-through (see "How ghost blocks look").
 - **Show or hide.** One switch shows or hides all ghost blocks for that player: a key ("Show or hide ghost blocks", N
-  unless the player changes it in Controls) and a button in Effortless Building's radial menu. Building Planner
-  remembers the choice across game runs; ghost blocks show at first. Drawing a shape while they're hidden shows them
-  again, then draws.
+  unless the player changes it in Controls) and a button in Effortless Building's radial menu, each saying in chat
+  "Ghost blocks hidden." or "Ghost blocks shown.". Building Planner remembers the choice across game runs; ghost
+  blocks show at first. Drawing a shape while they're hidden shows them again, then draws.
 - **Drawing shapes.** With an Effortless Building mode chosen (single, line, wall, floor, cube, slope, circle,
   cylinder, sphere and the rest), the place (right) click draws the shape as ghost blocks, with Effortless Building's
   mirror, radial mirror and array (repeat). A shape drawn with the break (left) click erases ghost blocks, whoever
@@ -142,12 +142,13 @@ Effortless Building, under `common/src/main/java/nl/requios/effortlessbuilding/`
 | E13 | `buildpipeline/BuildPipeline.java`, `isBuildTriggerItem` | `@ModifyReturnValue` | On a server (with a session, or with Building Planner off), an item starts shapes only if it places a block (`ClickRule.placeable`: Minecraft's `BlockItem`, the same test as the mix's; `ClickRule` uses none of Litematica's classes, so these hooks can ask it while Building Planner is off). Effortless Building's own rule also takes buckets and tools with a `TOOL` component, and leaves out doors, beds and tall plants. While a box is awaited for copy or the material list, any held item, or none, counts, so it starts the cube. |
 | E14 | `buildpipeline/BuildPipelineClient.java`, `shouldInterceptPlacing` and `shouldInterceptBreaking` | `@ModifyReturnValue` | With the same rule, while the main hand holds no item that places a block and no shape is under way (`getBuildState()` null), neither click is Effortless Building's: its client tick, its `AttackBlockCallback`, and its cancelling of vanilla's `startUseItem`, `startAttack` and `continueAttack` all ask these first, and so does hold to repeat, so both clicks and holding them are vanilla's. A shape under way still takes the click that finishes or cancels it. |
 | E15 | `Minecraft.pick(float)`, into which Effortless Building's `MixinGameRenderer` adds, at its tail, a reach of 32 for an empty hand, aiming through entities; `buildmode/BuildModes.java`, `getBuildMode` | `@WrapMethod` on `pick`; `@ModifyReturnValue` on `getBuildMode` | While the main hand holds no item that places a block and no shape is under way, `getBuildMode` reads Disable during the pick, which that code skips, so the hand aims as without mods, at an entity before the block behind it. |
+| E16 | `screen/RadialMenu.java`, `onClose()` | `@Inject` at head | Let Building Planner's buttons act when the menu closes, as the menu's own do: its `tick` calls `onClose` once its key is let go (Escape calls it too), and `onClose` acts on the menu's button under the pointer unless a click acted since the menu opened (`performedActionUsingMouse`). |
 
 Effortless Building's limits come from its config on the player's computer (`config/ServerConfig.java`; survival
 defaults: reach 32, 2,000 blocks a shape, 64 a side). The server applies its own caps (below). The radial menu's own
 buttons come from a fixed list (`RadialMenu.extractRenderState`, `buildmode/ModeOptions.java` `ActionEnum`), which is
 why Building Planner adds widgets of its own rather than actions; they sit where the menu draws nothing, so its
-`switchTo` and `doAction` stay empty when the player clicks one.
+`switchTo` and `doAction` stay empty when the player clicks one or lets the menu's key go over it.
 
 Litematica, under `src/main/java/fi/dy/masa/litematica/`:
 
@@ -383,9 +384,10 @@ added tile would bring up Litematica's status panel for 10 seconds (`SchematicPl
 `StatusInfoRenderer.startOverrideDelay`), and it hides the copy too. Litematica's own switch still turns all its drawing
 off.
 
-The key and the button act only during a session; without one there are no ghost blocks to switch. Neither says
-anything, since the ghost blocks themselves show the change. The button's icon shows the current state: an eye while
-ghost blocks show, a crossed-out eye while they're hidden. Showing them again for a shape says "Ghost blocks shown
+The key and the button act only during a session; without one there are no ghost blocks to switch. Each time either
+switches, it says so in chat: "Ghost blocks hidden." or "Ghost blocks shown." (`ClientSession.toggleGhosts`). The
+button's icon shows the current state: an open eye while ghost blocks show, a closed eye while they're hidden. Showing
+them again for a shape doesn't say "Ghost blocks shown."; the first time in a session it says "Ghost blocks shown
 again. Press N to hide them.", with the key as the player has it bound (`ClientSession.showForDrawing`).
 
 ### The radial menu's buttons and sliders
@@ -415,28 +417,24 @@ reaches is saved at once in `config/buildingplanner-client.properties` (`place-r
 first 4 and 6, which a missing value, or one that isn't a whole number from 1 to 20, reads as), where hold to repeat
 reads it each tick. The sliders show and save on any server, and take effect only where hold to repeat runs.
 
-Building Planner's buttons (`RadialButton`) look like the menu's own: 20 across, grey, light blue under the pointer,
-with a 16-pixel icon, the menu's click sound, and, on hover, the button's name in aqua and its key, when it has one, in
-grey. Each acts on a click. Their place is Geo's choice, from four drafts with the buttons' middles 26 apart in the
-menu's own columns or rows, picked by the development system property `buildingplanner.buttonLayout`:
+Building Planner's buttons (`RadialButton`) look and act like the menu's own: 20 across, grey, light blue under the
+pointer, with a 16-pixel icon centred in them, and, on hover, the button's name in aqua and its key, when it has one,
+in grey. As with Effortless Building 4.3's own buttons (`RadialMenu`), each acts when the player lets go of the menu's
+key with the pointer over it (hook E16; Escape closes the menu the same way), and on a click of any mouse button over
+it, which leaves the menu open; after a click has acted, letting the key go acts on nothing. Each action plays the
+menu's quiet click (`RadialMenu.playRadialMenuSound`). The buttons sit above the wrench, undo and redo, in the same
+columns (157, 131 and 105 left of the middle), in rows 39 and 65 above the middle: "Show or hide ghost blocks", Copy
+and Paste, then "Copy real blocks" and "Material list". The row 91 above the middle stays free for the Turn, Mirror
+and Clear buttons, which step 10 adds. Copy, Paste, "Copy real blocks" and "Material list" come with steps 10 and 11;
+until then they show, doing nothing, only while the development system property `buildingplanner.draftButtons` is
+`true`.
 
-- **A**, right: the left-hand buttons' columns mirrored to the right (105 to 157 right of the middle), in rows 52 and
-  78 below the middle. The mirror can't take the left-hand rows (13 above and below the middle): in Wall, Floor, Cube,
-  Slope Floor, Circle, Cylinder and Sphere, Effortless Building draws its mode options there (`ModeOptions`; buttons
-  at 105 + 26 per option, rows 13 above and 26 below the middle, with labels above each row).
-- **B**, left and above (the layout without the property): the left-hand buttons' columns, in rows 39 and 65 above
-  the middle, over the wrench, undo and redo.
-- **C**, top: one row over the ring, its middle 95 above the menu's middle.
-- **D**, under the sliders: the left-hand buttons' columns, in rows 67 and 93 below the middle, the lower row left of
-  the widest description (Disable's, about 108 each side of the middle).
-
-Copy, Paste, "Copy real blocks" and "Material list" come with steps 10 and 11; until then they show, doing nothing,
-only while `buildingplanner.draftButtons` is `true`. Their icons come from Lucide 1.74.0 (ISC licence): eye and
-eye-off for show or hide, copy, clipboard-paste, brick-wall for "Copy real blocks", and list-checks. Their path data is
-copied verbatim into `LucideIcons`, which names the set, its version, its source and its licence; `StrokeIcon` draws it
-at Lucide's 2-unit stroke into a texture at each GUI scale's pixel size. For comparison, `buildingplanner.buttonIcons`
-set to `items` shows vanilla items instead (an ender eye or pearl, paper, a slime ball, bricks and a book and quill).
-The place, the icons and the hover texts wait on Geo's choice from screenshots before they're pushed.
+Each icon is a 16 by 16 image of its own in `mod/src/main/resources/assets/buildingplanner/textures/gui/radial/`,
+named by what it shows: `ghost_blocks_shown`, `ghost_blocks_hidden`, `copy`, `paste`, `copy_real_blocks`,
+`material_list`, and `turn`, `mirror` and `clear` for step 10's buttons. Changing an icon means replacing its file. Each
+draws at 16 by 16 GUI pixels with nearest-pixel filtering, as the menu draws its own (`AllIcons.render`). The icons
+were generated with OpenRouter's `google/gemini-3-pro-image` (Nano Banana Pro) on 2026-11-17, as Set 4 of 30
+candidate sets, which Geo chose for now (inbox request 732); Geo is to pick each icon later.
 
 ### The block mix and its panel
 
@@ -528,8 +526,8 @@ takes `columns`, since Building Planner 0.2 takes a `hello` of another layout un
 ### The add-on's licence
 
 MIT (`mod/LICENSE`). Effortless Building and Litematica are LGPL-3.0; the add-on calls their code and copies none of
-it, so it can take its own licence. The radial menu's icons are Lucide's, under its ISC licence, with its notice in
-`LucideIcons`, the source file that holds them.
+it, so it can take its own licence. The radial menu's icons were made for Building Planner with an image model ("The
+radial menu's buttons and sliders" names it).
 
 ### In-game checks
 
@@ -599,17 +597,21 @@ add-on's classes off the classpath) and checks:
 paste and of the material list waits on its build step (10 and 11): until then its section logs one failure marked with
 that step and doesn't run.
 
-- N hides every ghost block for that player alone: the game keeps them in its copy of the layer, Litematica has no
-  tile, and the client config keeps the choice. Another player's edits, one of them in a column that had no ghost
-  blocks, reach the hidden copy without showing or glowing, and N shows them with the rest.
-- The radial menu's "Show or hide ghost blocks" button hides them, then shows them, and the menu closes with them
-  showing.
-- With ghost blocks hidden, a shape shows them again, then draws, with its message the first time only.
+- N hides every ghost block for that player alone, saying "Ghost blocks hidden." in chat: the game keeps them in its
+  copy of the layer, Litematica has no tile, and the client config keeps the choice. Another player's edits, one of
+  them in a column that had no ghost blocks, reach the hidden copy without showing or glowing, and N shows them with
+  the rest, saying "Ghost blocks shown.".
+- Letting go of the radial menu's key with the pointer on its "Show or hide ghost blocks" button hides them, with the
+  chat line, and leaves Effortless Building's mode as it was; doing it again shows them, with its line. A click on the
+  button hides them with the menu staying open, and letting the key go over it then doesn't act again.
+- With ghost blocks hidden, a shape shows them again, then draws, with its message the first time only and never
+  "Ghost blocks shown.".
 - Hidden ghost blocks stay hidden after a restart, until N shows them.
-- In each drafted layout, at GUI scale 2 and, in a window of 1920 by 1080, at 4, the buttons, with steps 10 and 11's
-  shown, meet nothing the menu draws in any mode (its ring, buttons, mode options, mode names, descriptions and
-  watermark), the sliders, each other or the screen's edges (the driver's `radialclear`); each is shot, with the
-  buttons' boxes in the log, and so are the vanilla-item icons and the button's hover text.
+- At 854 by 480, GUI scale 2, and at 1920 by 1080, GUI scales 2 and 4, the buttons, with steps 10 and 11's shown,
+  meet nothing the menu draws in any mode (its ring, buttons, mode options, mode names, descriptions and watermark),
+  the sliders, each other or the screen's edges (the driver's `radialclear`); each is shot with ghost blocks hidden,
+  with the buttons' boxes in the log, and at 1920 by 1080, GUI scales 2 and 4, so is the show or hide button's hover
+  text with ghost blocks showing.
 - J, then a cube around some ghost blocks, makes a copy, with the message naming the Paste key, places no real block,
   doesn't reach the other player, and puts back the player's mode; the copy follows the player's aim.
 - U turns it a quarter turn clockwise, and H, facing south, flips it east to west, with its stairs turning with it.
