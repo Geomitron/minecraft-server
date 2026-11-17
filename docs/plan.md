@@ -206,6 +206,10 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it, not
   the weird scaling issues that makes it hard to read", 709 revision 2 Q3; "same text issue happens with the scaled
   down sliders", Geo in the project's thread). Each is drawn at the smallest size at or above 70% at which every font
   pixel covers a whole number of screen pixels: full size at GUI scales 1 to 3, 75% at 4, 80% at 5.
+- At that size the sliders' one-line labels don't fit between the menu's buttons and its ring, so both sliders are as
+  wide as the longer label needs, ending where they did, outside the ring, and reaching further left than the buttons
+  (709 revision 3 Q1 A, over two-line labels). In a GUI narrower than about 420 pixels, such as a 1024×768 window at
+  GUI scale 3, they run off the screen's left edge and cut off "Build" and "Break"; Geo saw that before choosing.
 - The copy follows where the player aims: its corner sits on the block they look at, until they paste or clear it
   (677 Q2 A).
 - N shows or hides the ghost blocks, since "Start a plan" no longer needs it (677 Q3 A).
