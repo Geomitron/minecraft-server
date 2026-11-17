@@ -60,14 +60,14 @@ public final class PlanReplicas {
 	/** Subscribes to a plan; does nothing if it's attached already. */
 	public void attach(UUID planId) {
 		if (replicas.putIfAbsent(planId, new Replica()) == null) {
-			connection.send(new Payloads.Subscribe(planId));
+			connection.send(new PlanPayloads.Subscribe(planId));
 		}
 	}
 
 	/** Unsubscribes from a plan and forgets the copy. */
 	public void detach(UUID planId) {
 		if (replicas.remove(planId) != null) {
-			connection.send(new Payloads.Unsubscribe(planId));
+			connection.send(new PlanPayloads.Unsubscribe(planId));
 		}
 	}
 
@@ -115,7 +115,7 @@ public final class PlanReplicas {
 			}
 		}
 		int seq = nextSeq++;
-		connection.send(new Payloads.Edit(planId, seq, kind, changes));
+		connection.send(new PlanPayloads.Edit(planId, seq, kind, changes));
 		return seq;
 	}
 
@@ -128,25 +128,25 @@ public final class PlanReplicas {
 	}
 
 	public void undo() {
-		connection.send(new Payloads.Undo());
+		connection.send(new PlanPayloads.Undo());
 	}
 
 	public void redo() {
-		connection.send(new Payloads.Redo());
+		connection.send(new PlanPayloads.Redo());
 	}
 
 	/** Takes one payload from the server. */
 	public void receive(CustomPacketPayload payload) {
 		switch (payload) {
-			case Payloads.Snapshot snapshot -> load(snapshot);
-			case Payloads.Applied applied -> apply(applied);
-			case Payloads.Rejected rejected -> reject(rejected);
+			case PlanPayloads.Snapshot snapshot -> load(snapshot);
+			case PlanPayloads.Applied applied -> apply(applied);
+			case PlanPayloads.Rejected rejected -> reject(rejected);
 			case Payloads.Notice notice -> view.message(notice.message());
 			default -> throw new IllegalArgumentException("Not a sync payload: " + payload.type());
 		}
 	}
 
-	private void load(Payloads.Snapshot snapshot) {
+	private void load(PlanPayloads.Snapshot snapshot) {
 		Replica replica = replicas.get(snapshot.plan());
 		if (replica == null) {
 			return;
@@ -157,7 +157,7 @@ public final class PlanReplicas {
 		view.loaded(snapshot.plan(), replica.plan);
 	}
 
-	private void apply(Payloads.Applied applied) {
+	private void apply(PlanPayloads.Applied applied) {
 		Replica replica = replicas.get(applied.plan());
 		if (replica == null || replica.plan == null || replica.awaitingSnapshot) {
 			return;
@@ -191,9 +191,9 @@ public final class PlanReplicas {
 		}
 	}
 
-	private void reject(Payloads.Rejected rejected) {
+	private void reject(PlanPayloads.Rejected rejected) {
 		Replica replica = replicas.get(rejected.plan());
-		if (rejected.clientSeq() == Payloads.NO_CLIENT_SEQ) {
+		if (rejected.clientSeq() == PlanPayloads.NO_CLIENT_SEQ) {
 			// The server doesn't have the plan.
 			replicas.remove(rejected.plan());
 			return;
@@ -207,7 +207,7 @@ public final class PlanReplicas {
 
 	private void resubscribe(UUID planId, Replica replica) {
 		replica.awaitingSnapshot = true;
-		connection.send(new Payloads.Subscribe(planId));
+		connection.send(new PlanPayloads.Subscribe(planId));
 	}
 
 	private static final class Replica {

@@ -4,6 +4,7 @@ import com.mojang.blaze3d.platform.InputConstants;
 import dev.buildingplanner.BuildingPlanner;
 import dev.buildingplanner.sync.EditKind;
 import dev.buildingplanner.sync.Payloads;
+import dev.buildingplanner.sync.PlanPayloads;
 import dev.buildingplanner.sync.PlayerMessage;
 import fi.dy.masa.litematica.schematic.container.LitematicaBlockStateContainer;
 import fi.dy.masa.malilib.event.RenderEventHandler;
@@ -47,8 +48,8 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	private static final BlockMix MIX = new BlockMix();
 
 	/** The payloads a session sends; a server that can't receive them all doesn't run Building Planner. */
-	private static final List<CustomPacketPayload.Type<?>> SERVERBOUND = List.of(Payloads.Subscribe.TYPE,
-		Payloads.Unsubscribe.TYPE, Payloads.Edit.TYPE, Payloads.Undo.TYPE, Payloads.Redo.TYPE);
+	private static final List<CustomPacketPayload.Type<?>> SERVERBOUND = List.of(PlanPayloads.Subscribe.TYPE,
+		PlanPayloads.Unsubscribe.TYPE, PlanPayloads.Edit.TYPE, PlanPayloads.Undo.TYPE, PlanPayloads.Redo.TYPE);
 
 	/**
 	 * Null while not connected to a server with Building Planner: on any other server, Building Planner is off, so
@@ -70,16 +71,16 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		KeyMappingHelper.registerKeyMapping(BLOCK_MIX);
 		List.of(COPY, PASTE, TURN, MIRROR, CLEAR).forEach(KeyMappingHelper::registerKeyMapping);
 		RenderEventHandler.getInstance().registerWorldLastRenderer(GLOW);
-		ClientPlayNetworking.registerGlobalReceiver(Payloads.Hello.TYPE, (hello, context) -> hello(hello));
+		ClientPlayNetworking.registerGlobalReceiver(PlanPayloads.Hello.TYPE, (hello, context) -> hello(hello));
 		// A singleplayer or LAN host's own world runs no server side.
 		ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
 			if (!client.isLocalServer() && !SERVERBOUND.stream().allMatch(ClientPlayNetworking::canSend)) {
 				BuildingPlanner.LOGGER.info("The server doesn't run Building Planner, so it's off");
 			}
 		});
-		ClientPlayNetworking.registerGlobalReceiver(Payloads.Snapshot.TYPE, (payload, context) -> receive(payload));
-		ClientPlayNetworking.registerGlobalReceiver(Payloads.Applied.TYPE, (payload, context) -> receive(payload));
-		ClientPlayNetworking.registerGlobalReceiver(Payloads.Rejected.TYPE, (payload, context) -> receive(payload));
+		ClientPlayNetworking.registerGlobalReceiver(PlanPayloads.Snapshot.TYPE, (payload, context) -> receive(payload));
+		ClientPlayNetworking.registerGlobalReceiver(PlanPayloads.Applied.TYPE, (payload, context) -> receive(payload));
+		ClientPlayNetworking.registerGlobalReceiver(PlanPayloads.Rejected.TYPE, (payload, context) -> receive(payload));
 		ClientPlayNetworking.registerGlobalReceiver(Payloads.Notice.TYPE, (payload, context) -> receive(payload));
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
 			if (session != null) {
@@ -142,12 +143,12 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	 * The server's {@code hello}: starts a session when the server speaks this client's protocol version, and otherwise
 	 * leaves Building Planner off.
 	 */
-	static void hello(Payloads.Hello hello) {
-		if (hello.protocolVersion() == Payloads.PROTOCOL_VERSION) {
+	static void hello(PlanPayloads.Hello hello) {
+		if (hello.protocolVersion() == PlanPayloads.PROTOCOL_VERSION) {
 			session = new ClientSession(hello.limits(), GLOW, MIX);
 		} else {
 			BuildingPlanner.LOGGER.warn("The server runs Building Planner protocol {}, this client {}",
-				hello.protocolVersion(), Payloads.PROTOCOL_VERSION);
+				hello.protocolVersion(), PlanPayloads.PROTOCOL_VERSION);
 		}
 	}
 

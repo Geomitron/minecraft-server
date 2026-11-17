@@ -9,6 +9,7 @@ import dev.buildingplanner.plan.PlanRegion;
 import dev.buildingplanner.sync.BlockChange;
 import dev.buildingplanner.sync.EditKind;
 import dev.buildingplanner.sync.Payloads;
+import dev.buildingplanner.sync.PlanPayloads;
 import dev.buildingplanner.sync.PlanReplicas;
 import dev.buildingplanner.sync.PlayerMessage;
 import dev.buildingplanner.sync.SyncLimits;
@@ -44,7 +45,7 @@ final class SimulatedNetwork {
 	}
 
 	private void deliver(UUID player, CustomPacketPayload payload) {
-		if (payload instanceof Payloads.Applied applied) {
+		if (payload instanceof PlanPayloads.Applied applied) {
 			List<Integer> revisions = sentRevisions.computeIfAbsent(applied.plan(), p -> new ArrayList<>());
 			if (revisions.isEmpty() || revisions.getLast() != applied.rev()) {
 				revisions.add(applied.rev());
@@ -76,7 +77,7 @@ final class SimulatedNetwork {
 	final class Client {
 		final UUID id = UUID.randomUUID();
 		final String name;
-		final List<Payloads.Rejected> rejections = new ArrayList<>();
+		final List<PlanPayloads.Rejected> rejections = new ArrayList<>();
 		final List<PlayerMessage> notices = new ArrayList<>();
 		final Deque<CustomPacketPayload> inbox = new ArrayDeque<>();
 		private final Deque<CustomPacketPayload> outbox = new ArrayDeque<>();
@@ -128,11 +129,11 @@ final class SimulatedNetwork {
 				return false;
 			}
 			switch (payload) {
-				case Payloads.Subscribe p -> server.subscribe(id, p.plan());
-				case Payloads.Unsubscribe p -> server.unsubscribe(id, p.plan());
-				case Payloads.Edit p -> server.edit(id, p.plan(), p.clientSeq(), p.kind(), p.changes());
-				case Payloads.Undo p -> server.undo(id);
-				case Payloads.Redo p -> server.redo(id);
+				case PlanPayloads.Subscribe p -> server.subscribe(id, p.plan());
+				case PlanPayloads.Unsubscribe p -> server.unsubscribe(id, p.plan());
+				case PlanPayloads.Edit p -> server.edit(id, p.plan(), p.clientSeq(), p.kind(), p.changes());
+				case PlanPayloads.Undo p -> server.undo(id);
+				case PlanPayloads.Redo p -> server.redo(id);
 				default -> throw new IllegalStateException("Not a client payload: " + payload);
 			}
 			return true;
@@ -145,7 +146,7 @@ final class SimulatedNetwork {
 				return false;
 			}
 			switch (payload) {
-				case Payloads.Rejected p -> rejections.add(p);
+				case PlanPayloads.Rejected p -> rejections.add(p);
 				case Payloads.Notice p -> notices.add(p.message());
 				default -> {
 				}

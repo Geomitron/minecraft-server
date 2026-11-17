@@ -1,35 +1,35 @@
 package dev.buildingplanner.sync;
 
 import dev.buildingplanner.BuildingPlanner;
-import dev.buildingplanner.plan.RegionSnapshot;
+import dev.buildingplanner.layer.PackedSection;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
-import net.minecraft.core.BlockPos;
-import net.minecraft.core.Vec3i;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * Building Planner's network payloads, namespace {@code buildingplanner}. Block states travel as ids in the
- * block-state registry; both sides run the same vanilla blocks.
+ * Building Planner's network payloads for the shared layer, namespace {@code buildingplanner}, protocol version 3.
+ * Dimensions travel as their ids; block states as ids in the block-state registry, since both sides run the same
+ * vanilla blocks.
  */
 public final class Payloads {
 	/** Raised whenever a payload's layout changes; a client that sees another version turns Building Planner off. */
-	public static final int PROTOCOL_VERSION = 2;
-	/** Marks an {@code applied} or {@code rejected} that answers no client edit (an undo, a redo, a subscribe). */
+	public static final int PROTOCOL_VERSION = 3;
+	/** Marks an {@code applied} that answers no edit of the player's: an undo or a redo. */
 	public static final int NO_CLIENT_SEQ = -1;
 	/** Room for {@link SyncLimits#WIRE_MAX_EDIT_BLOCKS} changes at their largest (a long and a three-byte id each). */
 	static final int MAX_EDIT_BYTES = SyncLimits.WIRE_MAX_EDIT_BLOCKS * 12 + 64 * 1024;
-	/** Snapshots and applied edits go to players; their size follows the plan's, up to the size cap. */
+	/** Room for 131,072 columns in one {@code watch} or {@code unwatch}, far more than the largest view distance loads. */
+	static final int MAX_WATCH_BYTES = 1024 * 1024;
+	/** Column snapshots and applied edits go to players; their size follows the layer's. */
 	private static final int MAX_CLIENTBOUND_BYTES = Integer.MAX_VALUE;
 	private static final int MAX_NAME_LENGTH = 256;
 
@@ -38,38 +38,58 @@ public final class Payloads {
 
 	// Client to server.
 
-	public record Subscribe(UUID plan) implements CustomPacketPayload {
-		public static final Type<Subscribe> TYPE = payloadType("subscribe");
-		static final StreamCodec<FriendlyByteBuf, Subscribe> CODEC = StreamCodec.of(
-			(buf, p) -> buf.writeUUID(p.plan), buf -> new Subscribe(buf.readUUID()));
+	/** The columns of the player's dimension that their game loaded since its last {@code watch}. */
+	public record Watch(Identifier dimension, List<ChunkPos> columns) implements CustomPacketPayload {
+		public static final Type<Watch> TYPE = payloadType("watch");
+		static final StreamCodec<FriendlyByteBuf, Watch> CODEC = StreamCodec.of(
+			(buf, p) -> {
+				buf.writeIdentifier(p.dimension);
+				writeList(buf, p.columns, (b, column) -> b.writeChunkPos(column));
+			},
+			buf -> new Watch(buf.readIdentifier(), readList(buf, b -> b.readChunkPos())));
+
+		public Watch {
+			columns = List.copyOf(columns);
+		}
 
 		@Override
-		public Type<Subscribe> type() {
+		public Type<Watch> type() {
 			return TYPE;
 		}
 	}
 
-	public record Unsubscribe(UUID plan) implements CustomPacketPayload {
-		public static final Type<Unsubscribe> TYPE = payloadType("unsubscribe");
-		static final StreamCodec<FriendlyByteBuf, Unsubscribe> CODEC = StreamCodec.of(
-			(buf, p) -> buf.writeUUID(p.plan), buf -> new Unsubscribe(buf.readUUID()));
+	/** The columns the player's game unloaded since its last {@code unwatch}. */
+	public record Unwatch(Identifier dimension, List<ChunkPos> columns) implements CustomPacketPayload {
+		public static final Type<Unwatch> TYPE = payloadType("unwatch");
+		static final StreamCodec<FriendlyByteBuf, Unwatch> CODEC = StreamCodec.of(
+			(buf, p) -> {
+				buf.writeIdentifier(p.dimension);
+				writeList(buf, p.columns, (b, column) -> b.writeChunkPos(column));
+			},
+			buf -> new Unwatch(buf.readIdentifier(), readList(buf, b -> b.readChunkPos())));
+
+		public Unwatch {
+			columns = List.copyOf(columns);
+		}
 
 		@Override
-		public Type<Unsubscribe> type() {
+		public Type<Unwatch> type() {
 			return TYPE;
 		}
 	}
 
-	public record Edit(UUID plan, int clientSeq, EditKind kind, List<BlockChange> changes) implements CustomPacketPayload {
+	/** A shape or an erase, in world positions; an erase's changes are air. */
+	public record Edit(Identifier dimension, int clientSeq, EditKind kind, List<LayerChange> changes)
+		implements CustomPacketPayload {
 		public static final Type<Edit> TYPE = payloadType("edit");
 		static final StreamCodec<FriendlyByteBuf, Edit> CODEC = StreamCodec.of(
 			(buf, p) -> {
-				buf.writeUUID(p.plan);
+				buf.writeIdentifier(p.dimension);
 				buf.writeVarInt(p.clientSeq);
 				buf.writeEnum(p.kind);
 				writeChanges(buf, p.changes);
 			},
-			buf -> new Edit(buf.readUUID(), buf.readVarInt(), buf.readEnum(EditKind.class), readChanges(buf)));
+			buf -> new Edit(buf.readIdentifier(), buf.readVarInt(), buf.readEnum(EditKind.class), readChanges(buf)));
 
 		public Edit {
 			changes = List.copyOf(changes);
@@ -103,15 +123,15 @@ public final class Payloads {
 
 	// Server to client.
 
-	public record Hello(int protocolVersion, SyncLimits limits) implements CustomPacketPayload {
+	/** Sent at join: the server's protocol version and the block cap for an edit. */
+	public record Hello(int protocolVersion, int maxEditBlocks) implements CustomPacketPayload {
 		public static final Type<Hello> TYPE = payloadType("hello");
 		static final StreamCodec<FriendlyByteBuf, Hello> CODEC = StreamCodec.of(
 			(buf, p) -> {
 				buf.writeVarInt(p.protocolVersion);
-				buf.writeVarInt(p.limits.maxEditBlocks());
-				buf.writeVarInt(p.limits.maxPlanSide());
+				buf.writeVarInt(p.maxEditBlocks);
 			},
-			buf -> new Hello(buf.readVarInt(), new SyncLimits(buf.readVarInt(), buf.readVarInt())));
+			buf -> new Hello(buf.readVarInt(), buf.readVarInt()));
 
 		@Override
 		public Type<Hello> type() {
@@ -119,63 +139,61 @@ public final class Payloads {
 		}
 	}
 
-	public record Snapshot(UUID plan, int rev, List<RegionSnapshot> regions) implements CustomPacketPayload {
-		public static final Type<Snapshot> TYPE = payloadType("snapshot");
-		static final StreamCodec<FriendlyByteBuf, Snapshot> CODEC = StreamCodec.of(
+	/**
+	 * The answer to a {@code watch}: each column it asked for that the server took, with its sections holding ghost
+	 * blocks, lowest first, or none for an empty column.
+	 */
+	public record Columns(Identifier dimension, List<Column> columns) implements CustomPacketPayload {
+		public static final Type<Columns> TYPE = payloadType("columns");
+		static final StreamCodec<FriendlyByteBuf, Columns> CODEC = StreamCodec.of(
 			(buf, p) -> {
-				buf.writeUUID(p.plan);
-				buf.writeVarInt(p.rev);
-				writeList(buf, p.regions, (b, region) -> {
-					b.writeUtf(region.name(), MAX_NAME_LENGTH);
-					b.writeBlockPos(region.min());
-					writeVector(b, region.dimensions());
-					writeList(b, region.palette(), Payloads::writeState);
-					writeList(b, region.sections(), (bb, section) -> {
-						bb.writeVarInt(section.x());
+				buf.writeIdentifier(p.dimension);
+				writeList(buf, p.columns, (b, column) -> {
+					b.writeChunkPos(column.pos());
+					writeList(b, column.sections(), (bb, section) -> {
 						bb.writeVarInt(section.y());
-						bb.writeVarInt(section.z());
-						bb.writeLongArray(section.packed());
+						writeList(bb, section.palette(), Payloads::writeState);
+						bb.writeLongArray(section.blocks());
 					});
 				});
 			},
-			buf -> new Snapshot(buf.readUUID(), buf.readVarInt(), readList(buf, b -> new RegionSnapshot(
-				b.readUtf(MAX_NAME_LENGTH), b.readBlockPos(), readVector(b), readList(b, Payloads::readState),
-				readList(b, bb -> new RegionSnapshot.Section(bb.readVarInt(), bb.readVarInt(), bb.readVarInt(),
-					bb.readLongArray()))))));
+			buf -> new Columns(buf.readIdentifier(), readList(buf, b -> new Column(b.readChunkPos(),
+				readList(b, bb -> new PackedSection(bb.readVarInt(), readList(bb, Payloads::readState), bb.readLongArray()))))));
 
-		public Snapshot {
-			regions = List.copyOf(regions);
+		public Columns {
+			columns = List.copyOf(columns);
 		}
 
 		@Override
-		public Type<Snapshot> type() {
+		public Type<Columns> type() {
 			return TYPE;
 		}
 	}
 
-	/** One edit as the server applied it, to every subscriber, its author included. Growth comes before the changes. */
-	public record Applied(UUID plan, int rev, UUID author, int clientSeq, List<RegionBox> growth, List<BlockChange> changes)
+	/** One column of a {@link Columns}. */
+	public record Column(ChunkPos pos, List<PackedSection> sections) {
+		public Column {
+			sections = List.copyOf(sections);
+		}
+	}
+
+	/**
+	 * One edit as the server applied it, with the changes that changed a block, to every player who watches a column it
+	 * touches, its author included.
+	 */
+	public record Applied(Identifier dimension, UUID author, int clientSeq, List<LayerChange> changes)
 		implements CustomPacketPayload {
 		public static final Type<Applied> TYPE = payloadType("applied");
 		static final StreamCodec<FriendlyByteBuf, Applied> CODEC = StreamCodec.of(
 			(buf, p) -> {
-				buf.writeUUID(p.plan);
-				buf.writeVarInt(p.rev);
+				buf.writeIdentifier(p.dimension);
 				buf.writeUUID(p.author);
 				buf.writeVarInt(p.clientSeq);
-				writeList(buf, p.growth, (b, box) -> {
-					b.writeUtf(box.region(), MAX_NAME_LENGTH);
-					b.writeBlockPos(box.min());
-					writeVector(b, box.dimensions());
-				});
 				writeChanges(buf, p.changes);
 			},
-			buf -> new Applied(buf.readUUID(), buf.readVarInt(), buf.readUUID(), buf.readVarInt(),
-				readList(buf, b -> new RegionBox(b.readUtf(MAX_NAME_LENGTH), b.readBlockPos(), readVector(b))),
-				readChanges(buf)));
+			buf -> new Applied(buf.readIdentifier(), buf.readUUID(), buf.readVarInt(), readChanges(buf)));
 
 		public Applied {
-			growth = List.copyOf(growth);
 			changes = List.copyOf(changes);
 		}
 
@@ -185,16 +203,15 @@ public final class Payloads {
 		}
 	}
 
-	/** The server didn't apply an edit (or a subscribe, with {@link #NO_CLIENT_SEQ}); the client takes a fresh snapshot. */
-	public record Rejected(UUID plan, int clientSeq, PlayerMessage reason) implements CustomPacketPayload {
+	/** The server didn't apply the player's edit, and changed nothing. */
+	public record Rejected(int clientSeq, PlayerMessage reason) implements CustomPacketPayload {
 		public static final Type<Rejected> TYPE = payloadType("rejected");
 		static final StreamCodec<FriendlyByteBuf, Rejected> CODEC = StreamCodec.of(
 			(buf, p) -> {
-				buf.writeUUID(p.plan);
 				buf.writeVarInt(p.clientSeq);
 				writeMessage(buf, p.reason);
 			},
-			buf -> new Rejected(buf.readUUID(), buf.readVarInt(), readMessage(buf)));
+			buf -> new Rejected(buf.readVarInt(), readMessage(buf)));
 
 		@Override
 		public Type<Rejected> type() {
@@ -216,14 +233,14 @@ public final class Payloads {
 	/** Registers every payload type; both sides call this at start. */
 	public static void register() {
 		PayloadTypeRegistry<?> serverbound = PayloadTypeRegistry.serverboundPlay();
-		serverbound.register(Subscribe.TYPE, Subscribe.CODEC);
-		serverbound.register(Unsubscribe.TYPE, Unsubscribe.CODEC);
+		serverbound.registerLarge(Watch.TYPE, Watch.CODEC, MAX_WATCH_BYTES);
+		serverbound.registerLarge(Unwatch.TYPE, Unwatch.CODEC, MAX_WATCH_BYTES);
 		serverbound.registerLarge(Edit.TYPE, Edit.CODEC, MAX_EDIT_BYTES);
 		serverbound.register(Undo.TYPE, Undo.CODEC);
 		serverbound.register(Redo.TYPE, Redo.CODEC);
 		PayloadTypeRegistry<?> clientbound = PayloadTypeRegistry.clientboundPlay();
 		clientbound.register(Hello.TYPE, Hello.CODEC);
-		clientbound.registerLarge(Snapshot.TYPE, Snapshot.CODEC, MAX_CLIENTBOUND_BYTES);
+		clientbound.registerLarge(Columns.TYPE, Columns.CODEC, MAX_CLIENTBOUND_BYTES);
 		clientbound.registerLarge(Applied.TYPE, Applied.CODEC, MAX_CLIENTBOUND_BYTES);
 		clientbound.register(Rejected.TYPE, Rejected.CODEC);
 		clientbound.register(Notice.TYPE, Notice.CODEC);
@@ -233,39 +250,22 @@ public final class Payloads {
 		return new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath(BuildingPlanner.MOD_ID, path));
 	}
 
-	/** Changes go grouped by region, so each region's name travels once. */
-	private static void writeChanges(FriendlyByteBuf buf, List<BlockChange> changes) {
-		Map<String, List<BlockChange>> byRegion = new LinkedHashMap<>();
-		for (BlockChange change : changes) {
-			byRegion.computeIfAbsent(change.region(), r -> new ArrayList<>()).add(change);
-		}
-		writeList(buf, List.copyOf(byRegion.entrySet()), (b, group) -> {
-			b.writeUtf(group.getKey(), MAX_NAME_LENGTH);
-			writeList(b, group.getValue(), (bb, change) -> {
-				bb.writeBlockPos(change.pos());
-				writeState(bb, change.state());
-			});
+	private static void writeChanges(FriendlyByteBuf buf, List<LayerChange> changes) {
+		writeList(buf, changes, (b, change) -> {
+			b.writeBlockPos(change.pos());
+			writeState(b, change.state());
 		});
 	}
 
-	private static List<BlockChange> readChanges(FriendlyByteBuf buf) {
-		List<BlockChange> changes = new ArrayList<>();
-		int groups = buf.readVarInt();
-		for (int g = 0; g < groups; g++) {
-			String region = buf.readUtf(MAX_NAME_LENGTH);
-			int count = buf.readVarInt();
-			for (int i = 0; i < count; i++) {
-				changes.add(new BlockChange(region, buf.readBlockPos(), readState(buf)));
-			}
-		}
-		return changes;
+	private static List<LayerChange> readChanges(FriendlyByteBuf buf) {
+		return readList(buf, b -> new LayerChange(b.readBlockPos(), readState(b)));
 	}
 
-	private static void writeState(FriendlyByteBuf buf, BlockState state) {
+	static void writeState(FriendlyByteBuf buf, BlockState state) {
 		buf.writeVarInt(Block.BLOCK_STATE_REGISTRY.getId(state));
 	}
 
-	private static BlockState readState(FriendlyByteBuf buf) {
+	static BlockState readState(FriendlyByteBuf buf) {
 		int id = buf.readVarInt();
 		BlockState state = Block.BLOCK_STATE_REGISTRY.byId(id);
 		if (state == null) {
@@ -274,30 +274,20 @@ public final class Payloads {
 		return state;
 	}
 
-	private static void writeMessage(FriendlyByteBuf buf, PlayerMessage message) {
+	static void writeMessage(FriendlyByteBuf buf, PlayerMessage message) {
 		buf.writeUtf(message.key(), MAX_NAME_LENGTH);
 		writeList(buf, message.args(), (b, arg) -> b.writeUtf(arg, MAX_NAME_LENGTH));
 	}
 
-	private static PlayerMessage readMessage(FriendlyByteBuf buf) {
+	static PlayerMessage readMessage(FriendlyByteBuf buf) {
 		return new PlayerMessage(buf.readUtf(MAX_NAME_LENGTH), readList(buf, b -> b.readUtf(MAX_NAME_LENGTH)));
 	}
 
-	private static void writeVector(FriendlyByteBuf buf, Vec3i vector) {
-		buf.writeVarInt(vector.getX());
-		buf.writeVarInt(vector.getY());
-		buf.writeVarInt(vector.getZ());
-	}
-
-	private static Vec3i readVector(FriendlyByteBuf buf) {
-		return new Vec3i(buf.readVarInt(), buf.readVarInt(), buf.readVarInt());
-	}
-
-	private interface Writer<T> {
+	interface Writer<T> {
 		void write(FriendlyByteBuf buf, T value);
 	}
 
-	private static <T> void writeList(FriendlyByteBuf buf, List<T> values, Writer<T> writer) {
+	static <T> void writeList(FriendlyByteBuf buf, List<T> values, Writer<T> writer) {
 		buf.writeVarInt(values.size());
 		for (T value : values) {
 			writer.write(buf, value);
@@ -305,7 +295,7 @@ public final class Payloads {
 	}
 
 	/** Doesn't trust the count for the list's capacity: a short buffer runs out before a false count does harm. */
-	private static <T> List<T> readList(FriendlyByteBuf buf, Function<FriendlyByteBuf, T> reader) {
+	static <T> List<T> readList(FriendlyByteBuf buf, Function<FriendlyByteBuf, T> reader) {
 		int count = buf.readVarInt();
 		List<T> values = new ArrayList<>(Math.min(Math.max(count, 0), 1024));
 		for (int i = 0; i < count; i++) {

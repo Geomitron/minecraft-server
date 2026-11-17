@@ -8,6 +8,7 @@ import com.mojang.authlib.GameProfile;
 import dev.buildingplanner.BuildingPlanner;
 import dev.buildingplanner.plan.Plan;
 import dev.buildingplanner.sync.Payloads;
+import dev.buildingplanner.sync.PlanPayloads;
 import dev.buildingplanner.sync.PlayerMessage;
 import java.util.List;
 import java.util.Optional;

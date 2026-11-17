@@ -9,7 +9,7 @@ import dev.buildingplanner.plan.PlanRegion;
 import dev.buildingplanner.server.SimulatedNetwork.Client;
 import dev.buildingplanner.sync.BlockChange;
 import dev.buildingplanner.sync.EditKind;
-import dev.buildingplanner.sync.Payloads;
+import dev.buildingplanner.sync.PlanPayloads;
 import dev.buildingplanner.sync.PlayerMessage;
 import dev.buildingplanner.sync.SyncLimits;
 import java.util.ArrayList;
@@ -109,7 +109,7 @@ class PlanSyncTest {
 		blair.serverReadsOne();
 
 		for (Client client : List.of(alex, blair)) {
-			Payloads.Applied applied = (Payloads.Applied) client.inbox.peek();
+			PlanPayloads.Applied applied = (PlanPayloads.Applied) client.inbox.peek();
 			assertEquals(1, applied.rev());
 			assertEquals(blair.id, applied.author());
 			assertEquals(seq, applied.clientSeq());
@@ -261,7 +261,7 @@ class PlanSyncTest {
 
 	// Rejections.
 
-	private Payloads.Rejected onlyRejection(Client client) {
+	private PlanPayloads.Rejected onlyRejection(Client client) {
 		assertEquals(1, client.rejections.size(), client.rejections.toString());
 		return client.rejections.getFirst();
 	}
@@ -273,11 +273,11 @@ class PlanSyncTest {
 		int seq = alex.edit(planId, EditKind.SHAPE, blocks(stone, BlockPos.ZERO));
 		network.settle();
 
-		Payloads.Rejected rejected = alex.rejections.getFirst();
+		PlanPayloads.Rejected rejected = alex.rejections.getFirst();
 		assertEquals(seq, rejected.clientSeq());
 		assertEquals(PlayerMessage.planGone(), rejected.reason());
 		// The fresh snapshot Alex asks for is refused too, so Alex drops the plan.
-		assertEquals(Payloads.NO_CLIENT_SEQ, alex.rejections.get(1).clientSeq());
+		assertEquals(PlanPayloads.NO_CLIENT_SEQ, alex.rejections.get(1).clientSeq());
 		assertTrue(alex.plans().isEmpty());
 	}
 
@@ -287,9 +287,9 @@ class PlanSyncTest {
 		alex.subscribe(unknown);
 		network.settle();
 
-		Payloads.Rejected rejected = onlyRejection(alex);
+		PlanPayloads.Rejected rejected = onlyRejection(alex);
 		assertEquals(unknown, rejected.plan());
-		assertEquals(Payloads.NO_CLIENT_SEQ, rejected.clientSeq());
+		assertEquals(PlanPayloads.NO_CLIENT_SEQ, rejected.clientSeq());
 		assertEquals(PlayerMessage.planGone(), rejected.reason());
 	}
 
@@ -370,7 +370,7 @@ class PlanSyncTest {
 		network.settle();
 
 		assertEquals(List.of(PlayerMessage.editDoesNotFit(), PlayerMessage.editDoesNotFit()),
-			alex.rejections.stream().map(Payloads.Rejected::reason).toList());
+			alex.rejections.stream().map(PlanPayloads.Rejected::reason).toList());
 		assertEquals(0, network.server.revision(planId));
 		assertEveryoneHasTheServersPlan(alex, blair);
 	}

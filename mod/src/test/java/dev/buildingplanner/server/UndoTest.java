@@ -9,7 +9,7 @@ import dev.buildingplanner.plan.PlanRegion;
 import dev.buildingplanner.server.SimulatedNetwork.Client;
 import dev.buildingplanner.sync.BlockChange;
 import dev.buildingplanner.sync.EditKind;
-import dev.buildingplanner.sync.Payloads;
+import dev.buildingplanner.sync.PlanPayloads;
 import dev.buildingplanner.sync.PlayerMessage;
 import dev.buildingplanner.sync.SyncLimits;
 import java.util.List;
@@ -97,10 +97,10 @@ class UndoTest {
 		alex.undo();
 		alex.serverReadsOne();
 
-		Payloads.Applied applied = (Payloads.Applied) blair.inbox.peek();
+		PlanPayloads.Applied applied = (PlanPayloads.Applied) blair.inbox.peek();
 		assertEquals(2, applied.rev());
 		assertEquals(alex.id, applied.author());
-		assertEquals(Payloads.NO_CLIENT_SEQ, applied.clientSeq());
+		assertEquals(PlanPayloads.NO_CLIENT_SEQ, applied.clientSeq());
 		network.settle();
 		for (BlockPos pos : List.of(A, B, C)) {
 			assertTrue(region().get(pos).isAir(), pos + " is back to air");

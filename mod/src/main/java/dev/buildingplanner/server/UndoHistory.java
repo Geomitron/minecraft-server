@@ -7,75 +7,61 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.block.state.BlockState;
+import java.util.function.Predicate;
 
 /**
- * Each player's undo steps, across plans, newest first, kept in memory until the server stops. An undone step waits on
- * a redo list until the player's next new edit clears it.
+ * Each player's undo steps, newest first, kept in memory until the server stops: the newest {@value #DEPTH} for each
+ * player. An undone step waits on a redo list until the player's next new edit clears it.
  */
-final class UndoHistory {
+final class UndoHistory<S extends UndoHistory.Step> {
 	/** Effortless Building's own undo depth. */
 	static final int DEPTH = 50;
 
-	/** One block of a step: its state before and after, in plan coordinates. */
-	record StepBlock(String region, BlockPos pos, BlockState before, BlockState after) {
-		StepBlock reversed() {
-			return new StepBlock(region, pos, after, before);
-		}
+	/** One edit by one player, with each block's state before and after it. */
+	interface Step {
+		/** True when every block has been changed by someone else since, so nothing is left to take back or forward. */
+		boolean isEmpty();
 	}
 
-	/** One edit by one player: a shape, an erase, or one tick of Litematica writes. */
-	record Step(UUID plan, List<StepBlock> blocks) {
-		Step {
-			blocks = List.copyOf(blocks);
-		}
-
-		Step reversed() {
-			return new Step(plan, blocks.stream().map(StepBlock::reversed).toList());
-		}
-	}
-
-	private final Map<UUID, Deque<Step>> undoSteps = new HashMap<>();
-	private final Map<UUID, Deque<Step>> redoSteps = new HashMap<>();
+	private final Map<UUID, Deque<S>> undoSteps = new HashMap<>();
+	private final Map<UUID, Deque<S>> redoSteps = new HashMap<>();
 
 	/** A new edit: its step goes on the undo list, and the redo list empties. */
-	void record(UUID player, Step step) {
+	void record(UUID player, S step) {
 		push(undoSteps, player, step);
 		redoSteps.remove(player);
 	}
 
-	Optional<Step> takeUndo(UUID player) {
+	Optional<S> takeUndo(UUID player) {
 		return Optional.ofNullable(undoSteps.getOrDefault(player, new ArrayDeque<>()).pollFirst());
 	}
 
 	/** The part of an undone step that was undone, ready to redo. */
-	void undone(UUID player, Step step) {
+	void undone(UUID player, S step) {
 		push(redoSteps, player, step);
 	}
 
-	Optional<Step> takeRedo(UUID player) {
+	Optional<S> takeRedo(UUID player) {
 		return Optional.ofNullable(redoSteps.getOrDefault(player, new ArrayDeque<>()).pollFirst());
 	}
 
 	/** The part of a step that was redone goes back on the undo list, keeping the rest of the redo list. */
-	void redone(UUID player, Step step) {
+	void redone(UUID player, S step) {
 		push(undoSteps, player, step);
 	}
 
-	/** A deleted plan's steps go with it. */
-	void dropPlan(UUID plan) {
-		for (Map<UUID, Deque<Step>> lists : List.of(undoSteps, redoSteps)) {
-			lists.values().forEach(steps -> steps.removeIf(step -> step.plan().equals(plan)));
+	/** Forgets every player's steps that match, on both lists. */
+	void removeIf(Predicate<S> filter) {
+		for (Map<UUID, Deque<S>> lists : List.of(undoSteps, redoSteps)) {
+			lists.values().forEach(steps -> steps.removeIf(filter));
 		}
 	}
 
-	/** An empty step (every block changed by someone else since) has nothing left to take back or forward. */
-	private static void push(Map<UUID, Deque<Step>> lists, UUID player, Step step) {
-		if (step.blocks().isEmpty()) {
+	private void push(Map<UUID, Deque<S>> lists, UUID player, S step) {
+		if (step.isEmpty()) {
 			return;
 		}
-		Deque<Step> steps = lists.computeIfAbsent(player, p -> new ArrayDeque<>());
+		Deque<S> steps = lists.computeIfAbsent(player, p -> new ArrayDeque<>());
 		steps.addFirst(step);
 		while (steps.size() > DEPTH) {
 			steps.removeLast();

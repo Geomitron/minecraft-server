@@ -20,11 +20,11 @@ public final class SentPackets {
 	private SentPackets() {
 	}
 
-	/** A packet with this namespace and path went out on the connection. */
+	/** A packet with this namespace and path went out on the connection; an edit is either protocol's ({@code edit}, {@code plan_edit}). */
 	public static void sent(String namespace, String path) {
 		if (namespace.equals("effortlessbuilding")) {
 			EFFORTLESS.add(path);
-		} else if (namespace.equals("buildingplanner") && path.equals("edit")) {
+		} else if (namespace.equals("buildingplanner") && (path.equals("edit") || path.equals("plan_edit"))) {
 			synchronized (EDITS) {
 				EDITS.add(tick);
 			}

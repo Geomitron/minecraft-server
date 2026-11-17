@@ -5,7 +5,7 @@ import ch.endte.syncmatica.litematica.LitematicManager;
 import ch.endte.syncmatica.litematica.gui.GuiSyncmaticaServerPlacementList;
 import dev.buildingplanner.sync.BlockChange;
 import dev.buildingplanner.sync.EditKind;
-import dev.buildingplanner.sync.Payloads;
+import dev.buildingplanner.sync.PlanPayloads;
 import dev.buildingplanner.sync.PlanReplicas;
 import dev.buildingplanner.sync.SyncLimits;
 import fi.dy.masa.litematica.config.Configs;
@@ -339,7 +339,7 @@ public final class Driver implements ClientModInitializer {
 			}
 			case "hello" -> {
 				// hello <version>: handles a server hello with that protocol version, as one from another release would be.
-				BuildingPlannerClient.hello(new Payloads.Hello(Integer.parseInt(a[1]), SyncLimits.DEFAULT));
+				BuildingPlannerClient.hello(new PlanPayloads.Hello(Integer.parseInt(a[1]), SyncLimits.DEFAULT));
 				return "ok";
 			}
 			case "shot" -> {

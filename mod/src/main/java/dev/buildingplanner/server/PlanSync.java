@@ -5,11 +5,10 @@ import dev.buildingplanner.plan.PlanRegion;
 import dev.buildingplanner.sync.BlockChange;
 import dev.buildingplanner.sync.EditKind;
 import dev.buildingplanner.sync.Payloads;
+import dev.buildingplanner.sync.PlanPayloads;
 import dev.buildingplanner.sync.PlayerMessage;
 import dev.buildingplanner.sync.RegionBox;
 import dev.buildingplanner.sync.SyncLimits;
-import dev.buildingplanner.server.UndoHistory.Step;
-import dev.buildingplanner.server.UndoHistory.StepBlock;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -43,12 +42,12 @@ public final class PlanSync {
 	private final SyncLimits limits;
 	private final Outbox outbox;
 	private final Map<UUID, LivePlan> plans = new HashMap<>();
-	private final UndoHistory history;
+	private final UndoHistory<Step> history;
 
 	public PlanSync(SyncLimits limits, Outbox outbox) {
 		this.limits = limits;
 		this.outbox = outbox;
-		this.history = new UndoHistory();
+		this.history = new UndoHistory<>();
 	}
 
 	public SyncLimits limits() {
@@ -68,7 +67,7 @@ public final class PlanSync {
 	 */
 	public void removePlan(UUID planId) {
 		plans.remove(planId);
-		history.dropPlan(planId);
+		history.removeIf(step -> step.plan().equals(planId));
 	}
 
 	public Optional<Plan> plan(UUID planId) {
@@ -102,11 +101,11 @@ public final class PlanSync {
 	public void subscribe(UUID player, UUID planId) {
 		LivePlan live = plans.get(planId);
 		if (live == null) {
-			outbox.send(player, new Payloads.Rejected(planId, Payloads.NO_CLIENT_SEQ, PlayerMessage.planGone()));
+			outbox.send(player, new PlanPayloads.Rejected(planId, PlanPayloads.NO_CLIENT_SEQ, PlayerMessage.planGone()));
 			return;
 		}
 		live.subscribers.add(player);
-		outbox.send(player, new Payloads.Snapshot(planId, live.revision, live.plan.snapshot()));
+		outbox.send(player, new PlanPayloads.Snapshot(planId, live.revision, live.plan.snapshot()));
 	}
 
 	public void unsubscribe(UUID player, UUID planId) {
@@ -137,7 +136,7 @@ public final class PlanSync {
 		if (problem.isEmpty()) {
 			problem = applyEdit(player, planId, live, clientSeq, kind, changes);
 		}
-		problem.ifPresent(reason -> outbox.send(player, new Payloads.Rejected(planId, clientSeq, reason)));
+		problem.ifPresent(reason -> outbox.send(player, new PlanPayloads.Rejected(planId, clientSeq, reason)));
 	}
 
 	private Optional<PlayerMessage> applyEdit(UUID player, UUID planId, LivePlan live, int clientSeq, EditKind kind,
@@ -196,7 +195,7 @@ public final class PlanSync {
 		}
 		live.revision++;
 		live.changed |= !grown.isEmpty() || !applied.isEmpty();
-		broadcast(live, new Payloads.Applied(planId, live.revision, player, clientSeq, grown, applied));
+		broadcast(live, new PlanPayloads.Applied(planId, live.revision, player, clientSeq, grown, applied));
 		return Optional.empty();
 	}
 
@@ -239,7 +238,7 @@ public final class PlanSync {
 		if (!done.isEmpty()) {
 			live.revision++;
 			live.changed = true;
-			broadcast(live, new Payloads.Applied(step.plan(), live.revision, player, Payloads.NO_CLIENT_SEQ, List.of(),
+			broadcast(live, new PlanPayloads.Applied(step.plan(), live.revision, player, PlanPayloads.NO_CLIENT_SEQ, List.of(),
 				done.stream().map(block -> new BlockChange(block.region(), block.pos(), block.after())).toList()));
 		}
 		int left = step.blocks().size() - done.size();
@@ -273,6 +272,29 @@ public final class PlanSync {
 	private void broadcast(LivePlan live, CustomPacketPayload payload) {
 		for (UUID subscriber : live.subscribers) {
 			outbox.send(subscriber, payload);
+		}
+	}
+
+	/** One block of a step: its state before and after, in plan coordinates. */
+	private record StepBlock(String region, BlockPos pos, BlockState before, BlockState after) {
+		StepBlock reversed() {
+			return new StepBlock(region, pos, after, before);
+		}
+	}
+
+	/** One edit by one player in one plan: a shape, an erase, or one tick of Litematica writes. */
+	private record Step(UUID plan, List<StepBlock> blocks) implements UndoHistory.Step {
+		Step {
+			blocks = List.copyOf(blocks);
+		}
+
+		Step reversed() {
+			return new Step(plan, blocks.stream().map(StepBlock::reversed).toList());
+		}
+
+		@Override
+		public boolean isEmpty() {
+			return blocks.isEmpty();
 		}
 	}
 

@@ -6,8 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import dev.buildingplanner.plan.Plan;
-import dev.buildingplanner.plan.RegionSnapshot;
+import dev.buildingplanner.layer.PackedSection;
 import io.netty.buffer.Unpooled;
 import java.io.InputStreamReader;
 import java.lang.reflect.Method;
@@ -23,10 +22,11 @@ import java.util.regex.Pattern;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.Vec3i;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.Bootstrap;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.StairBlock;
 import net.minecraft.world.level.block.state.BlockState;
@@ -34,6 +34,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 class PayloadsTest {
+	private static final Identifier NETHER = Identifier.withDefaultNamespace("the_nether");
 	private static BlockState stairs;
 
 	@BeforeAll
@@ -53,85 +54,49 @@ class PayloadsTest {
 
 	@Test
 	void clientPayloadsRoundTrip() {
-		UUID plan = UUID.randomUUID();
-		assertEquals(new Payloads.Subscribe(plan), roundTrip(Payloads.Subscribe.CODEC, new Payloads.Subscribe(plan)));
-		assertEquals(new Payloads.Unsubscribe(plan), roundTrip(Payloads.Unsubscribe.CODEC, new Payloads.Unsubscribe(plan)));
-		Payloads.Edit edit = new Payloads.Edit(plan, 42, EditKind.ERASE, List.of(
-			new BlockChange("Main", new BlockPos(-3, 70, 1_000_000), Blocks.AIR.defaultBlockState()),
-			new BlockChange("Tower", new BlockPos(1, 2, 3), stairs),
-			new BlockChange("Main", BlockPos.ZERO, Blocks.STONE.defaultBlockState())));
-		Payloads.Edit read = roundTrip(Payloads.Edit.CODEC, edit);
-		assertEquals(edit.plan(), read.plan());
-		assertEquals(42, read.clientSeq());
-		assertEquals(EditKind.ERASE, read.kind());
-		// Changes travel grouped by region, keeping each region's own order.
-		assertEquals(List.of(edit.changes().get(0), edit.changes().get(2), edit.changes().get(1)), read.changes());
+		List<ChunkPos> columns = List.of(new ChunkPos(-1, 2), new ChunkPos(1_875_000, -1_875_000));
+		assertEquals(new Payloads.Watch(NETHER, columns), roundTrip(Payloads.Watch.CODEC, new Payloads.Watch(NETHER, columns)));
+		assertEquals(new Payloads.Unwatch(NETHER, columns),
+			roundTrip(Payloads.Unwatch.CODEC, new Payloads.Unwatch(NETHER, columns)));
+		Payloads.Edit edit = new Payloads.Edit(NETHER, 42, EditKind.ERASE, List.of(
+			new LayerChange(new BlockPos(-3, -64, 1_000_000), Blocks.AIR.defaultBlockState()),
+			new LayerChange(new BlockPos(1, 319, 3), stairs)));
+		assertEquals(edit, roundTrip(Payloads.Edit.CODEC, edit));
 	}
 
 	@Test
 	void serverPayloadsRoundTrip() {
-		UUID plan = UUID.randomUUID();
-		Payloads.Hello hello = new Payloads.Hello(Payloads.PROTOCOL_VERSION, new SyncLimits(1234, 99));
+		Payloads.Hello hello = new Payloads.Hello(Payloads.PROTOCOL_VERSION, 1234);
 		assertEquals(hello, roundTrip(Payloads.Hello.CODEC, hello));
-
-		Payloads.Applied applied = new Payloads.Applied(plan, 7, UUID.randomUUID(), Payloads.NO_CLIENT_SEQ,
-			List.of(new RegionBox("Main", new BlockPos(-4, 0, 0), new Vec3i(9, 3, 2))),
-			List.of(new BlockChange("Main", new BlockPos(-4, 0, 0), stairs)));
+		Payloads.Applied applied = new Payloads.Applied(NETHER, UUID.randomUUID(), Payloads.NO_CLIENT_SEQ,
+			List.of(new LayerChange(new BlockPos(-4, 0, 0), stairs)));
 		assertEquals(applied, roundTrip(Payloads.Applied.CODEC, applied));
-
-		Payloads.Rejected rejected = new Payloads.Rejected(plan, 3, PlayerMessage.planTooLarge(600, 512));
+		Payloads.Rejected rejected = new Payloads.Rejected(3, PlayerMessage.tooManyBlocks(600, 512));
 		assertEquals(rejected, roundTrip(Payloads.Rejected.CODEC, rejected));
-		Payloads.Notice notice = new Payloads.Notice(PlayerMessage.planGone());
+		Payloads.Notice notice = new Payloads.Notice(PlayerMessage.nothingToUndo());
 		assertEquals(notice, roundTrip(Payloads.Notice.CODEC, notice));
 	}
 
 	@Test
-	void aSnapshotRoundTripsToTheSamePlan() {
-		Plan plan = Plan.create("Hall", "Alex", new BlockPos(-2, 0, 5), new Vec3i(5, 3, 4), 0);
-		plan.firstRegion().set(new BlockPos(-2, 0, 5), stairs);
-		plan.firstRegion().set(new BlockPos(2, 2, 8), Blocks.GLASS.defaultBlockState());
-		Payloads.Snapshot snapshot = new Payloads.Snapshot(UUID.randomUUID(), 12, plan.snapshot());
+	void columnsRoundTripWithTheirSections() {
+		long[] blocks = new long[128];
+		blocks[0] = 0b01;
+		Payloads.Columns columns = new Payloads.Columns(NETHER, List.of(
+			new Payloads.Column(new ChunkPos(3, -4), List.of(new PackedSection(-4, List.of(Blocks.AIR.defaultBlockState(),
+				stairs), blocks))),
+			new Payloads.Column(new ChunkPos(4, -4), List.of())));
 
-		Payloads.Snapshot read = roundTrip(Payloads.Snapshot.CODEC, snapshot);
+		Payloads.Columns read = roundTrip(Payloads.Columns.CODEC, columns);
 
-		assertEquals(snapshot.plan(), read.plan());
-		assertEquals(12, read.rev());
-		RegionSnapshot region = read.regions().getFirst();
-		assertEquals("Hall", region.name());
-		// Only the two sections holding blocks travel.
-		assertEquals(2, region.sections().size());
-		for (int i = 0; i < 2; i++) {
-			assertArrayEquals(snapshot.regions().getFirst().sections().get(i).packed(), region.sections().get(i).packed());
-		}
-		Plan copy = Plan.fromSnapshot(read.regions());
-		assertEquals(new BlockPos(-2, 0, 5), copy.firstRegion().minCorner());
-		assertEquals(new Vec3i(5, 3, 4), copy.firstRegion().dimensions());
-		assertEquals(stairs, copy.firstRegion().get(new BlockPos(-2, 0, 5)));
-		assertEquals(Blocks.GLASS.defaultBlockState(), copy.firstRegion().get(new BlockPos(2, 2, 8)));
+		assertEquals(NETHER, read.dimension());
+		assertEquals(List.of(new ChunkPos(3, -4), new ChunkPos(4, -4)), read.columns().stream().map(Payloads.Column::pos).toList());
+		PackedSection section = read.columns().getFirst().sections().getFirst();
+		assertEquals(-4, section.y());
+		assertEquals(List.of(Blocks.AIR.defaultBlockState(), stairs), section.palette());
+		assertArrayEquals(blocks, section.blocks());
+		assertEquals(List.of(), read.columns().get(1).sections());
 	}
 
-	/**
-	 * A plan at the size cap on every side with one full floor: its snapshot carries the floor's sections, about 1 MiB,
-	 * where every position of the box took at least 32 MiB.
-	 */
-	@Test
-	void aSnapshotOfALargeMostlyEmptyPlanCarriesOnlyItsBlocks() {
-		Plan plan = Plan.create("Hall", "Alex", BlockPos.ZERO, new Vec3i(512, 512, 512), 0);
-		BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
-		for (int x = 0; x < 512; x++) {
-			for (int z = 0; z < 512; z++) {
-				plan.firstRegion().set(pos.set(x, 0, z), stairs);
-			}
-		}
-		FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
-
-		Payloads.Snapshot.CODEC.encode(buf, new Payloads.Snapshot(UUID.randomUUID(), 1, plan.snapshot()));
-
-		int bytes = buf.readableBytes();
-		assertTrue(bytes > 1024 * 1024 && bytes < 1024 * 1024 + 16 * 1024, "the snapshot took " + bytes + " bytes");
-	}
-
-	@Test
 	void oneBlockLeftAsItIsHasItsOwnText() {
 		assertEquals(new PlayerMessage("buildingplanner.undo.left_as_it_is", List.of()), PlayerMessage.blocksLeftAsTheyAre(1));
 		assertEquals(new PlayerMessage("buildingplanner.undo.left_as_they_are", List.of("2")),

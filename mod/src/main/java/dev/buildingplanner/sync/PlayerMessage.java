@@ -25,6 +25,24 @@ public record PlayerMessage(String key, List<String> args) {
 		return new PlayerMessage(PREFIX + "rejected.too_many_blocks", List.of(Integer.toString(blocks), Integer.toString(max)));
 	}
 
+	/** An edit to the layer in another dimension than the player's (sent just before they changed dimension, say). */
+	public static PlayerMessage otherDimension() {
+		return new PlayerMessage(PREFIX + "rejected.other_dimension", List.of());
+	}
+
+	/** An edit to the layer that reaches a column the player's game hasn't loaded. */
+	public static PlayerMessage notLoaded() {
+		return new PlayerMessage(PREFIX + "rejected.unloaded", List.of());
+	}
+
+	public static PlayerMessage outsideBuildHeight() {
+		return new PlayerMessage(PREFIX + "rejected.build_height", List.of());
+	}
+
+	public static PlayerMessage outsideWorldBorder() {
+		return new PlayerMessage(PREFIX + "rejected.world_border", List.of());
+	}
+
 	public static PlayerMessage planTooLarge(int side, int max) {
 		return new PlayerMessage(PREFIX + "rejected.too_large", List.of(Integer.toString(side), Integer.toString(max)));
 	}
