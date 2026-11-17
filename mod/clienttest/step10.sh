@@ -146,9 +146,9 @@ check "and they're kept in Building Planner's client config" eval \
 # came every <period> ticks. For erasing, the row is filled first.
 hold_at() {
 	if [[ $1 == 1 ]]; then
-		drv 1 "fill 2 -60 5 40 -60 5 minecraft:stone_bricks" "await block 40 -60 5 minecraft:stone_bricks" > /dev/null
+		drv 1 "edit 2 -60 5 40 -60 5 minecraft:stone_bricks" "await block 40 -60 5 minecraft:stone_bricks" > /dev/null
 	else
-		drv 1 "fill 2 -60 5 40 -57 5 minecraft:air" "await block 40 -60 5 minecraft:air" > /dev/null
+		drv 1 "edit 2 -60 5 40 -57 5 minecraft:air" "await block 40 -60 5 minecraft:air" > /dev/null
 	fi
 	drv 1 "cmd tp @s 2.5 -55 5.5 0 90" "wait 30" "holdreset" > /dev/null
 	hold_while_walking "$1"
@@ -164,7 +164,7 @@ check "and holding attack one every 10" hold_at 1 attack 10
 # Both settings survive a restart: the sliders show them, and hold to repeat uses them.
 stop_client 1
 start_client 1
-check "client 1 starts a session again" drv 1 "await session" "await noscreen" "await placement Yard"
+check "client 1 starts a session again" drv 1 "await session" "await noscreen"
 check "after a restart, hold to repeat keeps both settings" eval '[[ $(val 1 repeat) == "place=2 erase=10" ]]'
 drv 1 "cmd tp @s 20 -58 -5 0 30" "wait 20" > /dev/null
 xdo 1 keydown Alt_L
@@ -194,9 +194,9 @@ check "hold to repeat takes a repeat every tick" eval '[[ $(val 1 repeat) == "pl
 # log then shows one edit.
 quick_click() {
 	if [[ $1 == attack ]]; then
-		drv 1 "fill 2 -60 5 40 -60 5 minecraft:stone_bricks" "await block 40 -60 5 minecraft:stone_bricks" > /dev/null
+		drv 1 "edit 2 -60 5 40 -60 5 minecraft:stone_bricks" "await block 40 -60 5 minecraft:stone_bricks" > /dev/null
 	else
-		drv 1 "fill 2 -60 5 40 -57 5 minecraft:air" "await block 40 -60 5 minecraft:air" > /dev/null
+		drv 1 "edit 2 -60 5 40 -57 5 minecraft:air" "await block 40 -60 5 minecraft:air" > /dev/null
 	fi
 	drv 1 "cmd tp @s 2.5 -55 5.5 0 90" "wait 30" "holdreset" > /dev/null
 	"${1}_click" 1

@@ -171,13 +171,13 @@ drv 1 "notoasts" "wait 5" "shot mix-off-message" > /dev/null
 # under a ghost block is the grass. No click sends an edit.
 # click_case <item> <target> <click> <ghost after> <real after> <grass after> <what it does>
 click_case() {
-	drv 1 "fill 16 -60 4 16 -58 4 minecraft:air" "cmd fill 16 -60 4 16 -58 4 minecraft:air" \
+	drv 1 "edit 16 -60 4 16 -58 4 minecraft:air" "cmd fill 16 -60 4 16 -58 4 minecraft:air" \
 		"cmd setblock 16 -61 4 minecraft:grass_block" "await block 16 -60 4 minecraft:air" \
 		"await real 16 -61 4 minecraft:grass_block" > /dev/null
 	if [[ $2 == real ]]; then
 		drv 1 "cmd setblock 16 -60 4 minecraft:stone" "await real 16 -60 4 minecraft:stone" > /dev/null
 	else
-		drv 1 "fill 16 -60 4 16 -60 4 minecraft:stone_bricks" "await block 16 -60 4 minecraft:stone_bricks" > /dev/null
+		drv 1 "edit 16 -60 4 16 -60 4 minecraft:stone_bricks" "await block 16 -60 4 minecraft:stone_bricks" > /dev/null
 	fi
 	drv 1 "cmd item replace entity @s weapon.mainhand with minecraft:$1" "cmd tp @s 16.5 -60 2.5 0 45" "wait 20" \
 		"holdreset" > /dev/null
@@ -210,7 +210,7 @@ done
 # ready <item> [block]: clears the column at 16 4 down to the grass, puts the block (a stone, or a closed door) on the
 # grass if given, and puts the item in Planner1's main hand.
 ready() {
-	drv 1 "fill 16 -60 4 16 -58 4 minecraft:air" "cmd fill 16 -60 4 16 -58 4 minecraft:air" \
+	drv 1 "edit 16 -60 4 16 -58 4 minecraft:air" "cmd fill 16 -60 4 16 -58 4 minecraft:air" \
 		"cmd setblock 16 -61 4 minecraft:grass_block" "await block 16 -60 4 minecraft:air" \
 		"await real 16 -61 4 minecraft:grass_block" "await real 16 -60 4 minecraft:air" > /dev/null
 	case ${2:-} in
