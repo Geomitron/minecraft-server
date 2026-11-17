@@ -147,13 +147,20 @@ From Geo's walkthrough (inbox request 608) and the reply after it, not built yet
 - Ghost blocks show see-through at 0.8 opacity by default: "render blocks as translucent is true", "ghostBlockAlpha
   default to 0.8" (608 note). A player's own change to either stays.
 - In Effortless Building's "Single" mode, holding the button keeps placing or erasing ghost blocks: "I want to be able
-  to place or destroy quickly" (608 note).
+  to place or destroy quickly" (608 note). Two sliders in Effortless Building's menu set the placing speed and the
+  erasing speed (Geo, comment c2 on inbox request 670: "I'd like this to be two different configurable sliders on the
+  effortless building UI, easy to change as you work").
 - With "Disable" chosen in Effortless Building, clicks act as they do without mods, even with the block mix on. The
   mix must never be on without the player knowing: "I don't want that feature of block mix; I'd rather deliberately
   select which blocks to use with the block mix UI open... either that or some much clearer "block mix selection mode"
   that makes it much clearer that I'm in a special mode for that and it's clear what's happening (such as it
   displaying the current block mix and the keys or controls to save, cancel)" (Geo, replying to inbox request 669).
-  How the mix shows is open with Geo (670).
+  While the mix is on, a panel at the edge of the screen shows its blocks and shares, and the keys to change it or
+  turn it off (670 Q2 A). Choosing the mix is a mode of its own: "choosing the mix is a distinct mode, where after
+  chosen, the UI for it goes away, but it now applies to the effortless building's block placing controls until
+  disabled. ... it should still be clear whether the currently selected block is just the one you're placing, or if
+  you're placing a mix. But the point of the mix mode is to allow the player to look at specific blocks and pick them
+  to be added to the current mix, I think." (Geo's comment on 670 Q2). How a player picks the blocks is open with Geo.
 - Ghost blocks stay shared live with everyone on the server, as one layer rather than separate plans, and each player
   shows or hides all of them with one switch (Geo, comment c1 on inbox request 670: "it's still very important for
   ghost blocks to be synced and shared for users on the same server, where each player can choose whether to see
