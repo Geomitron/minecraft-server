@@ -631,16 +631,18 @@ where they're teleported.
 - K pastes it: the other player sees its blocks at once, turned and mirrored as the copy showed them, glowing with the
   paster's name; the copy's empty space leaves the ghost blocks under it, and the copy stays. One Ctrl+Z undoes the
   whole paste, and Ctrl+Y redoes it.
-- "Copy real blocks", from the radial menu, then a cube around a real house, makes a copy of its blocks that the
-  menu's Paste button pastes as ghost blocks.
+- "Copy real blocks", from the radial menu, then a cube around a real house, makes a copy of its blocks, which letting
+  the menu's key go over its Paste button pastes as ghost blocks.
+- With a copy, at 1920 by 1080, GUI scales 2 and 4, the menu shows Turn, Mirror and Clear, and the buttons meet nothing
+  (`radialclear`); each is shot, with the buttons' boxes in the log.
 - J over no ghost blocks gives its message; a copy over the block cap gives the message with the server's limit and
   keeps the earlier copy; Delete clears the copy; K with no copy gives its message; a box of one block has its own
   message.
 - J again, Delete, or another mode stops a wait; the other mode stays.
 - The Material list button, then a cube around 10 ghost stone bricks, 4 of them built for real, opens Litematica's
   material list with 10 in all and 6 missing.
-- The radial menu's Turn, Mirror, Copy (twice), Clear and Paste buttons do what their keys do, and Turn, Mirror and
-  Clear go when the copy does.
+- A click on the radial menu's Turn, Mirror, Copy (twice), Clear or Paste button does what its key does, and Turn,
+  Mirror and Clear go when the copy does.
 - On the same server with Building Planner left out, N, J, K, U, H and Delete make no copy, open nothing and leave
   ghost blocks shown.
 
