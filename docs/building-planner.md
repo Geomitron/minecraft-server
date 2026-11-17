@@ -390,17 +390,12 @@ them, start 29 below the middle, 6 under the lower row as it is under the upper,
 mode under the pointer, which the menu draws 100 below the middle. Each slider draws as the game's own sliders do
 (`RepeatSlider`), with its text at the size of the mix panel's (`SmallText`, below), full size at GUI scales 1 to 3.
 At full size the widest label, "Break speed: 3.33 blocks/s", is 137 across, more than the 102 between
-the buttons' left edge and the menu's ring of modes (65 from the middle at most), so Geo is choosing between two
-layouts, picked by the development system property `buildingplanner.sliderLayout`:
-
-- `A`, wider: the sliders end 65 left of the middle, outside the ring, and are as wide as the longest label either
-  shows needs at the current size, plus 4 on each side (145 at full size, 111 at GUI scale 4), so they reach further
-  left than the buttons. They are 12 high and end 55 below the middle. At 854 by 480, GUI scale 2, they start 3 from
-  the screen's left edge; on a GUI narrower than 420 across at full size, where the buttons may still fit (from 334
-  across), they run off it: at 1024 by 768, GUI scale 3, 341 across, by 39.
-- `B`, two lines (the layout unless the property says `A`): the sliders are 102 across, with their left edges in line
-  with the leftmost buttons', and each label is split after its colon, "Build speed:" over "5 blocks/s". They are 22
-  high and end 75 below the middle.
+the buttons' left edge and the menu's ring of modes (65 from the middle at most), so the sliders, on one line each,
+end 65 left of the middle, outside the ring, and are as wide as the longest label either shows needs at the current
+size, plus 4 on each side (145 at full size, 111 at GUI scale 4), reaching further left than the buttons (709 revision
+3 Q1 A). They are 12 high and end 55 below the middle. At 854 by 480, GUI scale 2, they start 3 from the screen's left
+edge; on a GUI narrower than 420 across at full size, such as 1024 by 768 at GUI scale 3 (341 across), they run off
+it.
 
 The rows of buttons go under the sliders; where exactly, and how they keep clear of that description, is settled with
 Geo's review when they're built. Each slider shows its speed in blocks a second, to two decimals at most ("Build
@@ -597,9 +592,8 @@ real buttons with xdotool while Planner1 is teleported one block every two ticks
   each edit put one ghost block in the row, on both clients, and no real block.
 - Holding attack over a row filled with ghost blocks sends an edit when the button goes down and then one every 6
   ticks, and each edit erased one ghost block, on both clients, leaving the real blocks.
-- In each slider layout, at GUI scale 2 and, in a window of 1920 by 1080, at 4, the radial menu's sliders end above
-  the description of the mode under the pointer, and start on the screen; each is shot. Layout A is also shot at 1024
-  by 768, GUI scale 3, where it runs off the screen, and the log says so.
+- At GUI scale 2 and, in a window of 1920 by 1080, at 4, the radial menu's sliders end above the description of the
+  mode under the pointer, and start on the screen; each is shot.
 - The radial menu, opened with left Alt held, shows both sliders at their first settings ("Build speed: 5 blocks/s",
   "Break speed: 3.33 blocks/s"). A click on the build slider sets it to 10 blocks a second and a drag on the break
   slider sets it to 2; hold to repeat takes both at once, and Building Planner's client config keeps them. Holding use
