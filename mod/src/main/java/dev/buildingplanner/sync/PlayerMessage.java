@@ -49,14 +49,9 @@ public record PlayerMessage(String key, List<String> args) {
 		return new PlayerMessage(PREFIX + "redo.nothing", List.of());
 	}
 
-	/** Copy waits for a box drawn with Effortless Building's "Cube" shape around ghost blocks. */
+	/** Copy waits for a box drawn with Effortless Building's "Cube" shape around the blocks to copy. */
 	public static PlayerMessage drawBoxToCopy() {
 		return new PlayerMessage(PREFIX + "copy.draw_box", List.of());
-	}
-
-	/** "Copy real blocks" waits for a box drawn with Effortless Building's "Cube" shape around real blocks. */
-	public static PlayerMessage drawBoxToCopyReal() {
-		return new PlayerMessage(PREFIX + "copy_real.draw_box", List.of());
 	}
 
 	/** The player turned the block mix on in the picker; {@code key} is the picker key's name. */
@@ -69,14 +64,9 @@ public record PlayerMessage(String key, List<String> args) {
 		return new PlayerMessage(PREFIX + "mix.off", List.of());
 	}
 
-	/** The box holds no ghost blocks to copy. */
+	/** The box holds no ghost blocks and no real blocks other than air. */
 	public static PlayerMessage nothingToCopy() {
 		return new PlayerMessage(PREFIX + "copy.nothing", List.of());
-	}
-
-	/** The box for "Copy real blocks" holds only air. */
-	public static PlayerMessage nothingRealToCopy() {
-		return new PlayerMessage(PREFIX + "copy_real.nothing", List.of());
 	}
 
 	/** The box holds more blocks than a paste may carry. */

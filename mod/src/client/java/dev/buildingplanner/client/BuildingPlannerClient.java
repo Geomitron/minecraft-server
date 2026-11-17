@@ -48,9 +48,6 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	// Copy and paste. None of these keys is a default key, or in a default key combination, of Minecraft, Litematica,
 	// MaLiLib, Effortless Building or Freecam.
 	static final KeyMapping COPY = new KeyMapping("key.buildingplanner.copy", InputConstants.KEY_J, CATEGORY);
-	/** "Copy real blocks" has no key unless the player sets one. */
-	static final KeyMapping COPY_REAL =
-		new KeyMapping("key.buildingplanner.copy_real", InputConstants.UNKNOWN.getValue(), CATEGORY);
 	static final KeyMapping PASTE = new KeyMapping("key.buildingplanner.paste", InputConstants.KEY_K, CATEGORY);
 	static final KeyMapping TURN = new KeyMapping("key.buildingplanner.turn", InputConstants.KEY_U, CATEGORY);
 	static final KeyMapping MIRROR = new KeyMapping("key.buildingplanner.mirror", InputConstants.KEY_H, CATEGORY);
@@ -84,7 +81,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	/** The mix panel; null without Effortless Building, whose mode the mix rule reads. */
 	private static MixPanel mixPanel;
 	/**
-	 * Copy, "Copy real blocks" and the material list waiting for a box drawn with Effortless Building's "Cube" shape;
+	 * Copy and the material list waiting for a box drawn with Effortless Building's "Cube" shape;
 	 * null without Effortless Building, whose classes it uses, so none of them takes a box then.
 	 */
 	private static BoxWait boxWait;
@@ -107,7 +104,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		}
 		KeyMappingHelper.registerKeyMapping(BLOCK_MIX);
 		KeyMappingHelper.registerKeyMapping(SHOW_HIDE);
-		List.of(COPY, COPY_REAL, PASTE, TURN, MIRROR, CLEAR).forEach(KeyMappingHelper::registerKeyMapping);
+		List.of(COPY, PASTE, TURN, MIRROR, CLEAR).forEach(KeyMappingHelper::registerKeyMapping);
 		glow = EditGlow.registered();
 		ClientPlayNetworking.registerGlobalReceiver(Payloads.Hello.TYPE, (hello, context) -> hello(hello));
 		// A singleplayer or LAN host's own world runs no server side.
@@ -171,9 +168,6 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 			}
 			while (COPY.consumeClick()) {
 				copy();
-			}
-			while (COPY_REAL.consumeClick()) {
-				copyReal();
 			}
 			while (PASTE.consumeClick()) {
 				paste();
@@ -266,16 +260,11 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	}
 
 	/**
-	 * The Copy key and button: waits for a box around ghost blocks drawn with Effortless Building's "Cube" shape, or
+	 * The Copy key and button: waits for a box around ghost blocks and real blocks drawn with Effortless Building's "Cube" shape, or
 	 * stops a wait under way. Does nothing while Building Planner is off or without Effortless Building.
 	 */
 	static void copy() {
 		awaitBox(BoxWait.Purpose.COPY);
-	}
-
-	/** The "Copy real blocks" key and button: as {@link #copy()}, for a box around real blocks. */
-	static void copyReal() {
-		awaitBox(BoxWait.Purpose.COPY_REAL);
 	}
 
 	/**
@@ -298,7 +287,6 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		boxWait.start(purpose);
 		ClientSession.show(switch (purpose) {
 			case COPY -> PlayerMessage.drawBoxToCopy();
-			case COPY_REAL -> PlayerMessage.drawBoxToCopyReal();
 			case MATERIAL_LIST -> PlayerMessage.drawBoxToList();
 		});
 	}
@@ -309,8 +297,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 			return;
 		}
 		switch (boxWait.take()) {
-			case COPY -> session.copy(min, max, false, PASTE.getTranslatedKeyMessage().getString());
-			case COPY_REAL -> session.copy(min, max, true, PASTE.getTranslatedKeyMessage().getString());
+			case COPY -> session.copy(min, max, PASTE.getTranslatedKeyMessage().getString());
 			case MATERIAL_LIST -> session.materialList(min, max);
 		}
 	}

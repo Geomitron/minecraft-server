@@ -7,19 +7,19 @@ behind it are in [plan.md](plan.md) ("Decisions").
 
 **What's built.** Players run Building Planner 0.2.1, and the server 0.2.0, which keep ghost blocks in separate named
 plans shared through Syncmatica. Built on `main` since then: hold to repeat (hook E10) with its speed sliders in the
-radial menu (E11, E12), the look of ghost blocks, the block mix's rules, its panel and its "Turn off", clicks as
-without mods with anything but an item that places a block (E13 to E15), the layer's storage and files, the server's
-side of the layer and protocol 3, the one-time import of the plans Syncmatica shared, the player's copy of the layer
-with its tiles, shapes and erasing in world positions, and the edit glow, hooks L1 and L4 to L7, which keep tiles out
-of Litematica's screens and edits, the removal of old plans' placements, showing or hiding ghost blocks, with its
-key, its radial menu button, and Litematica's tool item off at a first start, and copy and paste: Copy and "Copy real
-blocks" with a box drawn in the "Cube" shape (hooks E1, E2, E13 to E15 and E17), the copy following the aim, Paste,
-Turn, Mirror and Clear, their keys and radial menu buttons, the copy kept out of Litematica's selection and
-placement list (L4, L5), and the material list for a box drawn in the "Cube" shape, from its radial menu button.
-Neither side speaks protocol 2's named plans or uses Syncmatica any more. Everything else this spec describes waits on the build
-steps in [plan.md](plan.md) ("Agent-ready work"), which end with the release. The build reuses what still fits:
-Effortless Building's hooks E1 to E10 (E1, E2 and E6 change), the rules of undo and redo, the edit glow, the block mix
-screen's layout, the check for a server without the add-on, and the in-game check harness.
+radial menu (E11, E12), the look of ghost blocks, the block mix's rules, its panel and its "Turn off", clicks as without
+mods with anything but an item that places a block (E13 to E15), the layer's storage and files, the server's side of the
+layer and protocol 3, the one-time import of the plans Syncmatica shared, the player's copy of the layer with its tiles,
+shapes and erasing in world positions, and the edit glow, hooks L1 and L4 to L7, which keep tiles out of Litematica's
+screens and edits, the removal of old plans' placements, showing or hiding ghost blocks, with its key, its radial menu
+button, and Litematica's tool item off at a first start, and copy and paste: Copy, of the ghost blocks and real blocks
+in a box drawn in the "Cube" shape (hooks E1, E2, E13 to E15 and E17), the copy following the aim, Paste, Turn, Mirror
+and Clear, their keys and radial menu buttons, the copy kept out of Litematica's selection and placement list (L4, L5),
+and the material list for a box drawn in the "Cube" shape, from its radial menu button. Neither side speaks protocol 2's
+named plans or uses Syncmatica any more. Everything else this spec describes waits on the build steps in
+[plan.md](plan.md) ("Agent-ready work"), which end with the release. The build reuses what still fits: Effortless
+Building's hooks E1 to E10 (E1, E2 and E6 change), the rules of undo and redo, the edit glow, the block mix screen's
+layout, the check for a server without the add-on, and the in-game check harness.
 
 ## What players get
 
@@ -60,12 +60,12 @@ screen's layout, the check for a server without the add-on, and the in-game chec
   until the player's next new change.
 - **Others' edits.** When someone else changes ghost blocks, the changed blocks glow for a few seconds, with the
   editor's name beside them.
-- **Copy and paste.** The player presses Copy (J, or the Copy button in the radial menu) and draws a box with
-  Effortless Building's "Cube" shape: the ghost blocks inside become a copy, which only that player sees. "Copy real
-  blocks" (its radial menu button) does the same with the real blocks inside the box. The copy follows where the
-  player aims; Turn (U) and Mirror (H) turn and flip it, and Paste (K) writes it into the layer as one change, which
-  one undo takes back. The empty space in the copy leaves the ghost blocks under it as they are. The copy stays for
-  more pastes until the player clears it (Delete). Each key also has a radial menu button.
+- **Copy and paste.** The player presses Copy (J, or the Copy button in the radial menu) and draws a box with Effortless
+  Building's "Cube" shape: the blocks inside, ghost blocks and real blocks alike, become a copy, which only that player
+  sees; where a ghost block stands in place of a real block, the copy takes the ghost block. The copy follows where the
+  player aims; Turn (U) and Mirror (H) turn and flip it, and Paste (K) writes it into the layer as one change, which one
+  undo takes back. The empty space in the copy leaves the ghost blocks under it as they are. The copy stays for more
+  pastes until the player clears it (Delete). Each key also has a radial menu button.
 - **Material list.** The player presses the Material list button in the radial menu and draws a box with the "Cube"
   shape: Litematica's material list opens for the ghost blocks inside, with how many of each block are still missing
   in the world. A box with no ghost blocks gives a message instead.
@@ -85,7 +85,7 @@ screen's layout, the check for a server without the add-on, and the in-game chec
 | Plan room sizes and shapes before committing | Effortless Building's shapes drawn as ghost blocks, erased with the break click. | None. |
 | See and judge a build (free or fixed camera) | Litematica draws the ghost blocks; Freecam moves the camera away from the player; the switch hides them to compare with the real world. | Effortless Building aims from the player's eyes, not the camera, so shapes can't be drawn from a Freecam view. |
 | Lay out walls, shapes and components quickly | Effortless Building's eleven build modes; hold to repeat in Single mode at the player's chosen speed. | None. |
-| Copy and paste | Copy and "Copy real blocks" take a box drawn with the "Cube" shape; Paste writes the copy into the layer. Effortless Building's array repeats while drawing. | None. |
+| Copy and paste | Copy takes the ghost blocks and real blocks in a box drawn with the "Cube" shape; Paste writes the copy into the layer. Effortless Building's array repeats while drawing. | None. |
 | Symmetry | Effortless Building's mirror and radial mirror. | None. |
 | Randomized block mixes | Building Planner's block mix (Effortless Building's Randomizer needs the server copy, which Geo kept off the server). | None. |
 | A plan everyone on the server sees, built for real by hand | The shared layer reaches everyone live; Litematica's ghost blocks, its missing-block colours and the material list for a marked area guide the build. | None. |
@@ -130,7 +130,7 @@ Effortless Building, under `common/src/main/java/nl/requios/effortlessbuilding/`
 
 | # | File, method | Hook | Purpose |
 |---|---|---|---|
-| E1 | `buildpipeline/BuildPipelineClient.java`, `handleClick` | `@WrapWithCondition` on `PacketHandler.sendToServer(PlaceBuildModePacket)`, reading the local `BlockSet blocks` | Take the finished shape (every entry, after mode, modifiers, mix and constraints) into the layer; don't send the packet. `getFirstClickHit()` is still set here, so block states use the first click's face. While a copy, a "Copy real blocks" or a material list waits for its box, take the box from `blocks.firstPos` and `blocks.lastPos` (a cube's opposite corners, which modifiers don't move) instead, and place nothing. |
+| E1 | `buildpipeline/BuildPipelineClient.java`, `handleClick` | `@WrapWithCondition` on `PacketHandler.sendToServer(PlaceBuildModePacket)`, reading the local `BlockSet blocks` | Take the finished shape (every entry, after mode, modifiers, mix and constraints) into the layer; don't send the packet. `getFirstClickHit()` is still set here, so block states use the first click's face. While a copy or a material list waits for its box, take the box from `blocks.firstPos` and `blocks.lastPos` (a cube's opposite corners, which modifiers don't move) instead, and place nothing. |
 | E2 | same method | `@WrapWithCondition` on `PacketHandler.sendToServer(BreakBuildModePacket)` | Erase the shape's positions from the layer; don't send. While a box is awaited, take the box as E1 does and erase nothing, so either click draws it. |
 | E3 | same method | `@WrapWithCondition` on `PlacedBlockTracker.clientTrackAll` | Don't record ghost positions as real blocks the player placed. |
 | E4 | `network/PacketHandler.java`, `sendToServer(UndoPacket)` and `sendToServer(RedoPacket)` | `@Inject` at head, cancellable | Route undo and redo to the layer. Covers both the Ctrl+Z/Ctrl+Y keys (`fabric/.../EffortlessBuildingClient.java`, client tick) and the radial menu (`buildmode/ModeOptions.java`, `performAction`). |
@@ -405,7 +405,7 @@ again. Press N to hide them.", with the key as the player has it bound (`ClientS
 Hooks E11 and E12 add Building Planner's widgets to Effortless Building's radial menu (opened by holding its key, left
 Alt by default; it closes when the key is let go): two sliders, "Build speed" and "Break speed", just under the menu's
 left-hand buttons (the wrench, undo and redo, and the row under them); buttons for "Show or hide ghost blocks",
-"Copy", "Paste", "Copy real blocks" and "Material list"; and "Turn", "Mirror" and "Clear" while a copy exists. The
+"Copy", "Paste" and "Material list"; and "Turn", "Mirror" and "Clear" while a copy exists. The
 widgets sit by the menu's middle, as its own buttons do (`RadialMenuWidgets`): the menu's left-hand buttons are 20
 across with their middles 26 apart, the leftmost 157 left of the middle, in two rows 13 above and below it, so they
 span 167 to 95 left of the middle and end 23 below it. The sliders, with 2 between
@@ -434,20 +434,20 @@ key with the pointer over it (hook E16; Escape closes the menu the same way), an
 it, which leaves the menu open; after a click has acted, letting the key go acts on nothing. Each action plays the
 menu's quiet click (`RadialMenu.playRadialMenuSound`). The buttons sit above the wrench, undo and redo, in the same
 columns (157, 131 and 105 left of the middle), in rows 39 and 65 above the middle: "Show or hide ghost blocks", Copy
-and Paste, then "Copy real blocks" and "Material list"; and in the row 91 above the middle, in the same columns, Turn,
-Mirror and Clear, which show only while a copy exists. Copy, Paste, "Copy real blocks", Turn, Mirror and Clear do what
-their keys do (see "Copy and paste"), and "Material list", which has no key, waits for a box (see "The material
+and Paste, then "Material list" alone, in the left column; and in the row 91 above the middle, in the same columns,
+Turn, Mirror and Clear, which show only while a copy exists. Copy, Paste, Turn, Mirror and Clear do what their keys
+do (see "Copy and paste"), and "Material list", which has no key, waits for a box (see "The material
 list"). The development system property `buildingplanner.allButtons`, while `true`, shows Turn, Mirror and Clear
-without a copy too, so the checks can place all eight.
+without a copy too, so the checks can place all seven.
 
-Each icon is a 16 by 16 image of its own in `mod/src/main/resources/assets/buildingplanner/textures/gui/radial/`,
-named by what it shows: `ghost_blocks_shown`, `ghost_blocks_hidden`, `copy`, `paste`, `copy_real_blocks`,
-`material_list`, and `turn`, `mirror` and `clear` for step 10's buttons. Changing an icon means replacing its file. Each
-draws at 16 by 16 GUI pixels with nearest-pixel filtering, as the menu draws its own (`AllIcons.render`). Each icon is
-the one Geo picked from the generated candidate sets (inbox request 738, 2026-11-17), made with an OpenRouter model:
-`ghost_blocks_shown` and `ghost_blocks_hidden` from set 14, `copy` and `paste` from set 16, and `copy_real_blocks`
-from set 18, all `google/gemini-nano-banana-2.1`; `turn` from set 31, `google/gemini-3.1-flash-image`;
-`material_list` from set 3, `mirror` from set 5 and `clear` from set 6, all `google/gemini-3-pro-image`.
+Each icon is a 16 by 16 image of its own in `mod/src/main/resources/assets/buildingplanner/textures/gui/radial/`, named
+by what it shows: `ghost_blocks_shown`, `ghost_blocks_hidden`, `copy`, `paste`, `material_list`, and `turn`, `mirror`
+and `clear` for step 10's buttons. Changing an icon means replacing its file. Each draws at 16 by 16 GUI pixels with
+nearest-pixel filtering, as the menu draws its own (`AllIcons.render`). Each icon is the one Geo picked from the
+generated candidate sets (inbox request 738, 2026-11-17), made with an OpenRouter model: `ghost_blocks_shown` and
+`ghost_blocks_hidden` from set 14, and `copy` and `paste` from set 16, all `google/gemini-nano-banana-2.1`; `turn` from
+set 31, `google/gemini-3.1-flash-image`; `material_list` from set 3, `mirror` from set 5 and `clear` from set 6, all
+`google/gemini-3-pro-image`.
 
 ### The block mix and its panel
 
@@ -479,27 +479,27 @@ the game's HUD is hidden (F1). Without Effortless Building, whose mode the rule 
 
 ### Copy and paste
 
-The copy is a Litematica placement of a schematic kept in memory on the player's computer. Only that player sees it,
-and Litematica doesn't save it, since it has no file; hook L4 keeps it from being selected, and L5 leaves it out of the
+The copy is a Litematica placement of a schematic kept in memory on the player's computer. Only that player sees it, and
+Litematica doesn't save it, since it has no file; hook L4 keeps it from being selected, and L5 leaves it out of the
 placement list, as for tiles. Its keys and buttons, each key changeable in Controls under Building Planner: Copy (J),
-"Copy real blocks" (no key unless the player sets one), Paste (K), Turn (U), Mirror (H) and Clear (Delete). None of the
-keys is a default key, or part of a default key combination, of Minecraft 26.3, Litematica, MaLiLib, Effortless
-Building 4.3 or Freecam 1.5.1.
+Paste (K), Turn (U), Mirror (H) and Clear (Delete). None of the keys is a default key, or part of a default key
+combination, of Minecraft 26.3, Litematica, MaLiLib, Effortless Building 4.3 or Freecam 1.5.1.
 
-Copy and "Copy real blocks" wait for a box: they switch Effortless Building to its "Cube" mode, remembering the mode
-the player had, with a message saying to draw a box around what to copy. The cube's first click takes the aimed block
-itself as a corner (hook E17), its preview shows as usual, and its last click, with either button (hooks E1 and E2),
-makes the copy, places or erases nothing, and puts back the player's mode at the next client tick (switching back
-within the click would sound as a cancelled shape). While a box is awaited, any held item, or none, draws the cube
-(E13 to E15). Pressing Copy, "Copy real blocks" or Material list while a box is awaited, choosing another mode, which
-stays, or Clear stops the wait, without a message. Copy takes the ghost blocks in the box from the player's copy of the layer;
-"Copy real blocks" takes the real blocks in the box from the player's world (`ClientLevel.getBlockState`), every
-non-air block state, without block entity contents. Each block keeps its world position relative to the box. The
-copy's box is the smallest box around the copied blocks, and its schematic holds structure void in every position
-with no copied block, so the ghost blocks under its empty space show. When the box has no blocks to copy, the player
-gets a message and nothing changes. A copy of more blocks than the server's block cap is refused with a message,
-since its paste would be. Otherwise the new copy replaces any earlier one, and the player gets a message naming the
-Paste key. Effortless Building's own limit on a shape's sides (64 in survival by default) limits the box.
+Copy waits for a box: it switches Effortless Building to its "Cube" mode, remembering the mode the player had, with a
+message saying to draw a box around what to copy. The cube's first click takes the aimed block itself as a corner (hook
+E17), its preview shows as usual, and its last click, with either button (hooks E1 and E2), makes the copy, places or
+erases nothing, and puts back the player's mode at the next client tick (switching back within the click would sound as
+a cancelled shape). While a box is awaited, any held item, or none, draws the cube (E13 to E15). Pressing Copy or
+Material list while a box is awaited, choosing another mode, which stays, or Clear stops the wait, without a message.
+Copy takes, at each position in the box, the ghost block from the player's copy of the layer, whether ghost blocks show
+or are hidden; where there is none, it takes the real block from the player's world (`ClientLevel.getBlockState`), any
+block state but air, without block entity contents. So where a position has both a ghost block and a real block, the
+copy takes the ghost block (`CopyRules.blocks`). Each block keeps its world position relative to the box. The copy's box
+is the smallest box around the copied blocks, and its schematic holds structure void in every position with no copied
+block, so the ghost blocks under its empty space show. When the box has no blocks to copy, the player gets a message and
+nothing changes. A copy of more blocks than the server's block cap is refused with a message, since its paste would be.
+Otherwise the new copy replaces any earlier one, and the player gets a message naming the Paste key. Effortless
+Building's own limit on a shape's sides (64 in survival by default) limits the box.
 
 The copy follows where the player aims: each client tick its origin, its corner with the lowest
 coordinates, goes on the block beside the face the player aims at, real or ghost (as hook E9 aims: ghost blocks count
@@ -518,21 +518,21 @@ with no copy do nothing. Clear removes the copy; leaving the server or changing 
 
 ### The material list
 
-The Material list button waits for a box as Copy does, with its own message ("Draw a box around the ghost blocks to
-list their materials."), and the same ways to stop the wait: pressing Copy, "Copy real blocks" or Material list while
-any box is awaited stops that wait and starts none. When the cube finishes, ghost blocks show again first if they're
-hidden, as for a shape. Building Planner then counts the ghost blocks in the box in the player's copy of the layer,
-which holds the columns the player watches, the chunks loaded on their computer, against the player's world
-(`MaterialCount`), by the rule Litematica's own list uses for a placement (`TaskCountBlocksPlacement.countAtPosition`):
-each block's total; missing where the world has air; missing and the wrong block where it has another block, unless
-Litematica's "materialListIgnoreState" (the same block in another state) or "ignoreCropAge" options count it as built.
-The counts become a Litematica material list of Building Planner's own (`GhostMaterialList`, a `MaterialListBase`
-filled through `MaterialListUtils.getMaterialList`), titled "Material list for the ghost blocks in the box", which it
-sets as Litematica's material list (`DataManager.setMaterialList`), so Litematica's material list key reopens it, and
-opens (`GuiMaterialList`). Litematica's Refresh button counts the same box again, while the player is still in its
-dimension. Counting the layer rather than Litematica's schematic world leaves out the copy, which Litematica also
-draws and which sits on the box while the player aims at it; the copy stays as it was. A box with no ghost blocks
-opens nothing, with the message "There are no ghost blocks in that box to list."
+The Material list button waits for a box as Copy does, with its own message ("Draw a box around the ghost blocks to list
+their materials."), and the same ways to stop the wait: pressing Copy or Material list while any box is awaited stops
+that wait and starts none. When the cube finishes, ghost blocks show again first if they're hidden, as for a shape.
+Building Planner then counts the ghost blocks in the box in the player's copy of the layer, which holds the columns the
+player watches, the chunks loaded on their computer, against the player's world (`MaterialCount`), by the rule
+Litematica's own list uses for a placement (`TaskCountBlocksPlacement.countAtPosition`): each block's total; missing
+where the world has air; missing and the wrong block where it has another block, unless Litematica's
+"materialListIgnoreState" (the same block in another state) or "ignoreCropAge" options count it as built. The counts
+become a Litematica material list of Building Planner's own (`GhostMaterialList`, a `MaterialListBase` filled through
+`MaterialListUtils.getMaterialList`), titled "Material list for the ghost blocks in the box", which it sets as
+Litematica's material list (`DataManager.setMaterialList`), so Litematica's material list key reopens it, and opens
+(`GuiMaterialList`). Litematica's Refresh button counts the same box again, while the player is still in its dimension.
+Counting the layer rather than Litematica's schematic world leaves out the copy, which Litematica also draws and which
+sits on the box while the player aims at it; the copy stays as it was. A box with no ghost blocks opens nothing, with
+the message "There are no ghost blocks in that box to list."
 
 ### When the server lacks the mod
 
@@ -631,11 +631,13 @@ where they're teleported.
 - With ghost blocks hidden, a shape shows them again, then draws, with its message the first time only and never
   "Ghost blocks shown.".
 - Hidden ghost blocks stay hidden after a restart, until N shows them.
-- At 854 by 480, GUI scale 2, and at 1920 by 1080, GUI scales 2 and 4, the buttons, all eight shown,
+- At 854 by 480, GUI scale 2, and at 1920 by 1080, GUI scales 2 and 4, the buttons, all seven shown,
   meet nothing the menu draws in any mode (its ring, buttons, mode options, mode names, descriptions and watermark),
   the sliders, each other or the screen's edges (the driver's `radialclear`); each is shot with ghost blocks hidden,
   with the buttons' boxes in the log, and at 1920 by 1080, GUI scales 2 and 4, so is the show or hide button's hover
   text with ghost blocks showing.
+- Without a copy, the menu shows show or hide, Copy and Paste in the row 39 above its middle and Material list alone in
+  the row 65 above it, at the left, each with its hover text (the driver's `slots`), shot at 854 by 480, GUI scale 2.
 - J waits for a box in "Cube" mode, with its message; a cube around some ghost blocks then makes a copy, with the
   message naming the Paste key, places no real block, doesn't reach the other player, and puts back the player's mode.
   The copy's corner sits on the aimed block and follows the aim, and Litematica neither selects nor lists it.
@@ -644,13 +646,16 @@ where they're teleported.
 - K pastes it: the other player sees its blocks at once, turned and mirrored as the copy showed them, glowing with the
   paster's name; the copy's empty space leaves the ghost blocks under it, and the copy stays. One Ctrl+Z undoes the
   whole paste, and Ctrl+Y redoes it.
-- "Copy real blocks", from the radial menu, then a cube around a real house, makes a copy of its blocks, which letting
-  the menu's key go over its Paste button pastes as ghost blocks.
+- The radial menu's Copy button, then a cube around a real house with no ghost blocks, copies its real blocks. With a
+  ghost gold block added inside the house and ghost stone over one of its real oak planks, J and the same cube copy
+  the ghost blocks and the real blocks together, taking the ghost stone over the oak plank; letting the menu's key go
+  over its Paste button pastes them all as ghost blocks.
 - With a copy, at 1920 by 1080, GUI scales 2 and 4, the menu shows Turn, Mirror and Clear, and the buttons meet nothing
-  (`radialclear`); each is shot, with the buttons' boxes in the log.
-- J over no ghost blocks gives its message; a copy over the block cap gives the message with the server's limit and
-  keeps the earlier copy; Delete clears the copy; K with no copy gives its message; a box of one block has its own
-  message.
+  (`radialclear`); each is shot, with the buttons' boxes in the log. At 854 by 480, GUI scale 2, all seven buttons sit
+  in their slots, with their hover texts, and the menu is shot.
+- A box with no blocks in it (its first corner, a real block, taken away before the cube finishes) gives its message; a
+  copy over the block cap gives the message with the server's limit and keeps the earlier copy; Delete clears the copy;
+  K with no copy gives its message; a box of one block has its own message.
 - J again, Delete, or another mode stops a wait; the other mode stays.
 - Letting the radial menu's key go over its Material list button waits for a box, with its message; then, with ghost
   blocks hidden and a copy of the bricks following the aim, a cube around 10 ghost stone bricks, 4 of them built for

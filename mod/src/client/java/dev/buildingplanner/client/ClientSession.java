@@ -16,7 +16,6 @@ import fi.dy.masa.malilib.gui.GuiBase;
 import it.unimi.dsi.fastutil.longs.LongSet;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -29,6 +28,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
@@ -217,25 +217,17 @@ final class ClientSession {
 	}
 
 	/**
-	 * Makes the copy from a box drawn for Copy (the ghost blocks in it, from the player's copy of the layer) or for
-	 * "Copy real blocks" (every block in it other than air, from the player's world, without block entity contents);
-	 * {@code pasteKey} is the Paste key's name, for the message. A box with nothing to copy, or more blocks than the
-	 * server's cap for an edit, which its paste would exceed, leaves any earlier copy, with a message.
+	 * Makes the copy from a box drawn for Copy: at each position the ghost block from the player's copy of the layer,
+	 * and where there is none, the real block from the player's world other than air, without block entity contents
+	 * ({@link CopyRules#blocks}); {@code pasteKey} is the Paste key's name, for the message. A box with nothing to copy,
+	 * or more blocks than the server's cap for an edit, which its paste would exceed, leaves any earlier copy, with a
+	 * message.
 	 */
-	void copy(BlockPos min, BlockPos max, boolean real, String pasteKey) {
-		Map<BlockPos, BlockState> blocks = new LinkedHashMap<>();
+	void copy(BlockPos min, BlockPos max, String pasteKey) {
 		Level level = Minecraft.getInstance().level;
-		if (!real) {
-			replica.layer().forEachIn(min, max, blocks::put);
-		} else if (level != null) {
-			for (BlockPos pos : BlockPos.betweenClosed(min, max)) {
-				BlockState state = level.getBlockState(pos);
-				if (!state.isAir()) {
-					blocks.put(pos.immutable(), state);
-				}
-			}
-		}
-		Optional<PlayerMessage> refusal = CopyRules.refusal(blocks.size(), maxEditBlocks, real);
+		Map<BlockPos, BlockState> blocks = CopyRules.blocks(min, max, replica.layer(),
+			pos -> level == null ? Blocks.AIR.defaultBlockState() : level.getBlockState(pos));
+		Optional<PlayerMessage> refusal = CopyRules.refusal(blocks.size(), maxEditBlocks);
 		if (refusal.isPresent()) {
 			show(refusal.get());
 			return;

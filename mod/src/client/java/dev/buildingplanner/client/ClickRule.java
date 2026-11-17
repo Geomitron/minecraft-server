@@ -17,8 +17,8 @@ public final class ClickRule {
 	/** Whether the pick under way leaves Effortless Building's reach out (hook E15). Only the client thread uses it. */
 	private static boolean vanillaPick;
 	/**
-	 * Whether Copy, "Copy real blocks" or the material list waits for a box drawn with Effortless Building's "Cube"
-	 * shape, which any held item, or none, then draws (hooks E13 to E15).
+	 * Whether Copy or the material list waits for a box drawn with Effortless Building's "Cube" shape, which any held
+	 * item, or none, then draws (hooks E13 to E15).
 	 */
 	private static boolean boxAwaited;
 

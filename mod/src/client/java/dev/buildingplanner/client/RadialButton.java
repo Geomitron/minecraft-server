@@ -76,14 +76,19 @@ final class RadialButton extends AbstractWidget {
 		graphics.blit(RenderPipelines.GUI_TEXTURED, icon.get(), getX() + offset, getY() + offset, 0, 0, ICON, ICON,
 			ICON, ICON);
 		if (isHovered()) {
-			List<Component> lines = new ArrayList<>();
-			lines.add(getMessage().copy().withStyle(ChatFormatting.AQUA));
-			String keyName = key.get();
-			if (keyName != null) {
-				lines.add(Component.literal("[" + keyName + "]").withStyle(ChatFormatting.GRAY));
-			}
-			graphics.setComponentTooltipForNextFrame(Minecraft.getInstance().font, lines, mouseX, mouseY);
+			graphics.setComponentTooltipForNextFrame(Minecraft.getInstance().font, hoverText(), mouseX, mouseY);
 		}
+	}
+
+	/** The lines shown on hover: the button's name, and its key, when it has one. */
+	List<Component> hoverText() {
+		List<Component> lines = new ArrayList<>();
+		lines.add(getMessage().copy().withStyle(ChatFormatting.AQUA));
+		String keyName = key.get();
+		if (keyName != null) {
+			lines.add(Component.literal("[" + keyName + "]").withStyle(ChatFormatting.GRAY));
+		}
+		return lines;
 	}
 
 	/** Any mouse button, as the menu's own buttons take. */

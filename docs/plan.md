@@ -281,11 +281,11 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it, not
    Built (`GhostsShown`, with its unit tests, the switch and its chat lines in `Tiles` and `ClientSession`, and
    `RadialButton` and `RadialMenuWidgets` in the client, with the buttons' place, triggers and icons as Geo chose them
    in 729 and 732; `step9.sh`'s checks other than copy, paste and the material list, and `step10.sh`, pass).
-10. **Copy and paste on the layer**: the "Cube" box for Copy and "Copy real blocks" (E1, E6), the copy following the
-    aim, and the radial menu's buttons. Built (`BoxWait`, `GhostAim`, hook E17 and the copy in `Clipboard` and
-    `ClientSession`, with the radial menu's Copy, Paste and "Copy real blocks" buttons in layout B's slots, and Turn,
-    Mirror and Clear in the row above them while a copy exists, with step 9's triggers and icons; `step9.sh`'s copy
-    and paste checks pass).
+10. **Copy and paste on the layer**: the "Cube" box for Copy, which takes the ghost blocks and the real blocks in it
+    (E1, E6), the copy following the aim, and the radial menu's buttons. Built (`BoxWait`, `GhostAim`, hook E17,
+    `CopyRules` with its unit tests, and the copy in `Clipboard` and `ClientSession`, with the radial menu's Copy and
+    Paste buttons in layout B's slots and Material list in the row above them, and Turn, Mirror and Clear in the row
+    above that while a copy exists, with step 9's triggers and icons; `step9.sh`'s copy and paste checks pass).
 11. **The material list for a marked area.** Built (`MaterialCount`, with its unit tests, and `GhostMaterialList`,
     with the radial menu's Material list button waiting for a "Cube" box as Copy does; `step9.sh`'s material list
     checks pass).

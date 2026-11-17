@@ -1,19 +1,44 @@
 package dev.buildingplanner.sync;
 
+import dev.buildingplanner.layer.Layer;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.block.state.BlockState;
 
-/** The rules for copying ghost blocks. */
+/** The rules for copying blocks. */
 public final class CopyRules {
 	private CopyRules() {
 	}
 
 	/**
-	 * Why a copy of {@code blocks} blocks, ghost blocks or {@code real} ones, is refused, or empty when it isn't: a box
-	 * with none, or more than {@code maxEditBlocks}, the server's cap for an edit, which its paste would exceed.
+	 * The blocks a copy of the box from {@code min} to {@code max} takes, by world position: at each position the ghost
+	 * block from {@code layer}, and where there is none, the real block from {@code world} unless it's air.
 	 */
-	public static Optional<PlayerMessage> refusal(int blocks, int maxEditBlocks, boolean real) {
+	public static Map<BlockPos, BlockState> blocks(BlockPos min, BlockPos max, Layer layer,
+		Function<BlockPos, BlockState> world) {
+		Map<BlockPos, BlockState> blocks = new LinkedHashMap<>();
+		for (BlockPos pos : BlockPos.betweenClosed(min, max)) {
+			BlockState state = layer.get(pos);
+			if (state.isAir()) {
+				state = world.apply(pos);
+			}
+			if (!state.isAir()) {
+				blocks.put(pos.immutable(), state);
+			}
+		}
+		return blocks;
+	}
+
+	/**
+	 * Why a copy of {@code blocks} blocks is refused, or empty when it isn't: a box with none, or more than
+	 * {@code maxEditBlocks}, the server's cap for an edit, which its paste would exceed.
+	 */
+	public static Optional<PlayerMessage> refusal(int blocks, int maxEditBlocks) {
 		if (blocks == 0) {
-			return Optional.of(real ? PlayerMessage.nothingRealToCopy() : PlayerMessage.nothingToCopy());
+			return Optional.of(PlayerMessage.nothingToCopy());
 		}
 		if (blocks > maxEditBlocks) {
 			return Optional.of(PlayerMessage.copyTooLarge(blocks, maxEditBlocks));

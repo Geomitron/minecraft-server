@@ -34,6 +34,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.Minecraft;
@@ -47,6 +48,7 @@ import net.minecraft.commands.arguments.EntityAnchorArgument;
 import net.minecraft.commands.arguments.blocks.BlockStateParser;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
@@ -194,8 +196,7 @@ public final class Driver implements ClientModInitializer {
 				return "ok";
 			}
 			case "boxwait" -> {
-				// boxwait: whether Copy, "Copy real blocks" or the material list waits for a box, and Effortless
-				// Building's mode now.
+				// boxwait: whether Copy or the material list waits for a box, and Effortless Building's mode now.
 				return ClickRule.boxAwaited() + " " + EffortlessDriver.mode();
 			}
 			case "presses" -> {
@@ -493,6 +494,20 @@ public final class Driver implements ClientModInitializer {
 					}
 				}
 				return String.join(" | ", boxes);
+			}
+			case "slots" -> {
+				// slots: each of Building Planner's buttons on the open screen as its hover text, its lines separated by a
+				// space, then @ and its middle from the screen's middle in GUI pixels (x,y), separated by " | ".
+				Screen screen = mc.gui.screen();
+				List<String> slots = new ArrayList<>();
+				for (GuiEventListener child : screen.children()) {
+					if (child instanceof RadialButton w && w.visible) {
+						slots.add(w.hoverText().stream().map(Component::getString).collect(Collectors.joining(" "))
+							+ " @ " + (w.getX() + w.getWidth() / 2 - screen.width / 2) + ","
+							+ (w.getY() + w.getHeight() / 2 - screen.height / 2));
+					}
+				}
+				return String.join(" | ", slots);
 			}
 			case "ghosts" -> {
 				// ghosts: whether ghost blocks show, with how many tiles there are and how many placements Litematica has.

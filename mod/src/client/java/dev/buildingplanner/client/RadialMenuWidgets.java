@@ -28,9 +28,9 @@ import net.minecraft.resources.Identifier;
  *
  * <p>Building Planner's buttons ({@link RadialButton}) sit above the wrench, undo and redo, in the same columns (middles
  * 157, 131 and 105 left of the menu's middle), in rows 39 and 65 above the middle: "Show or hide ghost blocks", Copy and
- * Paste, then "Copy real blocks" and "Material list"; and in the row 91 above the middle, Turn, Mirror and Clear, which
+ * Paste, then "Material list" in the left column; and in the row 91 above the middle, Turn, Mirror and Clear, which
  * show only while a copy exists, or while the development system property {@value #ALL_BUTTONS_PROPERTY} is
- * {@code true}, so the in-game checks can place all eight. Each does what its key does; "Material list" has no key.
+ * {@code true}, so the in-game checks can place all seven. Each does what its key does; "Material list" has no key.
  * Each icon is a texture of its own ({@link RadialButton#icon}).
  */
 public final class RadialMenuWidgets {
@@ -44,14 +44,13 @@ public final class RadialMenuWidgets {
 	private static final String BUILD = "buildingplanner.ui.radial.build_speed";
 	private static final String BREAK = "buildingplanner.ui.radial.break_speed";
 	/** The buttons' middles from the menu's middle, {x, y}, in the buttons' order. */
-	private static final int[][] SLOTS = {{-157, -39}, {-131, -39}, {-105, -39}, {-157, -65}, {-131, -65},
+	private static final int[][] SLOTS = {{-157, -39}, {-131, -39}, {-105, -39}, {-157, -65},
 		{-157, -91}, {-131, -91}, {-105, -91}};
 
 	private static final Identifier SHOWN = RadialButton.icon("ghost_blocks_shown");
 	private static final Identifier HIDDEN = RadialButton.icon("ghost_blocks_hidden");
 	private static final Identifier COPY = RadialButton.icon("copy");
 	private static final Identifier PASTE = RadialButton.icon("paste");
-	private static final Identifier COPY_REAL = RadialButton.icon("copy_real_blocks");
 	private static final Identifier MATERIAL_LIST = RadialButton.icon("material_list");
 	private static final Identifier TURN = RadialButton.icon("turn");
 	private static final Identifier MIRROR = RadialButton.icon("mirror");
@@ -79,15 +78,13 @@ public final class RadialMenuWidgets {
 			BuildingPlannerClient.COPY, () -> COPY, BuildingPlannerClient::copy, always));
 		widgets.add(button(width, height, SLOTS[2], Component.translatable("buildingplanner.ui.radial.paste"),
 			BuildingPlannerClient.PASTE, () -> PASTE, BuildingPlannerClient::paste, always));
-		widgets.add(button(width, height, SLOTS[3], Component.translatable("buildingplanner.ui.radial.copy_real"),
-			BuildingPlannerClient.COPY_REAL, () -> COPY_REAL, BuildingPlannerClient::copyReal, always));
-		widgets.add(button(width, height, SLOTS[4], Component.translatable("buildingplanner.ui.radial.material_list"),
+		widgets.add(button(width, height, SLOTS[3], Component.translatable("buildingplanner.ui.radial.material_list"),
 			null, () -> MATERIAL_LIST, BuildingPlannerClient::materialList, always));
-		widgets.add(button(width, height, SLOTS[5], Component.translatable(BuildingPlannerClient.TURN.getName()),
+		widgets.add(button(width, height, SLOTS[4], Component.translatable(BuildingPlannerClient.TURN.getName()),
 			BuildingPlannerClient.TURN, () -> TURN, BuildingPlannerClient::turnCopy, withCopy));
-		widgets.add(button(width, height, SLOTS[6], Component.translatable(BuildingPlannerClient.MIRROR.getName()),
+		widgets.add(button(width, height, SLOTS[5], Component.translatable(BuildingPlannerClient.MIRROR.getName()),
 			BuildingPlannerClient.MIRROR, () -> MIRROR, BuildingPlannerClient::mirrorCopy, withCopy));
-		widgets.add(button(width, height, SLOTS[7], Component.translatable(BuildingPlannerClient.CLEAR.getName()),
+		widgets.add(button(width, height, SLOTS[6], Component.translatable(BuildingPlannerClient.CLEAR.getName()),
 			BuildingPlannerClient.CLEAR, () -> CLEAR, BuildingPlannerClient::clearCopy, withCopy));
 		return widgets;
 	}
