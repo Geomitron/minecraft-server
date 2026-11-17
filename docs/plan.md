@@ -228,7 +228,10 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it, not
   like either; would it be possible to image generate icons that fit the style of the other image icons? That means
   pixelated at about the same resolution with black borders. Maybe there's something in my opencode provider that
   can do a good job at this? I'd want to pick from multiple generated options." (729 Q2, over Lucide's line icons
-  and Minecraft items).
+  and Minecraft items). The buttons use generated Set 4 for now (Nano Banana Pro, pale-blue symbols with mint
+  accents), so the work can go on: "Use A for now so you can continue working, but I'll want to experiment with other
+  image models and select my favorites from there" (732 Q1). Geo later picks each icon from all its variants, and
+  asks for new variations on a chosen one.
 - The shared layer replaces the decisions above that concern separate plans: named plans that move and turn as a whole
   (411 Q1), plan growth (411 Q2), who deletes a plan (411 Q3, 420 Q9), starting a plan with N (420 Q1, 469 Q1), hiding
   a plan with Litematica or Syncmatica (420 Q2, 469 Q2), the paste's target plan (485 Q3), Litematica's Edit Schematic
