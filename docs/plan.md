@@ -160,7 +160,12 @@ From Geo's walkthrough (inbox request 608) and the reply after it, not built yet
   chosen, the UI for it goes away, but it now applies to the effortless building's block placing controls until
   disabled. ... it should still be clear whether the currently selected block is just the one you're placing, or if
   you're placing a mix. But the point of the mix mode is to allow the player to look at specific blocks and pick them
-  to be added to the current mix, I think." (Geo's comment on 670 Q2). How a player picks the blocks is open with Geo.
+  to be added to the current mix, I think." (Geo's comment on 670 Q2). Players choose the mix's blocks only in the
+  block mix screen, with its search and "Only my inventory" switch (671 Q1 A), not by looking at blocks: "I don't want
+  to be able to select blocks by looking at them: Just make it so that you have to select blocks using the block search
+  (with the only my inventory filter)" (671, note c3). The mix applies only while a placeable item is selected: "this
+  should only apply when placeable items are selected on the hotbar; switching to tools or nonplaceable items will go
+  back to normal behavior and will hide the mix panel until placeable items are selected again" (671, comment c2).
 - Ghost blocks stay shared live with everyone on the server, as one layer rather than separate plans, and each player
   shows or hides all of them with one switch (Geo, comment c1 on inbox request 670: "it's still very important for
   ghost blocks to be synced and shared for users on the same server, where each player can choose whether to see
