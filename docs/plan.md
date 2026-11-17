@@ -274,8 +274,10 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it, not
    plugin's Litematica rule. Built (the hooks in `dev.buildingplanner.mixin.litematica`, `OldPlans` in the client;
    `step6.sh`, with its checks on hidden tiles, and `step8.sh` pass).
 9. **Show or hide**: the key, the radial menu button, showing again when drawing, and the tool item off by default.
-   Done when `step9.sh`'s check with ghost blocks hidden passes, and `step10.sh`
-   finds the tool item off after a first start.
+   Built (`GhostsShown` and `StrokeIcon`, with their unit tests, the switch in `Tiles` and `ClientSession`, and
+   `RadialButton` and `LucideIcons` in the client; `step9.sh`'s checks other than copy, paste and the material list,
+   and `step10.sh`, pass). The radial menu buttons' place (drafts A to D), their icons and their hover texts wait on
+   Geo's choice from screenshots before the branch goes to `main`.
 10. **Copy and paste on the layer**: the "Cube" box for Copy and "Copy real blocks" (E1, E6), the copy following the
     aim, and the radial menu's buttons. Done when `step9.sh`'s copy and paste checks
     pass.

@@ -11,11 +11,12 @@ radial menu (E11, E12), the look of ghost blocks, the block mix's rules, its pan
 without mods with anything but an item that places a block (E13 to E15), the layer's storage and files, the server's
 side of the layer and protocol 3, the one-time import of the plans Syncmatica shared, the player's copy of the layer
 with its tiles, shapes and erasing in world positions, and the edit glow, hooks L1 and L4 to L7, which keep tiles out
-of Litematica's screens and edits, and the removal of old plans' placements. Neither side speaks protocol 2's named
-plans or uses Syncmatica any more. Everything else this spec
-describes waits on the build steps in [plan.md](plan.md) ("Agent-ready work"), which end with the release. The build reuses what still fits: Effortless Building's hooks E1 to E10 (E1, E2 and E6 change),
-the rules of undo and redo, the edit glow, the block mix screen's layout, the check for a server without the add-on, and
-the in-game check harness.
+of Litematica's screens and edits, the removal of old plans' placements, and showing or hiding ghost blocks, with its
+key, its radial menu button in four drafted places, and Litematica's tool item off at a first start. Neither side
+speaks protocol 2's named plans or uses Syncmatica any more. Everything else this spec describes waits on the build
+steps in [plan.md](plan.md) ("Agent-ready work"), which end with the release. The build reuses what still fits:
+Effortless Building's hooks E1 to E10 (E1, E2 and E6 change), the rules of undo and redo, the edit glow, the block mix
+screen's layout, the check for a server without the add-on, and the in-game check harness.
 
 ## What players get
 
@@ -371,7 +372,9 @@ value Building Planner would set looks the same as one it set.
 
 The switch is the "Show or hide ghost blocks" key (N) and a radial menu button. Hiding removes every tile
 from Litematica; showing adds them back. While hidden, the game keeps watching columns and applying edits to its copy of
-the layer, so showing needs no reload, and the edit glow draws nothing. The state is kept in
+the layer, so showing needs no reload, and the edit glow draws nothing. A tile made while hidden is removed from
+Litematica as soon as it's made: setting a placement up registers its chunks with Litematica's placement manager
+(`SchematicPlacement.onModified`), which then draws it though it was never added. The state is kept in
 `config/buildingplanner-client.properties` (`ghost-blocks-shown`) and starts as shown. When a shape starts (Effortless
 Building's `getBuildState()` turns non-null, read once a client tick) or finishes (E1, E2), a paste is made, or a
 material list is asked for while ghost blocks are hidden, they show again first, with a message the first time in each
@@ -380,15 +383,20 @@ added tile would bring up Litematica's status panel for 10 seconds (`SchematicPl
 `StatusInfoRenderer.startOverrideDelay`), and it hides the copy too. Litematica's own switch still turns all its drawing
 off.
 
+The key and the button act only during a session; without one there are no ghost blocks to switch. Neither says
+anything, since the ghost blocks themselves show the change. The button's icon shows the current state: an eye while
+ghost blocks show, a crossed-out eye while they're hidden. Showing them again for a shape says "Ghost blocks shown
+again. Press N to hide them.", with the key as the player has it bound (`ClientSession.showForDrawing`).
+
 ### The radial menu's buttons and sliders
 
 Hooks E11 and E12 add Building Planner's widgets to Effortless Building's radial menu (opened by holding its key, left
 Alt by default; it closes when the key is let go): two sliders, "Build speed" and "Break speed", just under the menu's
-left-hand buttons (the wrench, undo and redo, and the row under them); under the sliders a row of buttons for "Show or
-hide ghost blocks", "Copy", "Copy real blocks", "Paste" and "Material list"; and a second row with "Turn", "Mirror" and
-"Clear" while a copy exists. The widgets sit by the menu's middle, as its own buttons do (`RadialMenuWidgets`): the
-menu's left-hand buttons are 20 across with their middles 26 apart, the leftmost 157 left of the middle, in two rows
-13 above and below it, so they span 167 to 95 left of the middle and end 23 below it. The sliders, with 2 between
+left-hand buttons (the wrench, undo and redo, and the row under them); buttons for "Show or hide ghost blocks",
+"Copy", "Paste", "Copy real blocks" and "Material list"; and "Turn", "Mirror" and "Clear" while a copy exists. The
+widgets sit by the menu's middle, as its own buttons do (`RadialMenuWidgets`): the menu's left-hand buttons are 20
+across with their middles 26 apart, the leftmost 157 left of the middle, in two rows 13 above and below it, so they
+span 167 to 95 left of the middle and end 23 below it. The sliders, with 2 between
 them, start 29 below the middle, 6 under the lower row as it is under the upper, and end above the description of a
 mode under the pointer, which the menu draws 100 below the middle. Each slider draws as the game's own sliders do
 (`RepeatSlider`), with its text at the size of the mix panel's (`SmallText`, below), full size at GUI scales 1 to 3.
@@ -400,18 +408,35 @@ size, plus 4 on each side (145 at full size, 111 at GUI scale 4), reaching furth
 edge; on a GUI narrower than 420 across at full size, such as 1024 by 768 at GUI scale 3 (341 across), they run off
 it.
 
-The rows of buttons go under the sliders; where exactly, and how they keep clear of that description, is settled with
-Geo's review when they're built. Each slider shows its speed in blocks a second, to two decimals at most ("Build
-speed: 5 blocks/s", "Break speed: 3.33 blocks/s" at first), so each step reads differently. Its steps are the tick
-gaps 20 to 1 from left to right (1 to 20 blocks a second); a click or a drag sets it, and the handle settles on the
-chosen step when let go. Each step it reaches is saved at once in
-`config/buildingplanner-client.properties` (`place-repeat-ticks`, `erase-repeat-ticks`; at first 4 and 6, which a
-missing value, or one that isn't a whole number from 1 to 20, reads as), where hold to repeat reads it each tick. The
-sliders show and save on any server, and take effect only where hold to repeat runs. Each button
-shows its name, and its key when it has one, on hover, as the menu's own buttons do. Their icons come from Lucide
-(ISC licence), copied as path data into a source file that names the set, its version, its source and its licence, and
-made into the mod's button textures from that data. The layout and labels are drafted for Geo's review, with
-screenshots, before the step that builds them is pushed.
+Each slider shows its speed in blocks a second, to two decimals at most ("Build speed: 5 blocks/s", "Break speed: 3.33
+blocks/s" at first), so each step reads differently. Its steps are the tick gaps 20 to 1 from left to right (1 to 20
+blocks a second); a click or a drag sets it, and the handle settles on the chosen step when let go. Each step it
+reaches is saved at once in `config/buildingplanner-client.properties` (`place-repeat-ticks`, `erase-repeat-ticks`; at
+first 4 and 6, which a missing value, or one that isn't a whole number from 1 to 20, reads as), where hold to repeat
+reads it each tick. The sliders show and save on any server, and take effect only where hold to repeat runs.
+
+Building Planner's buttons (`RadialButton`) look like the menu's own: 20 across, grey, light blue under the pointer,
+with a 16-pixel icon, the menu's click sound, and, on hover, the button's name in aqua and its key, when it has one, in
+grey. Each acts on a click. Their place is Geo's choice, from four drafts with the buttons' middles 26 apart in the
+menu's own columns or rows, picked by the development system property `buildingplanner.buttonLayout`:
+
+- **A**, right: the left-hand buttons' columns mirrored to the right (105 to 157 right of the middle), in rows 52 and
+  78 below the middle. The mirror can't take the left-hand rows (13 above and below the middle): in Wall, Floor, Cube,
+  Slope Floor, Circle, Cylinder and Sphere, Effortless Building draws its mode options there (`ModeOptions`; buttons
+  at 105 + 26 per option, rows 13 above and 26 below the middle, with labels above each row).
+- **B**, left and above (the layout without the property): the left-hand buttons' columns, in rows 39 and 65 above
+  the middle, over the wrench, undo and redo.
+- **C**, top: one row over the ring, its middle 95 above the menu's middle.
+- **D**, under the sliders: the left-hand buttons' columns, in rows 67 and 93 below the middle, the lower row left of
+  the widest description (Disable's, about 108 each side of the middle).
+
+Copy, Paste, "Copy real blocks" and "Material list" come with steps 10 and 11; until then they show, doing nothing,
+only while `buildingplanner.draftButtons` is `true`. Their icons come from Lucide 1.74.0 (ISC licence): eye and
+eye-off for show or hide, copy, clipboard-paste, brick-wall for "Copy real blocks", and list-checks. Their path data is
+copied verbatim into `LucideIcons`, which names the set, its version, its source and its licence; `StrokeIcon` draws it
+at Lucide's 2-unit stroke into a texture at each GUI scale's pixel size. For comparison, `buildingplanner.buttonIcons`
+set to `items` shows vanilla items instead (an ender eye or pearl, paper, a slime ball, bricks and a book and quill).
+The place, the icons and the hover texts wait on Geo's choice from screenshots before they're pushed.
 
 ### The block mix and its panel
 
@@ -503,7 +528,8 @@ takes `columns`, since Building Planner 0.2 takes a `hello` of another layout un
 ### The add-on's licence
 
 MIT (`mod/LICENSE`). Effortless Building and Litematica are LGPL-3.0; the add-on calls their code and copies none of
-it, so it can take its own licence. The radial menu's icons are Lucide's, under its ISC licence, with its notice.
+it, so it can take its own licence. The radial menu's icons are Lucide's, under its ISC licence, with its notice in
+`LucideIcons`, the source file that holds them.
 
 ### In-game checks
 
@@ -569,8 +595,21 @@ add-on's classes off the classpath) and checks:
 - A `hello` with another protocol version, which the driver hands to the client, starts no session and shows no
   message.
 
-`step9.sh`, copy and paste and the material list:
+`step9.sh`, show or hide, the radial menu's buttons, copy and paste and the material list. Each check of copy and
+paste and of the material list waits on its build step (10 and 11): until then its section logs one failure marked with
+that step and doesn't run.
 
+- N hides every ghost block for that player alone: the game keeps them in its copy of the layer, Litematica has no
+  tile, and the client config keeps the choice. Another player's edits, one of them in a column that had no ghost
+  blocks, reach the hidden copy without showing or glowing, and N shows them with the rest.
+- The radial menu's "Show or hide ghost blocks" button hides them, then shows them, and the menu closes with them
+  showing.
+- With ghost blocks hidden, a shape shows them again, then draws, with its message the first time only.
+- Hidden ghost blocks stay hidden after a restart, until N shows them.
+- In each drafted layout, at GUI scale 2 and, in a window of 1920 by 1080, at 4, the buttons, with steps 10 and 11's
+  shown, meet nothing the menu draws in any mode (its ring, buttons, mode options, mode names, descriptions and
+  watermark), the sliders, each other or the screen's edges (the driver's `radialclear`); each is shot, with the
+  buttons' boxes in the log, and so are the vanilla-item icons and the button's hover text.
 - J, then a cube around some ghost blocks, makes a copy, with the message naming the Paste key, places no real block,
   doesn't reach the other player, and puts back the player's mode; the copy follows the player's aim.
 - U turns it a quarter turn clockwise, and H, facing south, flips it east to west, with its stairs turning with it.
@@ -583,8 +622,9 @@ add-on's classes off the classpath) and checks:
   keeps the earlier copy; Delete clears the copy; K with no copy gives its message.
 - The Material list button, then a cube around 10 ghost stone bricks, 4 of them built for real, opens Litematica's
   material list with 10 in all and 6 missing.
-- With ghost blocks hidden, a shape shows them again, then draws.
-- The radial menu's buttons do what their keys do.
+- The radial menu's other buttons do what their keys do.
+- On the same server with Building Planner left out, N, J, K, U, H and Delete make no copy, open nothing and leave
+  ghost blocks shown.
 
 `step10.sh`, hold to repeat and the look of ghost blocks. The driver counts the ticks each mouse button was down and
 notes the client tick of each edit the client sends (a mixin in the `clienttest` source set), and the script holds the
