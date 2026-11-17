@@ -7,11 +7,11 @@ behind it are in [plan.md](plan.md) ("Decisions").
 
 **What's built.** Players run Building Planner 0.2.1, and the server 0.2.0, which keep ghost blocks in separate named
 plans shared through Syncmatica. Built on `main` since then: hold to repeat at fixed speeds (hook E10), the look of
-ghost blocks, the layer's storage and files, the server's side of the layer and protocol 3, and the one-time import of
-the plans Syncmatica shared. The server's side no longer uses Syncmatica or speaks protocol 2's named plans (payload ids
-starting `plan_`), which the client still speaks, so no client shares ghost blocks with the dev server until the
-player's layer is built. Everything else this spec describes waits on the build steps in [plan.md](plan.md) ("Agent-ready work"), which
-end with the release. The build reuses what still fits: Effortless Building's hooks E1 to E10 (E1, E2 and E6 change),
+ghost blocks, the layer's storage and files, the server's side of the layer and protocol 3, the one-time import of
+the plans Syncmatica shared, and the player's copy of the layer with its tiles, shapes and erasing in world positions,
+and the edit glow. Neither side speaks protocol 2's named plans any more. Tiles still show in Litematica's screens, and
+the client still carries hooks S2, S3, L2 and L3 and "Start a plan", until build step 8. Everything else this spec
+describes waits on the build steps in [plan.md](plan.md) ("Agent-ready work"), which end with the release. The build reuses what still fits: Effortless Building's hooks E1 to E10 (E1, E2 and E6 change),
 the rules of undo and redo, the edit glow, the block mix screen's layout, the check for a server without the add-on, and
 the in-game check harness.
 
@@ -164,11 +164,10 @@ Fabric API: `PayloadTypeRegistry` (`registerLarge` for column snapshots), `Serve
 ordering below relies on. Fabric splits a payload registered with `registerLarge` into packets of at most 1 MiB to
 players and joins them on arrival.
 
-The build steps remove what the shared layer replaces from the client's code: hooks S2 and S3 into Syncmatica (each
+Build step 8 removes what the shared layer replaces from the client's code: hooks S2 and S3 into Syncmatica (each
 plan's own schematic, and Syncmatica's packets on the main thread) with `remove-loaded.sh`, L2 (plan coordinates
-without clamping) and L3 (growing a plan's region in place), the L1 capture of Edit Schematic writes, the "Start a
-plan" screen and key, protocol 2's payloads, and Syncmatica on the dev clients' classpath (`clientImplementation` in
-`build.gradle`). The server's side has none of them: `fabric.mod.json` doesn't name Syncmatica, and the dev server
+without clamping) and L3 (growing a plan's region in place), the "Start a plan" screen and key, and Syncmatica on the
+dev clients' classpath (`clientImplementation` in `build.gradle`). The server's side has none of them: `fabric.mod.json` doesn't name Syncmatica, and the dev server
 runs without it.
 
 ### Tiles: how Litematica draws the layer
@@ -556,8 +555,8 @@ from Syncmatica's `ServerPlacement.toJson`, with turned, mirrored and overlappin
 sub-region of negative size; plans in Building Planner's own files and in Syncmatica's stored files written by
 Litematica; a plan with no file and one with a damaged file. They compare each block with where Litematica's own
 arithmetic and reader place it. `import.sh` copies that fixture into the dev server's world: the server, without
-Syncmatica, logs the import's counts, and Planner1's driver asks for the plans' columns with protocol 3's `watch` and
-finds every expected ghost block and no other, again after a restart, which doesn't import again.
+Syncmatica, logs the import's counts, and Planner1, standing at the plans, holds every expected ghost block and no
+other in the game's own copy of the layer, again after a restart, which doesn't import again.
 
 ## Unverified
 

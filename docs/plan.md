@@ -239,16 +239,15 @@ are built (`step10.sh`). The steps below come in this order, each small enough f
    delete check, the plan files' archive, `max-plan-side` and Syncmatica from `fabric.mod.json`, the build and the dev
    server. Done when the import's unit tests pass and the dev server, started on a dev world with shared plans and
    without Syncmatica, logs the import and serves the same blocks. Built (`PlanImport` in
-   `dev.buildingplanner.server`, with `PlanImportTest` and the in-game check `import.sh`). The server speaks only
-   protocol 3; the client keeps protocol 2 (`PlanPayloads`, which only the client registers, `PlanReplicas` and
-   `SyncLimits`) until the steps that take out the named plans remove it. The driver's `LayerProbe` takes `columns`
-   only while the client has no receiver of its own.
+   `dev.buildingplanner.server`, with `PlanImportTest` and the in-game check `import.sh`).
 7. **The player's layer and its tiles**: the copy of the layer, column watching, tiles, shapes and erasing in world
-   positions, and the edit glow on the layer. Done when `step6.sh` (all but its checks on hidden tiles) and
-   `step7.sh` pass.
+   positions, and the edit glow on the layer. Built (`LayerReplica` in `dev.buildingplanner.sync`, with its unit
+   tests, and `Tiles` and `ClientSession` in the client; `step6.sh`, `step7.sh` and `import.sh` pass). Copy and
+   paste use the layer through Litematica's marked area until step 10.
 8. **Tiles out of sight, and Syncmatica off the client**: hooks L4 to L7, L1 as a guard, removing S2, S3, L2, L3,
    "Start a plan" and `remove-loaded.sh`, the removal of old plan placements at a session's start, and the mixin
-   plugin's Litematica rule. Done when `step6.sh` and `step8.sh` pass.
+   plugin's Litematica rule. Done when `step6.sh`, with the checks on hidden tiles this step adds to it, and
+   `step8.sh` pass.
 9. **Show or hide**: the key, the radial menu button, showing again when drawing, and the tool item off by default.
    Done when `step9.sh`'s check with ghost blocks hidden passes, and `step10.sh`
    finds the tool item off after a first start.
