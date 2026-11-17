@@ -513,6 +513,11 @@ on the dev server; [plan.md](plan.md) says which build step makes or rewrites ea
   one, and an apple's break click breaks the real block as without mods. In Disable, with the mix on and a block held, the place
   click puts a real block and no ghost block, and the use click opens a door.
 - The mix key while the mix is on opens the screen with the mix in it; "Turn off" turns it off, with its message.
+- In Single mode with the mix off: with a pickaxe, an apple or nothing in hand, the place click on a
+  real block or a ghost block does nothing. The break click with a pickaxe or nothing in hand goes to Effortless
+  Building, which treats both as build items: it erases a ghost block, and on a real block it sends an edit that
+  erases nothing and leaves the block. An apple's break click is vanilla's: it breaks a real block, and on a ghost
+  block it breaks the real block under it and leaves the ghost block.
 - A client without Effortless Building (its jar left off the classpath) loads without it or mixin errors, keeps
   receiving the other player's edits, and opens the mix screen.
 

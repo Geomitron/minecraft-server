@@ -1,8 +1,8 @@
 # Step 7's in-game checks: Effortless Building's shapes drawn as ghost blocks, in Single mode with the array modifier
 # and as a Line, starting on ghost blocks and erasing, the block-mix picker and its inventory toggle, the mix in
-# shapes, and a client without Effortless Building. Sourced by inside.sh, which provides drv, val, check, keys, click,
-# use_click, attack_click, client_said, start_client and stop_client. Shapes are drawn with Planner1 looking straight
-# down, so each block's position is known.
+# shapes, what clicks do with a pickaxe, an apple or nothing in hand, and a client without Effortless Building.
+# Sourced by inside.sh, which provides drv, val, check, keys, click, use_click, attack_click, client_said, start_client
+# and stop_client. Shapes are drawn with Planner1 looking straight down, so each block's position is known.
 
 check "client 1 starts a session on hello" drv 1 "await session" "await noscreen"
 check "client 2 starts a session on hello" drv 2 "await session" "await noscreen"
@@ -127,6 +127,49 @@ drv 1 "cmd tp @s 2 -58 -5 0 5" "wait 20" > /dev/null
 keys 1 key b
 check "B turns the mix off, with a message" eval 'client_said 1 "Block mix off." && [[ $(val 1 mix) == off* ]]'
 drv 1 "notoasts" "wait 5" "shot mix-off-message" > /dev/null
+
+# What clicks do in Single mode, with the mix off, while the main hand holds a pickaxe, an apple or nothing: each
+# click on a real stone, or on a ghost stone brick, at 16 -60 4, on the real grass at 16 -61 4. Planner1 stands at
+# 16.5 -60 2.5 and looks down 45 degrees south, at that block. These record how it works now; a pickaxe and an empty
+# hand are build items to Effortless Building, so their break clicks go to it rather than to vanilla.
+# click_case <item> <target> <click> <ghost after> <real after> <grass after> <edits> <what it does>
+click_case() {
+	drv 1 "fill 16 -60 4 16 -58 4 minecraft:air" "cmd fill 16 -60 4 16 -58 4 minecraft:air" \
+		"cmd setblock 16 -61 4 minecraft:grass_block" "await block 16 -60 4 minecraft:air" \
+		"await real 16 -61 4 minecraft:grass_block" > /dev/null
+	if [[ $2 == real ]]; then
+		drv 1 "cmd setblock 16 -60 4 minecraft:stone" "await real 16 -60 4 minecraft:stone" > /dev/null
+	else
+		drv 1 "fill 16 -60 4 16 -60 4 minecraft:stone_bricks" "await block 16 -60 4 minecraft:stone_bricks" > /dev/null
+	fi
+	drv 1 "cmd item replace entity @s weapon.mainhand with minecraft:$1" "cmd tp @s 16.5 -60 2.5 0 45" "wait 20" \
+		"holdreset" > /dev/null
+	"${3}_click" 1
+	drv 1 "wait 30" > /dev/null
+	local seen want edits=$7 held
+	case $1 in
+		iron_pickaxe) held="a pickaxe" ;;
+		apple) held="an apple" ;;
+		*) held=nothing ;;
+	esac
+	seen="ghost=$(val 1 "get 16 -60 4") above=$(val 1 "get 16 -59 4") real=$(val 1 "real 16 -60 4")"
+	seen+=" grass=$(val 1 "real 16 -61 4") $(val 1 holdlog)"
+	want="ghost=minecraft:$4 above=minecraft:air real=minecraft:$5 grass=minecraft:$6"
+	echo "  $held $2 $3: $seen" >> /out/checks.log
+	check "with $held in hand, the $3 click on a $2 block $8" \
+		eval '[[ $seen == "$want "* && $seen == *" edits=$edits "* ]]'
+}
+drv 1 "ebmode SINGLE" > /dev/null
+for item in iron_pickaxe apple air; do
+	click_case "$item" real use air stone grass_block 0 "does nothing"
+	click_case "$item" ghost use stone_bricks air grass_block 0 "does nothing"
+done
+click_case iron_pickaxe real attack air stone grass_block 1 "erases nothing and leaves the real block"
+click_case iron_pickaxe ghost attack air air grass_block 1 "erases the ghost block"
+click_case apple real attack air air grass_block 0 "breaks the real block"
+click_case apple ghost attack stone_bricks air air 0 "breaks the real block under the ghost block"
+click_case air real attack air stone grass_block 1 "erases nothing and leaves the real block"
+click_case air ghost attack air air grass_block 1 "erases the ghost block"
 
 # A client without Effortless Building loads, skips the hooks into it, and keeps everything else.
 cp /out/client2.log /out/client2-with-effortless.log
