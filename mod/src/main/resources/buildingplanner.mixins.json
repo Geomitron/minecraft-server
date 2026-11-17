@@ -17,6 +17,9 @@
 		"effortless.RandomizerSystemMixin",
 		"litematica.ChunkRendererSchematicVboMixin",
 		"litematica.OverlayRendererMixin",
+		"litematica.PlacementManagerDaemonHandlerMixin",
+		"litematica.PlacementManagerTaskMixin",
+		"litematica.PlacementManagerTaskRebuildMixin",
 		"litematica.SchematicPlacementManagerMixin",
 		"litematica.SchematicUtilsMixin",
 		"litematica.WidgetListSchematicPlacementsMixin"

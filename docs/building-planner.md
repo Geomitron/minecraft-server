@@ -163,6 +163,8 @@ Litematica, under `src/main/java/fi/dy/masa/litematica/`:
 | L5 | `gui/widgets/WidgetListSchematicPlacements.java`, `getAllEntries()` | `@ModifyReturnValue` | Leave tiles and the copy out of Litematica's placement list. |
 | L6 | `render/OverlayRenderer.java`, `updatePlacementCache()` | `@WrapOperation` on `SchematicPlacementManager.getAllSchematicsPlacements()` | Leave tiles out of the boxes and origin markers `renderBoxes` draws. Litematica's own switch for those boxes (`enablePlacementBoxesRendering`) would hide the copy's box too. |
 | L7 | `render/schematic/ChunkRendererSchematicVbo.java`, `getOverlayType(BlockState, BlockState)` | `@ModifyReturnValue` | While Building Planner has a session, turn `EXTRA` into `NONE`. Litematica marks a real block as extra wherever a placement's box holds air there (`schematicOverlayTypeExtra`, on by default), and a tile's box is a whole chunk column's sections, so every real block in it would be marked. The layer holds only blocks to place, so no real block is extra. Missing and wrong blocks keep their colours. |
+| L8 | `schematic/placement/PlacementManagerTaskRebuild.java`, `run()`; `PlacementManagerTask.java`'s constructors | `@WrapMethod`; a number for each task, in the order they're made (`RebuildOrder`) | Run the rebuilds of one chunk column one at a time. Litematica's background threads (at least two) rebuild a column from its placements' blocks as they are when the rebuild runs, so two rebuilds of one column at once could end with the older one's result, read before an edit's blocks were written. |
+| L9 | `schematic/placement/PlacementManagerDaemonHandler.java`, `removeRebuildTasksFor` and `removeDeferredTasksFor` | `@WrapMethod` | A running rebuild drops from the queue only the rebuilds of its column made before it began, whose edits it reads. Litematica's rebuild drops every queued rebuild of its column as it ends, and as it unloads a column with no placements, including one queued for an edit written after it read the column, which would leave that edit undrawn. Elsewhere (a new rebuild replacing the queued ones, an unload) every queued rebuild of the column still goes. |
 
 Public Litematica API the add-on calls: `LitematicaSchematic.createEmptySchematic`, `getSubRegionContainer`,
 `getAreaSize`; `LitematicaBlockStateContainer`'s `get` and `set`; `SchematicPlacement.createFor`,
@@ -197,7 +199,8 @@ they have no file), and added with `addSchematicPlacement` without messages.
 
 Litematica keeps each chunk's placements in lists (`schematicsTouchingChunk`) and rebuilds what it draws one chunk
 column at a time (`PlacementManagerTaskRebuild.buildTask`), so tiles never overlap and an edit rebuilds only its own
-columns. An edit writes the changed blocks into the tile's container and calls `markChunkForRebuild` for the column.
+columns. An edit writes the changed blocks into the tile's container and calls `markChunkForRebuild` for the column;
+hooks L8 and L9 keep that rebuild from being lost to one already running, so it draws the edit.
 An edit that adds a block in a section above or below the tile, or empties the tile's top or bottom section, replaces
 the tile with one of the new height; a column left with no ghost blocks loses its tile.
 
