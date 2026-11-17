@@ -212,10 +212,13 @@ are built (`step10.sh`). The steps below come in this order, each small enough f
 3. **The radial menu's widgets and the two speed sliders** (hooks E11 and E12; the sliders set E10's gaps and are kept
    in the client config). Done when `step10.sh`'s slider check passes and screenshots of the menu have gone to Geo.
 4. **The layer's storage and files** (common): columns of 16-block sections with palettes, and the area files. Built
-   (`dev.buildingplanner.layer`, with its unit tests); nothing uses it until step 5.
+   (`dev.buildingplanner.layer`, with its unit tests).
 5. **The server's layer**: the store, column watching, edits in world positions with their checks, undo and redo,
    messages and protocol version 3. Done when unit tests over the simulated network cover a snapshot then later edits
-   in order, every rejection, undo and redo across dimensions, and a save and reload.
+   in order, every rejection, undo and redo across dimensions, and a save and reload. Built (`LayerSync` and
+   `LayerStore` in `dev.buildingplanner.server`, the payloads in `dev.buildingplanner.sync.Payloads`, with unit
+   tests). Protocol 2's payloads (`PlanPayloads`, ids starting `plan_`), `PlanSync` and their tests stay beside it
+   while the client speaks protocol 2; the steps that take out the named plans remove them.
 6. **The import, and Syncmatica off the server**: the one-time import, and removing hook S1, `SyncmaticaPlans`, the
    delete check, the plan files' archive, `max-plan-side` and Syncmatica from `fabric.mod.json`, the build and the dev
    server. Done when the import's unit tests pass and the dev server, started on a dev world with shared plans and

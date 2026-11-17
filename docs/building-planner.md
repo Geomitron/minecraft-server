@@ -7,10 +7,12 @@ behind it are in [plan.md](plan.md) ("Decisions").
 
 **What's built.** Players run Building Planner 0.2.1, and the server 0.2.0, which keep ghost blocks in separate named
 plans shared through Syncmatica. Built on `main` since then: hold to repeat at fixed speeds (hook E10), the look of
-ghost blocks, and the layer's storage and files, which nothing uses until the server's layer is built. Everything else
-this spec describes waits on the build steps in [plan.md](plan.md) ("Agent-ready work"), which end with the release. The
-build reuses what still fits: Effortless Building's hooks E1 to E10 (E1, E2 and E6 change), the rules of undo and redo,
-the edit glow, the block mix screen's layout, the check for a server without the add-on, and the in-game check harness.
+ghost blocks, the layer's storage and files, and the server's side of the layer and protocol 3, which the server runs
+beside protocol 2's named plans (payload ids starting `plan_`) and which no client speaks until the player's layer is
+built. Everything else this spec describes waits on the build steps in [plan.md](plan.md) ("Agent-ready work"), which
+end with the release. The build reuses what still fits: Effortless Building's hooks E1 to E10 (E1, E2 and E6 change),
+the rules of undo and redo, the edit glow, the block mix screen's layout, the check for a server without the add-on, and
+the in-game check harness.
 
 ## What players get
 
@@ -209,8 +211,9 @@ server drops that player's watches on its side (`ServerEntityLevelChangeEvents.A
 loads no chunks, so it changes nothing.
 
 The server answers each `watch` with one `columns` message that lists every column asked for, each with its sections,
-or none for an empty column, and from then sends that player every edit that touches a watched column. A watch farther
-from the player than the server's view distance plus two chunks is ignored. Until a column's snapshot arrives, the
+or none for an empty column, and from then sends that player every edit that touches a watched column. A column
+farther from the player than the server's view distance plus two chunks, and a watch of another dimension than the
+player's, is ignored. Until a column's snapshot arrives, the
 game ignores edits to it; a snapshot replaces whatever the game held for that column. Messages on one connection keep
 their order, so nothing falls between a snapshot and the edits after it.
 
@@ -229,7 +232,8 @@ Payloads (namespace `buildingplanner`, protocol version 3):
 Order and conflicts:
 
 1. The server applies edits one at a time on its main thread, in the order they arrive, and sends each applied edit to
-   every player who watches a column it touches, its author included.
+   every player who watches a column it touches. The author gets every edit back, as `applied` with only the changes
+   that changed a block (perhaps none) or as `rejected`.
 2. Each block takes the value of the last edit, in the server's order, that wrote it. There are no locks and no
    owners: anyone may erase anyone's ghost blocks, and everyone ends with the same layer.
 3. A game applies `applied` messages in the order they arrive, to the columns it holds, and ignores the rest. A shape
@@ -258,7 +262,8 @@ coordinates divided by 32, rounded down). Each file is gzip-compressed NBT:
 
 A file whose area holds no ghost blocks is deleted. The server builds a changed area's contents on the server thread and
 one background thread writes them, each through a temporary file and a rename, at most every 30 seconds while the layer
-has changed, and when the server stops. At start the server reads every file. When a file can't be read, the server logs
+has changed, and when the server stops. At start the server reads every file; when it can't list the layer's folder, it
+stops rather than run without the layer. When a file can't be read, the server logs
 an error, adds none of its ghost blocks, leaves the file for repair by hand, and never writes that area while it runs,
 so no edit overwrites it. A file can't be read when it's cut short or isn't compressed NBT, has another version or a
 missing entry, lists a column outside its area or twice, or a section twice in one column, or has a section with a block
@@ -446,7 +451,8 @@ joining until the server's `hello` arrives. A `hello` with another protocol vers
 player whose pack still has Building Planner 0.2.1 sees no ghost blocks until their next launch updates it. A
 singleplayer world, or a LAN host's own world, runs no server side, and Effortless Building works there as it does
 without Building Planner. The server sends nothing to a player who can't receive it (`ServerPlayNetworking.canSend`),
-so players without the add-on, or without any mods, join and play as before.
+so players without the add-on, or without any mods, join and play as before. It sends `hello` only to a game that also
+takes `columns`, since Building Planner 0.2 takes a `hello` of another layout under the same name.
 
 ### The add-on's licence
 
