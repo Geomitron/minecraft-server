@@ -18,6 +18,9 @@ Effortless Building, Litematica and Syncmatica. Geo's decisions behind it are in
   sphere and the rest), a player's clicks draw the shape into a plan as ghost blocks, with Effortless Building's
   mirror, radial mirror and array (repeat). A shape drawn with the break (left) click erases those ghost blocks from
   the plan. Effortless Building never places or breaks real blocks.
+  - In Single mode, holding the place (right) button keeps placing ghost blocks and holding the break (left) button
+    keeps erasing them, at the game's own pace for a held button: five a second to place, and just over three a second
+    to erase. The other modes, and the Disable mode, act once for each click.
   - A shape goes into the plan it starts in, or into the player's selected Litematica plan when it starts outside every
     plan.
   - A shape can start on a plan's ghost blocks as well as on real blocks.
@@ -44,6 +47,10 @@ Effortless Building, Litematica and Syncmatica. Geo's decisions behind it are in
   aim. They move it with Litematica's own controls, turn and mirror it with Building Planner's keys, and press "Paste"
   to write it into a plan as one change, which one undo takes back. The empty space in the copy leaves the plan's
   blocks as they are. The copy stays for more pastes until the player clears it.
+- **How plans look.** On each player's computer, once, Building Planner turns on Litematica's "render blocks as
+  translucent" and sets its ghost block alpha to 0.8, so plans draw see-through. It sets each only if the player hasn't
+  changed it from Litematica's default (off, and 0.5), and never again, so a player's own later change stays. This
+  happens whether or not the player joins a server with Building Planner.
 - **Messages.** Every message players see goes to Geo for review once there's something built to show it in.
 
 ## Geo's goals, and what meets each
@@ -71,8 +78,8 @@ menus, so it adds nothing to the registries Fabric API syncs at login, and playe
   They run only on a dedicated server, which is how the group plays; in a singleplayer or LAN world Syncmatica works
   as it does without the add-on.
 - **Client:** the Litematica bridge (attach plans to placements, apply edits, capture Edit Schematic writes, grow in
-  place), starting a plan, the edit glow, the Effortless Building capture, the block-mix picker, copy and paste, and
-  the check for a server without the add-on.
+  place), starting a plan, the edit glow, the Effortless Building capture, hold to repeat, the block-mix picker, copy
+  and paste, the look of ghost blocks, and the check for a server without the add-on.
 
 They're built in the steps [plan.md](plan.md) lists. Step 6 built the client's Litematica bridge (hooks L1, L3, S2 and
 E4), starting a plan and the edit glow. Step 7 built the Effortless Building capture (E1 to E3 and E5 to E9), the
@@ -108,6 +115,7 @@ Effortless Building, under `common/src/main/java/nl/requios/effortlessbuilding/`
 | E7 | `buildpipeline/ConstraintSystem.java`, `processBlocks` | `@ModifyExpressionValue` on the `instabuild` read, and on `getProtectTileEntities()` | Skip the survival checks on real blocks (placed-by-player, hardness, tools) and the protected-block-entity check, which concern real blocks, not plans. World border, build height and the block cap still apply. |
 | E8 | `buildpipeline/BuildPipelineClient.java`, `updateDisplayTrackers` | `@WrapOperation` on both `ItemUsageTracker.compute` calls, clearing the tracker instead | No red "missing items" tint: plans don't use up items. |
 | E9 | `buildpipeline/BuildPipelineClient.java`, `handleClick` and `getPreviewBlocks`; `resolveFirstClickPos` | `@WrapOperation` on `ClientLevel.clip`; on `Level.getBlockState` | Let shapes start on ghost blocks: aim at the nearer of the real block and Litematica's ghost block (`RayTraceUtils.traceToSchematicWorld`), and read the ghost block's state, where the real block can be replaced, when picking the start position, so the shape goes beside it. |
+| E10 | `buildpipeline/BuildPipelineClient.java`, public static `handleRightClick` and `handleLeftClick`, with `shouldInterceptPlacing`, `shouldInterceptBreaking` and `getBuildState`; `buildpipeline/BuildPipeline.java`, `isBuildTriggerItem`; `buildmode/BuildModes.java`, `getBuildMode`; the click checks copy `fabric/.../EffortlessBuildingClient.java`'s client tick | No mixin: Building Planner's own `END_CLIENT_TICK` calls the two public methods again while a button stays down | Hold to repeat in Single mode (see "The client"). Effortless Building's own tick acts only when a button goes down (`rightJustPressed`, `leftJustPressed`). |
 
 Effortless Building's limits come from its config on the player's computer (`config/ServerConfig.java`; survival
 defaults: reach 32, 2,000 blocks a shape, 64 a side). The server applies its own caps (below).
@@ -258,6 +266,28 @@ position from hook L2 and its state unrotated (`getUntransformedBlockState`). It
 would place: the block's placement rules with the first click's face and the player's facing, then the shape's mirror
 and turn. Entries whose item isn't a block (a bucket, a tool) are left out. A shape over the server's block cap isn't
 sent, with the server's message; Litematica writes made earlier in the tick are sent first.
+
+Hold to repeat (E10): while Building Planner has a session, Effortless Building is loaded and its mode is Single, the
+client tick counts how many ticks each of the use and attack buttons has been down, with no screen open. After the
+tick a button goes down, which Effortless Building's own tick handles, it calls `handleRightClick` (use) or
+`handleLeftClick` (attack) again every 4 ticks for use and every 6 for attack, under the conditions Effortless Building
+sets for a fresh click (a build trigger item, or a sequence under way; for attack also `shouldInterceptBreaking`). Both
+paces are vanilla 26.3's for a held button, read in the game's classes: `Minecraft.startUseItem` sets `rightClickDelay`
+to 4, which `Minecraft.tick` counts down once a tick and a held use button acts again on reaching 0, so use repeats
+every 4 ticks; `MultiPlayerGameMode.startDestroyBlock` and `continueDestroyBlock` set `destroyDelay` to 5 after a
+creative destroy, and `continueDestroyBlock` counts it down on the next 5 ticks and destroys on the one after, so attack
+repeats every 6 ticks. Effortless Building's mixins already cancel vanilla's own repeat while it intercepts. Each
+repeat is an ordinary click, so it sends an edit as any shape does, and a block shows when the server's `applied` comes
+back, as for any shape. The other modes, the Disable mode, and a server without the add-on have no repeat.
+
+How plans look: on the first client tick of a game run, after Litematica has loaded its config, Building Planner
+reads `config/buildingplanner-client.properties` on the player's computer. When it doesn't hold
+`look-defaults-applied=true`, Building Planner sets Litematica's `Visuals` options `renderBlocksAsTranslucent` to on and
+`ghostBlockAlpha` to 0.8, but each only while it still equals Litematica's default (off, and 0.5; `Configs.java`), then
+calls `Configs.saveToFile()` and writes the line. When the file holds the line, it does nothing, so a player's own
+later change, even back to a default, stays. It doesn't need a session, so it happens before the player joins any
+server. If setting or saving fails, it logs a warning, writes no line and tries again at the next start. An option the
+player already set to the value Building Planner would set looks the same as one it set.
 
 Starting a plan: the key opens a screen asking for the plan's name, unless no area is marked, when the player gets a
 message instead. Litematica's Simple selection mode, its default, holds an unmarked area as one box with both corners
@@ -480,6 +510,20 @@ thread. Run on a copy of `mod/` without hook S3, the last check always fails, si
 the network thread, and on a connection where Syncmatica's own mixin catches the later packets too, Planner2's game
 can crash.
 
+`step10.sh` checks hold to repeat and the look of ghost blocks. The driver counts the ticks each mouse button was down
+and notes the client tick of each edit the client sends (a mixin in the `clienttest` source set), and the script holds
+the real buttons with xdotool while Planner1 is teleported one block every two ticks along a row, looking straight down:
+
+- Holding use in Single mode with stone bricks sends an edit when the button goes down and then one every 4 ticks, and
+  each edit put one ghost block in the row, on both clients, and no real block.
+- Holding attack over a row filled with ghost blocks sends an edit when the button goes down and then one every 6 ticks,
+  and each edit erased one ghost block, on both clients, leaving the real blocks.
+- Holding use in Line mode (which needs two clicks) and with the mode disabled sends no edit.
+- Each client's first start leaves Litematica's two options at on and 0.8, saved in its config, and the line in
+  Building Planner's client config.
+- A player's own change (off and 0.3) survives a restart. With the line gone and the server stopped, so the client joins
+  nothing, a start sets only the option still at its default (on) and keeps the 0.3.
+
 The results, the game logs and the screenshots go to a folder outside the repository.
 
 ## Unverified
@@ -490,6 +534,8 @@ The results, the game logs and the screenshots go to a folder outside the reposi
 - That the shape preview draws the mix's blocks, and how block states turn out for blocks whose placement depends on
   their neighbours (stairs, fences, slabs).
 - Whether Litematica's edits aim from Freecam's camera.
+- Hold to repeat in survival mode, with a held tool or bucket, and on a slow connection, where a held click sends edits
+  faster than the server's answers come back; the checks use creative mode, a held block and a local server.
 - A client without any mods joining a server with the add-on; the checks use a Fabric client without the add-on.
 - A real server running another protocol version; the check hands the client a made-up `hello`.
 - That Effortless Building places real blocks as usual in singleplayer and in a LAN host's own world.
