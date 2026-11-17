@@ -2,8 +2,8 @@
 # and the look Building Planner sets for Litematica's ghost blocks once. Sourced by inside.sh, which provides drv, val,
 # check, keys, xdo, start_client, stop_client and stop_server. Each client starts with a fresh game folder, so its first start is the first start.
 
-# The look, on a first start: both of Litematica's options are set, saved to its config, and recorded. Each client
-# also saved a first start before it joined the server.
+# The look, on a first start: both of Litematica's look options are set and its tool item turned off, saved to its
+# config, and recorded. Each client also saved a first start before it joined the server.
 marker=config/buildingplanner-client.properties
 for n in 1 2; do
 	check "client $n starts a session on hello" drv $n "await session" "await noscreen"
@@ -14,6 +14,9 @@ for n in 1 2; do
 		 tr -d " \n\r" < run/client'$n'/config/litematica.json | grep -Eq "\"renderBlocksAsTranslucent\":(true|\{\"enabled\":true)"'
 	check "client $n recorded it in Building Planner's own config" eval \
 		'grep -q "^look-defaults-applied=true" run/client'$n'/'$marker
+	check "client $n's first start turns Litematica's tool item off" eval '[[ $(val '$n' toolitem) == false ]]'
+	check "and saves that to Litematica's config" eval \
+		'tr -d " \n\r" < run/client'$n'/config/litematica.json | grep -Eq "\"toolItemEnabled\":(false|\{\"enabled\":false)"'
 done
 
 # walk <from> <to>: the commands that move Planner1 one block east every two ticks, 2.5 -55 5.5 and on, looking

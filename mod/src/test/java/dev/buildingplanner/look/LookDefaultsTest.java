@@ -20,6 +20,7 @@ class LookDefaultsTest {
 	void ourValuesAreTheOnesGeoChose() {
 		assertTrue(LookDefaults.TRANSLUCENT);
 		assertEquals(0.8, LookDefaults.GHOST_ALPHA);
+		assertFalse(LookDefaults.TOOL_ITEM);
 	}
 
 	@Test
