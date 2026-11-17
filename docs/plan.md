@@ -232,11 +232,11 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it, not
   like either; would it be possible to image generate icons that fit the style of the other image icons? That means
   pixelated at about the same resolution with black borders. Maybe there's something in my opencode provider that
   can do a good job at this? I'd want to pick from multiple generated options." (729 Q2, over Lucide's line icons
-  and Minecraft items). Geo picked each icon from every generated variant (738): show and hide from Set 14, Copy and
-  Paste from Set 16, "Material list" from Set 3, Turn from Set 31, Mirror from Set 5 and Clear from Set 6. The
-  buttons use these picks while cleaned-up variations of all but Clear are made, as Geo's notes ask (such as "the
-  lines are inconsistent, and the shapes could be refined"), and Geo picks again. OpenAI's image models join that
-  round, with Geo's OpenRouter account allowing them for the run (738 Q10 A).
+  and Minecraft items). Geo picked each icon from every generated variant and from variations on their first picks
+  (738): show and hide from Set 14, Copy from Set 16, Paste from Set 56a, "Material list" from Set 3, Turn from Set
+  31, Mirror from Set 66a (GPT-5.4 Image 2) and Clear from Set 6. Geo fine-tunes each icon by hand: "These still
+  have issues; put them all in a folder so that I can fine tune edit each one myself in Paint.NET" (738 revision 2,
+  c1).
 - Geo approved the texts players see in 0.3.0 as 742 showed them (the chat messages, the button and key names, and
   the material list's title), with Copy's texts as revision 2 showed them for the one Copy above, and the mod's
   description in Geo's wording: "Plan builds together using ghost blocks that everyone on the server can see." Geo saw

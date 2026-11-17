@@ -444,10 +444,10 @@ Each icon is a 16 by 16 image of its own in `mod/src/main/resources/assets/build
 by what it shows: `ghost_blocks_shown`, `ghost_blocks_hidden`, `copy`, `paste`, `material_list`, and `turn`, `mirror`
 and `clear` for step 10's buttons. Changing an icon means replacing its file. Each draws at 16 by 16 GUI pixels with
 nearest-pixel filtering, as the menu draws its own (`AllIcons.render`). Each icon is the one Geo picked from the
-generated candidate sets (inbox request 738, 2026-11-17), made with an OpenRouter model: `ghost_blocks_shown` and
-`ghost_blocks_hidden` from set 14, and `copy` and `paste` from set 16, all `google/gemini-nano-banana-2.1`; `turn` from
-set 31, `google/gemini-3.1-flash-image`; `material_list` from set 3, `mirror` from set 5 and `clear` from set 6, all
-`google/gemini-3-pro-image`.
+generated candidate sets (inbox request 738), made with an OpenRouter model: `ghost_blocks_shown` and
+`ghost_blocks_hidden` from set 14, and `copy` from set 16, all `google/gemini-nano-banana-2.1`; `paste` from set 56a
+and `turn` from set 31, both `google/gemini-3.1-flash-image`; `material_list` from set 3 and `clear` from set 6, both
+`google/gemini-3-pro-image`; `mirror` from set 66a, `openai/gpt-5.4-image-2`.
 
 ### The block mix and its panel
 
