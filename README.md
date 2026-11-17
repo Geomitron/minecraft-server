@@ -1,6 +1,6 @@
 # Minecraft Server
 
-A survival Minecraft server, and Building Planner, a mod being built for it. With Building Planner, players draft builds together as Litematica plans that everyone on the server sees and edits live, then build them by hand.
+A survival Minecraft server, and Building Planner, a mod being built for it. With Building Planner, players draft builds together in ghost blocks that everyone on the server sees and edits live, then build them by hand.
 
 - [Player setup](docs/players.md): the mods players use, and how to install them with Prism Launcher.
 - [Server plan](docs/plan.md): the current server, the decisions so far, and the work still open.

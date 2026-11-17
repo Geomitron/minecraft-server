@@ -2,7 +2,7 @@ hash-format = "sha256"
 
 [[files]]
 file = "mods/building-planner.pw.toml"
-hash = "f9f2c83623ec80709cca8e70b109f539ad2a5e698a0c348d915366aa94da0914"
+hash = "4d41a14a31934636fa3e07d0b0e0b65e58b7371c10cc67586774ea156373f89a"
 metafile = true
 
 [[files]]
@@ -28,9 +28,4 @@ metafile = true
 [[files]]
 file = "mods/malilib.pw.toml"
 hash = "aa19aaf146fb03f895583147e1906b950c9acc2c31a16110d3764401a65a79e1"
-metafile = true
-
-[[files]]
-file = "mods/syncmatica.pw.toml"
-hash = "1063819c4a7de56b72384a52615bc2dc7818c44b5791072b5b315ca372308fca"
 metafile = true
