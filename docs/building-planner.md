@@ -45,8 +45,7 @@ the in-game check harness.
   player picks up to nine blocks, each with a share (say 80 cobblestone to 20 mossy cobblestone), and turns the mix on.
   The screen closes, and the mix then applies to Effortless Building's shapes, in every mode but Disable, while the
   player holds an item that places a block; with anything else in hand, clicks act as without mods. While the mix
-  applies, a panel at the right edge of the screen shows its blocks and shares and the key to change it or turn it
-  off; with the mix on, that key opens the screen again, which then has a "Turn off" button. A mix of
+  applies, a small panel at the right edge of the screen shows each block's icon and share, and the mix key; with the mix on, that key opens the screen again, which then has a "Turn off" button. A mix of
   one block lets a survival player plan with a block they don't have.
 - **Undo and redo.** Undo takes back only that player's own changes, newest first: a whole shape or paste at a time,
   in any dimension. A block someone else has changed since stays as they left it. Effortless Building's Ctrl+Z (and
@@ -425,9 +424,10 @@ Escape leave the mix as it was. Opened while the mix is on, the screen shows the
 the mix's blocks stay in the screen for the next time. The buttons share the row's width.
 
 While the mix applies, a panel at the right edge of the screen (`MixPanel`, drawn through `HudElementRegistry`),
-centred top to bottom on a dark see-through box, shows the heading "Block mix", then each of the mix's blocks (its
-icon and name) with its percentage at the right, and under them, in grey, the line "B: change or turn off", with the
-key as the player has bound it. It hides while the mix doesn't apply (`MixRule`), while a screen is open, and while
+centred top to bottom on a dark see-through box, shows the heading "Block mix", then each of the mix's blocks as its
+icon and its percentage ("80%"), and under them, in grey, the line "B: close", with the key as the player has bound it
+(the key opens the mix screen). The box is as wide as its widest line, and the whole panel draws at 0.7 of the game's
+size, as the radial menu's slider labels do, where a line of text is still about 13 pixels high at GUI scale 2. It hides while the mix doesn't apply (`MixRule`), while a screen is open, and while
 the game's HUD is hidden (F1). Without Effortless Building, whose mode the rule reads, it never shows. Its look and
 text are drafted for Geo's review, with screenshots.
 
@@ -527,7 +527,7 @@ on the dev server; [plan.md](plan.md) says which build step makes or rewrites ea
 - A shape started on a ghost block goes on top of it.
 - The mix key opens the mix screen, without "Turn off", listing every block; the switch limits it to the inventory's
   two blocks; clicking both, typing their shares and "Use mix" turns the mix on and closes the screen, with its
-  message, and the panel shows both blocks, their percentages and the key line. F1 hides the panel and shows it again.
+  message, and the panel shows both blocks' percentages ("80%", "20%") and the key line ("B: close"). F1 hides the panel and shows it again.
 - With the mix on and a block held, each block of a 20-block shape is the mix's block at its position, on both
   clients. With the mix on and a pickaxe or an apple held, the panel hides, the place click draws no ghost block and
   places no real one, and an apple's break click breaks the real block as without mods. In Disable, with the mix on and

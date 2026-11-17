@@ -27,7 +27,7 @@
 	"buildingplanner.ui.block_mix.use": "Use mix",
 	"buildingplanner.ui.block_mix.clear": "Clear",
 	"buildingplanner.ui.block_mix.turn_off": "Turn off",
-	"buildingplanner.ui.mix_panel.keys": "%s: change or turn off",
+	"buildingplanner.ui.mix_panel.keys": "%s: close",
 	"buildingplanner.ui.radial.build_speed": "Build speed: %s blocks/s",
 	"buildingplanner.ui.radial.break_speed": "Break speed: %s blocks/s",
 	"key.category.buildingplanner.main": "Building Planner",

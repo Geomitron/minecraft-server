@@ -69,14 +69,15 @@ check "with a message" client_said 1 "Block mix on. Press B to change it or turn
 drv 1 "notoasts" "wait 5" "shot mix-on-message" > /dev/null
 
 # The mix panel shows while the mix applies: with cobblestone held in Single mode, and no screen open.
-panel="Block mix | Cobblestone 80% | Mossy Cobblestone 20% | B: change or turn off"
-check "the panel shows the mix's blocks, their percentages and the key line" \
+panel="Block mix | 80% | 20% | B: close"
+check "the panel shows the mix's shares beside their blocks' icons, and the key line" \
 	eval '[[ $(val 1 panel) == "$panel" ]]'
 keys 1 key F1
 check "the panel hides while the HUD is hidden (F1)" eval 'drv 1 "wait 5" > /dev/null; [[ $(val 1 panel) == hidden ]]'
 keys 1 key F1
 check "and shows again with the HUD" eval 'drv 1 "wait 5" > /dev/null; [[ $(val 1 panel) == "$panel" ]]'
-drv 1 "cmd tp @s 6 -58 -4 0 30" "wait 40" "notoasts" "wait 5" "shot mix-panel" > /dev/null
+# For the panel's screenshot, Planner2 steps out of view and the chat fades over 10 seconds.
+drv 1 "cmd tp Planner2 30 -60 -10" "cmd tp @s 6 -58 -4 0 30" "wait 220" "notoasts" "wait 5" "shot mix-panel" > /dev/null
 
 # With the mix on, each block of a shape comes from the mix: a row of 20 from 3 -60 7 eastward.
 declare -A mix_at
