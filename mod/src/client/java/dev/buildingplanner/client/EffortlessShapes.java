@@ -18,6 +18,9 @@ import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BedPart;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
@@ -37,13 +40,11 @@ public final class EffortlessShapes {
 	}
 
 	/**
-	 * Hooks E5 and E6: whether the block mix applies now: the mix is on, the main hand holds a block, and Effortless
-	 * Building's mode isn't Disable (see {@link MixRule}).
+	 * Hooks E5 and E6: whether the block mix applies now: the mix is on, the main hand holds a placeable item, and
+	 * Effortless Building's mode isn't Disable (see {@link MixRule}).
 	 */
 	public static boolean mixApplies() {
-		Player player = Minecraft.getInstance().player;
-		return MixRule.applies(BuildingPlannerClient.mixOn(),
-			player != null && player.getMainHandItem().getItem() instanceof BlockItem,
+		return MixRule.applies(BuildingPlannerClient.mixOn(), ClickRule.holdsPlaceable(),
 			BuildModes.CLIENT.getBuildMode() == BuildModeEnum.DISABLED);
 	}
 
@@ -75,14 +76,55 @@ public final class EffortlessShapes {
 				new BlockPlaceContext(player, InteractionHand.MAIN_HAND, stack, blockHit));
 			states.put(pos, entry.applyTransforms(state != null ? state : item.getBlock().defaultBlockState()));
 		}
+		Map<BlockPos, BlockState> otherHalves = new LinkedHashMap<>();
+		states.forEach((pos, state) -> {
+			BlockPos other = otherHalf(pos, state);
+			if (other != null) {
+				otherHalves.put(other, otherHalfState(state));
+			}
+		});
+		otherHalves.forEach(states::putIfAbsent);
 		BuildingPlannerClient.captureShape(EditKind.SHAPE, states);
 	}
 
-	/** Hook E2: the player finished a shape with the break click, which erases its ghost blocks. */
+	/**
+	 * Where the other half of a two-block block is (a door's or a tall plant's upper half, a bed's head), or null for a
+	 * block of one. The placing rules give only the half placed first, which the game completes as it places it; a
+	 * ghost block gets both.
+	 */
+	private static BlockPos otherHalf(BlockPos pos, BlockState state) {
+		if (state.hasProperty(BlockStateProperties.DOUBLE_BLOCK_HALF)) {
+			return state.getValue(BlockStateProperties.DOUBLE_BLOCK_HALF) == DoubleBlockHalf.LOWER ? pos.above() : pos.below();
+		}
+		if (state.hasProperty(BlockStateProperties.BED_PART) && state.hasProperty(BlockStateProperties.HORIZONTAL_FACING)) {
+			Direction facing = state.getValue(BlockStateProperties.HORIZONTAL_FACING);
+			return state.getValue(BlockStateProperties.BED_PART) == BedPart.FOOT ? pos.relative(facing)
+				: pos.relative(facing.getOpposite());
+		}
+		return null;
+	}
+
+	/** The state of the other half, for a state {@link #otherHalf} finds one for. */
+	private static BlockState otherHalfState(BlockState state) {
+		if (state.hasProperty(BlockStateProperties.DOUBLE_BLOCK_HALF)) {
+			return state.cycle(BlockStateProperties.DOUBLE_BLOCK_HALF);
+		}
+		return state.cycle(BlockStateProperties.BED_PART);
+	}
+
+	/**
+	 * Hook E2: the player finished a shape with the break click, which erases its ghost blocks, with the other
+	 * half of each two-block ghost block, as breaking either half of a real door or bed breaks both.
+	 */
 	public static void erase(BlockSet blocks) {
 		Map<BlockPos, BlockState> states = new LinkedHashMap<>();
+		Level ghosts = SchematicWorldHandler.getSchematicWorld();
 		for (BlockPos pos : blocks.validPositions()) {
 			states.put(pos, Blocks.AIR.defaultBlockState());
+			BlockPos other = ghosts == null ? null : otherHalf(pos, ghosts.getBlockState(pos));
+			if (other != null) {
+				states.put(other, Blocks.AIR.defaultBlockState());
+			}
 		}
 		BuildingPlannerClient.captureShape(EditKind.ERASE, states);
 	}

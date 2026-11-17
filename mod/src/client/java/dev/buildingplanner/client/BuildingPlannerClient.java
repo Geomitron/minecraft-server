@@ -261,6 +261,15 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		return session == null && !Minecraft.getInstance().isLocalServer();
 	}
 
+	/**
+	 * Whether Building Planner decides what Effortless Building's shapes do: on a server, with a session (ghost blocks)
+	 * or without one (nothing). A singleplayer world or a LAN host's own world without a session leaves Effortless
+	 * Building as it is.
+	 */
+	public static boolean ownsShapes() {
+		return session != null || !Minecraft.getInstance().isLocalServer();
+	}
+
 	/** Whether the player's mix is on, with a session. Hooks E5 and E6 also ask {@code EffortlessShapes.mixApplies}. */
 	public static boolean mixOn() {
 		return session != null && MIX.isOn();

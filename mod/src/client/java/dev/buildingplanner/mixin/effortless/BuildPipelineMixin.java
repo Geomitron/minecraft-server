@@ -1,18 +1,23 @@
 package dev.buildingplanner.mixin.effortless;
 
-import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
+import com.llamalad7.mixinextras.injector.ModifyReturnValue;
+import com.llamalad7.mixinextras.sugar.Local;
 import dev.buildingplanner.client.BuildingPlannerClient;
-import dev.buildingplanner.client.EffortlessShapes;
+import dev.buildingplanner.client.ClickRule;
+import net.minecraft.world.item.ItemStack;
 import nl.requios.effortlessbuilding.buildpipeline.BuildPipeline;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 
-/** Hook E6: while the mix applies, the held block starts shapes, as Effortless Building's Randomizer does. */
+/**
+ * Hook E13: on a server, where Building Planner decides what Effortless Building's shapes do, an item starts shapes
+ * only if it places a block ({@link ClickRule#placeable}). Effortless Building's own rule also takes buckets
+ * and tools, and leaves out doors, beds and tall plants.
+ */
 @Mixin(value = BuildPipeline.class, remap = false)
 abstract class BuildPipelineMixin {
-	@ModifyExpressionValue(method = "isBuildTriggerItem", at = @At(value = "CONSTANT",
-		args = "classValue=nl/requios/effortlessbuilding/item/RandomizerToolItem"))
-	private static boolean buildingplanner$mixIsRandomizer(boolean isRandomizer) {
-		return isRandomizer || BuildingPlannerClient.active() && EffortlessShapes.mixApplies();
+	@ModifyReturnValue(method = "isBuildTriggerItem", at = @At("RETURN"))
+	private static boolean buildingplanner$onlyPlaceables(boolean trigger, @Local(argsOnly = true) ItemStack stack) {
+		return BuildingPlannerClient.ownsShapes() ? ClickRule.placeable(stack) : trigger;
 	}
 }

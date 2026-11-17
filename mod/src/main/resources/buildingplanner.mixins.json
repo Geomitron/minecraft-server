@@ -7,9 +7,11 @@
 	"mixins": [],
 	"client": [
 		"effortless.BlockPreviewRendererMixin",
+		"effortless.BuildModesMixin",
 		"effortless.BuildPipelineClientMixin",
 		"effortless.BuildPipelineMixin",
 		"effortless.ConstraintSystemMixin",
+		"effortless.MinecraftMixin",
 		"effortless.PacketHandlerMixin",
 		"effortless.RadialMenuMixin",
 		"effortless.RandomizerSystemMixin",

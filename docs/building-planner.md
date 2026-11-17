@@ -28,7 +28,11 @@ the in-game check harness.
   cylinder, sphere and the rest), the place (right) click draws the shape as ghost blocks, with Effortless Building's
   mirror, radial mirror and array (repeat). A shape drawn with the break (left) click erases ghost blocks, whoever
   placed them. Effortless Building never places or breaks real blocks. A shape can start on a ghost block as well as
-  on a real block.
+  on a real block. Ghost blocks are drawn and erased only with an item that places a block in hand: a block, or the
+  likes of redstone dust, fences, doors, signs, seeds and string; a door or a bed gets both its halves. With anything
+  else in hand (a tool, food, an empty hand, or an item that places an entity or a fluid, such as a bucket, an item
+  frame, an armor stand or a boat), every click acts as without mods, in every mode, breaking and using real blocks,
+  and holding a button repeats as the game does.
 - **Hold to repeat.** In Single mode, holding the place button keeps placing ghost blocks and holding the break button
   keeps erasing them. Two sliders in Effortless Building's radial menu, "Build speed" and "Break speed", set how fast,
   from 1 to 20 blocks a second; at first they're the game's own pace for a held button, five a second to place and
@@ -40,9 +44,9 @@ the in-game check harness.
   place to choose a mix's blocks: it lists every block in the game, with search and an "Only my inventory" switch. The
   player picks up to nine blocks, each with a share (say 80 cobblestone to 20 mossy cobblestone), and turns the mix on.
   The screen closes, and the mix then applies to Effortless Building's shapes, in every mode but Disable, while the
-  player holds a placeable item (a block); with a tool or any other item in hand, clicks act as they would without the
-  mix. While the mix applies, a panel at the right edge of the screen shows its blocks and shares and the key to change
-  it or turn it off; with the mix on, that key opens the screen again, which then has a "Turn off" button. A mix of
+  player holds an item that places a block; with anything else in hand, clicks act as without mods. While the mix
+  applies, a panel at the right edge of the screen shows its blocks and shares and the key to change it or turn it
+  off; with the mix on, that key opens the screen again, which then has a "Turn off" button. A mix of
   one block lets a survival player plan with a block they don't have.
 - **Undo and redo.** Undo takes back only that player's own changes, newest first: a whole shape or paste at a time,
   in any dimension. A block someone else has changed since stays as they left it. Effortless Building's Ctrl+Z (and
@@ -125,13 +129,16 @@ Effortless Building, under `common/src/main/java/nl/requios/effortlessbuilding/`
 | E3 | same method | `@WrapWithCondition` on `PlacedBlockTracker.clientTrackAll` | Don't record ghost positions as real blocks the player placed. |
 | E4 | `network/PacketHandler.java`, `sendToServer(UndoPacket)` and `sendToServer(RedoPacket)` | `@Inject` at head, cancellable | Route undo and redo to the layer. Covers both the Ctrl+Z/Ctrl+Y keys (`fabric/.../EffortlessBuildingClient.java`, client tick) and the radial menu (`buildmode/ModeOptions.java`, `performAction`). |
 | E5 | `buildpipeline/RandomizerSystem.java`, `processBlocks` | `@Inject` at head, cancellable | While the mix applies, give each entry its block from the mix (`entry.item`, `entry.blockState`), chosen by a fixed hash of the position so the preview and the result match. |
-| E6 | `buildpipeline/BuildPipeline.java` `isBuildTriggerItem`; `buildpipeline/BuildPipelineClient.java` `shouldInterceptPlacing`, `updateDisplayTrackers`; `render/BlockPreviewRenderer.java` `render` | `@ModifyExpressionValue` on `instanceof RandomizerToolItem` | While the mix applies, treat the held block as Effortless Building's Randomizer, so the preview draws each entry's own block. In `shouldInterceptPlacing` this holds only while the mode isn't Disable (`BuildModes.CLIENT.getBuildMode() != BuildModeEnum.DISABLED`), so clicks in Disable stay vanilla's. While a box is awaited for copy or the material list, any held item, or none, starts the cube. |
+| E6 | `buildpipeline/BuildPipelineClient.java` `shouldInterceptPlacing`, `updateDisplayTrackers`; `render/BlockPreviewRenderer.java` `render` | `@ModifyExpressionValue` on `instanceof RandomizerToolItem` | While the mix applies, treat the held block as Effortless Building's Randomizer, so the preview draws each entry's own block. In `shouldInterceptPlacing` this holds only while the mode isn't Disable (`BuildModes.CLIENT.getBuildMode() != BuildModeEnum.DISABLED`), so clicks in Disable stay vanilla's. |
 | E7 | `buildpipeline/ConstraintSystem.java`, `processBlocks` | `@ModifyExpressionValue` on the `instabuild` read, and on `getProtectTileEntities()` | Skip the survival checks on real blocks (placed-by-player, hardness, tools) and the protected-block-entity check, which concern real blocks, not ghost blocks. World border, build height and the block cap still apply. |
 | E8 | `buildpipeline/BuildPipelineClient.java`, `updateDisplayTrackers` | `@WrapOperation` on both `ItemUsageTracker.compute` calls, clearing the tracker instead | No red "missing items" tint: ghost blocks don't use up items. |
 | E9 | `buildpipeline/BuildPipelineClient.java`, `handleClick` and `getPreviewBlocks`; `resolveFirstClickPos` | `@WrapOperation` on `ClientLevel.clip`; on `Level.getBlockState` | Let shapes start on ghost blocks: aim at the nearer of the real block and Litematica's ghost block (`RayTraceUtils.traceToSchematicWorld`), and read the ghost block's state, where the real block can be replaced, when picking the start position, so the shape goes beside it. |
 | E10 | `buildpipeline/BuildPipelineClient.java`, public static `handleRightClick` and `handleLeftClick`, with `shouldInterceptPlacing`, `shouldInterceptBreaking` and `getBuildState`; `buildpipeline/BuildPipeline.java`, `isBuildTriggerItem`; `buildmode/BuildModes.java`, `getBuildMode`; the click checks copy `fabric/.../EffortlessBuildingClient.java`'s client tick | No mixin: Building Planner's own `END_CLIENT_TICK` calls the two public methods again while a button stays down | Hold to repeat in Single mode (see "The client"). Effortless Building's own tick acts only when a button goes down (`rightJustPressed`, `leftJustPressed`). |
 | E11 | `screen/RadialMenu.java`, `init()` | `@Inject` at tail, calling `Screen.addRenderableWidget` | Add Building Planner's buttons and sliders to the radial menu each time it opens (Minecraft clears a screen's widgets and calls `init` on each open). They're children of the screen, so `RadialMenu.mouseClicked`, which calls `super.mouseClicked` after its own `performAction`, routes clicks and drags to them. |
 | E12 | `screen/RadialMenu.java`, `extractRenderState(GuiGraphicsExtractor, int, int, float)` | `@Inject` before its call to `drawTexts` | Draw those widgets: the method draws the menu itself and never calls `Screen`'s own drawing, which would draw them. Drawn before the menu's texts, they leave a hovered mode's name, which can fall on the sliders, on top. |
+| E13 | `buildpipeline/BuildPipeline.java`, `isBuildTriggerItem` | `@ModifyReturnValue` | On a server (with a session, or with Building Planner off), an item starts shapes only if it places a block (`ClickRule.placeable`: Minecraft's `BlockItem`, the same test as the mix's; `ClickRule` uses none of Litematica's classes, so these hooks can ask it while Building Planner is off). Effortless Building's own rule also takes buckets and tools with a `TOOL` component, and leaves out doors, beds and tall plants. While a box is awaited for copy or the material list, any held item, or none, counts, so it starts the cube. |
+| E14 | `buildpipeline/BuildPipelineClient.java`, `shouldInterceptPlacing` and `shouldInterceptBreaking` | `@ModifyReturnValue` | With the same rule, while the main hand holds no item that places a block and no shape is under way (`getBuildState()` null), neither click is Effortless Building's: its client tick, its `AttackBlockCallback`, and its cancelling of vanilla's `startUseItem`, `startAttack` and `continueAttack` all ask these first, and so does hold to repeat, so both clicks and holding them are vanilla's. A shape under way still takes the click that finishes or cancels it. |
+| E15 | `Minecraft.pick(float)`, into which Effortless Building's `MixinGameRenderer` adds, at its tail, a reach of 32 for an empty hand, aiming through entities; `buildmode/BuildModes.java`, `getBuildMode` | `@WrapMethod` on `pick`; `@ModifyReturnValue` on `getBuildMode` | While the main hand holds no item that places a block and no shape is under way, `getBuildMode` reads Disable during the pick, which that code skips, so the hand aims as without mods, at an entity before the block behind it. |
 
 Effortless Building's limits come from its config on the player's computer (`config/ServerConfig.java`; survival
 defaults: reach 32, 2,000 blocks a shape, 64 a side). The server applies its own caps (below). The radial menu's own
@@ -319,7 +326,9 @@ old plans over the layer. The files stay, and a plan the player loads from them 
 
 A finished shape (E1, E2) goes as one `edit` of world positions. Each block's state is the one Effortless Building
 would place: the block's placement rules with the first click's face and the player's facing, then the shape's mirror
-and turn. Entries whose item isn't a block (a bucket, a tool) are left out. A shape over the server's block cap (from
+and turn. Entries whose item isn't a block are left out. A block of two halves (a door, a tall plant, a bed) also gets
+its other half, above it or toward the bed's head, where the shape has no block of its own; erasing either half of a
+ghost one erases both, as breaking a real one does. A shape over the server's block cap (from
 `hello`) isn't sent; the player gets the server's message.
 
 An `applied` edit writes its blocks into the player's copy of the layer and into the tiles, as "Tiles" describes. When
@@ -526,11 +535,11 @@ on the dev server; [plan.md](plan.md) says which build step makes or rewrites ea
 - The mix key while the mix is on opens the screen with the mix in it and a "Turn off" button, and the panel hides
   while the screen is open; "Turn off" turns the mix off and closes the screen, with its message, and the panel stays
   hidden.
-- In Single mode with the mix off: with a pickaxe, an apple or nothing in hand, the place click on a
-  real block or a ghost block does nothing. The break click with a pickaxe or nothing in hand goes to Effortless
-  Building, which treats both as build items: it erases a ghost block, and on a real block it sends an edit that
-  erases nothing and leaves the block. An apple's break click is vanilla's: it breaks a real block, and on a ghost
-  block it breaks the real block under it and leaves the ghost block.
+- In Single mode with the mix off, with a pickaxe, an apple or nothing in hand, every click is vanilla's and sends no
+  edit: the place click on a real block or a ghost block does nothing, and the break click breaks a real block, and
+  on a ghost block breaks the real block under it and leaves the ghost block.
+- In Single mode and in Line mode: a pickaxe breaks a real block, an empty hand opens a door and a water bucket places
+  water, each with no edit; redstone dust draws a ghost block, on both clients, and places no real block.
 - A client without Effortless Building (its jar left off the classpath) loads without it or mixin errors, keeps
   receiving the other player's edits, and opens the mix screen.
 

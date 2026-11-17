@@ -1,11 +1,13 @@
 package dev.buildingplanner.mixin.effortless;
 
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
+import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 import com.llamalad7.mixinextras.injector.v2.WrapWithCondition;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
 import dev.buildingplanner.client.BuildingPlannerClient;
+import dev.buildingplanner.client.ClickRule;
 import dev.buildingplanner.client.EffortlessShapes;
 import java.util.Collection;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -28,7 +30,7 @@ import org.spongepowered.asm.mixin.injection.At;
 /**
  * Effortless Building's client pipeline, on a server with Building Planner: a finished shape goes into the layer
  * instead of to the server as real blocks (hooks E1 to E3), the mix starts shapes (E6), the preview has no "missing items"
- * tint (E8), and shapes can start on ghost blocks (E9).
+ * tint (E8), shapes can start on ghost blocks (E9), and clicks without a placeable item stay vanilla's (E14).
  */
 @Mixin(value = BuildPipelineClient.class, remap = false)
 abstract class BuildPipelineClientMixin {
@@ -69,6 +71,18 @@ abstract class BuildPipelineClientMixin {
 		args = "classValue=nl/requios/effortlessbuilding/item/RandomizerToolItem"), require = 2)
 	private static boolean buildingplanner$mixIsRandomizer(boolean isRandomizer) {
 		return isRandomizer || BuildingPlannerClient.active() && EffortlessShapes.mixApplies();
+	}
+
+	/**
+	 * Hook E14: with anything but a placeable item in the main hand, and no shape under way, Effortless Building takes
+	 * neither click, so both act as without mods (its client tick, its cancelling of vanilla's use, attack and held
+	 * attack, and hold to repeat all ask these first). A shape under way still takes the click that finishes or
+	 * cancels it.
+	 */
+	@ModifyReturnValue(method = {"shouldInterceptPlacing", "shouldInterceptBreaking"}, at = @At("RETURN"), require = 2)
+	private static boolean buildingplanner$onlyWithPlaceables(boolean intercept) {
+		return intercept && (!BuildingPlannerClient.ownsShapes() || BuildPipelineClient.getBuildState() != null
+			|| ClickRule.holdsPlaceable());
 	}
 
 	/** Hook E8: ghost blocks don't use up items, so the preview shows none missing. */

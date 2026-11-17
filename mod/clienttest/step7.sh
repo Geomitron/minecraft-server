@@ -1,9 +1,9 @@
 # Step 7's in-game checks: Effortless Building's shapes drawn as ghost blocks, in Single mode with the array modifier
 # and as a Line, starting on ghost blocks and erasing, the block-mix picker and its inventory toggle, the mix in
-# shapes, the mix panel and the picker's "Turn off", what clicks do with a pickaxe, an apple or nothing in hand, and a
-# client without Effortless Building. Sourced by inside.sh, which provides drv, val, check, keys, click, use_click,
-# attack_click, client_said, start_client and stop_client. Shapes are drawn with Planner1 looking straight down, so
-# each block's position is known.
+# shapes, the mix panel and the picker's "Turn off", what clicks do with a pickaxe, an apple, nothing, a water bucket
+# or redstone dust in hand, and a client without Effortless Building. Sourced by inside.sh, which provides drv, val,
+# check, keys, click, use_click, attack_click, client_said, start_client and stop_client. Shapes are drawn with
+# Planner1 looking straight down, so each block's position is known.
 
 check "client 1 starts a session on hello" drv 1 "await session" "await noscreen"
 check "client 2 starts a session on hello" drv 2 "await session" "await noscreen"
@@ -162,9 +162,10 @@ drv 1 "notoasts" "wait 5" "shot mix-off-message" > /dev/null
 
 # What clicks do in Single mode, with the mix off, while the main hand holds a pickaxe, an apple or nothing: each
 # click on a real stone, or on a ghost stone brick, at 16 -60 4, on the real grass at 16 -61 4. Planner1 stands at
-# 16.5 -60 2.5 and looks down 45 degrees south, at that block. These record how it works now; a pickaxe and an empty
-# hand are build items to Effortless Building, so their break clicks go to it rather than to vanilla.
-# click_case <item> <target> <click> <ghost after> <real after> <grass after> <edits> <what it does>
+# 16.5 -60 2.5 and looks down 45 degrees south, at that block. None of the three places a block, so every click acts as
+# without mods: the use click does nothing to a stone, and the attack click breaks the real block it aims at, which
+# under a ghost block is the grass. No click sends an edit.
+# click_case <item> <target> <click> <ghost after> <real after> <grass after> <what it does>
 click_case() {
 	drv 1 "fill 16 -60 4 16 -58 4 minecraft:air" "cmd fill 16 -60 4 16 -58 4 minecraft:air" \
 		"cmd setblock 16 -61 4 minecraft:grass_block" "await block 16 -60 4 minecraft:air" \
@@ -178,7 +179,7 @@ click_case() {
 		"holdreset" > /dev/null
 	"${3}_click" 1
 	drv 1 "wait 30" > /dev/null
-	local seen want edits=$7 held
+	local seen want held
 	case $1 in
 		iron_pickaxe) held="a pickaxe" ;;
 		apple) held="an apple" ;;
@@ -188,20 +189,68 @@ click_case() {
 	seen+=" grass=$(val 1 "real 16 -61 4") $(val 1 holdlog)"
 	want="ghost=minecraft:$4 above=minecraft:air real=minecraft:$5 grass=minecraft:$6"
 	echo "  $held $2 $3: $seen" >> /out/checks.log
-	check "with $held in hand, the $3 click on a $2 block $8" \
-		eval '[[ $seen == "$want "* && $seen == *" edits=$edits "* ]]'
+	check "with $held in hand, the $3 click on a $2 block $7" \
+		eval '[[ $seen == "$want "* && $seen == *" edits=0 "* ]]'
 }
 drv 1 "ebmode SINGLE" > /dev/null
 for item in iron_pickaxe apple air; do
-	click_case "$item" real use air stone grass_block 0 "does nothing"
-	click_case "$item" ghost use stone_bricks air grass_block 0 "does nothing"
+	click_case "$item" real use air stone grass_block "does nothing"
+	click_case "$item" ghost use stone_bricks air grass_block "does nothing"
+	click_case "$item" real attack air air grass_block "breaks the real block"
+	click_case "$item" ghost attack stone_bricks air air "breaks the real block under the ghost block"
 done
-click_case iron_pickaxe real attack air stone grass_block 1 "erases nothing and leaves the real block"
-click_case iron_pickaxe ghost attack air air grass_block 1 "erases the ghost block"
-click_case apple real attack air air grass_block 0 "breaks the real block"
-click_case apple ghost attack stone_bricks air air 0 "breaks the real block under the ghost block"
-click_case air real attack air stone grass_block 1 "erases nothing and leaves the real block"
-click_case air ghost attack air air grass_block 1 "erases the ghost block"
+
+# In Single mode and in Line mode, which takes two clicks: a pickaxe breaks a real block, an empty hand opens a door
+# and a water bucket places water, each as without mods and with no edit, and redstone dust, an item that places a
+# block, draws a ghost block. Planner1 looks at the real grass at 16 -61 4, or at a stone or a door on it, as above.
+# ready <item> [block]: clears the column at 16 4 down to the grass, puts the block (a stone, or a closed door) on the
+# grass if given, and puts the item in Planner1's main hand.
+ready() {
+	drv 1 "fill 16 -60 4 16 -58 4 minecraft:air" "cmd fill 16 -60 4 16 -58 4 minecraft:air" \
+		"cmd setblock 16 -61 4 minecraft:grass_block" "await block 16 -60 4 minecraft:air" \
+		"await real 16 -61 4 minecraft:grass_block" "await real 16 -60 4 minecraft:air" > /dev/null
+	case ${2:-} in
+		stone) drv 1 "cmd setblock 16 -60 4 minecraft:stone" "await real 16 -60 4 minecraft:stone" > /dev/null ;;
+		# Facing south, a closed door stands at its block's north side, where Planner1's aim meets it.
+		door) drv 1 "cmd setblock 16 -60 4 minecraft:oak_door[half=lower,facing=south,open=false]" \
+			"cmd setblock 16 -59 4 minecraft:oak_door[half=upper,facing=south,open=false]" \
+			"await real 16 -60 4 minecraft:oak_door" > /dev/null ;;
+	esac
+	drv 1 "cmd item replace entity @s weapon.mainhand with minecraft:$1" "cmd tp @s 16.5 -60 2.5 0 45" "wait 20" \
+		"holdreset" > /dev/null
+}
+no_edit() {
+	[[ $(val 1 holdlog) == *" edits=0 "* ]]
+}
+for mode in SINGLE LINE; do
+	drv 1 "ebmode $mode" > /dev/null
+	ready iron_pickaxe stone
+	attack_click 1
+	check "in $mode mode, a pickaxe breaks a real block" drv 1 "await real 16 -60 4 minecraft:air"
+	check "and sends no edit" no_edit
+	ready air door
+	use_click 1
+	check "in $mode mode, an empty hand opens a door" \
+		eval 'drv 1 "wait 10" > /dev/null; [[ $(val 1 "realstate 16 -60 4") == *open=true* ]]'
+	check "and sends no edit" no_edit
+	ready water_bucket
+	use_click 1
+	check "in $mode mode, a water bucket places water" drv 1 "await real 16 -60 4 minecraft:water"
+	check "and sends no edit" no_edit
+	# The water's flow drains once its source is gone.
+	drv 1 "cmd setblock 16 -60 4 minecraft:air" "wait 60" > /dev/null
+	ready redstone
+	use_click 1
+	if [[ $mode == LINE ]]; then
+		drv 1 "wait 10" > /dev/null
+		use_click 1
+	fi
+	check "in $mode mode, redstone dust draws a ghost block, on both clients" \
+		eval 'drv 1 "await block 16 -60 4 minecraft:redstone_wire" && drv 2 "await block 16 -60 4 minecraft:redstone_wire"'
+	check "and places no real block" eval '[[ $(val 1 "real 16 -60 4") == minecraft:air ]]'
+	drv 1 "notoasts" "wait 5" "shot redstone-ghost-${mode,,}" > /dev/null
+done
+drv 1 "ebmode SINGLE" > /dev/null
 
 # A client without Effortless Building loads, skips the hooks into it, and keeps everything else.
 cp /out/client2.log /out/client2-with-effortless.log
