@@ -277,11 +277,15 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it, not
     (Q4 A).
   - **Radial menu:** two rows above the wrench, undo and redo, in their columns (Q5 A). The show and hide icons get
     a larger eye, and slash over it, with the bottom-right corner fixed and the block behind unchanged (Q5 comment):
-    Geo found the doubled eye too big and picked 12 by 10 pixels from the sizes between (768). The "Block mix" button shows Effortless Building's Randomizer Bag (Q8 A).
+    Geo found the doubled eye too big and picked 12 by 10 pixels from the sizes between (768). The "Block mix"
+    button shows Effortless Building's Randomizer Bag (Q8 A).
   - **Keys:** Effortless Building's four keys go under the "Building Planner" heading (Q6 A).
   - **Litematica's area selection:** its drawing is turned off once on each player's computer (Q7 A).
   - **Messages:** none when a box ends early (Q9 A, the walkthrough's Q3).
   - **"Clear Mix":** keeps the block mix screen open to pick a new mix (Q10 A).
+
+  Geo saw steps 1 to 3 in the game (774) and kept the controls line where Effortless Building draws its own, though
+  a chat message covers its left end for about 10 seconds (Q1 A).
 - The shared layer replaces the decisions above that concern separate plans: named plans that move and turn as a whole
   (411 Q1), plan growth (411 Q2), who deletes a plan (411 Q3, 420 Q9), starting a plan with N (420 Q1, 469 Q1), hiding
   a plan with Litematica or Syncmatica (420 Q2, 469 Q2), the paste's target plan (485 Q3), Litematica's Edit Schematic
