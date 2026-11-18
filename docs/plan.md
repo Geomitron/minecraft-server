@@ -268,8 +268,10 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it, not
     under it; one "Clear Mix" button empties the mix and turns it off, in place of "Clear" and "Turn off"; "Only my
     inventory" is on by default.
 
-  Open: whether chat says so when a box wait stops (Q3, unanswered), how large a box may be, and what the design
-  work for these changes finds.
+  Open: each `OPEN:` in [building-planner.md](building-planner.md), going to Geo: whether chat says so when a box
+  ends (Q3), the box's limits with the server's cap and undo budget, which actions keep the copy, how real blocks show
+  in the material list, the radial menu's layout, the key heading, Litematica's area selection, and the Block mix
+  button's icon.
 - The shared layer replaces the decisions above that concern separate plans: named plans that move and turn as a whole
   (411 Q1), plan growth (411 Q2), who deletes a plan (411 Q3, 420 Q9), starting a plan with N (420 Q1, 469 Q1), hiding
   a plan with Litematica or Syncmatica (420 Q2, 469 Q2), the paste's target plan (485 Q3), Litematica's Edit Schematic
@@ -331,8 +333,50 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it, not
     pack without Syncmatica, with the guide's list of mods and the README in the wording Geo approved (`59ed2a9`).
     "Current setup" above describes it. Geo's walkthrough (752) drew ghost blocks on the server from the updated pack.
 
-**The walkthrough's changes** (752, in "Decisions" above) come next, as one update with Geo's hand-edited icons:
-designed first, with the open questions going to Geo, then built in steps here.
+**The walkthrough's changes** (752, in "Decisions" above), as one update with Geo's hand-edited icons.
+[building-planner.md](building-planner.md) is the design; each `OPEN:` there is a question for Geo, and a step that
+depends on one waits for Geo's answer. The steps come in this order, each small enough for one child, which pushes it to
+`main` once its checks pass (inbox request 429); nothing goes to the server or the pack before the last step.
+
+1. **The mouse modes and the copy at the aim** ("Building Planner's mouse modes" and "Copy and paste"): `MouseMode`,
+   hooks M1 to M5, E14's and E15's new condition, E21 and E22, `ModeHud` with the controls line, the copy put away
+   and brought back by Paste (`Clipboard` keeps the schematic), the counterclockwise turn, and the keys J, K, U, H
+   and Delete removed with their texts and icons. Done when unit tests cover `Turn`'s counterclockwise quarter and
+   which actions end a mode, and `step9.sh`'s copy, paste and put-away checks pass, with the driver's `scroll` and
+   middle click. Waits for Geo's answer on which actions keep the copy.
+2. **Building Planner's box** ("Boxes for Copy and the material list"): `BoxDraw` with its three left clicks, the first
+   corner rule, the outline through MaLiLib, switching between Copy and the material list, the limits with the red box
+   and its line, and `BoxWait`, E1's and E2's box calls, E13's box rule and E17 removed. Done when unit tests cover the
+   corner rule, the second corner's plane and the height (pure functions over the eye, the look and the first
+   corner), and each limit, and `step9.sh`'s box checks pass. Waits for Geo's answers on the box's limits and on a message when a box ends (Q3).
+3. **The count and the list under the crosshair**: `BoxCount` reading whole sections, the wrapped list with its "+N"
+   cell, and E8 clearing Effortless Building's break list during a session. Done when unit tests cover the count by
+   sections against a count position by position, the wrap and the "+N" cell at 854 by 480, GUI scale 2, and
+   `step9.sh`'s list check passes with its shot.
+4. **Hidden ghost blocks left out** (`CopyRules` and `MaterialCount` taking whether ghost blocks show, and the material
+   list no longer showing them). Done when the unit tests cover a box with both kinds of block, shown and hidden, and
+   `step9.sh`'s hidden copy check passes.
+5. **Real blocks in the material list** ("The material list"): `MaterialCount` counting the real blocks by the rule Geo
+   chooses, and an empty list for an empty box. Done when a unit test gives the worked example's counts and
+   `step9.sh`'s material list checks pass. Waits for Geo's answer on the columns.
+6. **The server's cap and undo budget**: `max-edit-blocks` at the chosen cap, and `UndoHistory` dropping old steps past
+   the budget. Done when unit tests cover an edit at the cap, one over it, and the budget dropping the oldest steps
+   while keeping the newest. Waits for Geo's answer on the box's limits.
+7. **The block mix's changes** ("The block mix and its panel"): the click that toggles, "Clear Mix", "Only my
+   inventory" on at launch, and "B: Edit Mix" in the panel. Done when `step7.sh`'s mix checks pass with their shots.
+8. **The radial menu's five buttons**: the chosen layout, the Block mix button and its icon, the selected look for the
+   current mode's button, E19, and E20 with the widgets moving with the menu's animation. Done when `step9.sh`'s
+   radial menu checks pass at all three sizes, with the shots 1 and 2 frames after opening, and `step10.sh`'s slider
+   checks still pass. Waits for Geo's answers on the layout and the icon.
+9. **Building Planner's name and the key heading**: E18 and the chosen heading (E23 or a language line). Done when
+   `step9.sh`'s corner text and Controls checks pass with their shots. Waits for Geo's answer on the heading.
+10. **Litematica's area selection**, by the option Geo chooses. Done when `step9.sh`'s selection check passes and, for
+    option A, `step10.sh`'s look checks cover the option. Waits for Geo's answer.
+11. **Texts for Geo**: every text the steps added or changed (the controls lines, the messages, the button names, "Clear
+    Mix", "B: Edit Mix", the key heading and the material list's title) goes to Geo as editable text, and Geo's version
+    is built in, with `step7.sh` and `step9.sh` checking the texts exactly.
+12. **The release**: version 0.4.0 with Geo's hand-edited icons, after Geo's approval: the GitHub release, on the
+    server after a backup, and in the pack, with the README's description of the changes in Geo's wording.
 
 ## Design work: Building Planner
 
