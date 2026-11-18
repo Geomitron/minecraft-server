@@ -16,11 +16,6 @@ import nl.requios.effortlessbuilding.buildpipeline.BuildPipelineClient;
 public final class ClickRule {
 	/** Whether the pick under way leaves Effortless Building's reach out (hook E15). Only the client thread uses it. */
 	private static boolean vanillaPick;
-	/**
-	 * Whether Copy or the material list waits for a box drawn with Effortless Building's "Cube" shape, which any held
-	 * item, or none, then draws (hooks E13 to E15).
-	 */
-	private static boolean boxAwaited;
 
 	private ClickRule() {
 	}
@@ -41,21 +36,7 @@ public final class ClickRule {
 		return player != null && placeable(player.getMainHandItem());
 	}
 
-	/** Whether a box is awaited, so any held item, or none, draws the cube. */
-	public static boolean boxAwaited() {
-		return boxAwaited;
-	}
-
-	static void setBoxAwaited(boolean awaited) {
-		boxAwaited = awaited;
-	}
-
-	/** Hooks E13 to E15: whether Effortless Building's clicks are taken now: a placeable item in hand, or a box awaited. */
-	public static boolean startsShapes() {
-		return boxAwaited || holdsPlaceable();
-	}
-
-	/** Drops the shape under way, as when the copy comes to the aim and takes the clicks. */
+	/** Drops the shape under way, as when a box starts or the copy comes to the aim and takes the clicks. */
 	static void cancelShape() {
 		BuildPipelineClient.cancelCurrentSequence();
 	}
@@ -67,7 +48,7 @@ public final class ClickRule {
 	 */
 	public static void pick(Runnable pick) {
 		vanillaPick = BuildingPlannerClient.ownsShapes() && (BuildingPlannerClient.mouseModeOn()
-			|| !startsShapes() && BuildPipelineClient.getBuildState() == null);
+			|| !holdsPlaceable() && BuildPipelineClient.getBuildState() == null);
 		try {
 			pick.run();
 		} finally {

@@ -7,6 +7,12 @@ package dev.buildingplanner.input;
  */
 public enum MouseMode {
 	/**
+	 * Drawing a box for Copy or the material list: three left clicks set a corner, the opposite corner on the same
+	 * level and the height, and a right click leaves the mode. The middle click does nothing and the wheel changes the
+	 * hotbar slot.
+	 */
+	BOX,
+	/**
 	 * The copy at the aim: a left click pastes it, the scroll wheel turns it, a middle click mirrors it, and a right
 	 * click puts it away.
 	 */
@@ -34,12 +40,14 @@ public enum MouseMode {
 
 	/**
 	 * Whether the action ends this mode. Each action that ends it then does its own action (Copy and "Material list"
-	 * start a box, Paste brings the copy back); undo and redo keep it, so a player can undo a paste and paste again.
+	 * start a box, Paste brings the copy back); undo and redo keep it, so a player can undo a paste and paste again. A
+	 * box's own buttons, Copy and "Material list", don't end it here: the same button ends the box and the other
+	 * switches it to that purpose, keeping its corners. A box ends too at its third left click, which finishes it.
 	 */
 	public boolean endedBy(Action action) {
 		return switch (action) {
-			case RIGHT_CLICK, CHOOSE_BUILD_MODE, SHOW_OR_HIDE, COPY_BUTTON, MATERIAL_LIST_BUTTON, PASTE_BUTTON, BLOCK_MIX,
-				LEAVE -> true;
+			case RIGHT_CLICK, CHOOSE_BUILD_MODE, SHOW_OR_HIDE, PASTE_BUTTON, BLOCK_MIX, LEAVE -> true;
+			case COPY_BUTTON, MATERIAL_LIST_BUTTON -> this == COPY_AT_AIM;
 			case LEFT_CLICK, SCROLL, MIDDLE_CLICK, UNDO, REDO -> false;
 		};
 	}

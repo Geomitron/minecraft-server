@@ -195,9 +195,11 @@ public final class Driver implements ClientModInitializer {
 				mc.player.onUpdateAbilities();
 				return "ok";
 			}
-			case "boxwait" -> {
-				// boxwait: whether Copy or the material list waits for a box, and Effortless Building's mode now.
-				return ClickRule.boxAwaited() + " " + EffortlessDriver.mode();
+			case "drawbox" -> {
+				// drawbox: the box for Copy or the material list as it shows: what it's for, how many corners are set,
+				// its lowest and highest corners for the aim now and its colour, with "unaimed" when the aim gives no
+				// next corner, or none; then Effortless Building's mode.
+				return session().box().describe() + " " + EffortlessDriver.mode();
 			}
 			case "presses" -> {
 				// presses: how many key and mouse button presses the game has handled, for "await pressedafter".

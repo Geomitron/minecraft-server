@@ -230,8 +230,8 @@ check "the radial menu's Paste button with no copy gives a message" \
 check "and shows no copy" eval '[[ $(val 1 copy) == none ]] && [[ $(val 1 modehud) == hidden ]]'
 shot 1 paste-nothing-message
 
-# Copy and paste. Boxes are drawn with three real clicks of Effortless Building's "Cube" shape, aimed with the driver's
-# lookat, which turns the player as a mouse move would.
+# Boxes, copy and paste. Boxes are drawn with three real left clicks, aimed with the driver's lookat, which turns the
+# player as a mouse move would.
 # half <n>: n + 0.5, for negative n too.
 half() {
 	awk -v n="$1" 'BEGIN { print n + 0.5 }'
@@ -241,22 +241,32 @@ half() {
 aim() {
 	drv "$1" "lookat $(half "$2") $3 $(half "$4")" "wait 5" > /dev/null
 }
-# cube <client> <x y z> <x2 z2> <y3> [<shot>]: draws a cube: the first click on the top of the block at x y z, which
-# becomes a corner (hook E17); the second on the floor at x2 z2 (Effortless Building's level through that corner); the
-# third at height y3 on the line above x2 z2. With a shot name, shoots the box before the third click.
-cube() {
-	drv "$1" "lookat $(half "$2") $(($3 + 1)) $(half "$4")" "wait 5" > /dev/null
-	use_click "$1"
-	drv "$1" "lookat $(half "$5") $3 $(half "$6")" "wait 5" > /dev/null
-	use_click "$1"
-	drv "$1" "lookat $5 $(half "$7") $6" "wait 10" > /dev/null
-	[[ -z ${8:-} ]] || shot "$1" "$8"
-	use_click "$1"
+# box <client> <ax ay az> <y1> <x2 z2> <y3> [<shot>]: draws a box with three left clicks: the first aimed at the point
+# ax ay az, on a block's top face for the space above it or on its side for the block itself, which becomes the first
+# corner, on level y1; the second at the middle of the block x2 y1 z2, where the line of sight crosses that level; the
+# third at the middle of the block at height y3 above x2 z2. With a shot name, shoots the box before the third click.
+box() {
+	drv "$1" "lookat $2 $3 $4" "wait 5" > /dev/null
+	attack_click "$1"
+	drv "$1" "lookat $(half "$6") $5 $(half "$7")" "wait 5" > /dev/null
+	attack_click "$1"
+	drv "$1" "lookat $(half "$6") $(half "$8") $(half "$7")" "wait 10" > /dev/null
+	[[ -z ${9:-} ]] || shot "$1" "$9"
+	attack_click "$1"
 	drv "$1" "wait 5" > /dev/null
 }
 # copy_is <client> <pattern>: the copy, as the driver's copy describes it, matches the extended regular expression.
 copy_is() {
 	[[ $(val "$1" copy) =~ $2 ]]
+}
+# box_is <text>: Planner1's box, as the driver's drawbox describes it, followed by Effortless Building's mode, is the
+# text.
+box_is() {
+	[[ $(val 1 drawbox) == "$1" ]]
+}
+# chat_lines <client>: how many chat lines that client has shown.
+chat_lines() {
+	grep -c '\[CHAT\]' "/out/client$1.log" || true
 }
 
 # Both players fly, so each stays where a teleport puts them. Flying stops on the ground, so each is lifted first.
@@ -264,8 +274,11 @@ drv 1 "cmd tp @s ~ ~10 ~" "wait 5" "fly true" > /dev/null
 drv 1 "cmd execute as Planner2 at @s run tp @s ~ ~10 ~" > /dev/null
 drv 2 "wait 5" "fly true" > /dev/null
 
-# The copy at the aim's controls line.
+# The copy at the aim's controls line, and a box's controls for each click.
 controls="Left-click to paste, Scroll to turn, Middle-click to mirror, Right-click to put away"
+first_line="Left-click to set the first corner, Right-click to cancel"
+second_line="Left-click to set the opposite corner, Right-click to cancel"
+height_line="Left-click to set the height, Right-click to cancel"
 # copy_button and paste_button: a click on the radial menu's Copy or Paste button.
 copy_button() {
 	radial_open
@@ -282,18 +295,55 @@ copy_kept() {
 	val 1 copy | sed -E 's/^(origin [^ ]+|away) //'
 }
 
-# The Copy button, then a cube from the stone brick at 5 -60 4 to 3 -59 3, around 6 stone bricks, the stairs and the
-# glowstone.
+# The Copy button starts a box, with its line, leaving Effortless Building's mode as it was; a right click ends it,
+# placing no block where Planner1 looks, at 8 -60 19.
 drv 1 "ebmode SINGLE" "cmd tp @s 8.5 -56 9.5 0 30" "wait 40" > /dev/null
-draw_lines=$(chat_count 1 "Draw a box around the blocks to copy.")
+lines=$(chat_lines 1)
 copy_button
-check "the radial menu's Copy button waits for a box in Effortless Building's Cube mode" eval \
-	'[[ $(val 1 boxwait) == "true CUBE" ]]'
-check "with a message" said_once_more 1 "Draw a box around the blocks to copy." "$draw_lines"
-shot 1 copy-draw-box-message
-cube 1 5 -60 4 3 3 -59 copy-box
-check "the cube's last click copies the 8 ghost blocks in the box, with a message" client_said 1 "Copied 8 blocks."
-check "and puts back the player's mode" eval '[[ $(val 1 boxwait) == "false SINGLE" ]]'
+check "the radial menu's Copy button starts a box, leaving Effortless Building's mode as it was" eval \
+	'drv 1 "wait 5" > /dev/null && [[ $(val 1 drawbox) == "COPY 0 "*" white SINGLE" ]]'
+check "with its controls line" eval '[[ $(val 1 modehud) == "Copy: $first_line" ]]'
+check "and no message in chat" eval '(($(chat_lines 1) == lines))'
+use_click 1
+check "a right click ends the box" eval 'drv 1 "wait 10" > /dev/null && box_is "none SINGLE" &&
+	[[ $(val 1 modehud) == hidden ]]'
+check "placing no block, real or ghost, and saying nothing" eval '[[ $(val 1 holdlog) == *" edits=0 "* ]] &&
+	[[ $(val 1 "real 8 -60 19") == minecraft:air ]] && [[ $(val 1 "layer 8 -60 19") == minecraft:air ]] &&
+	(($(chat_lines 1) == lines))'
+
+# The first corner: the space above the block aimed at for its top face, and the block itself for a side.
+copy_button
+drv 1 "lookat 5.5 -59 4.5" "wait 5" > /dev/null
+check "aiming at a block's top face, the box's first corner is the space above it" \
+	box_is "COPY 0 5,-59,4..5,-59,4 white SINGLE"
+drv 1 "lookat 4.5 -58.5 3.9" "wait 5" > /dev/null
+check "aiming at its side, the block itself" box_is "COPY 0 4,-59,3..4,-59,3 white SINGLE"
+
+# A box from the space above the stone brick at 5 -60 4 to 3 -60 3, around 6 stone bricks, the stairs and the
+# glowstone. Between clicks it follows the aim, with the corners set so far fixed; it's shot after the first and the
+# second click, once the chat lines that draw over its line have faded.
+drv 1 "lookat 5.5 -59 4.5" "wait 5" > /dev/null
+attack_click 1
+drv 1 "lookat 6.5 -59 6.5" "wait 5" > /dev/null
+check "the first click sets the first corner, and the box follows the aim on its level" eval \
+	'box_is "COPY 1 5,-59,4..6,-59,6 white SINGLE" && [[ $(val 1 modehud) == "Copy: $second_line (2 × 1 × 3)" ]]'
+drv 1 "lookat 3.5 -59 3.5" "wait 5" > /dev/null
+check "to the opposite corner" eval 'box_is "COPY 1 3,-59,3..5,-59,4 white SINGLE" &&
+	[[ $(val 1 modehud) == "Copy: $second_line (3 × 1 × 2)" ]]'
+drv 1 "wait 200" > /dev/null
+shot 1 box-copy-first-click
+attack_click 1
+drv 1 "lookat 3.5 -57.5 3.5" "wait 5" > /dev/null
+check "the second click sets the opposite corner, and the height follows the aim" eval \
+	'box_is "COPY 2 3,-59,3..5,-58,4 white SINGLE" && [[ $(val 1 modehud) == "Copy: $height_line (3 × 2 × 2)" ]]'
+drv 1 "lookat 3.5 -59.5 3.5" "wait 5" > /dev/null
+check "down to the stone bricks" eval 'box_is "COPY 2 3,-60,3..5,-59,4 white SINGLE" &&
+	[[ $(val 1 modehud) == "Copy: $height_line (3 × 2 × 2)" ]]'
+shot 1 box-copy-second-click
+attack_click 1
+drv 1 "wait 5" > /dev/null
+check "the third click copies the 8 ghost blocks in the box, with a message" client_said 1 "Copied 8 blocks."
+check "and ends the box, leaving the player's mode" box_is "none SINGLE"
 check "and places no real block, leaving the ghost blocks" eval '[[ $(val 1 "real 4 -59 3") == minecraft:air ]] &&
 	[[ $(val 1 "real 5 -60 4") == minecraft:air ]] && [[ $(val 1 "layer 4 -59 3") == minecraft:glowstone ]] &&
 	[[ $(val 2 "get 5 -60 4") == minecraft:stone_bricks ]]'
@@ -428,19 +478,21 @@ paste_button
 check "Paste brings it back once more" copy_is 1 "^origin "
 
 # The radial menu's Copy button around a real house of oak planks, hollow, with a glass window: 26 real blocks, and no
-# ghost blocks.
+# ghost blocks. house_box [<shot>]: the box from the house's top corner nearest Planner1, aimed at its north side, to
+# the opposite corner on its floor.
+house_box() {
+	box 1 50.5 -57.5 10.1 -58 52 12 -60 "$@"
+}
 drv 1 "cmd fill 50 -60 10 52 -58 12 minecraft:oak_planks hollow" "cmd setblock 51 -59 10 minecraft:glass" \
 	"cmd tp @s 46.5 -56 6.5 0 30" "wait 40" > /dev/null
 check "the house is real" eval '[[ $(val 1 "real 51 -59 10") == minecraft:glass ]] &&
 	[[ $(val 1 "real 51 -59 11") == minecraft:air ]] && [[ $(val 1 "layer 50 -60 10") == minecraft:air ]]'
-draw_lines=$(chat_count 1 "Draw a box around the blocks to copy.")
 radial_open
 radial_click "Copy"
-check "the radial menu's Copy button puts the copy away and waits for a box" eval \
-	'[[ $(val 1 boxwait) == "true CUBE" ]] && copy_is 1 "^away "'
+check "the radial menu's Copy button puts the copy away and starts a box" eval \
+	'[[ $(val 1 drawbox) == "COPY 0 "* ]] && copy_is 1 "^away "'
 radial_let_go
-check "with a message" said_once_more 1 "Draw a box around the blocks to copy." "$draw_lines"
-cube 1 52 -58 12 50 10 -60 copy-real-box
+house_box copy-real-box
 check "a box around only real blocks copies them: the house's 26 blocks" client_said 1 "Copied 26 blocks."
 
 # Two ghost blocks on the house: a gold block inside, where the world has air, and stone at its top corner, over the
@@ -453,7 +505,7 @@ check "and on client 1 the ghost stone sits over a real oak plank" eval '
 	[[ $(val 1 "real 52 -58 12") == minecraft:oak_planks ]] && [[ $(val 1 "layer 52 -58 12") == minecraft:stone ]] &&
 	[[ $(val 1 "layer 51 -59 11") == minecraft:gold_block ]]'
 copy_button
-cube 1 52 -58 12 50 10 -60 copy-both-box
+house_box copy-both-box
 check "a box around ghost blocks and real blocks copies both: 27 blocks" client_said 1 "Copied 27 blocks."
 drv 1 "cmd tp @s 51.5 -56 27.5 180 30" "wait 40" > /dev/null
 aim 1 50 -60 20
@@ -488,7 +540,7 @@ check "ghost blocks are hidden before the copy" eval 'drv 1 "wait 5" > /dev/null
 real_lines=$(chat_count 1 "Copied 26 blocks.")
 drv 1 "cmd tp @s 46.5 -56 6.5 0 30" "wait 40" > /dev/null
 copy_button
-cube 1 52 -58 12 50 10 -60 copy-hidden-box
+house_box copy-hidden-box
 check "with ghost blocks hidden, the same box copies the house's 26 real blocks" \
 	said_once_more 1 "Copied 26 blocks." "$real_lines"
 check "and ghost blocks stay hidden" eval '[[ $(val 1 ghosts) == "hidden, "* ]]'
@@ -503,7 +555,7 @@ press 1 n
 check "ghost blocks show again" eval 'drv 1 "wait 5" > /dev/null && [[ $(val 1 ghosts) == "shown, "* ]]'
 drv 1 "cmd tp @s 46.5 -56 6.5 0 30" "wait 40" > /dev/null
 copy_button
-cube 1 52 -58 12 50 10 -60
+house_box
 check "the copy is the house with the gold block and the ghost stone again: 27 blocks" \
 	eval 'drv 1 "wait 5" > /dev/null && copy_is 1 "^origin [-0-9,]+ NONE NONE unselected 27 blocks$"'
 
@@ -535,62 +587,117 @@ check "with the copy at the aim, the menu shows the same four buttons in their s
 xdo 1 mousemove --window %w 5 5
 radial_let_go
 
-# The Copy button pressed again stops waiting.
+# The Copy button pressed again ends its box.
 radial_open
 radial_click "Copy"
-check "its Copy button waits for a box" eval '[[ $(val 1 boxwait) == "true CUBE" ]]'
+check "its Copy button starts a box" eval '[[ $(val 1 drawbox) == "COPY 0 "* ]]'
 radial_click "Copy"
-check "and pressed again, stops waiting and puts back the mode" eval '[[ $(val 1 boxwait) == "false SINGLE" ]]'
+check "and pressed again, ends it, leaving the player's mode" box_is "none SINGLE"
 radial_let_go
 earlier=$(copy_kept)
 
-# A box with no blocks in it. The cube's first corner is the aimed block, so the first click lands on a real stone at
-# 42 -59 42, which goes before the other two finish the box, from there to 40 -58 40, in the air.
+# A box with no blocks in it. Its first click lands on the side of a real stone at 42 -59 42, which becomes the first
+# corner and goes before the other two finish the box, from there to 40 -58 40, in the air.
 drv 1 "cmd tp @s 45.5 -57 45.5 0 30" "cmd setblock 42 -59 42 minecraft:stone" "wait 40" > /dev/null
 copy_button
-drv 1 "lookat 42.5 -58 42.5" "wait 5" > /dev/null
-use_click 1
+drv 1 "lookat 42.5 -58.5 42.9" "wait 5" > /dev/null
+check "a first corner on the stone's side is the stone" box_is "COPY 0 42,-59,42..42,-59,42 white SINGLE"
+attack_click 1
 drv 1 "cmd setblock 42 -59 42 minecraft:air" "await real 42 -59 42 minecraft:air" "lookat 40.5 -59 40.5" "wait 5" \
 	> /dev/null
-use_click 1
-drv 1 "lookat 40 -57.5 40" "wait 10" > /dev/null
-use_click 1
+attack_click 1
+drv 1 "lookat 40.5 -57.5 40.5" "wait 10" > /dev/null
+attack_click 1
 drv 1 "wait 5" > /dev/null
 check "a box with no blocks gives a message" client_said 1 "There are no blocks in that box to copy."
 shot 1 copy-nothing-message
-check "keeps the earlier copy and puts back the mode" eval '[[ $(copy_kept) == "$earlier" ]] &&
-	[[ $(val 1 boxwait) == "false SINGLE" ]]'
+check "keeps the earlier copy and ends the box, leaving the player's mode" eval '[[ $(copy_kept) == "$earlier" ]] &&
+	box_is "none SINGLE"'
 
-# The block cap: Big's 51,200 ghost blocks, added in two halves, are more than the server's 50,000 for one edit.
+# The block cap: Big's 51,200 ghost blocks, added in two halves, are more than the server's 50,000 for one edit. The
+# box starts in the space above Big's top corner.
 drv 1 "cmd tp @s 55.5 -20 -3.5 0 30" "cmd tp Planner2 56.5 -20 -3.5 0 30" "wait 40" > /dev/null
 drv 1 "edit 60 -60 2 99 -45 41 minecraft:stone" "wait 100" "edit 60 -44 2 99 -29 41 minecraft:stone" > /dev/null
 check "client 2 sees all of Big's blocks" drv 2 "await block 60 -60 2 minecraft:stone" "await block 99 -29 41 minecraft:stone"
 copy_button
-cube 1 99 -29 41 60 2 -60
-check "a cube over more blocks than the server's limit gives a message" \
+box 1 99.5 -28 41.5 -28 60 2 -60
+check "a box over more blocks than the server's limit gives a message" \
 	client_said 1 "That box has 51200 blocks, more than the server's limit of 50000."
 shot 1 copy-too-many-message
 check "and keeps the earlier copy" eval '[[ $(copy_kept) == "$earlier" ]]'
 
-# A box of one block: the cube's three clicks on the glowstone at 4 -59 3.
+# A box of one block: three clicks on the glowstone at 4 -59 3, the first on its side.
 drv 1 "cmd tp @s 8.5 -56 9.5 0 30" "wait 40" > /dev/null
 copy_button
-cube 1 4 -59 3 4 3 -59
+box 1 4.5 -58.5 3.9 -59 4 3 -59
 check "a single block has its own message" client_said 1 "Copied 1 block."
 shot 1 copy-one-message
 
-# Stopping a wait: the Copy button again, or another mode, which stays.
+# Ending a box: the Copy button again, or choosing a build mode, which stays.
 copy_button
 copy_button
-check "the Copy button pressed again stops waiting and puts back the mode" eval '[[ $(val 1 boxwait) == "false SINGLE" ]]'
+check "the Copy button pressed again ends its box, leaving the player's mode" box_is "none SINGLE"
 copy_button
 drv 1 "ebmode LINE" "wait 5" > /dev/null
-check "and choosing another mode ends the wait, keeping that mode" eval '[[ $(val 1 boxwait) == "false LINE" ]]'
-drv 1 "ebmode SINGLE" "fly false" > /dev/null
+check "and choosing a build mode ends the box, keeping that mode" box_is "none LINE"
+drv 1 "ebmode SINGLE" > /dev/null
+
+# The Material list button during a box for Copy switches it to the material list, keeping its first corner; it's shot
+# after the first and the second click, once the chat lines have faded. A right click then ends it, with no message.
+copy_button
+drv 1 "lookat 5.5 -59 4.5" "wait 5" > /dev/null
+attack_click 1
+radial_open
+radial_click "Material list"
+radial_let_go
+drv 1 "lookat 3.5 -59 3.5" "wait 5" > /dev/null
+check "the Material list button during a box for Copy switches it to the material list, keeping its corner" eval \
+	'box_is "MATERIAL_LIST 1 3,-59,3..5,-59,4 white SINGLE" &&
+	[[ $(val 1 modehud) == "Material list: $second_line (3 × 1 × 2)" ]]'
+drv 1 "wait 200" > /dev/null
+shot 1 box-material-list-first-click
+attack_click 1
+drv 1 "lookat 3.5 -59.5 3.5" "wait 5" > /dev/null
+check "its second click sets the opposite corner" eval 'box_is "MATERIAL_LIST 2 3,-60,3..5,-59,4 white SINGLE" &&
+	[[ $(val 1 modehud) == "Material list: $height_line (3 × 2 × 2)" ]]'
+shot 1 box-material-list-second-click
+lines=$(chat_lines 1)
+use_click 1
+check "a right click before the third click ends the box, with no message" eval \
+	'drv 1 "wait 10" > /dev/null && box_is "none SINGLE" && (($(chat_lines 1) == lines))'
+
+# The limits. A box from a corner on the grass at 120 -60 64; Planner1 then flies 210 blocks east, as a player may
+# while drawing, and the corner's chunks unload. An opposite corner 261 blocks from it is past the limit on a side,
+# which comes first, and one 181 blocks from it reaches chunks Planner1's game hasn't loaded. Each draws red, with its
+# line, and its click sets no corner. The shots wait for the chat lines to fade.
+drv 1 "cmd tp @s 120.5 -56 70.5 180 30" "wait 40" > /dev/null
+copy_button
+drv 1 "lookat 120.5 -60 64.5" "wait 5" > /dev/null
+check "a first corner on the grass" box_is "COPY 0 120,-60,64..120,-60,64 white SINGLE"
+attack_click 1
+drv 1 "cmd tp @s 330.5 -50 64.5 90 30" "wait 210" "lookat 380.5 -60 64.5" "wait 5" > /dev/null
+check "a box of 261 blocks a side draws red" box_is "COPY 1 120,-60,64..380,-60,64 red SINGLE"
+check "with its line saying which limit" eval \
+	'[[ $(val 1 modehud) == "At most 256 blocks a side | Copy: $second_line (261 × 1 × 1)" ]]'
+shot 1 box-too-large
+attack_click 1
+check "and its click sets no corner" eval 'drv 1 "wait 5" > /dev/null &&
+	box_is "COPY 1 120,-60,64..380,-60,64 red SINGLE"'
+drv 1 "lookat 300.5 -60 64.5" "wait 5" > /dev/null
+check "a box over chunks the game hasn't loaded draws red" box_is "COPY 1 120,-60,64..300,-60,64 red SINGLE"
+check "with its line saying which limit" eval '[[ $(val 1 modehud) == \
+	"Part of the box is too far away to read. Move closer. | Copy: $second_line (181 × 1 × 1)" ]]'
+shot 1 box-not-loaded
+attack_click 1
+check "and its click sets no corner" eval 'drv 1 "wait 5" > /dev/null &&
+	box_is "COPY 1 120,-60,64..300,-60,64 red SINGLE"'
+use_click 1
+check "a right click ends it" eval 'drv 1 "wait 10" > /dev/null && box_is "none SINGLE"'
+drv 1 "cmd tp @s 8.5 -56 9.5 0 30" "wait 40" "fly false" > /dev/null
 drv 2 "fly false" > /dev/null
 
 # The material list. Its radial menu button's hover text, shot at 1920 by 1080, GUI scales 2 and 4; the pointer leaves
-# the button before the key is let go, so closing the menu starts no wait.
+# the button before the key is let go, so closing the menu starts no box.
 for scale in 2 4; do
 	drv 1 "window 1920 1080 $scale" "wait 20" > /dev/null
 	radial_open
@@ -600,7 +707,7 @@ for scale in 2 4; do
 	xdo 1 mousemove --window %w 5 5
 	radial_let_go
 done
-check "the hover shots start no wait" eval '[[ $(val 1 boxwait) == "false SINGLE" ]]'
+check "the hover shots start no box" box_is "none SINGLE"
 drv 1 "window 854 480 2" "wait 20" > /dev/null
 
 # A row of 10 ghost stone bricks, 4 of them built for real. Both players fly again, lifted first.
@@ -613,48 +720,47 @@ check "the row shows, 4 of its bricks real" eval 'drv 1 "await block 29 -60 -10 
 
 # A copy of the row, and ghost blocks hidden, which puts it away.
 copy_button
-cube 1 20 -60 -10 29 -10 -60
+box 1 20.5 -59 -9.5 -59 29 -10 -60
 check "a copy of the row" client_said 1 "Copied 10 blocks."
 press 1 n
 check "ghost blocks are hidden" eval 'drv 1 "wait 5" > /dev/null && [[ $(val 1 ghosts) == "hidden, "* ]]'
 
-# Letting the menu's key go over its Material list button waits for a box, with a message; a cube two blocks high
-# around the row, starting on its first real brick, ends it. The list's screen takes the button from the game as it
-# opens, so the game never sees the third click held: it's a plain press, held for 10 ticks.
+# Letting the menu's key go over its Material list button starts a box; a box two blocks high around the row, from the
+# space above its first brick, ends it. The list's screen takes the button from the game as it opens, so the game never
+# sees the third click held: it's a plain press, held for 10 ticks.
 # material_box <press>: the three clicks of that box, the third held for 10 ticks when <press> is "held" and a plain
-# click otherwise. With no list to open, a held click would go on to act in the player's mode.
+# click otherwise.
 material_box() {
 	drv 1 "lookat 20.5 -59 -9.5" "wait 5" > /dev/null
-	use_click 1
-	drv 1 "lookat 29.5 -60 -9.5" "wait 5" > /dev/null
-	use_click 1
-	drv 1 "lookat 29 -58.5 -10" "wait 10" > /dev/null
+	attack_click 1
+	drv 1 "lookat 29.5 -59 -9.5" "wait 5" > /dev/null
+	attack_click 1
+	drv 1 "lookat 29.5 -59.5 -9.5" "wait 10" > /dev/null
 	if [[ $1 == held ]]; then
-		xdo 1 mousedown 3
+		xdo 1 mousedown 1
 		drv 1 "wait 10" > /dev/null
-		xdo 1 mouseup 3
+		xdo 1 mouseup 1
 	else
-		use_click 1
+		attack_click 1
 	fi
 	drv 1 "wait 10" > /dev/null
 }
 
 # With ghost blocks hidden, the box counts as if it held none, so nothing opens, with the message for a box without
 # ghost blocks, and ghost blocks stay hidden.
-wait_lines=$(chat_count 1 "Draw a box around the ghost blocks to list their materials.")
 none_lines=$(chat_count 1 "There are no ghost blocks in that box to list.")
 radial_open
 radial_point "Material list"
 radial_let_go
-check "letting the menu's key go over its Material list button waits for a box in Cube mode" eval \
-	'[[ $(val 1 boxwait) == "true CUBE" ]]'
-check "with a message" said_once_more 1 "Draw a box around the ghost blocks to list their materials." "$wait_lines"
+check "letting the menu's key go over its Material list button starts a box for it" eval \
+	'[[ $(val 1 drawbox) == "MATERIAL_LIST 0 "* ]]'
+check "with its controls line" eval '[[ $(val 1 modehud) == "Material list: $first_line" ]]'
 material_box plain
-check "with ghost blocks hidden, the cube lists none of the row's ghost blocks, with the message" \
+check "with ghost blocks hidden, the box lists none of the row's ghost blocks, with the message" \
 	said_once_more 1 "There are no ghost blocks in that box to list." "$none_lines"
 check "opens no list" eval '[[ $(val 1 matlist) == closed* ]]'
 check "and ghost blocks stay hidden" eval '[[ $(val 1 ghosts) == "hidden, "* ]]'
-check "the cube puts back the player's mode" eval '[[ $(val 1 boxwait) == "false SINGLE" ]]'
+check "the box ends, leaving the player's mode" box_is "none SINGLE"
 
 # With ghost blocks shown, the same box opens Litematica's material list. The copy is at the aim before, and the
 # Material list button puts it away.
@@ -668,34 +774,37 @@ radial_let_go
 check "the Material list button puts it away" copy_is 1 "^away "
 material_box held
 echo "  the material list: $(val 1 matlist); the copy: $(val 1 copy)" >> /out/checks.log
-check "the cube opens Litematica's material list: 10 stone bricks in all, 6 missing" eval '[[ $(val 1 matlist) == \
+check "the box opens Litematica's material list: 10 stone bricks in all, 6 missing" eval '[[ $(val 1 matlist) == \
 	"open Material list for the ghost blocks in the box: total 10 missing 6 wrong 0 | minecraft:stone_bricks 10/6" ]]'
 check "ghost blocks still show" eval '[[ $(val 1 ghosts) == "shown, "* ]]'
-check "the cube places and erases nothing, and puts back the player's mode" eval '
+check "the box places and erases nothing, and ends, leaving the player's mode" eval '
 	[[ $(val 1 "real 24 -60 -10") == minecraft:air ]] && [[ $(val 1 "real 20 -59 -10") == minecraft:air ]] &&
-	[[ $(val 1 "layer 20 -60 -10") == minecraft:stone_bricks ]] && [[ $(val 1 boxwait) == "false SINGLE" ]]'
+	[[ $(val 1 "layer 20 -60 -10") == minecraft:stone_bricks ]] && box_is "none SINGLE"'
 check "and leaves the copy put away" copy_is 1 "^away .* 10 blocks$"
 for scale in 2 4; do
 	drv 1 "window 1920 1080 $scale" "wait 20" "notoasts" "shot material-list-1920x1080-gui$scale" > /dev/null
 done
 drv 1 "window 854 480 2" "wait 20" "close" "wait 5" > /dev/null
 
-# A box with no ghost blocks opens nothing, with a message; the Material list button during a Copy wait stops it.
-# The box, from 42 -61 42 to 40 -60 40, holds the grass and no ghost blocks.
+# A box with no ghost blocks opens nothing, with a message: from the space above the grass at 42 -61 42 to 40 -61 40,
+# holding the grass and no ghost blocks. The Copy button during a box for the material list switches it to Copy, and
+# pressed again ends it.
 drv 1 "cmd tp @s 45.5 -57 45.5 0 30" "wait 40" > /dev/null
 none_lines=$(chat_count 1 "There are no ghost blocks in that box to list.")
 radial_open
 radial_click "Material list"
 radial_let_go
-cube 1 42 -61 42 40 40 -60
+box 1 42.5 -60 42.5 -60 40 40 -61
 check "a box with no ghost blocks gives a message" \
 	said_once_more 1 "There are no ghost blocks in that box to list." "$none_lines"
 check "and opens nothing" eval 'drv 1 "wait 10" > /dev/null && [[ $(val 1 matlist) == closed:* ]]'
 radial_open
-radial_click "Copy"
 radial_click "Material list"
-check "the Material list button during a Copy wait stops it, starting no other" eval \
-	'[[ $(val 1 boxwait) == "false SINGLE" ]]'
+radial_click "Copy"
+check "the Copy button during a box for the material list switches it to Copy" eval \
+	'[[ $(val 1 drawbox) == "COPY 0 "* ]]'
+radial_click "Copy"
+check "and pressed again, ends it" box_is "none SINGLE"
 radial_let_go
 drv 1 "fly false" > /dev/null
 drv 2 "fly false" > /dev/null

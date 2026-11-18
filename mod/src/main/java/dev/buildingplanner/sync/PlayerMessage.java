@@ -49,11 +49,6 @@ public record PlayerMessage(String key, List<String> args) {
 		return new PlayerMessage(PREFIX + "redo.nothing", List.of());
 	}
 
-	/** Copy waits for a box drawn with Effortless Building's "Cube" shape around the blocks to copy. */
-	public static PlayerMessage drawBoxToCopy() {
-		return new PlayerMessage(PREFIX + "copy.draw_box", List.of());
-	}
-
 	/** The player turned the block mix on in the picker; {@code key} is the picker key's name. */
 	public static PlayerMessage mixOn(String key) {
 		return new PlayerMessage(PREFIX + "mix.on", List.of(key));
@@ -101,11 +96,6 @@ public record PlayerMessage(String key, List<String> args) {
 	/** The player pressed Paste with no copy since they joined. */
 	public static PlayerMessage nothingToPaste() {
 		return new PlayerMessage(PREFIX + "paste.nothing", List.of());
-	}
-
-	/** The material list waits for a box around ghost blocks. */
-	public static PlayerMessage drawBoxToList() {
-		return new PlayerMessage(PREFIX + "material_list.draw_box", List.of());
 	}
 
 	/** The box drawn for the material list holds no ghost blocks. */

@@ -2,7 +2,6 @@ package dev.buildingplanner.client;
 
 import dev.buildingplanner.input.MixRule;
 import dev.buildingplanner.sync.EditKind;
-import fi.dy.masa.litematica.util.PositionUtils;
 import fi.dy.masa.litematica.world.SchematicWorldHandler;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -26,7 +25,6 @@ import net.minecraft.world.phys.Vec3;
 import nl.requios.effortlessbuilding.buildmode.BuildModeEnum;
 import nl.requios.effortlessbuilding.buildmode.BuildModes;
 import nl.requios.effortlessbuilding.buildpipeline.BuildPipelineClient;
-import nl.requios.effortlessbuilding.config.ServerConfig;
 import nl.requios.effortlessbuilding.utilities.BlockEntry;
 import nl.requios.effortlessbuilding.utilities.BlockSet;
 
@@ -159,26 +157,5 @@ public final class EffortlessShapes {
 		}
 		BlockState ghost = session.replica().layer().get(pos);
 		return ghost.isAir() ? real : ghost;
-	}
-
-	/**
-	 * Hooks E1 and E2 while a box is awaited: the cube's opposite corners, which modifiers don't move, the last kept
-	 * within Effortless Building's limit on a side as the cube's own blocks are ({@code ThreeClicksBuildMode
-	 * .findCoordinates}). The box is for a copy or the material list; nothing is placed or erased.
-	 */
-	public static void boxDrawn(BlockSet blocks) {
-		Player player = Minecraft.getInstance().player;
-		if (blocks.firstPos == null || blocks.lastPos == null || player == null) {
-			return;
-		}
-		int limit = ServerConfig.INSTANCE.getMaxBlocksPerAxis(player);
-		BlockPos first = blocks.firstPos;
-		BlockPos last = new BlockPos(within(first.getX(), blocks.lastPos.getX(), limit),
-			within(first.getY(), blocks.lastPos.getY(), limit), within(first.getZ(), blocks.lastPos.getZ(), limit));
-		BuildingPlannerClient.boxDrawn(PositionUtils.getMinCorner(first, last), PositionUtils.getMaxCorner(first, last));
-	}
-
-	private static int within(int from, int to, int limit) {
-		return Math.clamp(to, from - limit + 1, from + limit - 1);
 	}
 }

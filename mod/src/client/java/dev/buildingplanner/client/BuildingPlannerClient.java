@@ -76,17 +76,19 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	private static MixPanel mixPanel;
 	/** The line of a mouse mode's controls; null while Building Planner is off for want of Litematica or MaLiLib. */
 	private static ModeHud modeHud;
-	/**
-	 * Copy and the material list waiting for a box drawn with Effortless Building's "Cube" shape;
-	 * null without Effortless Building, whose classes it uses, so none of them takes a box then.
-	 */
-	private static BoxWait boxWait;
+	/** Whether Effortless Building is loaded, whose shape under way a box drops. */
+	private static boolean effortless;
 	/**
 	 * Whether the use button has stayed down since a mouse mode started or the right click ended one, so that holding
 	 * it, which the game repeats every 4 ticks, neither ends the mode it started in nor acts once the mode has ended
 	 * (hooks M2 and E14). It clears at the first tick the button is up.
 	 */
 	private static boolean useHeld;
+	/**
+	 * Whether the attack button has stayed down since the left click that finished a box, so that holding it breaks
+	 * nothing once the mode has ended (hooks M3 and E14). It clears at the first tick the button is up.
+	 */
+	private static boolean attackHeld;
 
 	@Override
 	public void onInitializeClient() {
@@ -99,15 +101,16 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 			return;
 		}
 		if (loader.isModLoaded("effortlessbuilding")) {
+			effortless = true;
 			heldClicks = new HeldClicks(config);
-			boxWait = new BoxWait();
 			mixPanel = new MixPanel(MIX, EffortlessShapes::mixApplies);
 			HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(BuildingPlanner.MOD_ID, "mix_panel"), mixPanel);
 		}
 		KeyMappingHelper.registerKeyMapping(BLOCK_MIX);
 		KeyMappingHelper.registerKeyMapping(SHOW_HIDE);
 		glow = EditGlow.registered();
-		modeHud = new ModeHud(BuildingPlannerClient::mouseMode);
+		BoxOutline.registered(BuildingPlannerClient::boxShown);
+		modeHud = new ModeHud(BuildingPlannerClient::mouseMode, BuildingPlannerClient::boxShown);
 		HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(BuildingPlanner.MOD_ID, "mode_controls"),
 			modeHud);
 		ClientPlayNetworking.registerGlobalReceiver(Payloads.Hello.TYPE, (hello, context) -> hello(hello));
@@ -155,7 +158,6 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		ClientLevelEvents.AFTER_CLIENT_LEVEL_CHANGE.register((client, level) -> {
 			LOADED.clear();
 			if (session != null) {
-				stopBoxWait();
 				session.levelChanged(dimension(level));
 			}
 		});
@@ -171,6 +173,9 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 			if (!client.options.keyUse.isDown()) {
 				useHeld = false;
 			}
+			if (!client.options.keyAttack.isDown()) {
+				attackHeld = false;
+			}
 			if (!lookSet) {
 				// Litematica has loaded its config by the first tick.
 				lookSet = true;
@@ -178,13 +183,10 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 			}
 			if (session != null) {
 				session.tick();
-				if (boxWait != null) {
-					boxWait.tick();
-				}
 				if (heldClicks != null) {
 					// A shape started while ghost blocks are hidden shows them, so the player sees what it joins; a box
-					// for Copy or the material list leaves them hidden.
-					if ((boxWait == null || boxWait.purpose() == null) && EffortlessShapes.shapeUnderWay()) {
+					// for Copy or the material list, which isn't a shape, leaves them hidden.
+					if (EffortlessShapes.shapeUnderWay()) {
 						session.showForDrawing();
 					}
 					heldClicks.tick(client);
@@ -216,7 +218,6 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 
 	private static void endSession() {
 		if (session != null) {
-			stopBoxWait();
 			session.close();
 			session = null;
 		}
@@ -254,63 +255,39 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	}
 
 	/**
-	 * The radial menu's Copy button: puts the copy away and waits for a box around ghost blocks and real blocks drawn
-	 * with Effortless Building's "Cube" shape, or stops a wait under way. Does nothing while Building Planner is off.
+	 * The radial menu's Copy button: puts the copy away and starts a box around the ghost blocks and real blocks to copy,
+	 * or ends a box for Copy, or switches a box for the material list to Copy. Does nothing while Building Planner is off.
 	 */
 	static void copy() {
-		awaitBox(BoxWait.Purpose.COPY, MouseMode.Action.COPY_BUTTON);
+		boxButton(BoxDraw.Purpose.COPY, MouseMode.Action.COPY_BUTTON);
 	}
 
-	/**
-	 * The radial menu's "Material list" button: as {@link #copy()}, for a box whose ghost blocks Litematica's material
-	 * list then counts.
-	 */
+	/** The radial menu's "Material list" button: as {@link #copy()}, for a box whose blocks the material list counts. */
 	static void materialList() {
-		awaitBox(BoxWait.Purpose.MATERIAL_LIST, MouseMode.Action.MATERIAL_LIST_BUTTON);
+		boxButton(BoxDraw.Purpose.MATERIAL_LIST, MouseMode.Action.MATERIAL_LIST_BUTTON);
 	}
 
-	/**
-	 * After the button's action on the mouse mode, starts waiting for a box, with its message, or stops a wait under
-	 * way, whatever it was for.
-	 */
-	private static void awaitBox(BoxWait.Purpose purpose, MouseMode.Action button) {
-		if (session == null || boxWait == null) {
+	/** After the button's action on the mouse mode, starts, ends or switches a box, dropping a shape under way. */
+	private static void boxButton(BoxDraw.Purpose purpose, MouseMode.Action button) {
+		if (session == null) {
 			return;
 		}
 		session.modeAction(button);
-		if (boxWait.purpose() != null) {
-			boxWait.stop();
-			return;
-		}
-		boxWait.start(purpose);
-		ClientSession.show(switch (purpose) {
-			case COPY -> PlayerMessage.drawBoxToCopy();
-			case MATERIAL_LIST -> PlayerMessage.drawBoxToList();
-		});
-	}
-
-	/** Hooks E1 and E2: the box awaited, by its lowest and highest corners. */
-	public static void boxDrawn(BlockPos min, BlockPos max) {
-		if (session == null || boxWait == null || boxWait.purpose() == null) {
-			return;
-		}
-		switch (boxWait.take()) {
-			case COPY -> {
-				session.copy(min, max);
-				modeStarted();
+		if (session.boxButton(purpose)) {
+			if (effortless) {
+				ClickRule.cancelShape();
 			}
-			case MATERIAL_LIST -> session.materialList(min, max);
+			modeStarted();
 		}
 	}
 
-	private static void stopBoxWait() {
-		if (boxWait != null) {
-			boxWait.stop();
-		}
+	/** The box being drawn now, as it shows, or null. */
+	private static BoxDraw.Shown boxShown() {
+		return session == null ? null : session.boxShown();
 	}
 
 	/**
-	 * The radial menu's Paste button: brings the most recent copy back to the aim, dropping a box awaited and a shape
+	 * The radial menu's Paste button: brings the most recent copy back to the aim, ending a box and dropping a shape
 	 * under way, whose clicks the copy now takes; with no copy, says so. Only the radial menu, which is Effortless
 	 * Building's, calls it.
 	 */
@@ -320,7 +297,6 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		}
 		session.modeAction(MouseMode.Action.PASTE_BUTTON);
 		if (session.clipboard().exists()) {
-			stopBoxWait();
 			ClickRule.cancelShape();
 		}
 		if (session.bringBackCopy()) {
@@ -339,11 +315,19 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	}
 
 	/**
-	 * Hook E14: whether Effortless Building's clicks stay out: while a mouse mode is on, and while the use button stays
-	 * down after one started or ended.
+	 * Hook E14: whether Effortless Building's clicks stay out: while a mouse mode is on, while the use button stays down
+	 * after one started or ended, and while the attack button stays down after the click that finished a box.
 	 */
 	public static boolean mouseTaken() {
-		return session != null && (useHeld || session.mouseMode() != null);
+		return session != null && (useHeld || attackHeld || session.mouseMode() != null);
+	}
+
+	/**
+	 * Hook M3: whether holding the attack button breaks nothing: while a mouse mode is on, and while the button stays
+	 * down after the click that finished a box.
+	 */
+	public static boolean holdingAttackTaken() {
+		return session != null && (attackHeld || session.mouseMode() != null);
 	}
 
 	/** A mouse mode started, perhaps within a click of the use button, whose hold mustn't end it. */
@@ -351,19 +335,31 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		useHeld = Minecraft.getInstance().options.keyUse.isDown();
 	}
 
-	/** Hook E21: the player chose a mode in Effortless Building's radial menu; the box wait's own switches don't count. */
+	/** Hook E21: the player chose a mode in Effortless Building's radial menu. */
 	public static void buildModeChosen() {
-		if (session != null && (boxWait == null || !boxWait.switching())) {
+		if (session != null) {
 			session.modeAction(MouseMode.Action.CHOOSE_BUILD_MODE);
 		}
 	}
 
-	/** Hook M1: the left click pastes the copy at the aim; returns whether the click is taken from the game. */
+	/**
+	 * Hook M1: the left click sets the box's next corner, or pastes the copy at the aim; returns whether the click is
+	 * taken from the game.
+	 */
 	public static boolean leftClick() {
-		if (!mouseModeOn()) {
+		MouseMode mode = mouseMode();
+		if (mode == null) {
 			return false;
 		}
-		session.paste();
+		switch (mode) {
+			case BOX -> {
+				session.boxClick();
+				if (session.mouseMode() != MouseMode.BOX) {
+					attackHeld = Minecraft.getInstance().options.keyAttack.isDown();
+				}
+			}
+			case COPY_AT_AIM -> session.paste();
+		}
 		return true;
 	}
 
@@ -384,15 +380,18 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	}
 
 	/**
-	 * Hook M4: the middle click mirrors the copy at the aim left to right for the way the player faces; returns whether
-	 * the game's pick block is skipped.
+	 * Hook M4: the middle click mirrors the copy at the aim left to right for the way the player faces, and does nothing
+	 * while a box is drawn; returns whether the game's pick block is skipped.
 	 */
 	public static boolean middleClick() {
 		Minecraft mc = Minecraft.getInstance();
-		if (!mouseModeOn() || mc.player == null) {
+		MouseMode mode = mouseMode();
+		if (mode == null || mc.player == null) {
 			return false;
 		}
-		session.mirrorCopy(mc.player.getDirection());
+		if (mode == MouseMode.COPY_AT_AIM) {
+			session.mirrorCopy(mc.player.getDirection());
+		}
 		return true;
 	}
 
@@ -402,7 +401,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	 * the add-on.
 	 */
 	public static boolean scroll(int wheel) {
-		if (!mouseModeOn()) {
+		if (mouseMode() != MouseMode.COPY_AT_AIM) {
 			return true;
 		}
 		for (int notch = 0; notch < Math.abs(wheel); notch++) {

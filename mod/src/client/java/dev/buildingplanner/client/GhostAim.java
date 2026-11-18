@@ -54,16 +54,25 @@ final class GhostAim {
 	 * #COPY_REACH}; null when they aim at nothing.
 	 */
 	static BlockPos copyOrigin(Layer layer, boolean shown) {
+		BlockHitResult hit = aim(layer, shown, COPY_REACH);
+		return hit == null ? null : hit.getBlockPos().relative(hit.getDirection());
+	}
+
+	/**
+	 * The block the player aims at within {@code reach} of their eyes, the nearer of a real block and a ghost block, with
+	 * the face aimed at; null when they aim at nothing.
+	 */
+	static BlockHitResult aim(Layer layer, boolean shown, double reach) {
 		Minecraft mc = Minecraft.getInstance();
 		Player player = mc.player;
 		if (player == null || mc.level == null) {
 			return null;
 		}
 		Vec3 from = player.getEyePosition();
-		ClipContext context = new ClipContext(from, from.add(player.getLookAngle().scale(COPY_REACH)),
+		ClipContext context = new ClipContext(from, from.add(player.getLookAngle().scale(reach)),
 			ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player);
 		BlockHitResult hit = nearer(mc.level.clip(context), ghostHit(layer, shown, mc.level, context), from);
-		return hit != null && hit.getType() == HitResult.Type.BLOCK ? hit.getBlockPos().relative(hit.getDirection()) : null;
+		return hit != null && hit.getType() == HitResult.Type.BLOCK ? hit : null;
 	}
 
 	/** The layer's ghost blocks as a world a ray can be traced through. */

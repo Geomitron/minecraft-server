@@ -363,7 +363,9 @@ Nothing goes to the server or the pack before the last step.
    corner rule, the outline through MaLiLib, switching between Copy and the material list, the limits with the red box
    and its line, and `BoxWait`, E1's and E2's box calls, E13's box rule and E17 removed. Done when unit tests cover the
    corner rule, the second corner's plane and the height (pure functions over the eye, the look and the first
-   corner), and each limit, and `step9.sh`'s box checks pass.
+   corner), and each limit, and `step9.sh`'s box checks pass. Built (`BoxCorners` and `MouseMode.BOX`, with their unit
+   tests, `BoxDraw`, `BoxOutline`, the box's lines in `ModeHud`, and `GhostAim.aim`; `step9.sh`'s box checks pass,
+   with shots of a box for Copy and for the material list after its first and second clicks, and of each limit).
 3. **The count and the list under the crosshair**: `BoxCount` reading whole sections, the wrapped list with its "+N"
    cell, and E8 clearing Effortless Building's break list during a session. Done when unit tests cover the count by
    sections against a count position by position, the wrap and the "+N" cell at 854 by 480, GUI scale 2, and

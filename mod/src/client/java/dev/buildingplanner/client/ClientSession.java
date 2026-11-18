@@ -43,6 +43,7 @@ final class ClientSession {
 	private final Tiles tiles;
 	private final LayerReplica replica;
 	private final Clipboard clipboard = new Clipboard();
+	private final BoxDraw box = new BoxDraw();
 	private int clientSeq;
 	/**
 	 * Whether to remove old plans' placements at the next tick: at the session's start, and after each change of level,
@@ -98,13 +99,14 @@ final class ClientSession {
 	void levelChanged(Identifier dimension) {
 		removeOldPlans = true;
 		replica.levelChanged(dimension);
+		box.end();
 		clipboard.clear();
 		glow.clear();
 	}
 
 	/**
 	 * Once a client tick: removes old plans' placements when due, asks for the columns that loaded and lets go of those
-	 * that unloaded, and moves the copy at the aim to where the player aims.
+	 * that unloaded, and moves the box being drawn and the copy at the aim to where the player aims.
 	 */
 	void tick() {
 		if (removeOldPlans && Minecraft.getInstance().level != null) {
@@ -113,6 +115,9 @@ final class ClientSession {
 		}
 		sendWatches();
 		clipboard.tick();
+		if (box.on()) {
+			box.update(replica.layer(), tiles.shown());
+		}
 		followAim();
 	}
 
@@ -128,18 +133,69 @@ final class ClientSession {
 
 	/** Building Planner's mode that takes over the mouse now, or null. */
 	MouseMode mouseMode() {
-		return clipboard.atAim() ? MouseMode.COPY_AT_AIM : null;
+		return box.on() ? MouseMode.BOX : clipboard.atAim() ? MouseMode.COPY_AT_AIM : null;
 	}
 
-	/** The player did something that may end the mouse mode ({@link MouseMode#endedBy}); ending it puts the copy away. */
+	/**
+	 * The player did something that may end the mouse mode ({@link MouseMode#endedBy}): ending it ends the box, or puts
+	 * the copy away.
+	 */
 	void modeAction(MouseMode.Action action) {
 		MouseMode mode = mouseMode();
 		if (mode != null && mode.endedBy(action)) {
-			clipboard.putAway();
+			switch (mode) {
+				case BOX -> box.end();
+				case COPY_AT_AIM -> clipboard.putAway();
+			}
 		}
 	}
 
+	/** The box being drawn now, as it shows, or null. */
+	BoxDraw.Shown boxShown() {
+		return box.shown();
+	}
+
+	/** The box, for the in-game checks. */
+	BoxDraw box() {
+		return box;
+	}
+
+	/**
+	 * Copy's or the material list's button: starts a box for that purpose, or, while a box is drawn, ends it when it's
+	 * for the same purpose and otherwise switches it to that purpose, keeping its corners. Returns whether a box started.
+	 */
+	boolean boxButton(BoxDraw.Purpose purpose) {
+		if (box.on()) {
+			if (box.purpose() == purpose) {
+				box.end();
+			} else {
+				box.switchTo(purpose);
+			}
+			return false;
+		}
+		box.start(purpose);
+		box.update(replica.layer(), tiles.shown());
+		return true;
+	}
+
+	/**
+	 * The left click while a box is drawn: sets its next corner, and after the third hands the box to Copy or the
+	 * material list. Returns whether the click made the copy, which is then at the aim.
+	 */
+	boolean boxClick() {
+		BoxDraw.Finished finished = box.click(replica.layer(), tiles.shown());
+		if (finished == null) {
+			return false;
+		}
+		switch (finished.purpose()) {
+			case COPY -> copy(finished.min(), finished.max());
+			case MATERIAL_LIST -> materialList(finished.min(), finished.max());
+		}
+		return clipboard.atAim();
+	}
+
 	void close() {
+		box.end();
 		clipboard.clear();
 		tiles.clear();
 		glow.clear();

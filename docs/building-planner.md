@@ -13,9 +13,12 @@ Copy and the material list while they're hidden (`CopyRules.blocks` and `Materia
 show; the material list no longer shows them); and the copy at the aim worked by the mouse, with its controls line,
 put away by a right click or by the actions that end a mouse mode and brought back by Paste, in place of the keys J,
 K, U, H and Delete and the radial menu's Turn, Mirror and Clear buttons (`MouseMode`, hooks M1 to M5, E21 and E22,
-and `ModeHud`; with no Block mix button in the radial menu yet, the Block mix key B puts the copy away). Not built yet:
-Building Planner's own box for Copy and the material list, larger boxes, the material list counting real blocks (while ghost blocks
-are hidden, its list for now opens nothing, with the message for a box without ghost blocks), the block mix's changes,
+and `ModeHud`; with no Block mix button in the radial menu yet, the Block mix key B puts the copy away); and Building
+Planner's own box for Copy and the material list, drawn with three left clicks, with its outline, its controls line and
+its limits, switching between the two (`BoxCorners`, `BoxDraw`, `BoxOutline` and the box's lines in `ModeHud`; the
+server's limit on one edit is still 50,000 blocks). Not built yet: the count and the list under the crosshair, the
+server's limit of 200,000 blocks, the material list counting real blocks (while ghost blocks are hidden, its list for
+now opens nothing, with the message for a box without ghost blocks), the block mix's changes,
 the radial menu's five buttons in a new layout that joins its opening animation, "Building Planner" in place of
 "Effortless Building" where players see it, and Geo's hand-edited icons, which 0.3.0 doesn't have. The build steps are
 in [plan.md](plan.md) ("The walkthrough's changes").
@@ -506,7 +509,7 @@ walk, or fly in creative mode, while the box is drawn, so a far corner is reache
 
 The box's limits: a corner is aimed at up to 256 blocks from the player's eyes; a box is at most 256 blocks a side, and
 its height reaches the world's build limits; and every chunk the box touches must be loaded in the player's game
-(`ClientLevel.hasChunk`), since the game knows the real blocks and the layer's columns only there. Where the aimed
+(held in `ClientChunkCache`; `ClientLevel.hasChunk` is always true), since the game knows the real blocks and the layer's columns only there. Where the aimed
 corner would break a limit, the box draws red, the line on screen says which limit ("At most 256 blocks a side", "Part
 of the box is too far away to read. Move closer."), and the click doesn't set the corner. A box never shrinks to fit a
 limit.

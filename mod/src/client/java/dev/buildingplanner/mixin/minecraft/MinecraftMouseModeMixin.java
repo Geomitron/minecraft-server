@@ -15,7 +15,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  */
 @Mixin(Minecraft.class)
 abstract class MinecraftMouseModeMixin {
-	/** Hook M1: the left click pastes the copy, and attacks and breaks nothing. */
+	/** Hook M1: the left click sets the box's next corner or pastes the copy, and attacks and breaks nothing. */
 	@Inject(method = "startAttack", at = @At("HEAD"), cancellable = true)
 	private void buildingplanner$leftClick(CallbackInfoReturnable<Boolean> cir) {
 		if (BuildingPlannerClient.leftClick()) {
@@ -23,7 +23,7 @@ abstract class MinecraftMouseModeMixin {
 		}
 	}
 
-	/** Hook M2: the right click puts the copy away and uses nothing, nor does the use button held after it. */
+	/** Hook M2: the right click ends the box or puts the copy away and uses nothing, nor does the use button held after it. */
 	@Inject(method = "startUseItem", at = @At("HEAD"), cancellable = true)
 	private void buildingplanner$rightClick(CallbackInfo ci) {
 		if (BuildingPlannerClient.rightClick()) {
@@ -31,15 +31,15 @@ abstract class MinecraftMouseModeMixin {
 		}
 	}
 
-	/** Hook M3: holding the left click breaks nothing. */
+	/** Hook M3: holding the left click breaks nothing, nor after the click that finished a box. */
 	@Inject(method = "continueAttack", at = @At("HEAD"), cancellable = true)
 	private void buildingplanner$holdLeftClick(boolean down, CallbackInfo ci) {
-		if (BuildingPlannerClient.mouseModeOn()) {
+		if (BuildingPlannerClient.holdingAttackTaken()) {
 			ci.cancel();
 		}
 	}
 
-	/** Hook M4: the middle click mirrors the copy and picks no block. */
+	/** Hook M4: the middle click mirrors the copy, or does nothing while a box is drawn, and picks no block. */
 	@Inject(method = "pickBlockOrEntity", at = @At("HEAD"), cancellable = true)
 	private void buildingplanner$middleClick(CallbackInfo ci) {
 		if (BuildingPlannerClient.middleClick()) {
