@@ -29,8 +29,9 @@ wrench, undo and redo, joining the menu's opening animation, with the Block mix 
 the button for the mouse mode that's on showing selected in place of a mode segment (`RadialButton`,
 `RadialMenuWidgets` and hooks E16, E19 and E20); and "Building Planner" in place of "Effortless Building" in the radial
 menu's corner, with Effortless Building's four keys under the "Building Planner" heading in Controls (hooks E18 and
-E23). Not built yet: Litematica's area selection turned off, and Geo's hand-edited icons, which 0.3.0 doesn't have.
-The build steps are in [plan.md](plan.md) ("The walkthrough's changes").
+E23); and Litematica's drawing of area selections turned off once with the look of ghost blocks (`LookDefaults` and
+`LitematicaLook`). Not built yet: Geo's hand-edited icons, which 0.3.0 doesn't have. The build steps are in
+[plan.md](plan.md) ("The walkthrough's changes").
 
 ## What players get
 
@@ -875,8 +876,9 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   describes, places and erases nothing, and puts the copy away. With ghost blocks hidden, the same box lists only the
   planks and stone that are built, and ghost blocks stay hidden. Litematica's list and the button's hover text are shot
   at 1920 by 1080, GUI scales 2 and 4. A box with no blocks opens an empty list.
-- A simple area selection Litematica saved for the server before the session draws as "Litematica's area selection"
-  says.
+- A simple area selection Litematica saved for the server before the session, with its drawing of selections on, shows
+  as a large box in the view, which is shot; after Building Planner's first start on that computer, with its record
+  that it set the look gone, the option is off, the selection is still there, and it no longer shows in the same view.
 - On the same server with Building Planner left out, N makes no message and leaves ghost blocks shown, and the mouse
   works as without the add-on.
 
@@ -899,8 +901,8 @@ real buttons with xdotool while Planner1 is teleported one block every two ticks
   holding either sends its first repeat 4 ticks after the button goes down and then one every tick.
 - The radial menu's wrench button opens Effortless Building's Modifiers screen.
 - Holding use in Line mode (which needs two clicks) and with the mode disabled sends no edit.
-- Each client's first start leaves Litematica's options at on and 0.8 (and the tool item off), saved in its config,
-  and the line in Building Planner's client config.
+- Each client's first start leaves Litematica's options at on and 0.8 (and the tool item and the drawing of area
+  selections off), saved in its config, and the line in Building Planner's client config.
 - A player's own change (off and 0.3) survives a restart. With the line gone and the server stopped, so the client
   joins nothing, a start sets only the option still at its default (on) and keeps the 0.3.
 

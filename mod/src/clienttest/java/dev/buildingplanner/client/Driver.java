@@ -370,6 +370,34 @@ public final class Driver implements ClientModInitializer {
 				Configs.saveToFile();
 				return "ok";
 			}
+			case "areaoption" -> {
+				// areaoption: Litematica's enableAreaSelectionBoxesRendering now.
+				return String.valueOf(Configs.Visuals.ENABLE_AREA_SELECTION_RENDERING.getBooleanValue());
+			}
+			case "setareaoption" -> {
+				// setareaoption <on>: the player's own change in Litematica's settings, saved as its screen does.
+				Configs.Visuals.ENABLE_AREA_SELECTION_RENDERING.setBooleanValue(Boolean.parseBoolean(a[1]));
+				Configs.saveToFile();
+				return "ok";
+			}
+			case "selbox" -> {
+				// selbox <x1> <y1> <z1> <x2> <y2> <z2>: Litematica's simple area selection becomes that one box, saved as
+				// Litematica saves it for the server and dimension.
+				return AreaProbe.selectBox(pos(a, 1), pos(a, 4));
+			}
+			case "selaway" -> {
+				// selaway: Litematica's simple area selection moves to a box far from everything, so no view shows it.
+				return AreaProbe.moveAway();
+			}
+			case "selinfo" -> {
+				// selinfo: Litematica's selection mode and the boxes of its simple area selection, or none.
+				return AreaProbe.selection();
+			}
+			case "shotdiff" -> {
+				// shotdiff <shot> <shot>: how many pixels of the two screenshots' upper 6 tenths (the view, not the chat
+				// and the lines of text below it) differ by more than a little.
+				return AreaProbe.shotDifference(mc.gameDirectory.toPath().resolve("screenshots"), a[1], a[2]);
+			}
 			case "real" -> {
 				return realBlockId(pos(a, 1));
 			}

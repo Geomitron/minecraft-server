@@ -5,8 +5,9 @@ import java.io.IOException;
 
 /**
  * How Building Planner sets Litematica up on a player's computer, once: ghost blocks translucent, at 0.8 opacity, and
- * Litematica's tool item off, since the stick and Litematica's tool modes play no part in planning. An option the
- * player has changed from Litematica's default keeps the player's value, and once the defaults are set, the player's
+ * Litematica's tool item off, since the stick and Litematica's tool modes play no part in planning, and its drawing of
+ * area selections off, since a selection left from before has no tool to change or clear it. An option the player has
+ * changed from Litematica's default keeps the player's value, and once the defaults are set, the player's
  * {@link ClientConfig} records it, so a later change of the player's own is never overwritten.
  */
 public final class LookDefaults {
@@ -16,6 +17,8 @@ public final class LookDefaults {
 	public static final double GHOST_ALPHA = 0.8;
 	/** What Building Planner sets {@code toolItemEnabled} to. */
 	public static final boolean TOOL_ITEM = false;
+	/** What Building Planner sets {@code enableAreaSelectionBoxesRendering} to. */
+	public static final boolean AREA_SELECTION_RENDERING = false;
 
 	static final String APPLIED = "look-defaults-applied";
 

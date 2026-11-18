@@ -9,10 +9,11 @@ import fi.dy.masa.malilib.config.options.ConfigDouble;
 import java.io.IOException;
 
 /**
- * Sets how Litematica draws ghost blocks, and turns its tool item off, once on a player's computer, whether or not
- * they join a server with Building Planner: translucent blocks at 0.8 opacity and no tool item, for each option the
- * player hasn't changed from Litematica's default. It saves Litematica's config, then records that in the player's
- * {@link ClientConfig}, so a later change of the player's own stays.
+ * Sets how Litematica draws ghost blocks, and turns its tool item and its drawing of area selections off, once on a
+ * player's computer, whether or not they join a server with Building Planner: translucent blocks at 0.8 opacity, no
+ * tool item and no area selections drawn, for each option the player hasn't changed from Litematica's default. It
+ * saves Litematica's config, then records that in the player's {@link ClientConfig}, so a later change of the
+ * player's own stays.
  */
 final class LitematicaLook {
 	private LitematicaLook() {
@@ -42,10 +43,16 @@ final class LitematicaLook {
 			if (toolItemNow != toolItem.getBooleanValue()) {
 				toolItem.setBooleanValue(toolItemNow);
 			}
+			ConfigBoolean areaSelection = Configs.Visuals.ENABLE_AREA_SELECTION_RENDERING;
+			boolean areaSelectionNow = LookDefaults.choose(areaSelection.getBooleanValue(),
+				areaSelection.getDefaultBooleanValue(), LookDefaults.AREA_SELECTION_RENDERING);
+			if (areaSelectionNow != areaSelection.getBooleanValue()) {
+				areaSelection.setBooleanValue(areaSelectionNow);
+			}
 			Configs.saveToFile();
 			LookDefaults.markApplied(config);
 		} catch (IOException | RuntimeException e) {
-			BuildingPlanner.LOGGER.warn("Couldn't set Litematica's ghost block look and tool item", e);
+			BuildingPlanner.LOGGER.warn("Couldn't set Litematica's ghost block look, tool item and area selection", e);
 		}
 	}
 }

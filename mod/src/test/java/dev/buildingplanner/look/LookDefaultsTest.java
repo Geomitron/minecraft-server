@@ -21,6 +21,14 @@ class LookDefaultsTest {
 		assertTrue(LookDefaults.TRANSLUCENT);
 		assertEquals(0.8, LookDefaults.GHOST_ALPHA);
 		assertFalse(LookDefaults.TOOL_ITEM);
+		assertFalse(LookDefaults.AREA_SELECTION_RENDERING);
+	}
+
+	@Test
+	void theAreaSelectionDrawingIsTurnedOffOnlyWhileItIsAtLitematicasDefault() {
+		// Litematica draws area selections by default; a player who turned it off already has it off.
+		assertFalse(LookDefaults.choose(true, true, LookDefaults.AREA_SELECTION_RENDERING));
+		assertFalse(LookDefaults.choose(false, true, true));
 	}
 
 	@Test

@@ -2,8 +2,9 @@
 # and the look Building Planner sets for Litematica's ghost blocks once. Sourced by inside.sh, which provides drv, val,
 # check, keys, xdo, start_client, stop_client and stop_server. Each client starts with a fresh game folder, so its first start is the first start.
 
-# The look, on a first start: both of Litematica's look options are set and its tool item turned off, saved to its
-# config, and recorded. Each client also saved a first start before it joined the server.
+# The look, on a first start: both of Litematica's look options are set and its tool item and its drawing of area
+# selections turned off, saved to its config, and recorded. Each client also saved a first start before it joined the
+# server.
 marker=config/buildingplanner-client.properties
 for n in 1 2; do
 	check "client $n starts a session on hello" drv $n "await session" "await noscreen"
@@ -14,6 +15,11 @@ for n in 1 2; do
 		 tr -d " \n\r" < run/client'$n'/config/litematica.json | grep -Eq "\"renderBlocksAsTranslucent\":(true|\{\"enabled\":true)"'
 	check "client $n recorded it in Building Planner's own config" eval \
 		'grep -q "^look-defaults-applied=true" run/client'$n'/'$marker
+	check "client $n's first start turns Litematica's drawing of area selections off" eval \
+		'[[ $(val '$n' areaoption) == false ]]'
+	check "and saves that to Litematica's config" eval \
+		'tr -d " \n\r" < run/client'$n'/config/litematica.json |
+		 grep -Eq "\"enableAreaSelectionBoxesRendering\":(false|\{\"enabled\":false)"'
 	check "client $n's first start turns Litematica's tool item off" eval '[[ $(val '$n' toolitem) == false ]]'
 	check "and saves that to Litematica's config" eval \
 		'tr -d " \n\r" < run/client'$n'/config/litematica.json | grep -Eq "\"toolItemEnabled\":(false|\{\"enabled\":false)"'
@@ -230,13 +236,15 @@ xdo 1 keyup Alt_L
 drv 1 "wait 220" "notoasts" "wait 5" "shot modifiers" "close" "await noscreen" > /dev/null
 drv 1 "ebmode DISABLED" > /dev/null
 
-# The look, after the player's own change: translucent off and alpha 0.3, saved; a restart keeps both.
-drv 2 "setlook false 0.3" > /dev/null
+# The look, after the player's own change: translucent off and alpha 0.3, and the drawing of area selections turned
+# back on, saved; a restart keeps all three.
+drv 2 "setlook false 0.3" "setareaoption true" > /dev/null
 stop_client 2
 start_client 2
 check "client 2 starts a session again" drv 2 "await session" "await noscreen"
 check "a restart keeps the player's own look, not Building Planner's" \
 	eval '[[ $(val 2 look) == "translucent=false alpha=0.3" ]]'
+check "and the drawing of area selections the player turned back on" eval '[[ $(val 2 areaoption) == true ]]'
 
 # With the record gone but the alpha still the player's own, only the option left at Litematica's default is set, and
 # on a client that never joins a server with Building Planner: the server is stopped first.
@@ -246,6 +254,7 @@ rm "run/client2/$marker"
 start_client 2
 check "a client that joins no server sets the option left at its default, and keeps the player's alpha" \
 	eval 'drv 2 "wait 60" > /dev/null && [[ $(val 2 look) == "translucent=true alpha=0.3" ]]'
+check "and turns the drawing of area selections, which was at its default, off" eval '[[ $(val 2 areaoption) == false ]]'
 check "and records it" eval 'grep -q "^look-defaults-applied=true" run/client2/'$marker
 check "and saves it" eval \
 	'tr -d " \n\r" < run/client2/config/litematica.json | grep -q "\"ghostBlockAlpha\":0.3"'

@@ -414,7 +414,12 @@ Nothing goes to the server or the pack before the last step.
    checks pass, reading the strings the menu draws and the key binds screen's headings through the driver's
    `ScreenProbe`, with shots of the menu at 854 by 480 and of Controls scrolled to the heading).
 10. **Litematica's area selection**: its drawing turned off once, as the look of ghost blocks is set. Done when
-    `step9.sh`'s selection check passes and `step10.sh`'s look checks cover the option.
+    `step9.sh`'s selection check passes and `step10.sh`'s look checks cover the option. Built
+    (`LookDefaults.AREA_SELECTION_RENDERING` and `LitematicaLook` turning off Litematica's
+    "enableAreaSelectionBoxesRendering" while it's at its default, with the unit test; `step9.sh`'s selection check
+    passes, with shots of a selection drawn and of the same selection after the restart, not drawn, and `step10.sh`'s
+    look checks cover a first start, the player's turning it back on kept across a restart, and the option set alone
+    with the record gone).
 11. **Texts for Geo**: every text the steps added or changed (the controls lines, the messages, the button names, "Clear
     Mix", "B: Edit Mix", the key heading and the material list's title) goes to Geo as editable text, and Geo's version
     is built in, with `step7.sh` and `step9.sh` checking the texts exactly.
