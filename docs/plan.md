@@ -242,6 +242,34 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it, not
   description in Geo's wording: "Plan builds together using ghost blocks that everyone on the server can see." Geo saw
   the radial menu without "Copy real blocks", with "Material list" in its slot, and the rule that where a ghost block
   stands over a different real block, Copy takes the ghost block (742 revision 2).
+- Geo's walkthrough of 0.3.0 on the server (752) settles these for the next version:
+  - **Copy and paste without keys:** "We don't need keys." While the copy shows at the aim, its controls show on
+    screen: a left click pastes, a right click leaves the copy, the scroll wheel turns the copy and a middle click
+    mirrors it, ahead of what those do otherwise ("you're not able to scroll to different tools on the hotbar with
+    scroll wheel; that rotates the copied blocks instead"). Doing anything else in the mod, such as choosing "Wall"
+    or pressing "Material list", leaves the copy. Copy's box is a mode of its own, not "Cube": the wheel doesn't
+    highlight "Cube", and the text on screen is the box's own.
+  - **The radial menu's buttons:** show/hide, Copy, "Material list", Paste (back to the most recent copy, even after a
+    right click left it) and a new Block mix button; Turn, Mirror and Clear go. The buttons join the menu's opening
+    animation and are rearranged cleanly. "Effortless Building" where it shows, such as the corner text while the
+    wheel shows, reads "Building Planner", and Effortless Building's key category heading reads as words (c1).
+  - **Boxes for Copy and the material list:** only a left click draws one, with a prompt on screen (Q2). Its first
+    corner is the space in front of the aimed block when aiming at a block's top, and the aimed block otherwise (Q1).
+    Boxes may be much larger ("Let's dramatically increase the amount we can select"), and a box never shrinks to fit
+    a limit. The list of items shown while drawing wraps onto more lines instead of running off the screen. Pressing
+    "Material list" while Copy waits for a box switches to the material list's box, and the other way round (Q4 B).
+  - **Controls on screen:** "if there is an active "mode" (such as copying, specifying a materials list, or
+    building/breaking ghost blocks), then the usable controls related to it should be shown on screen" (Q2).
+  - **Hidden ghost blocks:** the copy follows the aim through them (Q5 A). While they're hidden, Copy and the
+    material list leave out the ghost blocks in the box (Q5 comment), and the material list leaves them hidden (Q6 B).
+  - **The material list:** a box without ghost blocks opens an empty list (Q7 B), and the list counts the real blocks
+    in the box as well as the ghost blocks (c2).
+  - **The block mix:** a click on a block in the search results adds or removes it; the panel shows "B: Edit Mix"
+    under it; one "Clear Mix" button empties the mix and turns it off, in place of "Clear" and "Turn off"; "Only my
+    inventory" is on by default.
+
+  Open: whether chat says so when a box wait stops (Q3, unanswered), how large a box may be, and what the design
+  work for these changes finds.
 - The shared layer replaces the decisions above that concern separate plans: named plans that move and turn as a whole
   (411 Q1), plan growth (411 Q2), who deletes a plan (411 Q3, 420 Q9), starting a plan with N (420 Q1, 469 Q1), hiding
   a plan with Litematica or Syncmatica (420 Q2, 469 Q2), the paste's target plan (485 Q3), Litematica's Edit Schematic
@@ -301,8 +329,10 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it, not
 13. **The release**: version 0.3.0, as Geo approved it in 746. Released: the GitHub release `building-planner-0.3.0`
     (`c2d951a`), on the server after a backup, with Syncmatica removed (the import found no shared plans), and in the
     pack without Syncmatica, with the guide's list of mods and the README in the wording Geo approved (`59ed2a9`).
-    "Current setup" above describes it. Not seen yet: a player from the updated pack drawing ghost blocks on the
-    server, which Geo's walkthrough covers first.
+    "Current setup" above describes it. Geo's walkthrough (752) drew ghost blocks on the server from the updated pack.
+
+**The walkthrough's changes** (752, in "Decisions" above) come next, as one update with Geo's hand-edited icons:
+designed first, with the open questions going to Geo, then built in steps here.
 
 ## Design work: Building Planner
 
