@@ -380,7 +380,11 @@ Nothing goes to the server or the pack before the last step.
    hidden material list checks pass).
 5. **Real blocks in the material list** ("The material list"): `MaterialCount` counting the real blocks in "Total" (766
    Q4 A), and an empty list for an empty box. Done when a unit test gives the worked example's counts and
-   `step9.sh`'s material list checks pass.
+   `step9.sh`'s material list checks pass. Built (`MaterialCount.of` takes the real blocks as `BoxCount` reads them,
+   with its unit tests including the worked example, `GhostMaterialList` opens for any box, the message for a box
+   without ghost blocks is gone, and the title reads "Material list for the blocks in the box"; `step9.sh`'s material
+   list checks pass, with shots of the list for a box with ghost and real blocks shown and hidden, and of an empty
+   list).
 6. **The server's cap and undo budget**: `max-edit-blocks` at 200,000, and `UndoHistory` dropping old steps past
    the budget of 2,000,000 blocks a player. Done when unit tests cover an edit at the cap, one over it, and the budget
    dropping the oldest steps while keeping the newest.

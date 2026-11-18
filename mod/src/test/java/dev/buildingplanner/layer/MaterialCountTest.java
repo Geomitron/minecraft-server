@@ -1,6 +1,7 @@
 package dev.buildingplanner.layer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.HashMap;
@@ -15,7 +16,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 class MaterialCountTest {
-	private static BlockState air;
+	private static BlockState planks;
 	private static BlockState bricks;
 	private static BlockState stone;
 	private static BlockState stairsNorth;
@@ -25,7 +26,7 @@ class MaterialCountTest {
 	static void bootstrap() {
 		SharedConstants.tryDetectVersion();
 		Bootstrap.bootStrap();
-		air = Blocks.AIR.defaultBlockState();
+		planks = Blocks.OAK_PLANKS.defaultBlockState();
 		bricks = Blocks.STONE_BRICKS.defaultBlockState();
 		stone = Blocks.STONE.defaultBlockState();
 		stairsNorth = Blocks.OAK_STAIRS.defaultBlockState()
@@ -50,17 +51,48 @@ class MaterialCountTest {
 		layer.set(new BlockPos(0, 66, 0), bricks);
 
 		MaterialCount count = MaterialCount.of(layer, new BlockPos(0, 63, -1), new BlockPos(9, 65, 1),
-			pos -> world.getOrDefault(pos, air), BlockState::equals, true);
+			TestSections.of(world), BlockState::equals, true);
 
 		assertEquals(10, count.total().getInt(bricks));
 		assertEquals(6, count.missing().getInt(bricks));
 		assertEquals(1, count.wrong().getInt(bricks));
+		assertEquals(0, count.total().getInt(stone), "the real stone under a ghost brick counts only through the brick");
 		assertEquals(1, count.total().size());
 	}
 
-	/** A box with ghost bricks, some built, and real stone with no ghost block over it: shown counts the bricks. */
+	/** The spec's worked example: 10 ghost oak planks, 6 of them built, and 20 real stone blocks with no ghost over them. */
 	@Test
-	void aBoxWithGhostAndRealBlocksCountsOnlyTheGhostBlocksWhileTheyShowAndNothingWhileTheyAreHidden() {
+	void theWorkedExampleCountsTheRealBlocksInTotalAndNeverInMissing() {
+		Layer layer = new Layer();
+		Map<BlockPos, BlockState> world = new HashMap<>();
+		for (int x = 0; x < 10; x++) {
+			layer.set(new BlockPos(x, 64, 0), planks);
+			if (x < 6) {
+				world.put(new BlockPos(x, 64, 0), planks);
+			}
+		}
+		for (int x = 0; x < 10; x++) {
+			world.put(new BlockPos(x, 64, 1), stone);
+			world.put(new BlockPos(x, 64, 2), stone);
+		}
+		BlockPos min = new BlockPos(0, 64, 0);
+		BlockPos max = new BlockPos(9, 65, 2);
+
+		MaterialCount count = MaterialCount.of(layer, min, max, TestSections.of(world), BlockState::equals, true);
+
+		assertEquals(10, count.total().getInt(planks));
+		assertEquals(4, count.missing().getInt(planks));
+		assertEquals(0, count.wrong().getInt(planks));
+		assertEquals(20, count.total().getInt(stone));
+		assertEquals(0, count.missing().getInt(stone));
+		assertEquals(0, count.wrong().getInt(stone));
+		assertEquals(2, count.total().size());
+		assertEquals(1, count.missing().size());
+	}
+
+	/** Hidden ghost blocks count as if there were none: the real blocks under them count, and nothing is missing. */
+	@Test
+	void whileGhostBlocksAreHiddenTheRealBlocksCountAndNothingIsMissing() {
 		Layer layer = new Layer();
 		Map<BlockPos, BlockState> world = new HashMap<>();
 		for (int x = 0; x < 4; x++) {
@@ -71,16 +103,16 @@ class MaterialCountTest {
 		BlockPos min = new BlockPos(0, 64, 0);
 		BlockPos max = new BlockPos(3, 64, 1);
 
-		MaterialCount shown = MaterialCount.of(layer, min, max, pos -> world.getOrDefault(pos, air), BlockState::equals,
-			true);
+		MaterialCount shown = MaterialCount.of(layer, min, max, TestSections.of(world), BlockState::equals, true);
 		assertEquals(4, shown.total().getInt(bricks));
 		assertEquals(2, shown.missing().getInt(bricks));
 		assertEquals(2, shown.wrong().getInt(bricks));
-		assertEquals(1, shown.total().size());
+		assertEquals(4, shown.total().getInt(stone), "the real stone beside the ghost bricks");
+		assertEquals(2, shown.total().size());
 
-		MaterialCount hidden = MaterialCount.of(layer, min, max, pos -> world.getOrDefault(pos, air),
-			BlockState::equals, false);
-		assertTrue(hidden.isEmpty());
+		MaterialCount hidden = MaterialCount.of(layer, min, max, TestSections.of(world), BlockState::equals, false);
+		assertEquals(2, hidden.total().getInt(bricks));
+		assertEquals(6, hidden.total().getInt(stone));
 		assertTrue(hidden.missing().isEmpty());
 		assertTrue(hidden.wrong().isEmpty());
 	}
@@ -90,12 +122,13 @@ class MaterialCountTest {
 		Layer layer = new Layer();
 		layer.set(new BlockPos(5, 70, 5), stairsNorth);
 		BlockPos at = new BlockPos(5, 70, 5);
+		BoxCount.Sections world = TestSections.of(Map.of(at, stairsEast));
 
-		MaterialCount strict = MaterialCount.of(layer, at, at, pos -> stairsEast, BlockState::equals, true);
+		MaterialCount strict = MaterialCount.of(layer, at, at, world, BlockState::equals, true);
 		assertEquals(1, strict.missing().getInt(stairsNorth));
 		assertEquals(1, strict.wrong().getInt(stairsNorth));
 
-		MaterialCount sameBlock = MaterialCount.of(layer, at, at, pos -> stairsEast,
+		MaterialCount sameBlock = MaterialCount.of(layer, at, at, world,
 			(ghost, real) -> ghost.getBlock() == real.getBlock(), true);
 		assertEquals(1, sameBlock.total().getInt(stairsNorth));
 		assertTrue(sameBlock.missing().isEmpty());
@@ -103,10 +136,20 @@ class MaterialCountTest {
 	}
 
 	@Test
-	void aBoxWithoutGhostBlocksIsEmpty() {
+	void aBoxWithNoBlocksIsEmptyAndABoxWithOnlyRealBlocksIsNot() {
 		Layer layer = new Layer();
 		layer.set(new BlockPos(0, 64, 0), bricks);
-		assertTrue(MaterialCount.of(layer, new BlockPos(1, 64, 0), new BlockPos(5, 64, 5), pos -> bricks,
-			BlockState::equals, true).isEmpty());
+		BlockPos min = new BlockPos(1, 64, 0);
+		BlockPos max = new BlockPos(5, 64, 5);
+
+		MaterialCount nothing = MaterialCount.of(layer, min, max, TestSections.of(Map.of()), BlockState::equals, true);
+		assertTrue(nothing.isEmpty());
+		assertTrue(nothing.missing().isEmpty());
+
+		MaterialCount real = MaterialCount.of(layer, min, max, TestSections.of(Map.of(new BlockPos(2, 64, 2), bricks)),
+			BlockState::equals, true);
+		assertFalse(real.isEmpty());
+		assertEquals(1, real.total().getInt(bricks));
+		assertTrue(real.missing().isEmpty());
 	}
 }

@@ -776,13 +776,17 @@ done
 check "the hover shots start no box" box_is "none SINGLE"
 drv 1 "window 854 480 2" "wait 20" > /dev/null
 
-# A row of 10 ghost stone bricks, 4 of them built for real. Both players fly again, lifted first.
+# A row of 10 ghost oak planks, 6 of them built for real, with a row of 10 real stone blocks on each side of it. Both
+# players fly again, lifted first.
 drv 1 "cmd tp @s 24.5 -51 -4.5 180 30" "cmd tp Planner2 24.5 -51 -3.5 180 30" "wait 40" "fly true" > /dev/null
 drv 2 "fly true" > /dev/null
-drv 1 "cmd tp @s 24.5 -56 -4.5 180 30" "edit 20 -60 -10 29 -60 -10 minecraft:stone_bricks" \
-	"cmd fill 20 -60 -10 23 -60 -10 minecraft:stone_bricks" "wait 40" > /dev/null
-check "the row shows, 4 of its bricks real" eval 'drv 1 "await block 29 -60 -10 minecraft:stone_bricks" > /dev/null &&
-	[[ $(val 1 "real 23 -60 -10") == minecraft:stone_bricks ]] && [[ $(val 1 "real 24 -60 -10") == minecraft:air ]]'
+drv 1 "cmd tp @s 24.5 -56 -4.5 180 30" "edit 20 -60 -10 29 -60 -10 minecraft:oak_planks" \
+	"cmd fill 20 -60 -10 25 -60 -10 minecraft:oak_planks" "cmd fill 20 -60 -11 29 -60 -11 minecraft:stone" \
+	"cmd fill 20 -60 -9 29 -60 -9 minecraft:stone" "wait 40" > /dev/null
+check "the row shows, 6 of its planks real, with the stone beside it" eval \
+	'drv 1 "await block 29 -60 -10 minecraft:oak_planks" > /dev/null &&
+	[[ $(val 1 "real 25 -60 -10") == minecraft:oak_planks ]] && [[ $(val 1 "real 26 -60 -10") == minecraft:air ]] &&
+	[[ $(val 1 "real 29 -60 -11") == minecraft:stone ]] && [[ $(val 1 "real 20 -60 -9") == minecraft:stone ]]'
 
 # A copy of the row, and ghost blocks hidden, which puts it away.
 copy_button
@@ -791,41 +795,45 @@ check "a copy of the row" client_said 1 "Copied 10 blocks."
 press 1 n
 check "ghost blocks are hidden" eval 'drv 1 "wait 5" > /dev/null && [[ $(val 1 ghosts) == "hidden, "* ]]'
 
-# Letting the menu's key go over its Material list button starts a box; a box two blocks high around the row, from the
-# space above its first brick, ends it. The list's screen takes the button from the game as it opens, so the game never
-# sees the third click held: it's a plain press, held for 10 ticks.
-# material_box <press>: the three clicks of that box, the third held for 10 ticks when <press> is "held" and a plain
-# click otherwise.
-material_box() {
-	drv 1 "lookat 20.5 -59 -9.5" "wait 5" > /dev/null
+# Letting the menu's key go over its Material list button starts a box; a box two blocks high around the row and the
+# stone beside it, from the space above the first stone block, ends it. The list's screen takes the button from the game
+# as it opens, so the game never sees the third click held: it's a press held for 10 ticks.
+# list_box <lookat x y z of the first corner> <y of the second corner> <x and z of the second corner> <lowest y>: the
+# three clicks of a box as `box` makes them, with the third held for 10 ticks.
+list_box() {
+	drv 1 "lookat $1 $2 $3" "wait 5" > /dev/null
 	attack_click 1
-	drv 1 "lookat 29.5 -59 -9.5" "wait 5" > /dev/null
+	drv 1 "lookat $(half "$5") $4 $(half "$6")" "wait 5" > /dev/null
 	attack_click 1
-	drv 1 "lookat 29.5 -59.5 -9.5" "wait 10" > /dev/null
-	if [[ $1 == held ]]; then
-		xdo 1 mousedown 1
-		drv 1 "wait 10" > /dev/null
-		xdo 1 mouseup 1
-	else
-		attack_click 1
-	fi
+	drv 1 "lookat $(half "$5") $(half "$7") $(half "$6")" "wait 10" > /dev/null
+	xdo 1 mousedown 1
+	drv 1 "wait 10" > /dev/null
+	xdo 1 mouseup 1
 	drv 1 "wait 10" > /dev/null
 }
+# material_box: the box around the row and the stone beside it.
+material_box() {
+	list_box 20.5 -59 -10.5 -59 29 -9 -60
+}
 
-# With ghost blocks hidden, the box counts as if it held none, so nothing opens, with the message for a box without
-# ghost blocks, and ghost blocks stay hidden.
-none_lines=$(chat_count 1 "There are no ghost blocks in that box to list.")
+# With ghost blocks hidden, the box lists the real blocks only: the 6 built planks and the 20 stone blocks, with nothing
+# missing, and ghost blocks stay hidden.
 radial_open
 radial_point "Material list"
 radial_let_go
 check "letting the menu's key go over its Material list button starts a box for it" eval \
 	'[[ $(val 1 drawbox) == "MATERIAL_LIST 0 "* ]]'
 check "with its controls line" eval '[[ $(val 1 modehud) == "Material list: $first_line" ]]'
-material_box plain
-check "with ghost blocks hidden, the box lists none of the row's ghost blocks, with the message" \
-	said_once_more 1 "There are no ghost blocks in that box to list." "$none_lines"
-check "opens no list" eval '[[ $(val 1 matlist) == closed* ]]'
+material_box
+echo "  the material list with ghost blocks hidden: $(val 1 matlist)" >> /out/checks.log
+check "with ghost blocks hidden, the box lists the real blocks: 6 planks and 20 stone blocks, none missing" eval \
+	'[[ $(val 1 matlist) == "open Material list for the blocks in the box: total 26 missing 0 wrong 0 | "* ]] &&
+	[[ $(val 1 matlist) == *" | minecraft:oak_planks 6/0"* ]] && [[ $(val 1 matlist) == *" | minecraft:stone 20/0"* ]]'
 check "and ghost blocks stay hidden" eval '[[ $(val 1 ghosts) == "hidden, "* ]]'
+for scale in 2 4; do
+	drv 1 "window 1920 1080 $scale" "wait 20" "notoasts" "shot material-list-hidden-1920x1080-gui$scale" > /dev/null
+done
+drv 1 "window 854 480 2" "wait 20" "close" "wait 5" > /dev/null
 check "the box ends, leaving the player's mode" box_is "none SINGLE"
 
 # With ghost blocks shown, the same box opens Litematica's material list. The copy is at the aim before, and the
@@ -838,32 +846,44 @@ radial_open
 radial_point "Material list"
 radial_let_go
 check "the Material list button puts it away" copy_is 1 "^away "
-material_box held
+material_box
 echo "  the material list: $(val 1 matlist); the copy: $(val 1 copy)" >> /out/checks.log
-check "the box opens Litematica's material list: 10 stone bricks in all, 6 missing" eval '[[ $(val 1 matlist) == \
-	"open Material list for the ghost blocks in the box: total 10 missing 6 wrong 0 | minecraft:stone_bricks 10/6" ]]'
+check "the box opens Litematica's material list: 30 blocks in all, 4 planks missing, the stone built" eval \
+	'[[ $(val 1 matlist) == "open Material list for the blocks in the box: total 30 missing 4 wrong 0 | "* ]] &&
+	[[ $(val 1 matlist) == *" | minecraft:oak_planks 10/4"* ]] && [[ $(val 1 matlist) == *" | minecraft:stone 20/0"* ]]'
 check "ghost blocks still show" eval '[[ $(val 1 ghosts) == "shown, "* ]]'
 check "the box places and erases nothing, and ends, leaving the player's mode" eval '
-	[[ $(val 1 "real 24 -60 -10") == minecraft:air ]] && [[ $(val 1 "real 20 -59 -10") == minecraft:air ]] &&
-	[[ $(val 1 "layer 20 -60 -10") == minecraft:stone_bricks ]] && box_is "none SINGLE"'
+	[[ $(val 1 "real 26 -60 -10") == minecraft:air ]] && [[ $(val 1 "real 20 -59 -10") == minecraft:air ]] &&
+	[[ $(val 1 "layer 20 -60 -10") == minecraft:oak_planks ]] && box_is "none SINGLE"'
 check "and leaves the copy put away" copy_is 1 "^away .* 10 blocks$"
 for scale in 2 4; do
 	drv 1 "window 1920 1080 $scale" "wait 20" "notoasts" "shot material-list-1920x1080-gui$scale" > /dev/null
 done
 drv 1 "window 854 480 2" "wait 20" "close" "wait 5" > /dev/null
 
-# A box with no ghost blocks opens nothing, with a message: from the space above the grass at 42 -61 42 to 40 -61 40,
-# holding the grass and no ghost blocks. The Copy button during a box for the material list switches it to Copy, and
-# pressed again ends it.
+# A box with no ghost blocks lists its real blocks: the 9 grass blocks from 42 -61 42 to 40 -61 40, from the space above
+# the grass; a box of the air above them opens an empty list. The Copy button during a box for the material list
+# switches it to Copy, and pressed again ends it.
 drv 1 "cmd tp @s 45.5 -57 45.5 0 30" "wait 40" > /dev/null
-none_lines=$(chat_count 1 "There are no ghost blocks in that box to list.")
 radial_open
 radial_click "Material list"
 radial_let_go
-box 1 42.5 -60 42.5 -60 40 40 -61
-check "a box with no ghost blocks gives a message" \
-	said_once_more 1 "There are no ghost blocks in that box to list." "$none_lines"
-check "and opens nothing" eval 'drv 1 "wait 10" > /dev/null && [[ $(val 1 matlist) == closed:* ]]'
+list_box 42.5 -60 42.5 -60 40 40 -61
+echo "  the material list of a box with real blocks only: $(val 1 matlist)" >> /out/checks.log
+check "a box with no ghost blocks lists its real blocks" eval \
+	'[[ $(val 1 matlist) == "open Material list for the blocks in the box: total 9 missing 0 wrong 0 | minecraft:grass_block 9/0" ]]'
+drv 1 "close" "wait 5" > /dev/null
+radial_open
+radial_click "Material list"
+radial_let_go
+list_box 42.5 -60 42.5 -60 40 40 -60
+echo "  the material list of a box with no blocks: $(val 1 matlist)" >> /out/checks.log
+check "a box with no blocks opens an empty list" eval \
+	'[[ $(val 1 matlist) == "open Material list for the blocks in the box: total 0 missing 0 wrong 0" ]]'
+for scale in 2 4; do
+	drv 1 "window 1920 1080 $scale" "wait 20" "notoasts" "shot material-list-empty-1920x1080-gui$scale" > /dev/null
+done
+drv 1 "window 854 480 2" "wait 20" "close" "wait 5" > /dev/null
 radial_open
 radial_click "Material list"
 radial_click "Copy"

@@ -13,11 +13,11 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * Litematica's material list for the ghost blocks in a box the player drew: each block's total, how many are still
- * missing in the world, and how many have the wrong block there. It counts the player's copy of the layer, which holds
- * the columns the game has loaded, against the player's world, by the rule Litematica's own list uses, so the copy,
- * which Litematica also draws, never counts. While the player's ghost blocks are hidden, it counts none. Litematica's
- * Refresh button counts again.
+ * Litematica's material list for the blocks in a box the player drew: each block's total, ghost and real blocks alike,
+ * and for the ghost blocks how many are still missing in the world and how many have the wrong block there. It counts
+ * the player's copy of the layer, which holds the columns the game has loaded, against the player's world, by the rule
+ * Litematica's own list uses, so the copy, which Litematica also draws, never counts. While the player's ghost blocks
+ * are hidden, it lists the real blocks only. Litematica's Refresh button counts again.
  */
 final class GhostMaterialList extends MaterialListBase {
 	private final Identifier dimension;
@@ -50,7 +50,7 @@ final class GhostMaterialList extends MaterialListBase {
 		if (session == null || mc.level == null || !dimension.equals(session.replica().dimension())) {
 			return;
 		}
-		MaterialCount count = MaterialCount.of(session.replica().layer(), min, max, mc.level::getBlockState,
+		MaterialCount count = MaterialCount.of(session.replica().layer(), min, max, BoxList.realSections(mc.level),
 			GhostMaterialList::built, session.ghostsShown());
 		setMaterialListEntries(MaterialListUtils.getMaterialList(count.total(), count.missing(), count.wrong(),
 			new Object2IntOpenHashMap<>(), new Object2IntOpenHashMap<>(), new Object2IntOpenHashMap<>(), mc.player));

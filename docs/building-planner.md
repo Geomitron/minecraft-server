@@ -10,7 +10,9 @@ the block mix, show or hide, copy and paste in a box drawn with Effortless Build
 U, H and Delete, and the material list for such a box. This spec describes the next version, with Geo's changes from
 the walkthrough of 0.3.0 (inbox request 752, in [plan.md](plan.md) "Decisions"). Built so far: ghost blocks left out of
 Copy and the material list while they're hidden (`CopyRules.blocks` and `MaterialCount.of` take whether ghost blocks
-show; the material list no longer shows them); and the copy at the aim worked by the mouse, with its controls line,
+show; the material list no longer shows them); the material list counting the real blocks in the box as well, in
+"Total" (`MaterialCount` through `BoxCount`, with the list opening empty for a box with no blocks, in place of a
+message); and the copy at the aim worked by the mouse, with its controls line,
 put away by a right click or by the actions that end a mouse mode and brought back by Paste, in place of the keys J,
 K, U, H and Delete and the radial menu's Turn, Mirror and Clear buttons (`MouseMode`, hooks M1 to M5, E21 and E22,
 and `ModeHud`; with no Block mix button in the radial menu yet, the Block mix key B puts the copy away); and Building
@@ -19,10 +21,7 @@ its limits, switching between the two (`BoxCorners`, `BoxDraw`, `BoxOutline` and
 server's limit on one edit is still 50,000 blocks); and the box's blocks counted by whole sections and listed under
 the crosshair in rows that wrap, ending with a "+N" cell, with Copy counting a box the same way before it takes any
 block, and no list of real blocks under Effortless Building's break shapes (`BoxCount`, `BoxList`, `BoxListLayout`
-and hook E8). Not built yet: the server's limit of 200,000 blocks, the material list counting real blocks (while
-ghost blocks are hidden, its list for now opens nothing, with the message for a box without ghost blocks), the block
-mix's changes,
-the radial menu's five buttons in a new layout that joins its opening animation, "Building Planner" in place of
+and hook E8). Not built yet: the server's limit of 200,000 blocks, the block mix's changes, the radial menu's five buttons in a new layout that joins its opening animation, "Building Planner" in place of
 "Effortless Building" where players see it, and Geo's hand-edited icons, which 0.3.0 doesn't have. The build steps are
 in [plan.md](plan.md) ("The walkthrough's changes").
 

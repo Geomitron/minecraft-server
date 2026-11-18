@@ -328,19 +328,15 @@ final class ClientSession {
 	}
 
 	/**
-	 * Opens Litematica's material list for the ghost blocks in the box from {@code min} to {@code max}, leaving hidden
-	 * ghost blocks hidden, and makes it the list Litematica's own material list key opens. A box with no ghost blocks,
-	 * or while they're hidden, opens nothing, with a message.
+	 * Opens Litematica's material list for the blocks in the box from {@code min} to {@code max}, ghost blocks and real
+	 * blocks alike, leaving hidden ghost blocks hidden, and makes it the list Litematica's own material list key opens.
+	 * A box with no blocks, or while ghost blocks are hidden with no real block, opens an empty list.
 	 */
 	void materialList(BlockPos min, BlockPos max) {
 		if (replica.dimension() == null) {
 			return;
 		}
 		GhostMaterialList list = new GhostMaterialList(replica.dimension(), min, max);
-		if (list.getCountTotal() == 0) {
-			show(PlayerMessage.nothingToList());
-			return;
-		}
 		DataManager.setMaterialList(list);
 		GuiBase.openGui(new GuiMaterialList(list));
 	}
