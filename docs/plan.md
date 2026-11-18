@@ -425,7 +425,8 @@ Nothing goes to the server or the pack before the last step.
     is built in, with `step7.sh` and `step9.sh` checking the texts exactly.
 12. **The release**: version 0.4.0 with Geo's hand-edited icons, after Geo's approval: the GitHub release, on the
     server after a backup (with `max-edit-blocks=200000` in its `config/buildingplanner.properties`, which has
-    50000 written), and in the pack, with the README's description of the changes in Geo's wording.
+    50000 written), and in the pack. The README and the guide's setup steps describe nothing 0.4.0 changes, so they
+    stay as they are.
 
 ## Design work: Building Planner
 
