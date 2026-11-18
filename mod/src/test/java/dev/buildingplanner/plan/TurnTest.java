@@ -100,6 +100,24 @@ class TurnTest {
 	}
 
 	@Test
+	void turningCounterclockwiseAddsAQuarterTurnCounterclockwiseAfterTheTurnSoFar() {
+		Turn quarter = new Turn(Mirror.NONE, Rotation.COUNTERCLOCKWISE_90);
+		for (Turn turn : allTurns()) {
+			Turn turned = turn.turnedCounterclockwise();
+			for (BlockPos pos : POSITIONS) {
+				assertEquals(quarter.apply(turn.apply(pos)), turned.apply(pos), turn + " at " + pos);
+			}
+			for (BlockState state : states) {
+				assertEquals(quarter.apply(turn.apply(state)), turned.apply(state), turn + " on " + state);
+			}
+			assertEquals(turn, turned.turnedClockwise(), "a notch up then a notch down from " + turn);
+		}
+		// A stair facing north faces west after a quarter turn counterclockwise.
+		BlockState north = Blocks.OAK_STAIRS.defaultBlockState().setValue(StairBlock.FACING, Direction.NORTH);
+		assertEquals(Direction.WEST, Turn.NONE.turnedCounterclockwise().apply(north).getValue(StairBlock.FACING));
+	}
+
+	@Test
 	void mirroringFlipsLeftToRightAfterTheTurnSoFar() {
 		for (Turn turn : allTurns()) {
 			for (Direction facing : FACINGS) {

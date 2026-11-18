@@ -26,22 +26,34 @@ import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * The player's copy of some blocks: a Litematica placement of a schematic kept in memory, which only this player sees.
+ * The player's most recent copy: a Litematica placement of a schematic kept in memory, which only this player sees.
  * Litematica doesn't save it, since it has no file; hooks L4 and L5 keep it out of Litematica's selection and placement
- * list, as for tiles. Its origin, the corner with the lowest coordinates when it's made, follows where the player
- * aims.
+ * list, as for tiles. At the aim, the placement is in Litematica and its origin, the corner with the lowest coordinates
+ * when it's made, follows where the player aims. Put away, it's out of Litematica, and the same placement, with its
+ * schematic, turn and mirror, comes back to the aim.
  */
 final class Clipboard {
 	private static final String REGION = "Copy";
 
+	/** The most recent copy, at the aim or put away; null before the first copy. */
 	private SchematicPlacement placement;
+	private boolean atAim;
 
-	/** Whether there's a copy; forgets it once Litematica no longer has its placement. */
+	/** Whether there's a copy, at the aim or put away. */
 	boolean exists() {
-		if (placement != null && !manager().getAllSchematicsPlacements().contains(placement)) {
-			placement = null;
-		}
 		return placement != null;
+	}
+
+	/** Whether the copy is at the aim. Cheap enough for the hooks, which ask several times a frame. */
+	boolean atAim() {
+		return atAim;
+	}
+
+	/** Once a tick: the copy counts as put away once Litematica no longer has its placement. */
+	void tick() {
+		if (atAim && !manager().getAllSchematicsPlacements().contains(placement)) {
+			atAim = false;
+		}
 	}
 
 	SchematicPlacement placement() {
@@ -54,8 +66,8 @@ final class Clipboard {
 	}
 
 	/**
-	 * Replaces any copy with one of {@code blocks} (world positions and states as the world shows them), with its
-	 * origin at {@code origin}, or over the blocks when that's null.
+	 * Replaces any copy with one of {@code blocks} (world positions and states as the world shows them), at the aim, with
+	 * its origin at {@code origin}, or over the blocks when that's null.
 	 */
 	void place(Map<BlockPos, BlockState> blocks, BlockPos origin) {
 		clear();
@@ -90,6 +102,27 @@ final class Clipboard {
 		// Known as the copy before it's added, so hook L4 keeps Litematica from selecting it.
 		placement = SchematicPlacement.createFor(schematic, origin != null ? origin : min, name, true, true);
 		manager().addSchematicPlacement(placement, false);
+		atAim = true;
+	}
+
+	/** Takes the copy out of Litematica, keeping it, as it's turned and mirrored, for {@link #bringBack}. */
+	void putAway() {
+		if (atAim()) {
+			manager().removeSchematicPlacement(placement);
+		}
+		atAim = false;
+	}
+
+	/**
+	 * Brings the copy back to the aim, as it was turned and mirrored, at its last origin until it follows the aim. Its
+	 * placement goes back into Litematica before anything about it changes, since changing a placement Litematica doesn't
+	 * have would still draw it.
+	 */
+	void bringBack() {
+		if (placement != null && !atAim()) {
+			manager().addSchematicPlacement(placement, false);
+			atAim = true;
+		}
 	}
 
 	/** Moves the copy's origin to {@code origin}, when it isn't there already. */
@@ -118,9 +151,10 @@ final class Clipboard {
 		return blocks;
 	}
 
-	/** Gives the copy a quarter turn clockwise, seen from above, around its origin. */
-	void turn() {
-		set(new Turn(placement.getMirror(), placement.getRotation()).turnedClockwise());
+	/** Gives the copy a quarter turn around its origin, clockwise or counterclockwise seen from above. */
+	void turn(boolean clockwise) {
+		Turn turn = new Turn(placement.getMirror(), placement.getRotation());
+		set(clockwise ? turn.turnedClockwise() : turn.turnedCounterclockwise());
 	}
 
 	/** Flips the copy left to right for a player facing {@code facing}, around its origin. */
@@ -128,10 +162,9 @@ final class Clipboard {
 		set(new Turn(placement.getMirror(), placement.getRotation()).flippedLeftRight(facing));
 	}
 
+	/** Drops the copy. */
 	void clear() {
-		if (placement != null) {
-			manager().removeSchematicPlacement(placement);
-		}
+		putAway();
 		placement = null;
 	}
 
@@ -140,7 +173,7 @@ final class Clipboard {
 	 * added since.
 	 */
 	void raise() {
-		if (!exists()) {
+		if (!atAim()) {
 			return;
 		}
 		manager().removeSchematicPlacement(placement, false);

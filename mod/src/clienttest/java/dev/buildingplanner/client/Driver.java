@@ -472,10 +472,16 @@ public final class Driver implements ClientModInitializer {
 				}
 				return String.join(" | ", texts);
 			}
-			case "allbuttons" -> {
-				// allbuttons <true|false>: whether the menu shows Turn, Mirror and Clear without a copy too.
-				System.setProperty(RadialMenuWidgets.ALL_BUTTONS_PROPERTY, a[1]);
-				return "ok";
+			case "modehud" -> {
+				// modehud: the line of the mouse mode's controls as the player reads it, or hidden.
+				Field f = BuildingPlannerClient.class.getDeclaredField("modeHud");
+				f.setAccessible(true);
+				return ((ModeHud) f.get(null)).text();
+			}
+			case "slot" -> {
+				// slot: the hotbar slot selected, from 0, and the item in the main hand, e.g. "0 minecraft:stone_bricks".
+				return mc.player.getInventory().getSelectedSlot() + " "
+					+ BuiltInRegistries.ITEM.getKey(mc.player.getMainHandItem().getItem());
 			}
 			case "radialclear" -> {
 				// radialclear: "clear" when Building Planner's buttons in the open radial menu meet nothing of the menu's,
@@ -725,8 +731,9 @@ public final class Driver implements ClientModInitializer {
 	}
 
 	/**
-	 * The player's copy: {@code none}, or its origin, mirror, rotation, whether it's the selected placement, and its
-	 * placement's name; {@code nosession} while Building Planner is off.
+	 * The player's copy: {@code none}, or {@code origin} and its origin while it's at the aim and {@code away} while it's
+	 * put away, then its mirror, rotation, whether it's the selected placement, and how many blocks it has;
+	 * {@code nosession} while Building Planner is off.
 	 */
 	private static String copy() throws Exception {
 		if (session() == null) {
@@ -738,8 +745,9 @@ public final class Driver implements ClientModInitializer {
 		}
 		SchematicPlacement p = clipboard.placement();
 		boolean selected = DataManager.getSchematicPlacementManager().getSelectedSchematicPlacement() == p;
-		return "origin " + p.getOrigin().toShortString().replace(" ", "") + " " + p.getMirror() + " " + p.getRotation()
-			+ (selected ? " selected " : " unselected ") + clipboard.worldBlocks().size() + " blocks";
+		return (clipboard.atAim() ? "origin " + p.getOrigin().toShortString().replace(" ", "") : "away") + " "
+			+ p.getMirror() + " " + p.getRotation() + (selected ? " selected " : " unselected ")
+			+ clipboard.worldBlocks().size() + " blocks";
 	}
 
 	private static BlockPos pos(String[] a, int i) {

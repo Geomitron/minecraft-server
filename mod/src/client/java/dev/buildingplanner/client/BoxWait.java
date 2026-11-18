@@ -26,6 +26,7 @@ final class BoxWait {
 	 * box: switching to Disable within the click would sound as a cancelled shape.
 	 */
 	private boolean restoreAtTick;
+	private boolean switching;
 
 	/** What the awaited box is for, or null while none is awaited. */
 	Purpose purpose() {
@@ -37,7 +38,7 @@ final class BoxWait {
 		before = restoreAtTick ? before : BuildModes.CLIENT.getBuildMode();
 		restoreAtTick = false;
 		BuildPipelineClient.cancelCurrentSequence();
-		BuildModes.CLIENT.setBuildMode(BuildModeEnum.CUBE);
+		setMode(BuildModeEnum.CUBE);
 		this.purpose = purpose;
 		ClickRule.setBoxAwaited(true);
 	}
@@ -55,7 +56,7 @@ final class BoxWait {
 		}
 		end();
 		BuildPipelineClient.cancelCurrentSequence();
-		BuildModes.CLIENT.setBuildMode(before);
+		setMode(before);
 	}
 
 	/**
@@ -77,7 +78,7 @@ final class BoxWait {
 		if (restoreAtTick) {
 			restoreAtTick = false;
 			if (BuildModes.CLIENT.getBuildMode() == BuildModeEnum.CUBE) {
-				BuildModes.CLIENT.setBuildMode(before);
+				setMode(before);
 			}
 		}
 		if (purpose != null && BuildModes.CLIENT.getBuildMode() != BuildModeEnum.CUBE) {
@@ -88,5 +89,22 @@ final class BoxWait {
 	private void end() {
 		purpose = null;
 		ClickRule.setBoxAwaited(false);
+	}
+
+	/**
+	 * Whether the wait is switching Effortless Building's mode itself, which hook E21 doesn't count as the player choosing
+	 * one: putting back the player's mode after a box for Copy mustn't put the new copy away.
+	 */
+	boolean switching() {
+		return switching;
+	}
+
+	private void setMode(BuildModeEnum mode) {
+		switching = true;
+		try {
+			BuildModes.CLIENT.setBuildMode(mode);
+		} finally {
+			switching = false;
+		}
 	}
 }

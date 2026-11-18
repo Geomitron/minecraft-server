@@ -74,10 +74,10 @@ public record PlayerMessage(String key, List<String> args) {
 		return new PlayerMessage(PREFIX + "copy.too_many", List.of(Integer.toString(blocks), Integer.toString(max)));
 	}
 
-	/** The player copied {@code blocks} blocks; {@code pasteKey} is the Paste key's name. */
-	public static PlayerMessage copied(int blocks, String pasteKey) {
-		return blocks == 1 ? new PlayerMessage(PREFIX + "copy.done_one", List.of(pasteKey))
-			: new PlayerMessage(PREFIX + "copy.done", List.of(Integer.toString(blocks), pasteKey));
+	/** The player copied {@code blocks} blocks. */
+	public static PlayerMessage copied(int blocks) {
+		return blocks == 1 ? new PlayerMessage(PREFIX + "copy.done_one", List.of())
+			: new PlayerMessage(PREFIX + "copy.done", List.of(Integer.toString(blocks)));
 	}
 
 	/** The player hid the ghost blocks with the show or hide key or button. */
@@ -98,9 +98,9 @@ public record PlayerMessage(String key, List<String> args) {
 		return new PlayerMessage(PREFIX + "ghosts.shown_again", List.of(key));
 	}
 
-	/** The player pressed Paste with no copy; {@code copyKey} is the Copy key's name. */
-	public static PlayerMessage nothingToPaste(String copyKey) {
-		return new PlayerMessage(PREFIX + "paste.nothing", List.of(copyKey));
+	/** The player pressed Paste with no copy since they joined. */
+	public static PlayerMessage nothingToPaste() {
+		return new PlayerMessage(PREFIX + "paste.nothing", List.of());
 	}
 
 	/** The material list waits for a box around ghost blocks. */

@@ -41,7 +41,6 @@ abstract class RadialMenuMixin extends Screen {
 		target = "Lnl/requios/effortlessbuilding/screen/RadialMenu;drawTexts"))
 	private void buildingplanner$drawWidgets(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTicks,
 		CallbackInfo ci) {
-		RadialMenuWidgets.beforeDraw(children());
 		for (GuiEventListener child : children()) {
 			if (child instanceof Renderable widget) {
 				widget.extractRenderState(graphics, mouseX, mouseY, partialTicks);

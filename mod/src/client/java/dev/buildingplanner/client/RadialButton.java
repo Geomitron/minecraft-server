@@ -3,7 +3,6 @@ package dev.buildingplanner.client;
 import dev.buildingplanner.BuildingPlanner;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
@@ -26,8 +25,7 @@ import nl.requios.effortlessbuilding.screen.RadialMenu;
  * <p>It acts as the menu's own buttons do (Effortless Building 4.3's {@code RadialMenu}): on a click of any mouse
  * button over it, which also keeps the menu from acting again when it closes ({@code performedActionUsingMouse}), and
  * when the menu closes, by letting go of its key (or by Escape), with the pointer over it and no click having acted
- * since the menu opened ({@link RadialMenuWidgets#menuClosing}). Each time it plays the menu's own quiet click. A button
- * shows only while its condition holds ({@link #refresh}); hidden, it neither draws nor acts.
+ * since the menu opened ({@link RadialMenuWidgets#menuClosing}). Each time it plays the menu's own quiet click.
  */
 final class RadialButton extends AbstractWidget {
 	static final int SIZE = 20;
@@ -39,26 +37,16 @@ final class RadialButton extends AbstractWidget {
 	private final Supplier<Identifier> icon;
 	private final Supplier<String> key;
 	private final Runnable action;
-	private final BooleanSupplier shown;
 
 	/**
 	 * A button at {@code x}, {@code y} (its top left, in GUI pixels) named {@code name}; {@code key} gives its key's name,
-	 * or null without one, {@code icon} its icon's texture ({@link #icon}), and {@code shown} whether it shows, all asked
-	 * each frame.
+	 * or null without one, and {@code icon} its icon's texture ({@link #icon}), both asked each frame.
 	 */
-	RadialButton(int x, int y, Component name, Supplier<String> key, Supplier<Identifier> icon, Runnable action,
-		BooleanSupplier shown) {
+	RadialButton(int x, int y, Component name, Supplier<String> key, Supplier<Identifier> icon, Runnable action) {
 		super(x, y, SIZE, SIZE, name);
 		this.icon = icon;
 		this.key = key;
 		this.action = action;
-		this.shown = shown;
-		refresh();
-	}
-
-	/** Shows or hides the button by its condition; the menu asks before each frame it draws. */
-	void refresh() {
-		visible = shown.getAsBoolean();
 	}
 
 	/**

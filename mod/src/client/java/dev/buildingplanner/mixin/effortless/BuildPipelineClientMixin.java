@@ -31,7 +31,8 @@ import org.spongepowered.asm.mixin.injection.At;
  * Effortless Building's client pipeline, on a server with Building Planner: a finished shape goes into the layer
  * instead of to the server as real blocks (hooks E1 to E3), or marks a box for a copy or the material list, the mix
  * starts shapes (E6), the preview has no "missing items" tint (E8), shapes can start on ghost blocks (E9), clicks
- * without a placeable item stay vanilla's (E14), and an awaited box starts on the block aimed at (E17).
+ * without a placeable item stay vanilla's and a mouse mode's go to it (E14), and an awaited box starts on the block
+ * aimed at (E17).
  */
 @Mixin(value = BuildPipelineClient.class, remap = false)
 abstract class BuildPipelineClientMixin {
@@ -86,15 +87,16 @@ abstract class BuildPipelineClientMixin {
 	}
 
 	/**
-	 * Hook E14: with anything but a placeable item in the main hand, and no shape under way, Effortless Building takes
-	 * neither click, so both act as without mods (its client tick, its cancelling of vanilla's use, attack and held
-	 * attack, and hold to repeat all ask these first). A shape under way still takes the click that finishes or
+	 * Hook E14: while a mouse mode takes the clicks, Effortless Building takes neither, in any mode, so hooks M1 to M5
+	 * have them. With anything but a placeable item in the main hand, and no shape under way, Effortless Building takes
+	 * neither click either, so both act as without mods (its client tick, its cancelling of vanilla's use, attack and
+	 * held attack, and hold to repeat all ask these first). A shape under way still takes the click that finishes or
 	 * cancels it.
 	 */
 	@ModifyReturnValue(method = {"shouldInterceptPlacing", "shouldInterceptBreaking"}, at = @At("RETURN"), require = 2)
 	private static boolean buildingplanner$onlyWithPlaceables(boolean intercept) {
-		return intercept && (!BuildingPlannerClient.ownsShapes() || BuildPipelineClient.getBuildState() != null
-			|| ClickRule.startsShapes());
+		return intercept && !BuildingPlannerClient.mouseTaken() && (!BuildingPlannerClient.ownsShapes()
+			|| BuildPipelineClient.getBuildState() != null || ClickRule.startsShapes());
 	}
 
 	/** Hook E8: ghost blocks don't use up items, so the preview shows none missing. */

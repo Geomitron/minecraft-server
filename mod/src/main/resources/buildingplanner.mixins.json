@@ -22,7 +22,9 @@
 		"litematica.PlacementManagerTaskRebuildMixin",
 		"litematica.SchematicPlacementManagerMixin",
 		"litematica.SchematicUtilsMixin",
-		"litematica.WidgetListSchematicPlacementsMixin"
+		"litematica.WidgetListSchematicPlacementsMixin",
+		"minecraft.MinecraftMouseModeMixin",
+		"minecraft.MouseHandlerMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

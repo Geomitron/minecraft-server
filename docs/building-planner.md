@@ -10,8 +10,11 @@ the block mix, show or hide, copy and paste in a box drawn with Effortless Build
 U, H and Delete, and the material list for such a box. This spec describes the next version, with Geo's changes from
 the walkthrough of 0.3.0 (inbox request 752, in [plan.md](plan.md) "Decisions"). Built so far: ghost blocks left out of
 Copy and the material list while they're hidden (`CopyRules.blocks` and `MaterialCount.of` take whether ghost blocks
-show; the material list no longer shows them). Not built yet: Building Planner's own box for Copy and the material
-list, the copy at the aim worked by the mouse, larger boxes, the material list counting real blocks (while ghost blocks
+show; the material list no longer shows them); and the copy at the aim worked by the mouse, with its controls line,
+put away by a right click or by the actions that end a mouse mode and brought back by Paste, in place of the keys J,
+K, U, H and Delete and the radial menu's Turn, Mirror and Clear buttons (`MouseMode`, hooks M1 to M5, E21 and E22,
+and `ModeHud`; with no Block mix button in the radial menu yet, the Block mix key B puts the copy away). Not built yet:
+Building Planner's own box for Copy and the material list, larger boxes, the material list counting real blocks (while ghost blocks
 are hidden, its list for now opens nothing, with the message for a box without ghost blocks), the block mix's changes,
 the radial menu's five buttons in a new layout that joins its opening animation, "Building Planner" in place of
 "Effortless Building" where players see it, and Geo's hand-edited icons, which 0.3.0 doesn't have. The build steps are
@@ -796,7 +799,7 @@ add-on's classes off the classpath) and checks:
 
 `step9.sh`, show or hide, the radial menu's buttons, the mouse modes, boxes, copy and paste and the material list.
 Boxes are drawn with three real left clicks, aimed with the driver's `lookat`, while the players fly so they stay where
-they're teleported; the driver's `scroll` and `click middle` send the wheel and the middle button with xdotool.
+they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 4, 5 and 2).
 
 - N hides every ghost block for that player alone, saying "Ghost blocks hidden." in chat: the game keeps them in its
   copy of the layer, Litematica has no tile, and the client config keeps the choice. Another player's edits, one of

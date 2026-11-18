@@ -3,6 +3,7 @@ package dev.buildingplanner.client;
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.buildingplanner.BuildingPlanner;
 import dev.buildingplanner.ClientConfig;
+import dev.buildingplanner.input.MouseMode;
 import dev.buildingplanner.layer.Layer;
 import dev.buildingplanner.look.GhostsShown;
 import dev.buildingplanner.sync.EditKind;
@@ -45,13 +46,6 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		new KeyMapping("key.buildingplanner.block_mix", InputConstants.KEY_B, CATEGORY);
 	static final KeyMapping SHOW_HIDE =
 		new KeyMapping("key.buildingplanner.show_hide", InputConstants.KEY_N, CATEGORY);
-	// Copy and paste. None of these keys is a default key, or in a default key combination, of Minecraft, Litematica,
-	// MaLiLib, Effortless Building or Freecam.
-	static final KeyMapping COPY = new KeyMapping("key.buildingplanner.copy", InputConstants.KEY_J, CATEGORY);
-	static final KeyMapping PASTE = new KeyMapping("key.buildingplanner.paste", InputConstants.KEY_K, CATEGORY);
-	static final KeyMapping TURN = new KeyMapping("key.buildingplanner.turn", InputConstants.KEY_U, CATEGORY);
-	static final KeyMapping MIRROR = new KeyMapping("key.buildingplanner.mirror", InputConstants.KEY_H, CATEGORY);
-	static final KeyMapping CLEAR = new KeyMapping("key.buildingplanner.clear", InputConstants.KEY_DELETE, CATEGORY);
 	/**
 	 * The edit glow, drawn through MaLiLib; null while Building Planner is off for want of Litematica or MaLiLib, so this
 	 * class never loads their classes then.
@@ -80,11 +74,19 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	private static boolean lookSet;
 	/** The mix panel; null without Effortless Building, whose mode the mix rule reads. */
 	private static MixPanel mixPanel;
+	/** The line of a mouse mode's controls; null while Building Planner is off for want of Litematica or MaLiLib. */
+	private static ModeHud modeHud;
 	/**
 	 * Copy and the material list waiting for a box drawn with Effortless Building's "Cube" shape;
 	 * null without Effortless Building, whose classes it uses, so none of them takes a box then.
 	 */
 	private static BoxWait boxWait;
+	/**
+	 * Whether the use button has stayed down since a mouse mode started or the right click ended one, so that holding
+	 * it, which the game repeats every 4 ticks, neither ends the mode it started in nor acts once the mode has ended
+	 * (hooks M2 and E14). It clears at the first tick the button is up.
+	 */
+	private static boolean useHeld;
 
 	@Override
 	public void onInitializeClient() {
@@ -104,8 +106,10 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		}
 		KeyMappingHelper.registerKeyMapping(BLOCK_MIX);
 		KeyMappingHelper.registerKeyMapping(SHOW_HIDE);
-		List.of(COPY, PASTE, TURN, MIRROR, CLEAR).forEach(KeyMappingHelper::registerKeyMapping);
 		glow = EditGlow.registered();
+		modeHud = new ModeHud(BuildingPlannerClient::mouseMode);
+		HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(BuildingPlanner.MOD_ID, "mode_controls"),
+			modeHud);
 		ClientPlayNetworking.registerGlobalReceiver(Payloads.Hello.TYPE, (hello, context) -> hello(hello));
 		// A singleplayer or LAN host's own world runs no server side.
 		ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
@@ -162,24 +166,10 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 				}
 			}
 			while (SHOW_HIDE.consumeClick()) {
-				if (session != null) {
-					session.toggleGhosts();
-				}
+				toggleGhosts();
 			}
-			while (COPY.consumeClick()) {
-				copy();
-			}
-			while (PASTE.consumeClick()) {
-				paste();
-			}
-			while (TURN.consumeClick()) {
-				turnCopy();
-			}
-			while (MIRROR.consumeClick()) {
-				mirrorCopy();
-			}
-			while (CLEAR.consumeClick()) {
-				clearCopy();
+			if (!client.options.keyUse.isDown()) {
+				useHeld = false;
 			}
 			if (!lookSet) {
 				// Litematica has loaded its config by the first tick.
@@ -241,8 +231,11 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		return level == null ? null : level.dimension().identifier();
 	}
 
-	/** The mix key: opens the picker on the player's mix, to choose it, change it or turn it off. */
+	/**
+	 * The mix key: puts the copy away and opens the picker on the player's mix, to choose it, change it or turn it off.
+	 */
 	private static void openMix() {
+		session.modeAction(MouseMode.Action.BLOCK_MIX);
 		BlockMixScreen.open(MIX,
 			() -> ClientSession.show(PlayerMessage.mixOn(BLOCK_MIX.getTranslatedKeyMessage().getString())),
 			() -> ClientSession.show(PlayerMessage.mixOff()));
@@ -253,7 +246,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		return session == null ? GhostsShown.get(config) : session.ghostsShown();
 	}
 
-	/** The radial menu's show or hide button, as the key: does nothing while Building Planner is off. */
+	/** The show or hide key and the radial menu's button: do nothing while Building Planner is off. */
 	public static void toggleGhosts() {
 		if (session != null) {
 			session.toggleGhosts();
@@ -261,11 +254,11 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	}
 
 	/**
-	 * The Copy key and button: waits for a box around ghost blocks and real blocks drawn with Effortless Building's "Cube" shape, or
-	 * stops a wait under way. Does nothing while Building Planner is off or without Effortless Building.
+	 * The radial menu's Copy button: puts the copy away and waits for a box around ghost blocks and real blocks drawn
+	 * with Effortless Building's "Cube" shape, or stops a wait under way. Does nothing while Building Planner is off.
 	 */
 	static void copy() {
-		awaitBox(BoxWait.Purpose.COPY);
+		awaitBox(BoxWait.Purpose.COPY, MouseMode.Action.COPY_BUTTON);
 	}
 
 	/**
@@ -273,14 +266,18 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	 * list then counts.
 	 */
 	static void materialList() {
-		awaitBox(BoxWait.Purpose.MATERIAL_LIST);
+		awaitBox(BoxWait.Purpose.MATERIAL_LIST, MouseMode.Action.MATERIAL_LIST_BUTTON);
 	}
 
-	/** Starts waiting for a box, with its message, or stops a wait under way, whatever it was for. */
-	private static void awaitBox(BoxWait.Purpose purpose) {
+	/**
+	 * After the button's action on the mouse mode, starts waiting for a box, with its message, or stops a wait under
+	 * way, whatever it was for.
+	 */
+	private static void awaitBox(BoxWait.Purpose purpose, MouseMode.Action button) {
 		if (session == null || boxWait == null) {
 			return;
 		}
+		session.modeAction(button);
 		if (boxWait.purpose() != null) {
 			boxWait.stop();
 			return;
@@ -298,7 +295,10 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 			return;
 		}
 		switch (boxWait.take()) {
-			case COPY -> session.copy(min, max, PASTE.getTranslatedKeyMessage().getString());
+			case COPY -> {
+				session.copy(min, max);
+				modeStarted();
+			}
 			case MATERIAL_LIST -> session.materialList(min, max);
 		}
 	}
@@ -309,39 +309,106 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		}
 	}
 
-	/** The Paste key and button. */
+	/**
+	 * The radial menu's Paste button: brings the most recent copy back to the aim, dropping a box awaited and a shape
+	 * under way, whose clicks the copy now takes; with no copy, says so. Only the radial menu, which is Effortless
+	 * Building's, calls it.
+	 */
 	static void paste() {
-		if (session != null) {
-			session.paste(COPY.getTranslatedKeyMessage().getString());
+		if (session == null) {
+			return;
 		}
-	}
-
-	/** The Turn key and button. */
-	static void turnCopy() {
-		if (session != null) {
-			session.turnCopy();
-		}
-	}
-
-	/** The Mirror key and button, for the way the player faces. */
-	static void mirrorCopy() {
-		Minecraft mc = Minecraft.getInstance();
-		if (session != null && mc.player != null) {
-			session.mirrorCopy(mc.player.getDirection());
-		}
-	}
-
-	/** The Clear key and button: stops waiting for a box and removes the copy. */
-	static void clearCopy() {
-		if (session != null) {
+		session.modeAction(MouseMode.Action.PASTE_BUTTON);
+		if (session.clipboard().exists()) {
 			stopBoxWait();
-			session.clearCopy();
+			ClickRule.cancelShape();
+		}
+		if (session.bringBackCopy()) {
+			modeStarted();
 		}
 	}
 
-	/** Whether the player has a copy, which the radial menu's Turn, Mirror and Clear buttons need. */
-	static boolean copyExists() {
-		return session != null && session.clipboard().exists();
+	/** Building Planner's mode that takes over the mouse now, or null. */
+	static MouseMode mouseMode() {
+		return session == null ? null : session.mouseMode();
+	}
+
+	/** Whether a mouse mode is on (hooks E15 and E22). */
+	public static boolean mouseModeOn() {
+		return mouseMode() != null;
+	}
+
+	/**
+	 * Hook E14: whether Effortless Building's clicks stay out: while a mouse mode is on, and while the use button stays
+	 * down after one started or ended.
+	 */
+	public static boolean mouseTaken() {
+		return session != null && (useHeld || session.mouseMode() != null);
+	}
+
+	/** A mouse mode started, perhaps within a click of the use button, whose hold mustn't end it. */
+	private static void modeStarted() {
+		useHeld = Minecraft.getInstance().options.keyUse.isDown();
+	}
+
+	/** Hook E21: the player chose a mode in Effortless Building's radial menu; the box wait's own switches don't count. */
+	public static void buildModeChosen() {
+		if (session != null && (boxWait == null || !boxWait.switching())) {
+			session.modeAction(MouseMode.Action.CHOOSE_BUILD_MODE);
+		}
+	}
+
+	/** Hook M1: the left click pastes the copy at the aim; returns whether the click is taken from the game. */
+	public static boolean leftClick() {
+		if (!mouseModeOn()) {
+			return false;
+		}
+		session.paste();
+		return true;
+	}
+
+	/**
+	 * Hook M2: the right click puts the copy away; returns whether the game's use is skipped, which it is too while the
+	 * button stays down after a mode started or ended.
+	 */
+	public static boolean rightClick() {
+		if (session == null) {
+			return false;
+		}
+		if (session.mouseMode() != null && !useHeld) {
+			session.modeAction(MouseMode.Action.RIGHT_CLICK);
+			useHeld = true;
+			return true;
+		}
+		return useHeld;
+	}
+
+	/**
+	 * Hook M4: the middle click mirrors the copy at the aim left to right for the way the player faces; returns whether
+	 * the game's pick block is skipped.
+	 */
+	public static boolean middleClick() {
+		Minecraft mc = Minecraft.getInstance();
+		if (!mouseModeOn() || mc.player == null) {
+			return false;
+		}
+		session.mirrorCopy(mc.player.getDirection());
+		return true;
+	}
+
+	/**
+	 * Hook M5: each notch of the scroll wheel gives the copy at the aim a quarter turn, clockwise for a notch down
+	 * ({@code wheel} below 0) and counterclockwise for a notch up; returns whether the hotbar slot changes as without
+	 * the add-on.
+	 */
+	public static boolean scroll(int wheel) {
+		if (!mouseModeOn()) {
+			return true;
+		}
+		for (int notch = 0; notch < Math.abs(wheel); notch++) {
+			session.turnCopy(wheel < 0);
+		}
+		return false;
 	}
 
 	/** Whether Building Planner is on for this server, so Effortless Building's hooks draw ghost blocks. */

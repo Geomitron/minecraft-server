@@ -55,13 +55,19 @@ public final class ClickRule {
 		return boxAwaited || holdsPlaceable();
 	}
 
+	/** Drops the shape under way, as when the copy comes to the aim and takes the clicks. */
+	static void cancelShape() {
+		BuildPipelineClient.cancelCurrentSequence();
+	}
+
 	/**
 	 * Hook E15: runs the game's pick of what the crosshair aims at. With anything but a placeable item in the main hand
-	 * and no shape under way, Effortless Building's longer reach, which it gives an empty hand and which aims through
-	 * an entity at the block behind it, is left out, so the hand aims as without mods.
+	 * and no shape under way, or while a mouse mode is on, Effortless Building's longer reach, which it gives an empty
+	 * hand and which aims through an entity at the block behind it, is left out, so the hand aims as without mods.
 	 */
 	public static void pick(Runnable pick) {
-		vanillaPick = BuildingPlannerClient.ownsShapes() && !startsShapes() && BuildPipelineClient.getBuildState() == null;
+		vanillaPick = BuildingPlannerClient.ownsShapes() && (BuildingPlannerClient.mouseModeOn()
+			|| !startsShapes() && BuildPipelineClient.getBuildState() == null);
 		try {
 			pick.run();
 		} finally {

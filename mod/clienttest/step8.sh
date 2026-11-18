@@ -76,8 +76,6 @@ check "client 1 starts no session" drv 1 "await noscreen" "wait 40" "await noses
 check "client 2 starts no session" drv 2 "await noscreen" "wait 40" "await nosession"
 keys 1 key b
 check "the block mix key opens nothing" drv 1 "wait 20" "await noscreen"
-keys 1 key j
-keys 1 key k
 drv 1 "wait 20" "notoasts" "wait 5" "shot off-not-on-server" > /dev/null
 
 # Effortless Building's shapes place nothing: four oak planks from 4 -60 5 eastward add no ghost blocks and no real

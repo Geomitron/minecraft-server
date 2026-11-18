@@ -42,6 +42,11 @@ public record Turn(Mirror mirror, Rotation rotation) {
 		return new Turn(mirror, rotation.getRotated(Rotation.CLOCKWISE_90));
 	}
 
+	/** This turn followed by a quarter turn counterclockwise, seen from above. */
+	public Turn turnedCounterclockwise() {
+		return new Turn(mirror, rotation.getRotated(Rotation.COUNTERCLOCKWISE_90));
+	}
+
 	/**
 	 * This turn followed by a flip left to right for a player facing {@code facing}: across the north-south line when they
 	 * face north or south, across the east-west line when they face east or west.

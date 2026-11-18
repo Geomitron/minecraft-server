@@ -355,7 +355,10 @@ Nothing goes to the server or the pack before the last step.
    and brought back by Paste (`Clipboard` keeps the schematic), the counterclockwise turn, and the keys J, K, U, H
    and Delete removed with their texts and icons. Done when unit tests cover `Turn`'s counterclockwise quarter and
    which actions end a mode, and `step9.sh`'s copy, paste and put-away checks pass, with the driver's `scroll` and
-   middle click.
+   middle click. Built (`MouseMode` and `Turn.turnedCounterclockwise`, with their unit tests, hooks M1 to M5 in
+   `dev.buildingplanner.mixin.minecraft`, E14's and E15's new condition, E21 and E22, `ModeHud`, and `Clipboard`
+   keeping the copy put away; `step9.sh`'s copy, paste and put-away checks pass, sending the wheel and the middle
+   button with xdotool).
 2. **Building Planner's box** ("Boxes for Copy and the material list"): `BoxDraw` with its three left clicks, the first
    corner rule, the outline through MaLiLib, switching between Copy and the material list, the limits with the red box
    and its line, and `BoxWait`, E1's and E2's box calls, E13's box rule and E17 removed. Done when unit tests cover the

@@ -2,6 +2,7 @@ package dev.buildingplanner.client;
 
 import dev.buildingplanner.BuildingPlanner;
 import dev.buildingplanner.ClientConfig;
+import dev.buildingplanner.input.MouseMode;
 import dev.buildingplanner.layer.Layer;
 import dev.buildingplanner.look.GhostsShown;
 import dev.buildingplanner.sync.CopyRules;
@@ -103,7 +104,7 @@ final class ClientSession {
 
 	/**
 	 * Once a client tick: removes old plans' placements when due, asks for the columns that loaded and lets go of those
-	 * that unloaded, and moves the copy to where the player aims.
+	 * that unloaded, and moves the copy at the aim to where the player aims.
 	 */
 	void tick() {
 		if (removeOldPlans && Minecraft.getInstance().level != null) {
@@ -111,11 +112,30 @@ final class ClientSession {
 			OldPlans.remove();
 		}
 		sendWatches();
-		if (clipboard.exists()) {
+		clipboard.tick();
+		followAim();
+	}
+
+	/** Moves the copy at the aim to the block beside the face the player aims at; aiming at nothing leaves it. */
+	private void followAim() {
+		if (clipboard.atAim()) {
 			BlockPos origin = GhostAim.copyOrigin(replica.layer(), tiles.shown());
 			if (origin != null) {
 				clipboard.follow(origin);
 			}
+		}
+	}
+
+	/** Building Planner's mode that takes over the mouse now, or null. */
+	MouseMode mouseMode() {
+		return clipboard.atAim() ? MouseMode.COPY_AT_AIM : null;
+	}
+
+	/** The player did something that may end the mouse mode ({@link MouseMode#endedBy}); ending it puts the copy away. */
+	void modeAction(MouseMode.Action action) {
+		MouseMode mode = mouseMode();
+		if (mode != null && mode.endedBy(action)) {
+			clipboard.putAway();
 		}
 	}
 
@@ -154,6 +174,7 @@ final class ClientSession {
 	 * chat.
 	 */
 	void toggleGhosts() {
+		modeAction(MouseMode.Action.SHOW_OR_HIDE);
 		boolean shown = !tiles.shown();
 		setGhostsShown(shown);
 		show(shown ? PlayerMessage.ghostsShown() : PlayerMessage.ghostsHidden());
@@ -219,11 +240,11 @@ final class ClientSession {
 	/**
 	 * Makes the copy from a box drawn for Copy: at each position the ghost block from the player's copy of the layer,
 	 * and where there is none, the real block from the player's world other than air, without block entity contents
-	 * ({@link CopyRules#blocks}), while ghost blocks are hidden only the real blocks; {@code pasteKey} is the Paste key's name, for the message. A box with nothing to copy,
-	 * or more blocks than the server's cap for an edit, which its paste would exceed, leaves any earlier copy, with a
-	 * message.
+	 * ({@link CopyRules#blocks}), while ghost blocks are hidden only the real blocks. The copy then shows at the aim. A
+	 * box with nothing to copy, or more blocks than the server's cap for an edit, which its paste would exceed, leaves
+	 * any earlier copy, with a message.
 	 */
-	void copy(BlockPos min, BlockPos max, String pasteKey) {
+	void copy(BlockPos min, BlockPos max) {
 		Level level = Minecraft.getInstance().level;
 		Map<BlockPos, BlockState> blocks = CopyRules.blocks(min, max, replica.layer(),
 			pos -> level == null ? Blocks.AIR.defaultBlockState() : level.getBlockState(pos), tiles.shown());
@@ -233,8 +254,8 @@ final class ClientSession {
 			return;
 		}
 		clipboard.place(blocks, GhostAim.copyOrigin(replica.layer(), tiles.shown()));
-		if (clipboard.exists()) {
-			show(PlayerMessage.copied(blocks.size(), pasteKey));
+		if (clipboard.atAim()) {
+			show(PlayerMessage.copied(blocks.size()));
 		}
 	}
 
@@ -256,29 +277,41 @@ final class ClientSession {
 		GuiBase.openGui(new GuiMaterialList(list));
 	}
 
-	/** Pastes the copy as one shape edit. It names only the copy's blocks, so its empty space leaves the layer's. */
-	void paste(String copyKey) {
-		if (!clipboard.exists()) {
-			show(PlayerMessage.nothingToPaste(copyKey));
-			return;
+	/**
+	 * Pastes the copy at the aim as one shape edit. It names only the copy's blocks, so its empty space leaves the
+	 * layer's.
+	 */
+	void paste() {
+		if (clipboard.atAim()) {
+			sendShape(EditKind.SHAPE, clipboard.worldBlocks());
 		}
-		sendShape(EditKind.SHAPE, clipboard.worldBlocks());
 	}
 
-	void turnCopy() {
-		if (clipboard.exists()) {
-			clipboard.turn();
+	/**
+	 * Brings the most recent copy back to the aim, as it was turned and mirrored; returns whether there was one. With
+	 * none since the player joined, says so.
+	 */
+	boolean bringBackCopy() {
+		if (!clipboard.exists()) {
+			show(PlayerMessage.nothingToPaste());
+			return false;
+		}
+		clipboard.bringBack();
+		followAim();
+		return true;
+	}
+
+	/** Gives the copy at the aim a quarter turn, clockwise or counterclockwise seen from above. */
+	void turnCopy(boolean clockwise) {
+		if (clipboard.atAim()) {
+			clipboard.turn(clockwise);
 		}
 	}
 
 	void mirrorCopy(Direction facing) {
-		if (clipboard.exists()) {
+		if (clipboard.atAim()) {
 			clipboard.mirror(facing);
 		}
-	}
-
-	void clearCopy() {
-		clipboard.clear();
 	}
 
 	/** Shows one of Building Planner's messages in the player's chat. */
