@@ -353,7 +353,7 @@ drv 1 "cmd execute as Planner2 at @s run tp @s ~ ~10 ~" > /dev/null
 drv 2 "wait 5" "fly true" > /dev/null
 
 # The copy at the aim's controls line, and a box's controls for each click.
-controls="Left-click to paste, Scroll to turn, Middle-click to mirror, Right-click to put away"
+controls="Left-click to paste, Scroll to turn, Middle-click to mirror, Right-click to close"
 first_line="Left-click to set the first corner, Right-click to cancel"
 second_line="Left-click to set the opposite corner, Right-click to cancel"
 height_line="Left-click to set the height, Right-click to cancel"
@@ -873,7 +873,7 @@ attack_click 1
 drv 1 "cmd tp @s 330.5 -50 64.5 90 30" "wait 210" "lookat 380.5 -60 64.5" "wait 5" > /dev/null
 check "a box of 261 blocks a side draws red" box_is "COPY 1 120,-60,64..380,-60,64 red SINGLE"
 check "with its line saying which limit" eval \
-	'[[ $(val 1 modehud) == "At most 256 blocks a side | Copy: $second_line (261 × 1 × 1)" ]]'
+	'[[ $(val 1 modehud) == "Too many blocks | Copy: $second_line (261 × 1 × 1)" ]]'
 shot 1 box-too-large
 attack_click 1
 check "and its click sets no corner" eval 'drv 1 "wait 5" > /dev/null &&

@@ -96,7 +96,7 @@ final class ModeHud implements HudElement {
 		List<Line> lines = new ArrayList<>(2);
 		if (shown.limit() != null) {
 			MutableComponent limit = switch (shown.limit()) {
-				case SIDE -> Component.translatable(BOX + ".too_large", BoxCorners.MAX_SIDE);
+				case SIDE -> Component.translatable(BOX + ".too_large");
 				case NOT_LOADED -> Component.translatable(BOX + ".not_loaded");
 			};
 			lines.add(new Line(limit.withStyle(ChatFormatting.RED)));

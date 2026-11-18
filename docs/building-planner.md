@@ -65,7 +65,7 @@ E23); and Litematica's drawing of area selections turned off once with the look 
   a share (say 80 cobblestone to 20 mossy cobblestone), and turns the mix on. The screen closes, and the mix then
   applies to Effortless Building's shapes, in every mode but Disable, while the player holds an item that places a
   block; with anything else in hand, clicks act as without mods. While the mix applies, a small panel at the right edge
-  of the screen shows each block's icon and share, and "B: Edit Mix" under them. "Clear Mix" empties the mix and turns
+  of the screen shows each block's icon and share, and "B: Edit mix" under them. "Clear Mix" empties the mix and turns
   it off. A mix of one block lets a survival player plan with a block they don't have.
 - **Undo and redo.** Undo takes back only that player's own changes, newest first: a whole shape or paste at a time,
   in any dimension. A block someone else has changed since stays as they left it. Effortless Building's Ctrl+Z (and
@@ -106,8 +106,7 @@ E23); and Litematica's drawing of area selections turned off once with the look 
   hasn't changed it from Litematica's default (off, and 0.5), and never again, so a player's own later change stays.
   This happens whether or not the player joins a server with Building Planner.
 - **Messages.** Building Planner's messages show in the player's chat. Every text players see (messages, key names,
-  button and slider labels, the panel) goes to Geo for review once it's built; the wording in this spec is drafted for
-  that review.
+  button and slider labels, the panel) is in the wording Geo approved, which this spec quotes.
 
 ## Geo's goals, and what meets each
 
@@ -488,12 +487,12 @@ since the hooks act only on the game's own clicks and wheel.
 While a mode is on, with no screen open and the HUD shown (not hidden with F1), a line of its controls shows on screen
 (`ModeHud`, drawn through `HudElementRegistry`), centred 58 above the screen's bottom, where Effortless Building draws
 its own line during a shape (`RenderHandler.renderSubtitle`), in the same words for the clicks and the same colours:
-white, with each action in dark aqua. The drafts, for Geo's review once built:
+white, with each action in dark aqua. The texts, as Geo approved them:
 
 - a box for Copy: "Copy: Left-click to set the first corner, Right-click to cancel", then "the opposite corner", then
   "the height", followed by the box's size ("12 × 5 × 8");
 - a box for the material list: the same, starting "Material list:";
-- the copy at the aim: "Left-click to paste, Scroll to turn, Middle-click to mirror, Right-click to put away".
+- the copy at the aim: "Left-click to paste, Scroll to turn, Middle-click to mirror, Right-click to close".
 
 A line too wide for the screen wraps onto a second line above it, breaking only at spaces outside the box's size, which
 goes after the last word that leaves it room, or alone on the line below. Effortless Building's own line during its
@@ -521,7 +520,7 @@ walk, or fly in creative mode, while the box is drawn, so a far corner is reache
 The box's limits: a corner is aimed at up to 256 blocks from the player's eyes; a box is at most 256 blocks a side, and
 its height reaches the world's build limits; and every chunk the box touches must be loaded in the player's game
 (held in `ClientChunkCache`; `ClientLevel.hasChunk` is always true), since the game knows the real blocks and the layer's columns only there. Where the aimed
-corner would break a limit, the box draws red, the line on screen says which limit ("At most 256 blocks a side", "Part
+corner would break a limit, the box draws red, the line on screen says which limit ("Too many blocks", "Part
 of the box is too far away to read. Move closer."), and the click doesn't set the corner. A box never shrinks to fit a
 limit.
 
@@ -631,14 +630,14 @@ inventory. The switch starts on at each launch and keeps the player's setting wh
 in the list adds it to the mix with a share of 1, or takes it out when it's already in the mix, and blocks in the mix
 show selected in the list; under each block in the mix is its share, which the player types, and its percentage;
 clicking a block in the mix also takes it out. "Use mix" turns the mix on and closes the screen, with the message
-"Block mix on. Press B to change it or turn it off." (the key as the player has bound it); "Clear Mix" empties the mix
+"Block mix on. Press B to edit or clear it." (the key as the player has bound it); "Clear Mix" empties the mix
 and turns it off at once, saying "Block mix off." when the mix was on, and leaves the screen open to pick again;
 "Cancel" and Escape leave the mix as it was, or as "Clear Mix" left it. Opened while the mix is on, the screen shows the
 mix as it is, to change it. The three buttons share the row's width.
 
 While the mix applies, a panel at the right edge of the screen (`MixPanel`, drawn through `HudElementRegistry`),
 centred top to bottom on a dark see-through box, shows the heading "Block mix", then each of the mix's blocks as its
-icon and its percentage ("80%"), then the line "B: Edit Mix", with the mix key as the player has bound it. The box is
+icon and its percentage ("80%"), then the line "B: Edit mix", with the mix key as the player has bound it. The box is
 as wide as its widest line. The whole panel, like the radial menu's
 slider labels, draws at the smallest size at or above 70% of the game's at which each of the font's pixels covers a
 whole number of screen pixels (`SmallText`), since at 70% they come out uneven and hard to read: ceil(GUI scale × 0.7)
@@ -661,7 +660,7 @@ and its schematic holds structure void in every position with no copied block, s
 show. Copy counts the box's blocks first, with `BoxCount`, and takes them, skipping sections with none, only when the
 count is neither 0 nor over the cap. When the box has no blocks to copy, the player gets a message and nothing changes. A copy of more
 blocks than the server's block cap is refused with a message, since its paste would be. Otherwise the new copy replaces
-any earlier one, the player gets the message "Copied 120 blocks." (a draft for Geo's review), and the copy shows at the
+any earlier one, the player gets the message "Copied 120 blocks.", and the copy shows at the
 aim.
 
 The copy at the aim is one of Building Planner's mouse modes (see "Building Planner's mouse modes"). Each client tick
@@ -684,7 +683,7 @@ the box's corner. Its box stays drawn (hook L6 leaves out only tiles). Its contr
 Turning and mirroring set the placement's rotation and mirror, which Litematica applies mirror first, then rotation;
 the mirror combines its flip with the turn already set. The radial menu's Paste button brings the most recent copy back
 to the aim, as it was turned and mirrored; with no copy since the player joined, it gives the message "Nothing to paste.
-Use Copy first." (a draft for Geo's review). Leaving the server or changing dimension drops the most recent copy.
+Use Copy first.". Leaving the server or changing dimension drops the most recent copy.
 
 ### The material list
 
@@ -695,7 +694,7 @@ missing and the wrong block where it has another block, unless Litematica's "mat
 in another state) or "ignoreCropAge" options count it as built. While ghost blocks are hidden, the box's ghost blocks
 count as if there were none, and they stay hidden. The counts become a Litematica material list of Building Planner's
 own (`GhostMaterialList`, a `MaterialListBase` filled through `MaterialListUtils.getMaterialList`), titled "Material
-list for the blocks in the box" (a draft for Geo's review), which it sets as Litematica's material list
+list for the blocks in the box", which it sets as Litematica's material list
 (`DataManager.setMaterialList`), so Litematica's material list key reopens it, and opens (`GuiMaterialList`).
 Litematica's Refresh button counts the same box again, while the player is still in its dimension. Counting the layer
 rather than Litematica's schematic world leaves out the copy, which Litematica also draws; the copy, if it was at the
@@ -784,7 +783,7 @@ on the dev server; [plan.md](plan.md) says which build step makes or rewrites ea
 - The mix key opens the mix screen listing only the inventory's two blocks, with "Only my inventory" on; turned off,
   it lists every block, and stays off when the screen opens again. Clicking both, clicking one again to take it out
   and once more to add it back, typing their shares and "Use mix" turns the mix on and closes the screen, with its
-  message, and the panel shows both blocks' percentages ("80%", "20%") and "B: Edit Mix". F1 hides the panel and
+  message, and the panel shows both blocks' percentages ("80%", "20%") and "B: Edit mix". F1 hides the panel and
   shows it again. The screen and the panel are shot at GUI scale 2 and, in a window of 1920 by 1080, at 4. The radial
   menu's "Block mix" button opens the same screen.
 - With the mix on and a block held, each block of a 20-block shape is the mix's block at its position, on both

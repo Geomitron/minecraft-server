@@ -205,7 +205,7 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it, not
 - The mix panel, as Geo approved it with changes (inbox request 709): the heading "Block mix", then each block's icon
   with its share only ("80%"), and no line about B: "remove B: close; the chat message is enough" (709 revision 2
   Q2). It is narrow: "note that my changes allow it to be significantly vertically narrower, which I want" (709 Q1).
-  "Use mix" leaves the chat message "Block mix on. Press B to change it or turn it off."
+  "Use mix" leaves the chat message "Block mix on. Press B to edit or clear it."
 - The panel's text and icons, and the speed sliders' labels, are drawn small but evenly: at 70% the font's pixels
   came out uneven and hard to read ("just restore the panel to a slightly larger size where the font doesn't have
   the weird scaling issues that makes it hard to read", 709 revision 2 Q3; "same text issue happens with the scaled
@@ -264,7 +264,7 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it, not
     material list leave out the ghost blocks in the box (Q5 comment), and the material list leaves them hidden (Q6 B).
   - **The material list:** a box without ghost blocks opens an empty list (Q7 B), and the list counts the real blocks
     in the box as well as the ghost blocks (c2).
-  - **The block mix:** a click on a block in the search results adds or removes it; the panel shows "B: Edit Mix"
+  - **The block mix:** a click on a block in the search results adds or removes it; the panel shows "B: Edit mix"
     under it; one "Clear Mix" button empties the mix and turns it off, in place of "Clear" and "Turn off"; "Only my
     inventory" is on by default.
 
@@ -397,9 +397,9 @@ Nothing goes to the server or the pack before the last step.
    the most blocks at their largest in the room `registerLarge` is given; `step9.sh`'s cap checks pass, with an
    edit of exactly 200,000 blocks sent through the server to both games, and a box and an edit over it refused).
 7. **The block mix's changes** ("The block mix and its panel"): the click that toggles, "Clear Mix", "Only my
-   inventory" on at launch, and "B: Edit Mix" in the panel. Done when `step7.sh`'s mix checks pass with their shots.
+   inventory" on at launch, and "B: Edit mix" in the panel. Done when `step7.sh`'s mix checks pass with their shots.
    Built (`BlockMixScreen` toggling a block with a click, keeping "Only my inventory" while the game runs, and its
-   "Clear Mix" emptying and turning off the mix with the screen left open, and `MixPanel`'s "B: Edit Mix" line;
+   "Clear Mix" emptying and turning off the mix with the screen left open, and `MixPanel`'s "B: Edit mix" line;
    `step7.sh`'s mix checks pass, with shots of the screen at 854 by 480 and 1920 by 1080).
 8. **The radial menu's five buttons**: the two rows above the wrench, undo and redo, the Block mix button with the
    Randomizer Bag, the selected look for the current mode's button, E19, and E20 with the widgets moving with the
@@ -421,8 +421,9 @@ Nothing goes to the server or the pack before the last step.
     look checks cover a first start, the player's turning it back on kept across a restart, and the option set alone
     with the record gone).
 11. **Texts for Geo**: every text the steps added or changed (the controls lines, the messages, the button names, "Clear
-    Mix", "B: Edit Mix", the key heading and the material list's title) goes to Geo as editable text, and Geo's version
-    is built in, with `step7.sh` and `step9.sh` checking the texts exactly.
+    Mix", "B: Edit mix", the key heading and the material list's title) goes to Geo as editable text, and Geo's version
+    is built in, with `step7.sh` and `step9.sh` checking the texts exactly. Built: `en_us.json` has the wording Geo
+    approved in inbox request 781, and the two scripts check each of its 15 texts exactly.
 12. **The release**: version 0.4.0 with Geo's hand-edited icons, after Geo's approval: the GitHub release, on the
     server after a backup (with `max-edit-blocks=200000` in its `config/buildingplanner.properties`, which has
     50000 written), and in the pack. The README and the guide's setup steps describe nothing 0.4.0 changes, so they
@@ -432,7 +433,7 @@ Nothing goes to the server or the pack before the last step.
 
 [building-planner.md](building-planner.md) is the spec: what players get, how each goal above is met, the technical
 design with every hook checked in the source, and what's unverified. Geo's decisions are above. The texts players see
-go to Geo for review once something is built.
+are in the wording Geo approved.
 
 ### Source evidence (read 2026-11-13)
 

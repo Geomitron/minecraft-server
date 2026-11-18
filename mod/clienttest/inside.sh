@@ -189,9 +189,14 @@ held_click() {
 	return "$status"
 }
 
-# client_said <client> <text>: the client's chat showed the text.
+# client_said <client> <text>: the client's chat showed exactly the text, as a whole message.
 client_said() {
-	wait_for "/out/client$1.log" "[CHAT] $2" 60
+	local line text="[CHAT] $2"
+	while IFS= read -r line; do
+		line=${line%$'\r'}
+		[[ $line == *"$text" ]] && return 0
+	done < <(timeout 60 tail -n +1 -F "/out/client$1.log" 2> /dev/null)
+	return 1
 }
 
 # no_planner_message <client>: that client's chat has shown none of Building Planner's messages, the texts in its

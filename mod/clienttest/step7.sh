@@ -96,12 +96,12 @@ read -r x y < <(val 1 "widget 0 Use mix")
 click 1 "$x" "$y"
 check "Use mix turns the mix on, 80 cobblestone to 20 mossy cobblestone" \
 	eval '[[ $(val 1 mix) == "on minecraft:cobblestone:80,minecraft:mossy_cobblestone:20" ]]'
-check "with a message" client_said 1 "Block mix on. Press B to change it or turn it off."
+check "with a message" client_said 1 "Block mix on. Press B to edit or clear it."
 drv 1 "notoasts" "wait 5" "shot mix-on-message" > /dev/null
 
 # The mix panel shows while the mix applies: with cobblestone held in Single mode, and no screen open.
-panel="Block mix | 80% | 20% | B: Edit Mix"
-check "the panel shows the mix's shares beside their blocks' icons, and B: Edit Mix under them" \
+panel="Block mix | 80% | 20% | B: Edit mix"
+check "the panel shows the mix's shares beside their blocks' icons, and B: Edit mix under them" \
 	eval '[[ $(val 1 panel) == "$panel" ]]'
 keys 1 key F1
 check "the panel hides while the HUD is hidden (F1)" eval 'drv 1 "wait 5" > /dev/null; [[ $(val 1 panel) == hidden ]]'
