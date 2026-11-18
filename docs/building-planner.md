@@ -13,7 +13,7 @@ Building Planner's own box for Copy and the material list, the copy at the aim w
 material list counting real blocks, ghost blocks left out of both while they're hidden, the block mix's changes, the
 radial menu's five buttons in a new layout that joins its opening animation, "Building Planner" in place of "Effortless
 Building" where players see it, and Geo's hand-edited icons, which 0.3.0 doesn't have. The build steps are in
-[plan.md](plan.md) ("The walkthrough's changes"). Places marked `OPEN:` wait on a question to Geo.
+[plan.md](plan.md) ("The walkthrough's changes").
 
 ## What players get
 
@@ -60,8 +60,8 @@ Building" where players see it, and Geo's hand-edited icons, which 0.3.0 doesn't
   mode. The first corner is the space above the aimed block when the player aims at its top, and the aimed block
   otherwise. The screen shows what the box is for, the click that comes next, the box's size, and the blocks in it, on
   as many lines as they need. Pressing the other of Copy and "Material list" while a box is drawn switches the box to
-  the other purpose. Boxes may be much larger than Effortless Building's shapes, and a box never shrinks to fit a
-  limit (`OPEN:` how large; see "Boxes for Copy and the material list").
+  the other purpose. A box may be up to 256 blocks a side, and it never shrinks to fit a limit (see "Boxes for Copy
+  and the material list").
 - **Copy and paste.** The player presses the Copy button in the radial menu and draws a box: the blocks inside, ghost
   blocks and real blocks alike, become a copy, which only that player sees; where a ghost block stands in place of a
   real block, the copy takes the ghost block. While ghost blocks are hidden, the copy takes only real blocks. The copy
@@ -69,19 +69,20 @@ Building" where players see it, and Geo's hand-edited icons, which 0.3.0 doesn't
   which one undo takes back, and the copy stays for more pastes; the scroll wheel turns it; a middle click mirrors it;
   a right click puts it away. These take the place of what the clicks and the wheel do otherwise, such as changing the
   hotbar slot. The empty space in the copy leaves the ghost blocks under it as they are. Doing anything else in Building
-  Planner or Effortless Building, such as choosing "Wall" or pressing "Material list", also puts the copy away (`OPEN:`
-  whether showing or hiding ghost blocks, undo and redo do too). The radial menu's Paste button brings back the most
-  recent copy at the aim.
+  Planner or Effortless Building, such as choosing "Wall", pressing "Material list", or showing or hiding ghost
+  blocks, also puts the copy away; undo, redo and the speed sliders keep it at the aim. The radial menu's Paste button
+  brings back the most recent copy at the aim.
 - **Material list.** The player presses the "Material list" button in the radial menu and draws a box: Litematica's
   material list opens for the blocks inside, ghost blocks and real blocks alike, with how many of each block the
   ghost blocks still need. While ghost blocks are hidden, it lists only the real blocks and leaves the ghost blocks
   hidden. A box with no blocks opens an empty list.
 - **Building Planner's name.** Where players see Effortless Building's name in the game, the corner of the radial
-  menu, it reads "Building Planner". Effortless Building's four keys in Controls have a readable heading (`OPEN:`
-  under the "Building Planner" heading or one of their own).
-- **Litematica's area selection.** `OPEN:` what Building Planner does about an area selection a player left in
-  Litematica, which Litematica keeps drawing as a large see-through box though its tool is off (see "Litematica's area
-  selection").
+  menu, it reads "Building Planner". Effortless Building's four keys in Controls show under the "Building Planner"
+  heading, with Building Planner's own.
+- **Litematica's area selection.** On each player's computer, once, Building Planner turns off Litematica's drawing of
+  area selections, so a selection a player left in Litematica no longer shows as a large see-through box while
+  Litematica's tool is off (see "Litematica's area selection"). The player can turn it back on in Litematica's
+  settings.
 - **How ghost blocks look.** On each player's computer, once, Building Planner turns on Litematica's "render blocks as
   translucent" and sets its ghost block alpha to 0.8, so ghost blocks draw see-through. It sets each only if the player
   hasn't changed it from Litematica's default (off, and 0.5), and never again, so a player's own later change stays.
@@ -164,7 +165,7 @@ Effortless Building, under `common/src/main/java/nl/requios/effortlessbuilding/`
 | E20 | `screen/RadialMenu.java`, private field `visibility` | `@Shadow`, read by E12 | The menu's opening animation: `extractRenderState` adds 0.4 × the frame's partial tick to `visibility` each frame, up to 1, and places its ring and its buttons at 0.8 + 0.2 × `visibility` of their distance and size from the middle, while the screen darkens. E12 places and sizes Building Planner's widgets by the same factor before drawing them. |
 | E21 | `buildmode/BuildModes.java`, `setBuildMode` | `@Inject` at head | Choosing a mode (the radial menu's `performAction` is its only caller outside `BuildModes`) ends a box and puts the copy away, even when the player chooses the mode they had. |
 | E22 | `render/BlockPreviewRenderer.java`, `render` | `@Inject` at head, cancellable | No shape preview while a box is drawn or the copy is at the aim: the method draws the current mode's first block at the aim each frame (`BuildPipelineClient.getPreviewBlocks`). |
-| E23 | `utilities/KeyBindings.java`, `<clinit>` | `@ModifyArg` on the category of each of the four `KeyMapping` constructors | `OPEN:` (the key heading) only with Geo's option A: Effortless Building's keys go under Building Planner's heading in Controls (see "Keys"). |
+| E23 | `utilities/KeyBindings.java`, `<clinit>` | `@ModifyArg` on the category of each of the four `KeyMapping` constructors | Effortless Building's keys go under Building Planner's heading in Controls (see "Keys"). |
 
 Effortless Building's limits on its shapes come from its config on the player's computer (`config/ServerConfig.java`),
 which keeps its defaults, since only Effortless Building's server sends other values (`SyncServerConfigS2CPacket`): in
@@ -204,7 +205,6 @@ Litematica, under `src/main/java/fi/dy/masa/litematica/`:
 | L7 | `render/schematic/ChunkRendererSchematicVbo.java`, `getOverlayType(BlockState, BlockState)` | `@ModifyReturnValue` | While Building Planner has a session, turn `EXTRA` into `NONE`. Litematica marks a real block as extra wherever a placement's box holds air there (`schematicOverlayTypeExtra`, on by default), and a tile's box is a whole chunk column's sections, so every real block in it would be marked. The layer holds only blocks to place, so no real block is extra. Missing and wrong blocks keep their colours. |
 | L8 | `schematic/placement/PlacementManagerTaskRebuild.java`, `run()`; `PlacementManagerTask.java`'s constructors | `@WrapMethod`; a number for each task, in the order they're made (`RebuildOrder`) | Run the rebuilds of one chunk column one at a time. Litematica's background threads (at least two) rebuild a column from its placements' blocks as they are when the rebuild runs, so two rebuilds of one column at once could end with the older one's result, read before an edit's blocks were written. |
 | L9 | `schematic/placement/PlacementManagerDaemonHandler.java`, `removeRebuildTasksFor` and `removeDeferredTasksFor` | `@WrapMethod` | A running rebuild drops from the queue only the rebuilds of its column made before it began, whose edits it reads. Litematica's rebuild drops every queued rebuild of its column as it ends, and as it unloads a column with no placements, including one queued for an edit written after it read the column, which would leave that edit undrawn. Elsewhere (a new rebuild replacing the queued ones, an unload) every queued rebuild of the column still goes. |
-| L10 | `render/OverlayRenderer.java`, `renderBoxes` | `@ModifyExpressionValue` on `Configs.Visuals.ENABLE_AREA_SELECTION_RENDERING.getBooleanValue()` | `OPEN:` only with Geo's option B for Litematica's area selection: no area selection box while Building Planner has a session (see "Litematica's area selection"). |
 
 Public Litematica API the add-on calls: `LitematicaSchematic.createEmptySchematic`, `getSubRegionContainer`,
 `getAreaSize`; `LitematicaBlockStateContainer`'s `get` and `set`; `SchematicPlacement.createFor`,
@@ -302,11 +302,10 @@ Order and conflicts:
    watches, within the world's build height and inside the world border, and the edit is within the block cap. A
    failed check changes nothing and returns `rejected` with a message.
 
-The block cap is the server's config file `config/buildingplanner.properties` (`max-edit-blocks`): 50,000 blocks an
-edit. `hello` carries it, so changing it needs no new protocol version, up to the 200,000 blocks an `edit` may carry
-(`SyncLimits.WIRE_MAX_EDIT_BLOCKS`), about 2.4 MB, which Fabric splits into packets of 1 MiB (`registerLarge`).
-`OPEN:` the block cap, which limits the copy and its paste. The recommendation (Geo's option A for the box's size):
-200,000.
+The block cap is the server's config file `config/buildingplanner.properties` (`max-edit-blocks`): 200,000 blocks
+an edit, the most an `edit` may carry (`SyncLimits.WIRE_MAX_EDIT_BLOCKS`), about 2.4 MB, which Fabric splits into
+packets of 1 MiB (`registerLarge`). `hello` carries it, so a lower cap needs no new protocol version. The cap limits
+the copy and its paste.
 
 ### The layer's files on the server
 
@@ -362,17 +361,17 @@ Planner moved <plans> of <shared> shared plans into the layer: <blocks> ghost bl
 
 ### Undo
 
-The server keeps an undo list for each player: each step is one edit (a shape, an erase or a paste), with its
-dimension and each block's state before and after the edit. Undo takes the player's newest step and sets each of its
-blocks back to its before-state only if the layer still holds that step's after-state there; blocks someone has
-changed since stay as they are, and a `notice` says how many. The undo goes out as an ordinary `applied` edit with no
-`clientSeq`; an undo that changes no block sends none, and with no steps left a `notice` says there's nothing to undo.
-Steps survive the player leaving or changing dimension, keep the newest 50 per player (Effortless Building's own
-depth), and last until the server restarts. Each block in a step takes about 64 bytes of the server's memory (expected,
-not measured), so 50 steps of 200,000 blocks would take about 640 MB of each player's share of its 6 GB. `OPEN:` with
-a cap of 200,000, the list also drops its oldest steps while the player's steps hold more than 2,000,000 blocks in all
-(about 128 MB a player), always keeping the newest. The part of a step an undo changed goes onto the player's redo list; a
-redo applies it forward by the same rule, and the player's next new edit clears the list.
+The server keeps an undo list for each player: each step is one edit (a shape, an erase or a paste), with its dimension
+and each block's state before and after the edit. Undo takes the player's newest step and sets each of its blocks back
+to its before-state only if the layer still holds that step's after-state there; blocks someone has changed since stay
+as they are, and a `notice` says how many. The undo goes out as an ordinary `applied` edit with no `clientSeq`; an undo
+that changes no block sends none, and with no steps left a `notice` says there's nothing to undo. Steps survive the
+player leaving or changing dimension, keep the newest 50 per player (Effortless Building's own depth), and last until
+the server restarts. Each block in a step takes about 64 bytes of the server's memory (expected, not measured), so 50
+steps of 200,000 blocks would take about 640 MB of each player's share of its 6 GB. The list also drops its oldest steps
+while the player's steps hold more than 2,000,000 blocks in all (about 128 MB a player), always keeping the newest. The
+part of a step an undo changed goes onto the player's redo list; a redo applies it forward by the same rule, and the
+player's next new edit clears the list.
 
 ### The client
 
@@ -456,16 +455,14 @@ the wheel. A mode ends when the player:
 
 - right-clicks (M2);
 - chooses a mode in the radial menu (E21), even the one they had;
+- shows or hides ghost blocks;
 - presses the radial menu's Copy, "Material list", Paste or Block mix button, or the block mix key, each of which then
   does its own action (Copy and "Material list" start or switch a box, Paste brings the copy back);
 - leaves the server or changes dimension.
 
-`OPEN:` whether showing or hiding ghost blocks, and undo and redo, end a mode too. Geo's words are "Doing anything else
-in the mod"; the recommendation is that these three keep it, so a player can hide ghost blocks to see the real blocks
-under the copy, or undo a paste and paste again.
+Undo, redo and the speed sliders keep the mode, so a player can undo a paste and paste again.
 
-`OPEN:` whether chat says so when a box ends before its third click (752 Q3). The recommendation is no message, since
-the controls line goes away and the box stops drawing.
+Chat says nothing when a box ends before its third click: the controls line goes away and the box stops drawing.
 
 Opening a screen (the inventory, chat, the radial menu) keeps the mode; its controls act only with no screen open,
 since the hooks act only on the game's own clicks and wheel.
@@ -502,12 +499,12 @@ Between clicks, the box follows the aim: its outline and see-through sides draw 
 (`RenderUtils.renderAreaOutline` and `renderAreaSides`), in white, with the corners set so far fixed. The player may
 walk, or fly in creative mode, while the box is drawn, so a far corner is reached by walking toward it.
 
-`OPEN:` the box's limits. The recommendation (Geo's option A in the questions): a corner is aimed at up to 128 blocks
-from the player's eyes; a box is at most 256 blocks a side, and its height reaches the world's build limits; and every
-chunk the box touches must be loaded in the player's game (`ClientLevel.hasChunk`), since the game knows the real
-blocks and the layer's columns only there. Where the aimed corner would break a limit, the box draws red, the line on
-screen says which limit ("At most 256 blocks a side", "Part of the box is too far away to read. Move closer."), and the
-click doesn't set the corner. A box never shrinks to fit a limit.
+The box's limits: a corner is aimed at up to 256 blocks from the player's eyes; a box is at most 256 blocks a side, and
+its height reaches the world's build limits; and every chunk the box touches must be loaded in the player's game
+(`ClientLevel.hasChunk`), since the game knows the real blocks and the layer's columns only there. Where the aimed
+corner would break a limit, the box draws red, the line on screen says which limit ("At most 256 blocks a side", "Part
+of the box is too far away to read. Move closer."), and the click doesn't set the corner. A box never shrinks to fit a
+limit.
 
 While the box is drawn, the blocks in it show under the crosshair: each block's item with its count, most numerous
 first, 20 apart from 10 right of the screen's middle, as Effortless Building's own list starts (`RenderHandler.
@@ -566,21 +563,20 @@ what its key does (see "Show or hide"), "Block mix" what the block mix key does 
 Copy and "Material list" start a box (see "Boxes for Copy and the material list"), and Paste brings back the most recent
 copy (see "Copy and paste").
 
-`OPEN:` where the five buttons sit. Geo asked for a clean arrangement; the questions show three layouts, each a mockup
-on an in-game shot: A, two rows above the wrench, undo and redo, in their columns ("Show or hide ghost blocks", "Block
-mix" and "Material list" 39 above the middle, Copy and Paste 65 above it); B, one row of five centred above the ring,
-26 apart, 100 above the middle; and C, one column of five left of the wrench, 183 left of the middle. Each meets nothing
-the menu draws at 854 by 480, GUI scale 2, and at 1920 by 1080, GUI scales 2 and 4.
+The five buttons sit in two rows above the wrench, undo and redo, in their columns: "Show or hide ghost blocks",
+"Block mix" and "Material list" 39 above the middle, and Copy and Paste 65 above it, over the wrench and undo. They
+meet nothing the menu draws at 854 by 480, GUI scale 2, and at 1920 by 1080, GUI scales 2 and 4.
 
 Each icon is a 16 by 16 image of its own in `mod/src/main/resources/assets/buildingplanner/textures/gui/radial/`, named
 by what it shows: `ghost_blocks_shown`, `ghost_blocks_hidden`, `copy`, `paste` and `material_list`. Changing an icon
 means replacing its file. Each draws at 16 by 16 GUI pixels with nearest-pixel filtering, as the menu draws its own
-(`AllIcons.render`). Each icon is the one Geo picked from the generated candidate sets (inbox request 738), made with
-an OpenRouter model, then edited by hand in Paint.NET: `ghost_blocks_shown` and `ghost_blocks_hidden` from set 14, and
+(`AllIcons.render`). Each icon is the one Geo picked from the generated candidate sets (inbox request 738), made with an
+OpenRouter model, then edited by hand in Paint.NET: `ghost_blocks_shown` and `ghost_blocks_hidden` from set 14, and
 `copy` from set 16, all `google/gemini-nano-banana-2.1`; `paste` from set 56a, `google/gemini-3.1-flash-image`; and
-`material_list` from set 3, `google/gemini-3-pro-image`. `OPEN:` the Block mix button's icon; the recommendation is
-Effortless Building's own Randomizer Bag item texture (`effortlessbuilding:textures/item/randomizerbag.png`), drawn from
-Effortless Building's jar, which copies none of it.
+`material_list` from set 3, `google/gemini-3-pro-image`. The eye on `ghost_blocks_shown` and `ghost_blocks_hidden`, with
+the slash over it, was then redrawn at 12 by 10 pixels, the size Geo picked (inbox request 768). The "Block mix" button
+shows Effortless Building's own Randomizer Bag item texture (`effortlessbuilding:textures/item/randomizerbag.png`),
+drawn from Effortless Building's jar, which copies none of it.
 
 ### Keys
 
@@ -593,13 +589,9 @@ Effortless Building's four keys ("Open Radial Menu", "Open Modifier Settings", "
 heading `key.category.effortlessbuilding.keybindings`: Minecraft 26.3 names a key category by the translation
 `key.category.<namespace>.<path>` of its id (`KeyMapping.Category.label`), Effortless Building registers the id
 `effortlessbuilding:keybindings` (`utilities/KeyBindings.java`), and its language file names
-`key.categories.effortlessbuilding` instead. `OPEN:` the heading for those keys:
-
-- A: they move under the "Building Planner" heading (hook E23). Controls sorts the keys of one heading by their names
-  (`KeyMapping.compareTo`), so the heading lists "Block mix", "Open Modifier Settings", "Open Radial Menu", "Redo",
-  "Show or hide ghost blocks" and "Undo".
-- B: they keep a heading of their own, which Building Planner's language file names, as the game merges every mod's
-  language files: "Building Planner: drawing" (a draft for Geo's review).
+`key.categories.effortlessbuilding` instead. Hook E23 moves them under the "Building Planner" heading. Controls
+sorts the keys of one heading by their names (`KeyMapping.compareTo`), so the heading lists "Block mix", "Open Modifier
+Settings", "Open Radial Menu", "Redo", "Show or hide ghost blocks" and "Undo".
 
 ### The block mix and its panel
 
@@ -691,11 +683,10 @@ and "Available", how many the player carries, with the ender chest's contents Li
 "materialListCountEnderCache" is on (`MaterialListUtils.getMaterialList`). Its "Hide available" button hides the rows
 whose "Available" covers "Missing".
 
-The list counts the real blocks in the box as well (752 c2). `OPEN:` how they appear in the columns. The
-recommendation (Geo's option A in the questions): a real block at a position with no ghost block counts in its block's
-"Total" and never in "Missing", since it's already built; a real block under a ghost block counts only through that
-ghost block, as built or as the wrong block. For a box with 10 ghost oak planks, 6 of them already built as real oak
-planks, and 20 real stone blocks with no ghost blocks over them, for a player carrying 3 oak planks:
+The list counts the real blocks in the box as well, in the same list: a real block at a position with no ghost block
+counts in its block's "Total" and never in "Missing", since it's already built; a real block under a ghost block counts
+only through that ghost block, as built or as the wrong block. For a box with 10 ghost oak planks, 6 of them already
+built as real oak planks, and 20 real stone blocks with no ghost blocks over them, for a player carrying 3 oak planks:
 
 | Item | Total | Missing | Available |
 |---|---|---|---|
@@ -710,16 +701,11 @@ Litematica's rendering and its option "enableAreaSelectionBoxesRendering" (on by
 holds and whether or not the tool is on. Litematica saves the selection for each server and dimension
 (`DataManager.savePerDimensionData`: the simple selection, its default mode, in `area_simple`, and a normal selection by
 its file) and restores it when the player comes back. Since Building Planner turned Litematica's tool item off, a player
-who left a selection on the server has no tool to change or clear it, and it stays drawn there, as Geo saw. `OPEN:`
-what Building Planner does about it:
-
-- A: turn off "enableAreaSelectionBoxesRendering" once on each player's computer, as it sets the look of ghost blocks
-  (only while the option is still at Litematica's default, and never again). Every selection, on every server and in
-  singleplayer, stops drawing until the player turns the option back on in Litematica's settings ("Visuals").
-- B: draw no area selection while Building Planner has a session (hook L10). Selections still draw elsewhere, and
-  Litematica's own switch does nothing on this server.
-- C: clear the current selection once on each player's computer (`SelectionManager.clear` for a normal selection, and
-  the simple selection's corners). The saved selection files stay, but the simple selection's corners are lost.
+who left a selection on the server has no tool to change or clear it, and it stays drawn there, as Geo saw. So
+Building Planner turns off "enableAreaSelectionBoxesRendering" once on each player's computer, as it sets the look of
+ghost blocks: only while the option is still at Litematica's default, and never again. Every selection, on every
+server and in singleplayer, then stops drawing until the player turns the option back on in Litematica's settings
+("Visuals").
 
 ### When the server lacks the mod
 
@@ -822,12 +808,12 @@ they're teleported; the driver's `scroll` and `click middle` send the wheel and 
 - Hidden ghost blocks stay hidden after a restart, until N shows them.
 - At 854 by 480, GUI scale 2, and at 1920 by 1080, GUI scales 2 and 4, the five buttons meet nothing the menu draws in
   any mode (its ring, buttons, mode options, mode names, descriptions and corner text), the sliders, each other or the
-  screen's edges (the driver's `radialclear`), in the chosen layout's slots (the driver's `slots`), each with its hover
+  screen's edges (the driver's `radialclear`), in the two rows' slots (the driver's `slots`), each with its hover
   text; each is shot, with the buttons' boxes in the log. Shots taken 1 and 2 frames after the menu opens show the
   buttons nearer the middle and smaller than when it's open, as the menu's own are. With Effortless Building's mode
   Line, no mode segment shows selected while a box is drawn, and Line's does after.
 - The menu's corner text reads "Building Planner", and Controls shows Building Planner's keys and Effortless Building's
-  under the chosen heading, with no raw key name; each is shot.
+  under the "Building Planner" heading, with no raw key name; each is shot.
 - The Copy button starts a box: the controls line shows "Copy: Left-click to set the first corner, Right-click to
   cancel", a right click and a use of the place click places no block, and Effortless Building's preview and mode are
   as they were. Aiming at a block's top face, the box's first corner is the space above it; aiming at its side, the
