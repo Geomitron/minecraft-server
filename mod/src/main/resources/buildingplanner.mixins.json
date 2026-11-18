@@ -11,6 +11,7 @@
 		"effortless.BuildPipelineClientMixin",
 		"effortless.BuildPipelineMixin",
 		"effortless.ConstraintSystemMixin",
+		"effortless.KeyBindingsMixin",
 		"effortless.MinecraftMixin",
 		"effortless.PacketHandlerMixin",
 		"effortless.RadialMenuMixin",

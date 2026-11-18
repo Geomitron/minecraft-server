@@ -474,6 +474,29 @@ public final class Driver implements ClientModInitializer {
 				}
 				return String.join(" | ", texts);
 			}
+			case "drawntexts" -> {
+				// drawntexts: each string the last frame drew as plain text, separated by " | ".
+				return ScreenProbe.drawnTexts();
+			}
+			case "cornertext" -> {
+				// cornertext: the string the last frame drew at the screen's lower right, as Effortless Building's
+				// radial menu draws its name, then " | " and its window box (left top right bottom), or none.
+				return ScreenProbe.cornerText(mc);
+			}
+			case "keybinds" -> {
+				// keybinds: opens the key binds screen (Options, Controls, Key Binds).
+				ScreenProbe.openKeyBinds(mc);
+				return "ok";
+			}
+			case "keybindlist" -> {
+				// keybindlist: the key binds screen's headings, each with its keys in order: "Heading: key, key ; ...".
+				return ScreenProbe.keyBinds(mc);
+			}
+			case "keybindscroll" -> {
+				// keybindscroll <heading>: scrolls the key binds screen to that heading, then gives the window boxes
+				// (left top right bottom) of its row and of the heading with its keys.
+				return ScreenProbe.scrollKeyBinds(mc, line.substring("keybindscroll ".length()));
+			}
 			case "modehud" -> {
 				// modehud: the line of the mouse mode's controls as the player reads it, or hidden.
 				return modeHud().text();

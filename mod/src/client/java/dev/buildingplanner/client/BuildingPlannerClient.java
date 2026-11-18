@@ -90,6 +90,11 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	 */
 	private static boolean attackHeld;
 
+	/** The heading of Building Planner's keys in Controls, which hook E23 gives Effortless Building's keys too. */
+	public static KeyMapping.Category category() {
+		return CATEGORY;
+	}
+
 	@Override
 	public void onInitializeClient() {
 		FabricLoader loader = FabricLoader.getInstance();

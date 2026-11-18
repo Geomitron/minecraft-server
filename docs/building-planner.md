@@ -27,9 +27,10 @@ or takes out a block, its "Clear Mix" that keeps the screen open, and "Only my i
 Mix" under the mix panel (`BlockMixScreen` and `MixPanel`); and the radial menu's five buttons in two rows above the
 wrench, undo and redo, joining the menu's opening animation, with the Block mix button showing the Randomizer Bag and
 the button for the mouse mode that's on showing selected in place of a mode segment (`RadialButton`,
-`RadialMenuWidgets` and hooks E16, E19 and E20). Not built yet: "Building Planner" in place of "Effortless Building"
-where players see it, and Geo's hand-edited icons, which 0.3.0 doesn't have. The build steps are in
-[plan.md](plan.md) ("The walkthrough's changes").
+`RadialMenuWidgets` and hooks E16, E19 and E20); and "Building Planner" in place of "Effortless Building" in the radial
+menu's corner, with Effortless Building's four keys under the "Building Planner" heading in Controls (hooks E18 and
+E23). Not built yet: Litematica's area selection turned off, and Geo's hand-edited icons, which 0.3.0 doesn't have.
+The build steps are in [plan.md](plan.md) ("The walkthrough's changes").
 
 ## What players get
 

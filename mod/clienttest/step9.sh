@@ -1,5 +1,6 @@
 # Step 9's in-game checks: showing and hiding ghost blocks with N and the radial menu's button, drawing while they're
-# hidden, the choice kept across a restart, where the radial menu's buttons sit, with screenshots, the box with its
+# hidden, the choice kept across a restart, where the radial menu's buttons sit, with screenshots, the menu's corner
+# text, the key headings in Controls, the box with its
 # list under the crosshair, copy and paste with the copy at the aim worked by the mouse, the material list, and N on a
 # server without Building Planner. Sourced by inside.sh, which provides drv, val,
 # check, keys, xdo, click, use_click, attack_click, client_said, start_server, stop_server, start_client, stop_client,
@@ -235,13 +236,32 @@ radial_open
 xdo 1 mousemove --window %w 427 240
 drv 1 "wait 10" "notoasts" "wait 5" "notoasts" "shot radial-no-copy" > /dev/null
 echo "  radial-no-copy buttons: $(val 1 buttons)" >> /out/checks.log
+echo "  radial-no-copy corner text: $(val 1 cornertext)" >> /out/checks.log
 check "without a copy, the menu shows its five buttons in their slots, with their hover texts" \
 	eval '[[ $(val 1 slots) == "$slots" ]]'
+# Building Planner's name, where Effortless Building draws its own: the text at the menu's lower right.
+check "the menu's corner text reads \"Building Planner\"" eval '[[ $(val 1 cornertext) == "Building Planner | "* ]]'
+check "and the menu draws no \"Effortless Building\"" eval '[[ $(val 1 drawntexts) != *"Effortless Building"* ]]'
 radial_point "Block mix"
 drv 1 "wait 10" "notoasts" "shot radial-block-mix-hover" > /dev/null
 xdo 1 mousemove --window %w 5 5
 drv 1 "wait 5" > /dev/null
 check "letting the key go with the pointer moved off Block mix closes the menu and opens nothing" radial_let_go
+
+# Controls: Effortless Building's four keys show under the "Building Planner" heading, with Building Planner's own, in
+# the order Controls sorts them, and no raw key name. The list is scrolled to the heading and shot at 854 by 480, with
+# the heading's and the keys' window boxes (left top right bottom) in the log.
+drv 1 "keybinds" "wait 10" > /dev/null
+echo "  controls: $(val 1 keybindlist)" >> /out/checks.log
+planner_keys="Block mix, Open Modifier Settings, Open Radial Menu, Redo, Show or hide ghost blocks, Undo"
+check "Controls shows Effortless Building's four keys under \"Building Planner\", with Building Planner's own" eval \
+	'[[ $(val 1 keybindlist) == *"Building Planner: $planner_keys"* ]]'
+check "under one heading" eval '(($(val 1 keybindlist | grep -o "Building Planner: " | wc -l) == 1))'
+check "with no raw key name" eval '[[ $(val 1 keybindlist) != *"key."* ]]'
+echo "  controls boxes: $(val 1 "keybindscroll Building Planner")" >> /out/checks.log
+drv 1 "wait 5" "notoasts" > /dev/null
+shot 1 controls-854x480
+drv 1 "close" "wait 5" > /dev/null
 
 # The Paste button before any copy gives a message.
 nothing_lines=$(chat_count 1 "Nothing to paste. Use Copy first.")

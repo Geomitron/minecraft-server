@@ -1,0 +1,143 @@
+package dev.buildingplanner.client;
+
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.components.MultiLineTextWidget;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.options.controls.KeyBindsList;
+import net.minecraft.client.gui.screens.options.controls.KeyBindsScreen;
+import net.minecraft.network.chat.Component;
+
+/**
+ * What a screen shows, for the driver's reading of the radial menu's corner text and of Controls (step9.sh): the plain
+ * text drawn in the last frame (recorded by {@code GuiTextMixin}), and the headings and keys of the key binds screen,
+ * with where they are in the window.
+ */
+public final class ScreenProbe {
+	/** The height of a line of the game's text, in GUI pixels. */
+	private static final int FONT_HEIGHT = 9;
+
+	/** A string drawn as plain text at {@code x}, {@code y}, in GUI pixels, with its width. */
+	private record Drawn(String text, int x, int y, int width) {
+	}
+
+	/** The strings of the frame being drawn, and of the last frame drawn. Only the game's render thread touches them. */
+	private static List<Drawn> current = new ArrayList<>();
+	private static List<Drawn> last = List.of();
+
+	private ScreenProbe() {
+	}
+
+	/** A string is being drawn as plain text. */
+	public static void drawn(Font font, String text, int x, int y) {
+		current.add(new Drawn(text, x, y, font.width(text)));
+	}
+
+	/** A frame has been drawn. */
+	public static void frameDrawn() {
+		last = current;
+		current = new ArrayList<>();
+	}
+
+	/** Each string drawn in the last frame, separated by " | ". */
+	static String drawnTexts() {
+		return last.stream().map(Drawn::text).collect(Collectors.joining(" | "));
+	}
+
+	/**
+	 * The string the last frame drew at the screen's right, bottom corner, as Effortless Building's radial menu draws its
+	 * name (right-aligned, 4 from the edge, 10 above the bottom), then its window box (left top right bottom), or none.
+	 */
+	static String cornerText(Minecraft mc) {
+		Screen screen = mc.gui.screen();
+		double scale = mc.getWindow().getGuiScale();
+		for (Drawn d : last) {
+			if (d.y() == screen.height - 10 && d.x() + d.width() == screen.width - 4) {
+				return d.text() + " | " + box(scale, d.x(), d.y(), d.x() + d.width(), d.y() + FONT_HEIGHT);
+			}
+		}
+		return "none";
+	}
+
+	/** Opens the key binds screen, as Options and then Controls do. */
+	static void openKeyBinds(Minecraft mc) {
+		mc.setScreenAndShow(new KeyBindsScreen(mc.gui.screen(), mc.options));
+	}
+
+	/** The key binds screen's headings, each with its keys in the order shown: "Heading: key, key ; Heading: key". */
+	static String keyBinds(Minecraft mc) throws Exception {
+		List<String> groups = new ArrayList<>();
+		List<String> keys = new ArrayList<>();
+		String heading = null;
+		for (KeyBindsList.Entry entry : list(mc).children()) {
+			if (entry instanceof KeyBindsList.CategoryEntry) {
+				if (heading != null) {
+					groups.add(heading + ": " + String.join(", ", keys));
+				}
+				heading = headingOf(entry);
+				keys.clear();
+			} else {
+				keys.add(((Component) field(entry, "name")).getString());
+			}
+		}
+		if (heading != null) {
+			groups.add(heading + ": " + String.join(", ", keys));
+		}
+		return String.join(" ; ", groups);
+	}
+
+	/**
+	 * Scrolls the key binds screen so the heading is at the top of its list, as far as the list allows, and gives the
+	 * window boxes (left top right bottom) of the heading's row and of the heading with its keys.
+	 */
+	static String scrollKeyBinds(Minecraft mc, String heading) throws Exception {
+		KeyBindsList list = list(mc);
+		List<KeyBindsList.Entry> entries = list.children();
+		int first = -1;
+		int end = entries.size();
+		for (int i = 0; i < entries.size(); i++) {
+			if (entries.get(i) instanceof KeyBindsList.CategoryEntry) {
+				if (first >= 0) {
+					end = i;
+					break;
+				}
+				if (headingOf(entries.get(i)).equals(heading)) {
+					first = i;
+				}
+			}
+		}
+		if (first < 0) {
+			return "no heading " + heading;
+		}
+		list.setScrollAmount(first * (list.getRowBottom(0) - list.getRowTop(0)));
+		double scale = mc.getWindow().getGuiScale();
+		int left = list.getRowLeft();
+		int right = list.getRowRight();
+		return "heading " + box(scale, left, list.getRowTop(first), right, list.getRowBottom(first))
+			+ " ; with its keys " + box(scale, left, list.getRowTop(first), right, list.getRowBottom(end - 1));
+	}
+
+	private static KeyBindsList list(Minecraft mc) throws Exception {
+		return (KeyBindsList) field(mc.gui.screen(), "keyBindsList");
+	}
+
+	private static String headingOf(Object categoryEntry) throws Exception {
+		return ((MultiLineTextWidget) field(categoryEntry, "categoryName")).getMessage().getString();
+	}
+
+	private static Object field(Object owner, String name) throws Exception {
+		Field f = owner.getClass().getDeclaredField(name);
+		f.setAccessible(true);
+		return f.get(owner);
+	}
+
+	/** A box in GUI pixels as its window box: left top right bottom. */
+	private static String box(double scale, int left, int top, int right, int bottom) {
+		return String.join(" ", String.valueOf((int) (left * scale)), String.valueOf((int) (top * scale)),
+			String.valueOf((int) (right * scale)), String.valueOf((int) (bottom * scale)));
+	}
+}

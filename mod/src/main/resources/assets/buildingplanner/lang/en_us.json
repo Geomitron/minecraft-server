@@ -32,6 +32,7 @@
 	"buildingplanner.ui.block_mix.edit": "%s: Edit Mix",
 	"buildingplanner.ui.radial.build_speed": "Build speed: %s blocks/s",
 	"buildingplanner.ui.radial.break_speed": "Break speed: %s blocks/s",
+	"buildingplanner.ui.radial.credits": "Building Planner",
 	"buildingplanner.ui.radial.copy": "Copy",
 	"buildingplanner.ui.radial.paste": "Paste",
 	"buildingplanner.ui.radial.material_list": "Material list",

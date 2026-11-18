@@ -6,18 +6,22 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Renderable;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
 import nl.requios.effortlessbuilding.screen.RadialMenu;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Constant;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.ModifyConstant;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * Hooks E11, E12, E16, E19 and E20: Building Planner's widgets in Effortless Building's radial menu. Minecraft clears a
- * screen's widgets and calls {@code init} each time it opens, so E11 adds them there; as children of the screen they
+ * Hooks E11, E12, E16, E18, E19 and E20: Building Planner's widgets in Effortless Building's radial menu, and its name
+ * in the menu's corner (E18). Minecraft clears a screen's widgets and calls {@code init} each time it opens, so E11
+ * adds them there; as children of the screen they
  * get the clicks and drags the menu passes on to {@code Screen}. The menu draws itself without {@code Screen}'s own
  * drawing, so E12 places them for the menu's opening animation, read from its {@code visibility} (E20), and draws them,
  * after the menu's ring and buttons and before its texts, so a hovered mode's name, which can fall on the sliders,
@@ -76,5 +80,10 @@ abstract class RadialMenuMixin extends Screen {
 		target = "Lnl/requios/effortlessbuilding/buildmode/BuildModeEnum;ordinal()I"))
 	private int buildingplanner$selectedSegment(int modeIndex) {
 		return RadialMenuWidgets.selectedSegment(modeIndex);
+	}
+
+	@ModifyConstant(method = "drawTexts", constant = @Constant(stringValue = "Effortless Building"))
+	private String buildingplanner$credits(String effortlessBuilding) {
+		return I18n.get("buildingplanner.ui.radial.credits");
 	}
 }

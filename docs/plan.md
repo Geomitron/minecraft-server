@@ -409,7 +409,10 @@ Nothing goes to the server or the pack before the last step.
    radial menu checks pass at all three sizes, with the driver's shots 1 and 2 frames after opening and its reading of
    the ring's selected segment, `step7.sh`'s Block mix button check passes, and `step8.sh` and `step10.sh` pass).
 9. **Building Planner's name and the key heading**: E18, and E23 moving Effortless Building's keys under "Building
-   Planner". Done when `step9.sh`'s corner text and Controls checks pass with their shots.
+   Planner". Done when `step9.sh`'s corner text and Controls checks pass with their shots. Built (`RadialMenuMixin`'s
+   E18 and `KeyBindingsMixin`'s E23, with `buildingplanner.ui.radial.credits`; `step9.sh`'s corner text and Controls
+   checks pass, reading the strings the menu draws and the key binds screen's headings through the driver's
+   `ScreenProbe`, with shots of the menu at 854 by 480 and of Controls scrolled to the heading).
 10. **Litematica's area selection**: its drawing turned off once, as the look of ghost blocks is set. Done when
     `step9.sh`'s selection check passes and `step10.sh`'s look checks cover the option.
 11. **Texts for Geo**: every text the steps added or changed (the controls lines, the messages, the button names, "Clear
