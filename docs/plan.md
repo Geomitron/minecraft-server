@@ -3,19 +3,23 @@
 ## Current setup
 
 **Server.** Minecraft 26.3 on Fabric (loader 0.20.1, server launcher 1.1.2) with Fabric API 0.166.2+26.3 and
-Building Planner 0.3.0 from the release `building-planner-0.3.0` (`/home/minecraft/mods/`), on Geo's VPS. The systemd unit `minecraft.service` runs it as root from `/home/minecraft`:
+Building Planner 0.4.0 from the release `building-planner-0.4.0` (`/home/minecraft/mods/`), on Geo's VPS, with
+`max-edit-blocks=200000` in `config/buildingplanner.properties`. The systemd unit `minecraft.service` runs it as root
+from `/home/minecraft`:
 `/usr/lib/jvm/java-25-openjdk-amd64/bin/java -Xmx6G -Xms1G -jar fabric-server-mc.26.3-loader.0.20.1-launcher.1.1.2.jar nogui`,
 port 25565. Survival, hard, whitelist enforced (11 players), online mode. None of the mods adds blocks or items, so players without
 mods can join: an unmodded 26.3 client joined a dev server with the same mods (`def7603`). The world (`world/`) is 1.9 GB.
 Building Planner keeps the shared ghost blocks in `world/building-planner/layer/`. Its one-time import of Syncmatica's shared
 plans found none (Syncmatica's list in `world/syncmatica/placements.json` was empty), so the ghost blocks started
 empty; Syncmatica's files, `world/syncmatica/` and `syncmatics/`, stay as they were.
-Archives sit beside it: `minecraft-backup-2026-11-17-pre-building-planner-0.3.0.tar.gz` (the world and `syncmatics/`
-just before Building Planner 0.3.0 was installed, 1.5 GB), `minecraft-backup-2026-11-16-pre-building-planner-0.2.0.tar.gz`
+Archives sit beside it: `minecraft-backup-2026-11-18-pre-building-planner-0.4.0.tar.gz` (the world and `syncmatics/`
+just before Building Planner 0.4.0 was installed, 1.5 GB), `minecraft-backup-2026-11-17-pre-building-planner-0.3.0.tar.gz`
+(the world and `syncmatics/` just before Building Planner 0.3.0 was installed, 1.5 GB), `minecraft-backup-2026-11-16-pre-building-planner-0.2.0.tar.gz`
 (the world just before Building Planner 0.2.0 was installed, 1.5 GB), `minecraft-backup-2026-11-15-pre-building-planner.tar.gz` (the world just before
 Building Planner 0.1.0 was installed, 1.5 GB), `minecraft-backup-2026-11-14-pre-fabric.tar.gz` (the world just before
 the switch to Fabric, 1.5 GB), `minecraft-archive-2026-10-29-1.21.11.tar.gz` and `minecraft-backup-2025-12-12.tar.gz`.
-To take Building Planner off the server, remove `mods/building-planner-0.3.0.jar` and run
+The 0.3.0 jar is kept in `/root/bp-0.4.0-stage/` for a rollback. To take Building Planner off the server, remove
+`mods/building-planner-0.4.0.jar` and run
 `systemctl restart minecraft.service`.
 The vanilla `server.jar` stays in place: to switch back, change the jar in `ExecStart` to `server.jar`, then run
 `systemctl daemon-reload` and `systemctl restart minecraft.service`. The VPS has 30 GB of RAM (about 16 GB available) and
@@ -32,7 +36,7 @@ an inbox notice, carrying only the error's id, kind and source.
 
 **Player pack.** This repository is public at https://github.com/Geomitron/minecraft-server. `pack/` is the packwiz
 pack "Server Pack": Minecraft 26.3 and Fabric loader 0.20.1 with Litematica, MaLiLib, Freecam, Fabric API, Building
-Planner 0.3.0 (downloaded from its release `building-planner-0.3.0`), and Effortless Building 4.3, served from `main`
+Planner 0.4.0 (downloaded from its release `building-planner-0.4.0`), and Effortless Building 4.3, served from `main`
 at https://raw.githubusercontent.com/Geomitron/minecraft-server/main/pack/pack.toml, so a push to `main` changes what
 players get at their next launch. The server and the pack run the same Building Planner, protocol 3; a game with an
 older pack still joins, and Building Planner does nothing in it. `instance/` is the Prism Launcher instance "Server
@@ -427,7 +431,8 @@ Nothing goes to the server or the pack before the last step.
 12. **The release**: version 0.4.0 with Geo's hand-edited icons, after Geo's approval: the GitHub release, on the
     server after a backup (with `max-edit-blocks=200000` in its `config/buildingplanner.properties`, which has
     50000 written), and in the pack. The README and the guide's setup steps describe nothing 0.4.0 changes, so they
-    stay as they are.
+    stay as they are. Released, as Geo approved it in 782: the GitHub release `building-planner-0.4.0` (not latest),
+    on the server since 3:17 AM ET, November 18th, and in the pack.
 
 ## Design work: Building Planner
 
