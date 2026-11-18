@@ -302,5 +302,10 @@ public final class LayerSync {
 		public boolean isEmpty() {
 			return blocks.isEmpty();
 		}
+
+		@Override
+		public int blockCount() {
+			return blocks.size();
+		}
 	}
 }

@@ -193,6 +193,21 @@ class LayerSyncTest {
 	}
 
 	@Test
+	void anEditOfExactlyTheCapIsApplied() {
+		LayerChange[] atTheCap = IntStream.range(0, LayerNetwork.MAX_EDIT_BLOCKS)
+			.mapToObj(i -> set(new BlockPos(i % 16, 64 + i / 16, 0), stone)).toArray(LayerChange[]::new);
+
+		alex.edit(atTheCap);
+		network.settle();
+
+		assertEquals(List.of(), alex.rejections);
+		assertEquals(LayerNetwork.MAX_EDIT_BLOCKS, alex.applied().stream().mapToInt(applied -> applied.changes().size()).sum());
+		assertEquals(stone, network.server.get(OVERWORLD, new BlockPos(0, 64, 0)));
+		assertEquals(stone, network.server.get(OVERWORLD, new BlockPos((LayerNetwork.MAX_EDIT_BLOCKS - 1) % 16,
+			64 + (LayerNetwork.MAX_EDIT_BLOCKS - 1) / 16, 0)));
+	}
+
+	@Test
 	void everyFailedCheckRejectsTheWholeEditAndChangesNothing() {
 		blair.watchAround(1);
 		network.settle();

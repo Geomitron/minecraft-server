@@ -27,6 +27,7 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.Bootstrap;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.StairBlock;
 import net.minecraft.world.level.block.state.BlockState;
@@ -62,6 +63,29 @@ class PayloadsTest {
 			new LayerChange(new BlockPos(-3, -64, 1_000_000), Blocks.AIR.defaultBlockState()),
 			new LayerChange(new BlockPos(1, 319, 3), stairs)));
 		assertEquals(edit, roundTrip(Payloads.Edit.CODEC, edit));
+	}
+
+	/** An edit of the most blocks the wire carries, each with the highest block state id, fits what the payload is registered for. */
+	@Test
+	void anEditOfTheMostBlocksFitsItsRegisteredSize() {
+		BlockState highest = Block.BLOCK_STATE_REGISTRY.byId(Block.BLOCK_STATE_REGISTRY.size() - 1);
+		BlockPos far = new BlockPos(-30_000_000, -64, 30_000_000);
+		Payloads.Edit edit = new Payloads.Edit(Identifier.fromNamespaceAndPath("some_namespace", "some/long/dimension_path"),
+			Integer.MAX_VALUE, EditKind.SHAPE,
+			java.util.Collections.nCopies(SyncLimits.WIRE_MAX_EDIT_BLOCKS, new LayerChange(far, highest)));
+		FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
+
+		Payloads.Edit.CODEC.encode(buf, edit);
+
+		assertTrue(buf.readableBytes() <= Payloads.MAX_EDIT_BYTES,
+			buf.readableBytes() + " bytes, room for " + Payloads.MAX_EDIT_BYTES);
+		assertEquals(edit, Payloads.Edit.CODEC.decode(buf));
+	}
+
+	@Test
+	void theDefaultCapIsTheMostAnEditCanCarry() {
+		assertEquals(200_000, SyncLimits.DEFAULT.maxEditBlocks());
+		assertEquals(SyncLimits.WIRE_MAX_EDIT_BLOCKS, SyncLimits.DEFAULT.maxEditBlocks());
 	}
 
 	@Test

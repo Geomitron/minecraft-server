@@ -619,17 +619,29 @@ shot 1 copy-nothing-message
 check "keeps the earlier copy and ends the box, leaving the player's mode" eval '[[ $(copy_kept) == "$earlier" ]] &&
 	box_is "none SINGLE"'
 
-# The block cap: Big's 51,200 ghost blocks, added in two halves, are more than the server's 50,000 for one edit. The
-# box starts in the space above Big's top corner.
-drv 1 "cmd tp @s 55.5 -20 -3.5 0 30" "cmd tp Planner2 56.5 -20 -3.5 0 30" "wait 40" > /dev/null
-drv 1 "edit 60 -60 2 99 -45 41 minecraft:stone" "wait 100" "edit 60 -44 2 99 -29 41 minecraft:stone" > /dev/null
-check "client 2 sees all of Big's blocks" drv 2 "await block 60 -60 2 minecraft:stone" "await block 99 -29 41 minecraft:stone"
+# The block cap, 200,000 blocks for one edit (the server's default): an edit of 204,000 blocks, one more layer than the
+# cap holds, is refused by the game, and Big, an edit of exactly 200,000 ghost blocks (80 by 50 by 50), goes through
+# the server to both games. A box over Big and the grass under it holds 204,000 blocks. The box starts in the space
+# above Big's top corner, 48 blocks from the players, who are above its middle.
+drv 1 "cmd tp @s 100.5 0 26.5 0 30" "cmd tp Planner2 101.5 0 26.5 0 30" "wait 60" > /dev/null
+drv 1 "edit 60 -60 2 139 -11 52 minecraft:stone" > /dev/null
+check "an edit of one block layer over the cap gives a message" \
+	client_said 1 "That edit changes 204000 blocks, more than the server's limit of 200000."
+drv 1 "edit 60 -60 2 139 -11 51 minecraft:stone" > /dev/null
+check "client 2 sees all of Big's 200,000 blocks" drv 2 "await block 60 -60 2 minecraft:stone" \
+	"await block 139 -11 51 minecraft:stone"
+check "and client 1 does too" drv 1 "await block 60 -60 2 minecraft:stone" "await block 139 -11 51 minecraft:stone"
+check "the edit over the cap changed nothing" eval '[[ $(val 2 "get 60 -60 52") != *stone* ]]'
 copy_button
-box 1 99.5 -28 41.5 -28 60 2 -60
+box 1 139.5 -10 51.5 -10 60 2 -61
 check "a box over more blocks than the server's limit gives a message" \
-	client_said 1 "That box has 51200 blocks, more than the server's limit of 50000."
+	client_said 1 "That box has 204000 blocks, more than the server's limit of 200000."
 shot 1 copy-too-many-message
 check "and keeps the earlier copy" eval '[[ $(copy_kept) == "$earlier" ]]'
+# Erasing Big is another edit of 200,000 blocks, and leaves the layer as the later checks expect it.
+drv 1 "edit 60 -60 2 139 -11 51 minecraft:air" > /dev/null
+check "erasing all of Big reaches both games" eval 'drv 2 "await block 60 -60 2 minecraft:air" \
+	"await block 139 -11 51 minecraft:air" && drv 1 "await block 139 -11 51 minecraft:air"'
 
 # A box of one block: three clicks on the glowstone at 4 -59 3, the first on its side.
 drv 1 "cmd tp @s 8.5 -56 9.5 0 30" "wait 40" > /dev/null

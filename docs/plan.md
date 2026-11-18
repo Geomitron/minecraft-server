@@ -392,7 +392,10 @@ Nothing goes to the server or the pack before the last step.
    list).
 6. **The server's cap and undo budget**: `max-edit-blocks` at 200,000, and `UndoHistory` dropping old steps past
    the budget of 2,000,000 blocks a player. Done when unit tests cover an edit at the cap, one over it, and the budget
-   dropping the oldest steps while keeping the newest.
+   dropping the oldest steps while keeping the newest. Built (`SyncLimits.DEFAULT` at 200,000, the wire's own most, and
+   `UndoHistory`'s block budget, with `UndoHistoryTest`, `LayerSyncTest`'s edit at the cap and `PayloadsTest`'s edit of
+   the most blocks at their largest in the room `registerLarge` is given; `step9.sh`'s cap checks pass, with an
+   edit of exactly 200,000 blocks sent through the server to both games, and a box and an edit over it refused).
 7. **The block mix's changes** ("The block mix and its panel"): the click that toggles, "Clear Mix", "Only my
    inventory" on at launch, and "B: Edit Mix" in the panel. Done when `step7.sh`'s mix checks pass with their shots.
 8. **The radial menu's five buttons**: the two rows above the wrench, undo and redo, the Block mix button with the

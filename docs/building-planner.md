@@ -17,11 +17,12 @@ put away by a right click or by the actions that end a mouse mode and brought ba
 K, U, H and Delete and the radial menu's Turn, Mirror and Clear buttons (`MouseMode`, hooks M1 to M5, E21 and E22,
 and `ModeHud`; with no Block mix button in the radial menu yet, the Block mix key B puts the copy away); and Building
 Planner's own box for Copy and the material list, drawn with three left clicks, with its outline, its controls line and
-its limits, switching between the two (`BoxCorners`, `BoxDraw`, `BoxOutline` and the box's lines in `ModeHud`; the
-server's limit on one edit is still 50,000 blocks); and the box's blocks counted by whole sections and listed under
+its limits, switching between the two (`BoxCorners`, `BoxDraw`, `BoxOutline` and the box's lines in `ModeHud`); and the box's blocks counted by whole sections and listed under
 the crosshair in rows that wrap, ending with a "+N" cell, with Copy counting a box the same way before it takes any
 block, and no list of real blocks under Effortless Building's break shapes (`BoxCount`, `BoxList`, `BoxListLayout`
-and hook E8). Not built yet: the server's limit of 200,000 blocks, the block mix's changes, the radial menu's five buttons in a new layout that joins its opening animation, "Building Planner" in place of
+and hook E8); and the server's limit of 200,000 blocks an edit, with its undo list dropping a player's oldest steps
+past 2,000,000 blocks (`SyncLimits.DEFAULT` for a config file with no value, and `UndoHistory`; the server's own
+config file on the live server still has 50000 written until the release). Not built yet: the block mix's changes, the radial menu's five buttons in a new layout that joins its opening animation, "Building Planner" in place of
 "Effortless Building" where players see it, and Geo's hand-edited icons, which 0.3.0 doesn't have. The build steps are
 in [plan.md](plan.md) ("The walkthrough's changes").
 
