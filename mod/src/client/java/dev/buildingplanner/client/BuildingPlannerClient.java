@@ -42,7 +42,7 @@ import net.minecraft.world.level.block.state.BlockState;
 public final class BuildingPlannerClient implements ClientModInitializer {
 	private static final KeyMapping.Category CATEGORY =
 		KeyMapping.Category.register(Identifier.fromNamespaceAndPath(BuildingPlanner.MOD_ID, "main"));
-	private static final KeyMapping BLOCK_MIX =
+	static final KeyMapping BLOCK_MIX =
 		new KeyMapping("key.buildingplanner.block_mix", InputConstants.KEY_B, CATEGORY);
 	static final KeyMapping SHOW_HIDE =
 		new KeyMapping("key.buildingplanner.show_hide", InputConstants.KEY_N, CATEGORY);
@@ -164,9 +164,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		});
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			while (BLOCK_MIX.consumeClick()) {
-				if (session != null) {
-					openMix();
-				}
+				blockMix();
 			}
 			while (SHOW_HIDE.consumeClick()) {
 				toggleGhosts();
@@ -234,9 +232,13 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	}
 
 	/**
-	 * The mix key: puts the copy away and opens the picker on the player's mix, to choose it, change it or turn it off.
+	 * The mix key and the radial menu's "Block mix" button: put the copy away and open the picker on the player's mix, to
+	 * choose it, change it or turn it off. Do nothing while Building Planner is off.
 	 */
-	private static void openMix() {
+	static void blockMix() {
+		if (session == null) {
+			return;
+		}
 		session.modeAction(MouseMode.Action.BLOCK_MIX);
 		BlockMixScreen.open(MIX,
 			() -> ClientSession.show(PlayerMessage.mixOn(BLOCK_MIX.getTranslatedKeyMessage().getString())),
@@ -303,6 +305,11 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		if (session.bringBackCopy()) {
 			modeStarted();
 		}
+	}
+
+	/** Whether a box is drawn for that purpose, whose radial menu button then shows selected. */
+	static boolean drawingBoxFor(BoxDraw.Purpose purpose) {
+		return session != null && session.mouseMode() == MouseMode.BOX && session.box().purpose() == purpose;
 	}
 
 	/** Building Planner's mode that takes over the mouse now, or null. */

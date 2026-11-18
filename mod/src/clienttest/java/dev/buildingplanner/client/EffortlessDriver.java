@@ -1,7 +1,11 @@
 package dev.buildingplanner.client;
 
+import java.awt.image.BufferedImage;
+import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import javax.imageio.ImageIO;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.components.AbstractWidget;
@@ -53,6 +57,31 @@ final class EffortlessDriver {
 			array.offsetZ = dz;
 			ModifierSystem.CLIENT.addModifier(array);
 		}
+	}
+
+	/**
+	 * The build modes whose segment of the radial menu's ring the screenshot shows in the menu's blue for the selected
+	 * mode ({@code selectedColor}, half-see-through 0, 0.5, 1), or "none". Each segment is read at one pixel, on the line
+	 * through its middle, 35 GUI pixels from the menu's middle: past the coloured category line (30 to 32) and short of
+	 * the mode's icon. An unselected segment is half-see-through black over the darkened world there, so its blue
+	 * passes its red by little; a selected one's blue is at least half of full and passes its red by far more.
+	 */
+	static String selectedSegments(Path shot, double guiScale) throws IOException {
+		BufferedImage image = ImageIO.read(shot.toFile());
+		double slice = 2 * Math.PI / BuildModeEnum.values().length;
+		List<String> selected = new ArrayList<>();
+		for (BuildModeEnum mode : BuildModeEnum.values()) {
+			double angle = (mode.ordinal() + 0.5) * slice - Math.PI / 2;
+			int x = (int) (image.getWidth() / 2.0 + Math.cos(angle) * 35 * guiScale);
+			int y = (int) (image.getHeight() / 2.0 + Math.sin(angle) * 35 * guiScale);
+			int rgb = image.getRGB(x, y);
+			int red = rgb >> 16 & 0xFF;
+			int blue = rgb & 0xFF;
+			if (blue >= 110 && blue - red >= 60) {
+				selected.add(mode.name());
+			}
+		}
+		return selected.isEmpty() ? "none" : String.join(" ", selected);
 	}
 
 	/** A box on the screen, in GUI pixels, with what it is. */

@@ -162,7 +162,7 @@ final class ClientSession {
 		return list.entries();
 	}
 
-	/** The box, for the in-game checks. */
+	/** The box, whose purpose picks the radial menu button that shows selected, and for the in-game checks. */
 	BoxDraw box() {
 		return box;
 	}

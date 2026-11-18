@@ -18,27 +18,40 @@ import net.minecraft.util.ARGB;
  * A speed slider in Effortless Building's radial menu: how fast a held button keeps placing or erasing, from 1 block
  * a second at the left to 20 at the right, in steps of one tick between repeats. Each step it reaches is kept in the
  * player's config at once, and hold to repeat reads it from there. It draws as the game's sliders do, with its text at
- * {@link SmallText}'s size.
+ * {@link SmallText}'s size. Its right end and its top keep their distance from the menu's middle times the menu's
+ * opening factor ({@link RadialMenuWidgets#factor}), and its size stays.
  */
-final class RepeatSlider extends AbstractSliderButton {
+final class RepeatSlider extends AbstractSliderButton implements RadialMenuWidgets.Placed {
 	private static final Identifier TRACK = Identifier.withDefaultNamespace("widget/slider");
 	private static final Identifier TRACK_FOCUSED = Identifier.withDefaultNamespace("widget/slider_highlighted");
 	private static final Identifier HANDLE = Identifier.withDefaultNamespace("widget/slider_handle");
 	private static final Identifier HANDLE_HOVERED = Identifier.withDefaultNamespace("widget/slider_handle_highlighted");
 	private static final int HANDLE_WIDTH = 8;
 
+	private final int right;
+	private final int top;
 	private final RepeatSpeed speed;
 	private final String labelKey;
 	private final ClientConfig config;
 	private int ticks;
 
-	RepeatSlider(int x, int y, int width, int height, RepeatSpeed speed, String labelKey, ClientConfig config) {
-		super(x, y, width, height, Component.empty(), RepeatSpeed.position(speed.ticks(config)));
+	/** A slider whose right end is {@code right} and top {@code top} from the menu's middle, in GUI pixels. */
+	RepeatSlider(int right, int top, int width, int height, RepeatSpeed speed, String labelKey, ClientConfig config) {
+		super(0, 0, width, height, Component.empty(), RepeatSpeed.position(speed.ticks(config)));
+		this.right = right;
+		this.top = top;
 		this.speed = speed;
 		this.labelKey = labelKey;
 		this.config = config;
 		this.ticks = speed.ticks(config);
 		updateMessage();
+	}
+
+	/** Cut to whole GUI pixels as the menu cuts its texts' places. */
+	@Override
+	public void place(double menuX, double menuY, double factor) {
+		setX((int) (menuX + right * factor) - getWidth());
+		setY((int) (menuY + top * factor));
 	}
 
 	@Override

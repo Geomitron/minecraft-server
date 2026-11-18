@@ -170,29 +170,46 @@ check "after a restart, client 1 starts a session with ghost blocks still hidden
 press 1 n
 check "and N shows them" drv 1 "await block 4 -59 3 minecraft:glowstone"
 
-# Where the radial menu's buttons sit, without a copy, in Circle mode, whose options fill two rows right of the ring, set before each opening since letting the key go over "Single" chooses it.
+# Where the radial menu's buttons sit, without a copy, in Circle mode, whose options fill two rows right of the ring,
+# set before each opening since letting the key go over "Single" chooses it.
 # radial_shot <width> <height> <gui scale> <name> opens the menu in a window of that size at that GUI scale, with the
 # pointer over "Single" (about 33 right of the menu's middle and 35 above it) so its name and description show, and
-# shoots it as <name>. The buttons' boxes go to the log, for outlining. It fails unless the buttons meet nothing the
-# menu draws, the sliders, each other or the screen's edges.
+# shoots it as <name>, and 1 and 2 frames after it opens as <name>-frame1 and <name>-frame2, which it keeps in frames.
+# The buttons' boxes go to the log, for outlining. It fails unless the buttons meet nothing the menu draws, the
+# sliders, each other or the screen's edges.
 radial_shot() {
 	local result
-	drv 1 "ebmode CIRCLE" "window $1 $2 $3" "wait 20" > /dev/null
+	drv 1 "ebmode CIRCLE" "window $1 $2 $3" "wait 20" "notoasts" "menuframes arm $4" > /dev/null
 	radial_open
 	xdo 1 mousemove --window %w $(($1 / 2 + 33 * $3)) $(($2 / 2 - 35 * $3))
 	drv 1 "wait 10" "notoasts" "wait 5" "notoasts" "shot $4" > /dev/null
 	echo "  $4 buttons: $(val 1 buttons)" >> /out/checks.log
+	frames=$(val 1 menuframes)
+	echo "  $4 frames: $frames" >> /out/checks.log
 	result=$(val 1 radialclear)
 	echo "  $4: $result" >> /out/checks.log
 	radial_let_go
 	[[ $result == clear ]]
 }
+# The buttons join the menu's opening animation: 1 and 2 frames after it opens, each is nearer the middle and smaller
+# than once it's open, as the menu's own are. The animation runs on the game's ticks, over 2.5 of them, and the virtual
+# screen's software drawing takes several ticks for a frame after a shot, where a player's game draws several frames a
+# tick; so for these shots the server runs 1 tick a second instead of 20, which the game follows, and each frame takes
+# a twentieth as much of the animation.
+frames_grow() {
+	[[ $frames == *"; nearer and smaller" ]]
+}
 # With ghost blocks hidden, so these shots and the hover shots below show every icon between them.
 drv 1 "cmd tp @s 20.5 -58 -2.5 0 40" "wait 20" > /dev/null
 press 1 n
+drv 1 "cmd tick rate 1" "wait 2" > /dev/null
 check "the buttons meet nothing at 854 by 480, GUI scale 2" radial_shot 854 480 2 radial-all-854x480-gui2
+check "and 1 and 2 frames after the menu opens, they're nearer its middle and smaller" frames_grow
 check "nor at 1920 by 1080, GUI scale 2" radial_shot 1920 1080 2 radial-all-1920x1080-gui2
+check "where they grow with the menu too" frames_grow
 check "nor at GUI scale 4" radial_shot 1920 1080 4 radial-all-1920x1080-gui4
+check "where they grow with the menu too" frames_grow
+drv 1 "cmd tick rate 20" "wait 5" > /dev/null
 press 1 n
 # The show or hide button's hover text. The pointer leaves the button before the key is let go, so closing the menu
 # leaves ghost blocks shown.
@@ -209,17 +226,22 @@ done
 check "ghost blocks still show after the hover shots" eval '[[ $(val 1 ghosts) == "shown, "* ]]'
 drv 1 "window 854 480 2" "wait 20" > /dev/null
 
-# Without a copy, the menu shows four buttons, each with its hover text, at its middle from the menu's middle: show or
-# hide, Copy and Paste in the row 39 above it, and Material list alone in the row 65 above it, at the left. Shot with
-# the pointer on the menu's middle, over no button.
+# Without a copy, the menu shows five buttons, each with its hover text, at its middle from the menu's middle: show or
+# hide, Block mix and Material list in the row 39 above it, and Copy and Paste in the row 65 above it, at the left.
+# Shot with the pointer on the menu's middle, over no button, then with the pointer on Block mix, for its hover text.
+slots="Show or hide ghost blocks [N] @ -157,-39 | Block mix [B] @ -131,-39 | Material list @ -105,-39 | \
+Copy @ -157,-65 | Paste @ -131,-65"
 radial_open
 xdo 1 mousemove --window %w 427 240
 drv 1 "wait 10" "notoasts" "wait 5" "notoasts" "shot radial-no-copy" > /dev/null
 echo "  radial-no-copy buttons: $(val 1 buttons)" >> /out/checks.log
-check "without a copy, the menu shows its four buttons in their slots, with their hover texts" eval '[[ $(val 1 slots) == \
-	"Show or hide ghost blocks [N] @ -157,-39 | Copy @ -131,-39 | Paste @ -105,-39 | Material list @ -157,-65" ]]'
+check "without a copy, the menu shows its five buttons in their slots, with their hover texts" \
+	eval '[[ $(val 1 slots) == "$slots" ]]'
+radial_point "Block mix"
+drv 1 "wait 10" "notoasts" "shot radial-block-mix-hover" > /dev/null
 xdo 1 mousemove --window %w 5 5
-radial_let_go
+drv 1 "wait 5" > /dev/null
+check "letting the key go with the pointer moved off Block mix closes the menu and opens nothing" radial_let_go
 
 # The Paste button before any copy gives a message.
 nothing_lines=$(chat_count 1 "Nothing to paste. Use Copy first.")
@@ -471,8 +493,15 @@ check "choosing a build mode puts it away" copy_is 1 "^away "
 drv 1 "ebmode SINGLE" > /dev/null
 paste_button
 check "Paste brings it back again" copy_is 1 "^origin "
+radial_open
+radial_point "Block mix"
+xdo 1 keyup Alt_L
+check "the radial menu's Block mix button puts it away and opens the block mix screen" \
+	eval 'drv 1 "await screen Block mix" > /dev/null && copy_is 1 "^away "'
+drv 1 "close" "wait 5" > /dev/null
+paste_button
 press 1 b
-check "B, Block mix, puts it away" eval 'drv 1 "await screen Block mix" > /dev/null && copy_is 1 "^away "'
+check "and so does B" eval 'drv 1 "await screen Block mix" > /dev/null && copy_is 1 "^away "'
 drv 1 "close" "wait 5" > /dev/null
 paste_button
 press 1 n
@@ -564,7 +593,7 @@ house_box
 check "the copy is the house with the gold block and the ghost stone again: 27 blocks" \
 	eval 'drv 1 "wait 5" > /dev/null && copy_is 1 "^origin [-0-9,]+ NONE NONE unselected 27 blocks$"'
 
-# With the copy at the aim, the menu shows the same four buttons, none of them for turning, mirroring or clearing the
+# With the copy at the aim, the menu shows the same five buttons, none of them for turning, mirroring or clearing the
 # copy; shot at 1920 by 1080, GUI scales 2 and 4, with the pointer off the buttons, and failing unless the buttons
 # meet nothing.
 radial_copy_shot() {
@@ -586,11 +615,44 @@ radial_open
 xdo 1 mousemove --window %w 427 240
 drv 1 "wait 10" "notoasts" "wait 5" "notoasts" "shot radial-with-copy" > /dev/null
 echo "  radial-with-copy buttons: $(val 1 buttons)" >> /out/checks.log
-check "with the copy at the aim, the menu shows the same four buttons in their slots, with their hover texts" eval \
-	'copy_is 1 "^origin " && [[ $(val 1 slots) == \
-	"Show or hide ghost blocks [N] @ -157,-39 | Copy @ -131,-39 | Paste @ -105,-39 | Material list @ -157,-65" ]]'
+check "with the copy at the aim, the menu shows the same five buttons in their slots, with their hover texts" eval \
+	'copy_is 1 "^origin " && [[ $(val 1 slots) == "$slots" ]]'
 xdo 1 mousemove --window %w 5 5
 radial_let_go
+
+# While a mouse mode is on, its button shows selected, in the menu's blue, and no mode segment does: Paste while the
+# copy is at the aim, Copy and Material list while a box is drawn for them. With the mode ended, the player's mode,
+# Line, shows selected again. Each is shot at 854 by 480 with the pointer in the screen's corner, off every button.
+# selected_shot <name>: moves the pointer off the buttons and shoots the open menu as <name>.
+selected_shot() {
+	xdo 1 mousemove --window %w 5 5
+	drv 1 "wait 5" > /dev/null
+	shot 1 "$1"
+	echo "  $1 buttons: $(val 1 buttons)" >> /out/checks.log
+}
+drv 1 "ebmode LINE" "wait 5" > /dev/null
+paste_button
+radial_open
+selected_shot radial-paste-selected
+check "with the copy at the aim in Line mode, Paste shows selected" eval 'copy_is 1 "^origin " &&
+	[[ $(val 1 selectedbuttons) == Paste ]] && [[ $(val 1 ebmode) == LINE ]]'
+check "and no mode segment does" eval '[[ $(val 1 "ringselected radial-paste-selected") == none ]]'
+radial_click "Copy"
+selected_shot radial-copy-selected
+check "while a box is drawn for Copy, Copy shows selected" eval '[[ $(val 1 drawbox) == "COPY 0 "* ]] &&
+	[[ $(val 1 selectedbuttons) == Copy ]]'
+check "and no mode segment does" eval '[[ $(val 1 "ringselected radial-copy-selected") == none ]]'
+radial_click "Material list"
+selected_shot radial-material-list-selected
+check "while it's drawn for the material list, Material list shows selected" eval \
+	'[[ $(val 1 drawbox) == "MATERIAL_LIST 0 "* ]] && [[ $(val 1 selectedbuttons) == "Material list" ]]'
+check "and no mode segment does" eval '[[ $(val 1 "ringselected radial-material-list-selected") == none ]]'
+radial_click "Material list"
+selected_shot radial-line-selected
+check "with the box ended, no button shows selected, and Line's segment does" eval '[[ $(val 1 drawbox) == none* ]] &&
+	[[ $(val 1 selectedbuttons) == none ]] && [[ $(val 1 "ringselected radial-line-selected") == LINE ]]'
+radial_let_go
+drv 1 "ebmode SINGLE" > /dev/null
 
 # The Copy button pressed again ends its box.
 radial_open

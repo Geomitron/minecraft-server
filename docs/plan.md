@@ -404,7 +404,10 @@ Nothing goes to the server or the pack before the last step.
 8. **The radial menu's five buttons**: the two rows above the wrench, undo and redo, the Block mix button with the
    Randomizer Bag, the selected look for the current mode's button, E19, and E20 with the widgets moving with the
    menu's animation. Done when `step9.sh`'s radial menu checks pass at all three sizes, with the shots 1 and 2 frames
-   after opening, and `step10.sh`'s slider checks still pass.
+   after opening, and `step10.sh`'s slider checks still pass. Built (`RadialButton` placed from the menu's middle each
+   frame by `RadialMenuWidgets`, hooks E16, E19 and E20, and the Block mix button doing what B does; `step9.sh`'s
+   radial menu checks pass at all three sizes, with the driver's shots 1 and 2 frames after opening and its reading of
+   the ring's selected segment, `step7.sh`'s Block mix button check passes, and `step8.sh` and `step10.sh` pass).
 9. **Building Planner's name and the key heading**: E18, and E23 moving Effortless Building's keys under "Building
    Planner". Done when `step9.sh`'s corner text and Controls checks pass with their shots.
 10. **Litematica's area selection**: its drawing turned off once, as the look of ghost blocks is set. Done when

@@ -15,7 +15,7 @@ show; the material list no longer shows them); the material list counting the re
 message); and the copy at the aim worked by the mouse, with its controls line,
 put away by a right click or by the actions that end a mouse mode and brought back by Paste, in place of the keys J,
 K, U, H and Delete and the radial menu's Turn, Mirror and Clear buttons (`MouseMode`, hooks M1 to M5, E21 and E22,
-and `ModeHud`; with no Block mix button in the radial menu yet, the Block mix key B puts the copy away); and Building
+and `ModeHud`); and Building
 Planner's own box for Copy and the material list, drawn with three left clicks, with its outline, its controls line and
 its limits, switching between the two (`BoxCorners`, `BoxDraw`, `BoxOutline` and the box's lines in `ModeHud`); and the box's blocks counted by whole sections and listed under
 the crosshair in rows that wrap, ending with a "+N" cell, with Copy counting a box the same way before it takes any
@@ -24,10 +24,12 @@ and hook E8); and the server's limit of 200,000 blocks an edit, with its undo li
 past 2,000,000 blocks (`SyncLimits.DEFAULT` for a config file with no value, and `UndoHistory`; the server's own
 config file on the live server still has 50000 written until the release); and the block mix screen's click that adds
 or takes out a block, its "Clear Mix" that keeps the screen open, and "Only my inventory" on at launch, with "B: Edit
-Mix" under the mix panel (`BlockMixScreen` and `MixPanel`). Not built yet: the radial menu's five buttons in a new
-layout that joins its opening animation, with its Block mix button, "Building Planner" in place of
-"Effortless Building" where players see it, and Geo's hand-edited icons, which 0.3.0 doesn't have. The build steps are
-in [plan.md](plan.md) ("The walkthrough's changes").
+Mix" under the mix panel (`BlockMixScreen` and `MixPanel`); and the radial menu's five buttons in two rows above the
+wrench, undo and redo, joining the menu's opening animation, with the Block mix button showing the Randomizer Bag and
+the button for the mouse mode that's on showing selected in place of a mode segment (`RadialButton`,
+`RadialMenuWidgets` and hooks E16, E19 and E20). Not built yet: "Building Planner" in place of "Effortless Building"
+where players see it, and Geo's hand-edited icons, which 0.3.0 doesn't have. The build steps are in
+[plan.md](plan.md) ("The walkthrough's changes").
 
 ## What players get
 
@@ -173,7 +175,7 @@ Effortless Building, under `common/src/main/java/nl/requios/effortlessbuilding/`
 | E13 | `buildpipeline/BuildPipeline.java`, `isBuildTriggerItem` | `@ModifyReturnValue` | On a server (with a session, or with Building Planner off), an item starts shapes only if it places a block (`ClickRule.placeable`: Minecraft's `BlockItem`, the same test as the mix's; `ClickRule` uses none of Litematica's classes, so these hooks can ask it while Building Planner is off). Effortless Building's own rule also takes buckets and tools with a `TOOL` component, and leaves out doors, beds and tall plants. |
 | E14 | `buildpipeline/BuildPipelineClient.java`, `shouldInterceptPlacing` and `shouldInterceptBreaking` | `@ModifyReturnValue` | While the player draws a box or the copy is at the aim (`MouseMode`), neither click is Effortless Building's in any mode, so hooks M1 to M5 take them. With the same rule as E13, while the main hand holds no item that places a block and no shape is under way (`getBuildState()` null), neither click is Effortless Building's either: its client tick, its `AttackBlockCallback`, and its cancelling of vanilla's `startUseItem`, `startAttack` and `continueAttack` all ask these first, and so does hold to repeat, so both clicks and holding them are vanilla's. A shape under way still takes the click that finishes or cancels it. |
 | E15 | `Minecraft.pick(float)`, into which Effortless Building's `MixinGameRenderer` adds, at its tail, a reach of 32 for an empty hand, aiming through entities; `buildmode/BuildModes.java`, `getBuildMode` | `@WrapMethod` on `pick`; `@ModifyReturnValue` on `getBuildMode` | While the main hand holds no item that places a block and no shape is under way, or while a box is drawn or the copy is at the aim, `getBuildMode` reads Disable during the pick, which that code skips, so the hand aims as without mods, at an entity before the block behind it. |
-| E16 | `screen/RadialMenu.java`, `onClose()` | `@Inject` at head | Let Building Planner's buttons act when the menu closes, as the menu's own do: its `tick` calls `onClose` once its key is let go (Escape calls it too), and `onClose` acts on the menu's button under the pointer unless a click acted since the menu opened (`performedActionUsingMouse`). |
+| E16 | `screen/RadialMenu.java`, `onClose()` | `@Inject` at head, finding the button under the pointer, and at tail, acting | Let Building Planner's buttons act when the menu closes, as the menu's own do: its `tick` calls `onClose` once its key is let go (Escape calls it too), and `onClose` acts on the menu's button under the pointer unless a click acted since the menu opened (`performedActionUsingMouse`). Building Planner's button is found as `onClose` begins, before closing grabs the mouse and moves the pointer to the window's middle, and acts after the menu has closed, like the menu's own, so "Block mix" can open its screen. |
 | E18 | `screen/RadialMenu.java`, `drawTexts` | `@ModifyConstant` on the string `"Effortless Building"` | The menu's corner text, which the method draws right-aligned from the string's width, reads "Building Planner" (`buildingplanner.ui.radial.credits`). It is the only place the game shows Effortless Building's name to a player on this server: its welcome message and its build mode hint come from its server side (`config/WelcomeMessageStorage.java`, `config/BuildModeHintStorage.java`), which the server doesn't run, and its screens' titles ("Build Modes", "Modifier Settings") don't name it. |
 | E19 | `screen/RadialMenu.java`, `drawRadialButtonBackgrounds` | `@ModifyExpressionValue` on `BuildModeEnum.ordinal()` | While a box is drawn or the copy is at the aim, no mode segment shows selected (the method compares each segment's index with the mode's `ordinal()`), since the player is in Building Planner's mode, whose button shows selected instead. |
 | E20 | `screen/RadialMenu.java`, private field `visibility` | `@Shadow`, read by E12 | The menu's opening animation: `extractRenderState` adds 0.4 × the frame's partial tick to `visibility` each frame, up to 1, and places its ring and its buttons at 0.8 + 0.2 × `visibility` of their distance and size from the middle, while the screen darkens. E12 places and sizes Building Planner's widgets by the same factor before drawing them. |
@@ -832,7 +834,8 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   screen's edges (the driver's `radialclear`), in the two rows' slots (the driver's `slots`), each with its hover
   text; each is shot, with the buttons' boxes in the log. Shots taken 1 and 2 frames after the menu opens show the
   buttons nearer the middle and smaller than when it's open, as the menu's own are. With Effortless Building's mode
-  Line, no mode segment shows selected while a box is drawn, and Line's does after.
+  Line, no mode segment shows selected while the copy is at the aim or a box is drawn, and Paste, Copy or "Material
+  list" does; with the box ended, Line's segment does, and no button.
 - The menu's corner text reads "Building Planner", and Controls shows Building Planner's keys and Effortless Building's
   under the "Building Planner" heading, with no raw key name; each is shot.
 - The Copy button starts a box: the controls line shows "Copy: Left-click to set the first corner, Right-click to

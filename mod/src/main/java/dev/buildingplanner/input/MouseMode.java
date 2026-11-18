@@ -30,7 +30,7 @@ public enum MouseMode {
 		COPY_BUTTON,
 		MATERIAL_LIST_BUTTON,
 		PASTE_BUTTON,
-		/** The block mix key. */
+		/** The block mix key, or the radial menu's "Block mix" button. */
 		BLOCK_MIX,
 		/** Leaving the server or changing dimension. */
 		LEAVE,

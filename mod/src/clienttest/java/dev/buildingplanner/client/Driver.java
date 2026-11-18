@@ -505,15 +505,35 @@ public final class Driver implements ClientModInitializer {
 			case "buttons" -> {
 				// buttons: each of Building Planner's buttons on the open screen as its name and its window box (x y width
 				// height), separated by " | ", for outlining them in a screenshot.
-				double scale = mc.getWindow().getGuiScale();
-				List<String> boxes = new ArrayList<>();
+				return buttonBoxes(mc);
+			}
+			case "selectedbuttons" -> {
+				// selectedbuttons: the names of Building Planner's buttons on the open screen that show selected,
+				// separated by " | ", or none.
+				List<String> names = new ArrayList<>();
 				for (GuiEventListener child : mc.gui.screen().children()) {
-					if (child instanceof RadialButton w && w.visible) {
-						boxes.add(w.getMessage().getString() + ": " + scaled(mc, w.getX(), w.getY()) + " "
-							+ (int) (w.getWidth() * scale) + " " + (int) (w.getHeight() * scale));
+					if (child instanceof RadialButton w && w.visible && w.selected()) {
+						names.add(w.getMessage().getString());
 					}
 				}
-				return String.join(" | ", boxes);
+				return names.isEmpty() ? "none" : String.join(" | ", names);
+			}
+			case "menuframes" -> {
+				// menuframes arm <name>: shoots the radial menu's next opening 1 and 2 frames after it, as
+				// <name>-frame1 and <name>-frame2. menuframes: those frames, each with the menu's size then and its
+				// buttons' window boxes, ending "nearer and smaller" when each button was nearer the middle and smaller
+				// than in the menu open now.
+				if (a.length > 2 && a[1].equals("arm")) {
+					MenuFrames.arm(a[2]);
+					return "ok";
+				}
+				return MenuFrames.report(mc);
+			}
+			case "ringselected" -> {
+				// ringselected <shot>: the build modes whose segment of the radial menu's ring the shot shows selected,
+				// in the menu's blue, or none; the menu is open at full size, with the pointer off the ring.
+				return EffortlessDriver.selectedSegments(
+					mc.gameDirectory.toPath().resolve("screenshots").resolve(a[1] + ".png"), mc.getWindow().getGuiScale());
 			}
 			case "slots" -> {
 				// slots: each of Building Planner's buttons on the open screen as its hover text, its lines separated by a
@@ -721,6 +741,22 @@ public final class Driver implements ClientModInitializer {
 			out.add(editor.invoke(g) + ":" + ((List<?>) blocks.invoke(g)).size());
 		}
 		return String.join(",", out);
+	}
+
+	/**
+	 * Each of Building Planner's buttons on the open screen as its name and its window box (x y width height), separated
+	 * by " | ".
+	 */
+	static String buttonBoxes(Minecraft mc) {
+		double scale = mc.getWindow().getGuiScale();
+		List<String> boxes = new ArrayList<>();
+		for (GuiEventListener child : mc.gui.screen().children()) {
+			if (child instanceof RadialButton w && w.visible) {
+				boxes.add(w.getMessage().getString() + ": " + scaled(mc, w.getX(), w.getY()) + " "
+					+ (int) (w.getWidth() * scale) + " " + (int) (w.getHeight() * scale));
+			}
+		}
+		return String.join(" | ", boxes);
 	}
 
 	private static String scaled(Minecraft mc, double x, double y) {

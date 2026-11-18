@@ -1,9 +1,11 @@
 package dev.buildingplanner.client;
 
+import dev.buildingplanner.input.MouseMode;
 import dev.buildingplanner.input.RepeatSpeed;
 import dev.buildingplanner.look.SmallText;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -14,21 +16,28 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 
 /**
- * Building Planner's widgets in Effortless Building's radial menu (hooks E11, E12 and E16), placed from the menu's
- * middle as its own buttons are. The menu's left-hand buttons (the wrench, undo and redo, and the row under them) are 20
- * across with their middles 26 apart, the leftmost 157 left of the menu's middle, in two rows 13 above and 13 below
- * it, so they span 167 to 95 left of the middle and end 23 below it. The two speed sliders sit just under them, 6 below
- * the lower row as that row is below the upper, and end above a mode's description, which the menu draws 100 below
- * the middle. Their labels draw on one line at {@link SmallText}'s size, full size at GUI scales 1 to 3, where the
- * longest label, "Break speed: 3.33 blocks/s", is 137 across: more than the 102 between the buttons' left edge and the
- * menu's ring (65 from the middle at most). So the sliders end 65 left of the middle, outside the ring, and are as wide
- * as the longest label either shows needs at the current size, plus {@link #PAD} on each side, reaching further left
- * than the buttons. Each is {@link #HEIGHT} high, and they end 55 below the middle.
+ * Building Planner's widgets in Effortless Building's radial menu (hooks E11, E12, E16, E19 and E20), placed from the
+ * menu's middle as its own buttons are. The menu's left-hand buttons (the wrench, undo and redo, and the row under
+ * them) are 20 across with their middles 26 apart, the leftmost 157 left of the menu's middle, in two rows 13 above
+ * and 13 below it, so they span 167 to 95 left of the middle and end 23 below it. The two speed sliders sit just under
+ * them, 6 below the lower row as that row is below the upper, and end above a mode's description, which the menu draws
+ * 100 below the middle. Their labels draw on one line at {@link SmallText}'s size, full size at GUI scales 1 to 3,
+ * where the longest label, "Break speed: 3.33 blocks/s", is 137 across: more than the 102 between the buttons' left
+ * edge and the menu's ring (65 from the middle at most). So the sliders end 65 left of the middle, outside the ring,
+ * and are as wide as the longest label either shows needs at the current size, plus {@link #PAD} on each side, reaching
+ * further left than the buttons. Each is {@link #HEIGHT} high, and they end 55 below the middle.
  *
- * <p>Building Planner's buttons ({@link RadialButton}) sit above the wrench, undo and redo, in the same columns (middles
- * 157, 131 and 105 left of the menu's middle), in rows 39 and 65 above the middle: "Show or hide ghost blocks", Copy and
- * Paste, then "Material list" in the left column. "Show or hide ghost blocks" does what its key does; Copy, Paste and
- * "Material list" have no keys. Each icon is a texture of its own ({@link RadialButton#icon}).
+ * <p>Building Planner's five buttons ({@link RadialButton}) sit in two rows above the wrench, undo and redo, in their
+ * columns (middles 157, 131 and 105 left of the menu's middle): "Show or hide ghost blocks", "Block mix" and "Material
+ * list" 39 above the middle, and Copy and Paste 65 above it, over the wrench and undo. "Show or hide ghost blocks" and
+ * "Block mix" do what their keys do; Copy, Paste and "Material list" have no keys, and each shows selected while its
+ * mouse mode is on, when no mode segment does (E19). Each icon is a texture of its own ({@link RadialButton#icon}),
+ * and "Block mix" shows Effortless Building's Randomizer Bag.
+ *
+ * <p>The widgets join the menu's opening animation (E20): the menu places its ring and buttons at {@link #factor} of
+ * their distance and size from its middle, which grows from 0.8 to 1 over its first frames, and {@link #place} places
+ * Building Planner's widgets by the same factor each frame. The sliders move with it and keep their size, as the
+ * menu's texts do.
  */
 public final class RadialMenuWidgets {
 	/** Where the sliders end, from the middle: just outside the menu's ring. */
@@ -39,61 +48,111 @@ public final class RadialMenuWidgets {
 	private static final int SLIDER_GAP = 2;
 	private static final String BUILD = "buildingplanner.ui.radial.build_speed";
 	private static final String BREAK = "buildingplanner.ui.radial.break_speed";
-	/** The buttons' middles from the menu's middle, {x, y}, in the buttons' order. */
-	private static final int[][] SLOTS = {{-157, -39}, {-131, -39}, {-105, -39}, {-157, -65}};
+	/** The buttons' middles from the menu's middle, {x, y}. */
+	private static final int[] SHOW_HIDE_SLOT = {-157, -39};
+	private static final int[] BLOCK_MIX_SLOT = {-131, -39};
+	private static final int[] MATERIAL_LIST_SLOT = {-105, -39};
+	private static final int[] COPY_SLOT = {-157, -65};
+	private static final int[] PASTE_SLOT = {-131, -65};
 
 	private static final Identifier SHOWN = RadialButton.icon("ghost_blocks_shown");
 	private static final Identifier HIDDEN = RadialButton.icon("ghost_blocks_hidden");
 	private static final Identifier COPY = RadialButton.icon("copy");
 	private static final Identifier PASTE = RadialButton.icon("paste");
 	private static final Identifier MATERIAL_LIST = RadialButton.icon("material_list");
+	/** Effortless Building's Randomizer Bag item texture, drawn from its jar. */
+	private static final Identifier RANDOMIZER_BAG =
+		Identifier.fromNamespaceAndPath("effortlessbuilding", "textures/item/randomizerbag.png");
+
+	/** A widget the menu places from its middle each frame. */
+	interface Placed {
+		/** Places the widget for a menu whose middle is at {@code menuX}, {@code menuY}, at {@link #factor}. */
+		void place(double menuX, double menuY, double factor);
+	}
 
 	private RadialMenuWidgets() {
 	}
 
-	/** The widgets for a radial menu of that size, made afresh each time it opens. */
-	public static List<AbstractWidget> create(int width, int height) {
+	/** The widgets for a radial menu, made afresh each time it opens; {@link #place} places them. */
+	public static List<AbstractWidget> create() {
 		int sliderWidth = widestLabel() + 2 * PAD;
-		int x = width / 2 + RIGHT - sliderWidth;
-		int top = height / 2 + SLIDERS_TOP;
 		List<AbstractWidget> widgets = new ArrayList<>(List.of(
-			new RepeatSlider(x, top, sliderWidth, HEIGHT, RepeatSpeed.PLACING, BUILD, BuildingPlannerClient.config()),
-			new RepeatSlider(x, top + HEIGHT + SLIDER_GAP, sliderWidth, HEIGHT, RepeatSpeed.ERASING, BREAK,
+			new RepeatSlider(RIGHT, SLIDERS_TOP, sliderWidth, HEIGHT, RepeatSpeed.PLACING, BUILD,
+				BuildingPlannerClient.config()),
+			new RepeatSlider(RIGHT, SLIDERS_TOP + HEIGHT + SLIDER_GAP, sliderWidth, HEIGHT, RepeatSpeed.ERASING, BREAK,
 				BuildingPlannerClient.config())));
-		widgets.add(button(width, height, SLOTS[0], Component.translatable(BuildingPlannerClient.SHOW_HIDE.getName()),
-			BuildingPlannerClient.SHOW_HIDE, () -> BuildingPlannerClient.ghostsShown() ? SHOWN : HIDDEN,
-			BuildingPlannerClient::toggleGhosts));
-		widgets.add(button(width, height, SLOTS[1], Component.translatable("buildingplanner.ui.radial.copy"), null,
-			() -> COPY, BuildingPlannerClient::copy));
-		widgets.add(button(width, height, SLOTS[2], Component.translatable("buildingplanner.ui.radial.paste"), null,
-			() -> PASTE, BuildingPlannerClient::paste));
-		widgets.add(button(width, height, SLOTS[3], Component.translatable("buildingplanner.ui.radial.material_list"),
-			null, () -> MATERIAL_LIST, BuildingPlannerClient::materialList));
+		widgets.add(button(SHOW_HIDE_SLOT, BuildingPlannerClient.SHOW_HIDE,
+			() -> BuildingPlannerClient.ghostsShown() ? SHOWN : HIDDEN, () -> false, BuildingPlannerClient::toggleGhosts));
+		widgets.add(button(BLOCK_MIX_SLOT, BuildingPlannerClient.BLOCK_MIX, () -> RANDOMIZER_BAG, () -> false,
+			BuildingPlannerClient::blockMix));
+		widgets.add(button(MATERIAL_LIST_SLOT, "material_list", MATERIAL_LIST,
+			() -> BuildingPlannerClient.drawingBoxFor(BoxDraw.Purpose.MATERIAL_LIST), BuildingPlannerClient::materialList));
+		widgets.add(button(COPY_SLOT, "copy", COPY, () -> BuildingPlannerClient.drawingBoxFor(BoxDraw.Purpose.COPY),
+			BuildingPlannerClient::copy));
+		widgets.add(button(PASTE_SLOT, "paste", PASTE,
+			() -> BuildingPlannerClient.mouseMode() == MouseMode.COPY_AT_AIM, BuildingPlannerClient::paste));
 		return widgets;
+	}
+
+	/**
+	 * The menu's size for its opening animation (E20), from its {@code visibility}, which grows from 0 to 1 over its
+	 * first frames: it places its ring and buttons at this share of their distance and size from its middle.
+	 */
+	public static double factor(float visibility) {
+		return 0.8 + 0.2 * visibility;
+	}
+
+	/** Hook E12 (and E11, before the first frame): places the menu's widgets for this frame of its opening. */
+	public static void place(List<? extends GuiEventListener> children, int width, int height, float visibility) {
+		for (GuiEventListener child : children) {
+			if (child instanceof Placed placed) {
+				placed.place(width / 2.0, height / 2.0, factor(visibility));
+			}
+		}
+	}
+
+	/**
+	 * Hook E19: the index of the mode segment the menu draws selected, given the mode's: none (-1) while a box is drawn
+	 * or the copy is at the aim, since then Building Planner's button for that mode shows selected instead.
+	 */
+	public static int selectedSegment(int modeIndex) {
+		return BuildingPlannerClient.mouseModeOn() ? -1 : modeIndex;
 	}
 
 	/**
 	 * Hook E16: the radial menu is closing, by its key let go or by Escape. As the menu then acts on its own button
 	 * under the pointer unless a click acted since it opened ({@code actedByClick}), so does the Building Planner button
-	 * under the pointer.
+	 * under the pointer now, which may have moved since the last frame. Returns that button's action, or null, for the
+	 * hook to run once the menu has closed, so "Block mix" can open its screen: closing grabs the mouse, which moves the
+	 * pointer to the window's middle.
 	 */
-	public static void menuClosing(List<? extends GuiEventListener> children, boolean actedByClick) {
+	public static Runnable menuClosing(List<? extends GuiEventListener> children, boolean actedByClick) {
 		if (actedByClick) {
-			return;
+			return null;
 		}
+		Minecraft mc = Minecraft.getInstance();
+		double x = mc.mouseHandler.xpos() * mc.getWindow().getGuiScaledWidth() / mc.getWindow().getScreenWidth();
+		double y = mc.mouseHandler.ypos() * mc.getWindow().getGuiScaledHeight() / mc.getWindow().getScreenHeight();
 		for (GuiEventListener child : children) {
-			if (child instanceof RadialButton button && button.isHovered()) {
-				button.act();
+			if (child instanceof RadialButton button && button.isMouseOver(x, y)) {
+				return button::act;
 			}
 		}
+		return null;
 	}
 
-	private static RadialButton button(int width, int height, int[] middle, Component name, KeyMapping key,
-		Supplier<Identifier> icon, Runnable action) {
-		Supplier<String> keyName = key == null || key.isUnbound() ? () -> null
-			: () -> key.getTranslatedKeyMessage().getString();
-		return new RadialButton(width / 2 + middle[0] - RadialButton.SIZE / 2,
-			height / 2 + middle[1] - RadialButton.SIZE / 2, name, keyName, icon, action);
+	/** A button named and worked by its key: its hover text shows the key as the player has bound it. */
+	private static RadialButton button(int[] slot, KeyMapping key, Supplier<Identifier> icon, BooleanSupplier selected,
+		Runnable action) {
+		Supplier<String> keyName = () -> key.isUnbound() ? null : key.getTranslatedKeyMessage().getString();
+		return new RadialButton(slot[0], slot[1], Component.translatable(key.getName()), keyName, icon, selected, action);
+	}
+
+	/** A button without a key, named by {@code buildingplanner.ui.radial.<name>}. */
+	private static RadialButton button(int[] slot, String name, Identifier icon, BooleanSupplier selected,
+		Runnable action) {
+		return new RadialButton(slot[0], slot[1], Component.translatable("buildingplanner.ui.radial." + name),
+			() -> null, () -> icon, selected, action);
 	}
 
 	/** The width the longest label either slider shows takes at the current size, in GUI pixels. */

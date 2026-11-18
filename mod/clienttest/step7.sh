@@ -202,6 +202,37 @@ check "Cancel then closes the picker, leaving the mix off" \
 check "and the panel hides" eval '[[ $(val 1 panel) == hidden ]]'
 drv 1 "notoasts" "wait 5" "shot mix-off-message" > /dev/null
 
+# The radial menu's Block mix button opens the same picker: letting the menu's key (left Alt) go with the pointer on
+# it, and a click on it, which opens the picker with the key still held. Effortless Building opens the menu again
+# only with no screen open, so the key is let go before the picker closes.
+# menu_on_block_mix: opens the radial menu and puts the pointer on its Block mix button.
+menu_on_block_mix() {
+	local x y
+	xdo 1 keydown Alt_L
+	drv 1 "await screen Build Modes" "wait 10" > /dev/null
+	read -r x y < <(val 1 "widget 0 Block mix")
+	xdo 1 mousemove --window %w "$x" "$y"
+	drv 1 "wait 5" > /dev/null
+}
+# cancel_picker: closes the picker with its Cancel button.
+cancel_picker() {
+	local x y
+	read -r x y < <(val 1 "widget 0 Cancel")
+	click 1 "$x" "$y"
+	drv 1 "await noscreen" > /dev/null
+}
+menu_on_block_mix
+xdo 1 keyup Alt_L
+check "letting the radial menu's key go over its Block mix button opens the picker" drv 1 "await screen Block mix"
+cancel_picker
+menu_on_block_mix
+xdo 1 click 1
+check "and a click on the button opens it with the key still held" drv 1 "await screen Block mix"
+xdo 1 keyup Alt_L
+check "where it stays once the key is let go" eval 'drv 1 "wait 10" > /dev/null &&
+	drv 1 "await screen Block mix" > /dev/null'
+cancel_picker
+
 # What clicks do in Single mode, with the mix off, while the main hand holds a pickaxe, an apple or nothing: each
 # click on a real stone, or on a ghost stone brick, at 16 -60 4, on the real grass at 16 -61 4. Planner1 stands at
 # 16.5 -60 2.5 and looks down 45 degrees south, at that block. None of the three places a block, so every click acts as
