@@ -9,7 +9,8 @@ import net.minecraft.world.level.block.state.BlockState;
 /**
  * The material list's counts for the ghost blocks in a box, by block state, as Litematica counts a placement's blocks
  * against the world: every ghost block counts in {@code total}; one with air in the world is {@code missing}; one with
- * another block there is both {@code missing} and {@code wrong}.
+ * another block there is both {@code missing} and {@code wrong}. While ghost blocks are hidden, the box counts as if it
+ * held none.
  */
 public record MaterialCount(Object2IntOpenHashMap<BlockState> total, Object2IntOpenHashMap<BlockState> missing,
 	Object2IntOpenHashMap<BlockState> wrong) {
@@ -17,12 +18,16 @@ public record MaterialCount(Object2IntOpenHashMap<BlockState> total, Object2IntO
 	/**
 	 * Counts the ghost blocks of {@code layer} in the box from {@code min} to {@code max}, both corners inside it, where
 	 * {@code world} gives the real block at a position and {@code same} whether a real block (its second argument) is
-	 * the ghost block (its first) built.
+	 * the ghost block (its first) built. {@code ghostsShown} is whether the player's ghost blocks show; while they're
+	 * hidden, nothing counts.
 	 */
 	public static MaterialCount of(Layer layer, BlockPos min, BlockPos max, Function<BlockPos, BlockState> world,
-		BiPredicate<BlockState, BlockState> same) {
+		BiPredicate<BlockState, BlockState> same, boolean ghostsShown) {
 		MaterialCount count = new MaterialCount(new Object2IntOpenHashMap<>(), new Object2IntOpenHashMap<>(),
 			new Object2IntOpenHashMap<>());
+		if (!ghostsShown) {
+			return count;
+		}
 		layer.forEachIn(min, max, (pos, ghost) -> {
 			count.total.addTo(ghost, 1);
 			BlockState real = world.apply(pos);

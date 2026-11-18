@@ -192,8 +192,9 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 					boxWait.tick();
 				}
 				if (heldClicks != null) {
-					// A shape started while ghost blocks are hidden shows them, so the player sees what it joins.
-					if (EffortlessShapes.shapeUnderWay()) {
+					// A shape started while ghost blocks are hidden shows them, so the player sees what it joins; a box
+					// for Copy or the material list leaves them hidden.
+					if ((boxWait == null || boxWait.purpose() == null) && EffortlessShapes.shapeUnderWay()) {
 						session.showForDrawing();
 					}
 					heldClicks.tick(client);

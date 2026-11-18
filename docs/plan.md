@@ -364,7 +364,9 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it, not
    `step9.sh`'s list check passes with its shot.
 4. **Hidden ghost blocks left out** (`CopyRules` and `MaterialCount` taking whether ghost blocks show, and the material
    list no longer showing them). Done when the unit tests cover a box with both kinds of block, shown and hidden, and
-   `step9.sh`'s hidden copy check passes.
+   `step9.sh`'s hidden copy check passes. Built (`CopyRules.blocks` and `MaterialCount.of` take whether ghost blocks
+   show, with their unit tests, and the material list leaves hidden ghost blocks hidden; `step9.sh`'s hidden copy and
+   hidden material list checks pass).
 5. **Real blocks in the material list** ("The material list"): `MaterialCount` counting the real blocks in "Total" (766
    Q4 A), and an empty list for an empty box. Done when a unit test gives the worked example's counts and
    `step9.sh`'s material list checks pass.

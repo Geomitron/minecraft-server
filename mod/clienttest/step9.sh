@@ -390,6 +390,33 @@ check "and no real blocks" eval '[[ $(val 1 "real 51 -59 20") == minecraft:air ]
 	[[ $(val 1 "real 52 -58 22") == minecraft:air ]]'
 shot 1 copy-both-pasted
 
+# With ghost blocks hidden, the same box copies the house's real blocks only: 26, with the real oak plank where the ghost
+# stone stands and nothing where the ghost gold block is; ghost blocks stay hidden. Then they show again and the box
+# copies the 27 blocks once more, which the checks below use.
+press 1 n
+check "ghost blocks are hidden before the copy" eval 'drv 1 "wait 5" > /dev/null && [[ $(val 1 ghosts) == "hidden, "* ]]'
+real_lines=$(chat_count 1 "Copied 26 blocks. Press K to paste them.")
+drv 1 "cmd tp @s 46.5 -56 6.5 0 30" "wait 40" > /dev/null
+press 1 j
+cube 1 52 -58 12 50 10 -60 copy-hidden-box
+check "with ghost blocks hidden, the same box copies the house's 26 real blocks" \
+	said_once_more 1 "Copied 26 blocks. Press K to paste them." "$real_lines"
+check "and ghost blocks stay hidden" eval '[[ $(val 1 ghosts) == "hidden, "* ]]'
+drv 1 "cmd tp @s 51.5 -56 27.5 180 30" "wait 40" > /dev/null
+aim 1 50 -60 20
+check "the copy has the real oak plank where the ghost stone stands, and no gold block" eval '
+	drv 1 "await copy origin 50,-60,20 NONE NONE unselected 26 blocks" > /dev/null &&
+	[[ $(val 1 "get 52 -58 22") == minecraft:oak_planks ]] && [[ $(val 1 "get 51 -59 21") != minecraft:gold_block ]] &&
+	[[ $(val 1 "get 51 -59 20") == minecraft:glass ]]'
+shot 1 copy-hidden
+press 1 n
+check "ghost blocks show again" eval 'drv 1 "wait 5" > /dev/null && [[ $(val 1 ghosts) == "shown, "* ]]'
+drv 1 "cmd tp @s 46.5 -56 6.5 0 30" "wait 40" > /dev/null
+press 1 j
+cube 1 52 -58 12 50 10 -60
+check "the copy is the house with the gold block and the ghost stone again: 27 blocks" \
+	eval 'drv 1 "wait 5" > /dev/null && copy_is 1 " NONE NONE unselected 27 blocks$"'
+
 # With a copy, the menu shows Turn, Mirror and Clear, in the row above the others; shot at 1920 by 1080, GUI scales 2
 # and 4, with the pointer off the buttons, and failing unless the buttons meet nothing.
 radial_copy_shot() {
@@ -527,27 +554,54 @@ press 1 n
 check "ghost blocks are hidden" eval 'drv 1 "wait 5" > /dev/null && [[ $(val 1 ghosts) == "hidden, "* ]]'
 
 # Letting the menu's key go over its Material list button waits for a box, with a message; a cube two blocks high
-# around the row, starting on its first real brick, opens Litematica's material list. The list's screen takes the
-# button from the game as it opens, so the game never sees the third click held: it's a plain press, held for 10 ticks.
+# around the row, starting on its first real brick, ends it. The list's screen takes the button from the game as it
+# opens, so the game never sees the third click held: it's a plain press, held for 10 ticks.
+# material_box <press>: the three clicks of that box, the third held for 10 ticks when <press> is "held" and a plain
+# click otherwise. With no list to open, a held click would go on to act in the player's mode.
+material_box() {
+	drv 1 "lookat 20.5 -59 -9.5" "wait 5" > /dev/null
+	use_click 1
+	drv 1 "lookat 29.5 -60 -9.5" "wait 5" > /dev/null
+	use_click 1
+	drv 1 "lookat 29 -58.5 -10" "wait 10" > /dev/null
+	if [[ $1 == held ]]; then
+		xdo 1 mousedown 3
+		drv 1 "wait 10" > /dev/null
+		xdo 1 mouseup 3
+	else
+		use_click 1
+	fi
+	drv 1 "wait 10" > /dev/null
+}
+
+# With ghost blocks hidden, the box counts as if it held none, so nothing opens, with the message for a box without
+# ghost blocks, and ghost blocks stay hidden.
+wait_lines=$(chat_count 1 "Draw a box around the ghost blocks to list their materials.")
+none_lines=$(chat_count 1 "There are no ghost blocks in that box to list.")
 radial_open
 radial_point "Material list"
 radial_let_go
 check "letting the menu's key go over its Material list button waits for a box in Cube mode" eval \
 	'[[ $(val 1 boxwait) == "true CUBE" ]]'
-check "with a message" client_said 1 "Draw a box around the ghost blocks to list their materials."
-drv 1 "lookat 20.5 -59 -9.5" "wait 5" > /dev/null
-use_click 1
-drv 1 "lookat 29.5 -60 -9.5" "wait 5" > /dev/null
-use_click 1
-drv 1 "lookat 29 -58.5 -10" "wait 10" > /dev/null
-xdo 1 mousedown 3
-drv 1 "wait 10" > /dev/null
-xdo 1 mouseup 3
-drv 1 "wait 10" > /dev/null
+check "with a message" said_once_more 1 "Draw a box around the ghost blocks to list their materials." "$wait_lines"
+material_box plain
+check "with ghost blocks hidden, the cube lists none of the row's ghost blocks, with the message" \
+	said_once_more 1 "There are no ghost blocks in that box to list." "$none_lines"
+check "opens no list" eval '[[ $(val 1 matlist) == closed* ]]'
+check "and ghost blocks stay hidden" eval '[[ $(val 1 ghosts) == "hidden, "* ]]'
+check "the cube puts back the player's mode" eval '[[ $(val 1 boxwait) == "false SINGLE" ]]'
+
+# With ghost blocks shown, the same box opens Litematica's material list.
+press 1 n
+check "ghost blocks show again" eval 'drv 1 "wait 5" > /dev/null && [[ $(val 1 ghosts) == "shown, "* ]]'
+radial_open
+radial_point "Material list"
+radial_let_go
+material_box held
 echo "  the material list: $(val 1 matlist); the copy: $(val 1 copy)" >> /out/checks.log
 check "the cube opens Litematica's material list: 10 stone bricks in all, 6 missing" eval '[[ $(val 1 matlist) == \
 	"open Material list for the ghost blocks in the box: total 10 missing 6 wrong 0 | minecraft:stone_bricks 10/6" ]]'
-check "ghost blocks show first" eval '[[ $(val 1 ghosts) == "shown, "* ]]'
+check "ghost blocks still show" eval '[[ $(val 1 ghosts) == "shown, "* ]]'
 check "the cube places and erases nothing, and puts back the player's mode" eval '
 	[[ $(val 1 "real 24 -60 -10") == minecraft:air ]] && [[ $(val 1 "real 20 -59 -10") == minecraft:air ]] &&
 	[[ $(val 1 "layer 20 -60 -10") == minecraft:stone_bricks ]] && [[ $(val 1 boxwait) == "false SINGLE" ]]'
@@ -561,11 +615,13 @@ drv 1 "window 854 480 2" "wait 20" "close" "wait 5" > /dev/null
 # The box, from 42 -61 42 to 40 -60 40, holds the grass and no ghost blocks.
 press 1 Delete
 drv 1 "cmd tp @s 45.5 -57 45.5 0 30" "wait 40" > /dev/null
+none_lines=$(chat_count 1 "There are no ghost blocks in that box to list.")
 radial_open
 radial_click "Material list"
 radial_let_go
 cube 1 42 -61 42 40 40 -60
-check "a box with no ghost blocks gives a message" client_said 1 "There are no ghost blocks in that box to list."
+check "a box with no ghost blocks gives a message" \
+	said_once_more 1 "There are no ghost blocks in that box to list." "$none_lines"
 check "and opens nothing" eval 'drv 1 "wait 10" > /dev/null && [[ $(val 1 matlist) == closed:* ]]'
 press 1 j
 radial_open

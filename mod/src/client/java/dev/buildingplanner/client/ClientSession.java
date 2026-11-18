@@ -219,14 +219,14 @@ final class ClientSession {
 	/**
 	 * Makes the copy from a box drawn for Copy: at each position the ghost block from the player's copy of the layer,
 	 * and where there is none, the real block from the player's world other than air, without block entity contents
-	 * ({@link CopyRules#blocks}); {@code pasteKey} is the Paste key's name, for the message. A box with nothing to copy,
+	 * ({@link CopyRules#blocks}), while ghost blocks are hidden only the real blocks; {@code pasteKey} is the Paste key's name, for the message. A box with nothing to copy,
 	 * or more blocks than the server's cap for an edit, which its paste would exceed, leaves any earlier copy, with a
 	 * message.
 	 */
 	void copy(BlockPos min, BlockPos max, String pasteKey) {
 		Level level = Minecraft.getInstance().level;
 		Map<BlockPos, BlockState> blocks = CopyRules.blocks(min, max, replica.layer(),
-			pos -> level == null ? Blocks.AIR.defaultBlockState() : level.getBlockState(pos));
+			pos -> level == null ? Blocks.AIR.defaultBlockState() : level.getBlockState(pos), tiles.shown());
 		Optional<PlayerMessage> refusal = CopyRules.refusal(blocks.size(), maxEditBlocks);
 		if (refusal.isPresent()) {
 			show(refusal.get());
@@ -239,15 +239,14 @@ final class ClientSession {
 	}
 
 	/**
-	 * Opens Litematica's material list for the ghost blocks in the box from {@code min} to {@code max}, after showing
-	 * hidden ghost blocks, and makes it the list Litematica's own material list key opens. A box with no ghost blocks
-	 * opens nothing, with a message.
+	 * Opens Litematica's material list for the ghost blocks in the box from {@code min} to {@code max}, leaving hidden
+	 * ghost blocks hidden, and makes it the list Litematica's own material list key opens. A box with no ghost blocks,
+	 * or while they're hidden, opens nothing, with a message.
 	 */
 	void materialList(BlockPos min, BlockPos max) {
 		if (replica.dimension() == null) {
 			return;
 		}
-		showForDrawing();
 		GhostMaterialList list = new GhostMaterialList(replica.dimension(), min, max);
 		if (list.getCountTotal() == 0) {
 			show(PlayerMessage.nothingToList());

@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 
 /** The rules for copying blocks. */
@@ -14,14 +15,16 @@ public final class CopyRules {
 	}
 
 	/**
-	 * The blocks a copy of the box from {@code min} to {@code max} takes, by world position: at each position the ghost
-	 * block from {@code layer}, and where there is none, the real block from {@code world} unless it's air.
+	 * The blocks a copy of the box from {@code min} to {@code max} takes, by world position: while ghost blocks show
+	 * ({@code ghostsShown}), at each position the ghost block from {@code layer}, and where there is none, the real
+	 * block from {@code world} unless it's air; while they're hidden, only the real blocks, so the box's ghost blocks
+	 * are left out.
 	 */
 	public static Map<BlockPos, BlockState> blocks(BlockPos min, BlockPos max, Layer layer,
-		Function<BlockPos, BlockState> world) {
+		Function<BlockPos, BlockState> world, boolean ghostsShown) {
 		Map<BlockPos, BlockState> blocks = new LinkedHashMap<>();
 		for (BlockPos pos : BlockPos.betweenClosed(min, max)) {
-			BlockState state = layer.get(pos);
+			BlockState state = ghostsShown ? layer.get(pos) : Blocks.AIR.defaultBlockState();
 			if (state.isAir()) {
 				state = world.apply(pos);
 			}

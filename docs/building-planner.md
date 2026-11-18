@@ -8,12 +8,14 @@ behind it are in [plan.md](plan.md) ("Decisions").
 **What's built.** The server and the player pack run Building Planner 0.3.0: the shared layer, drawing, hold to repeat,
 the block mix, show or hide, copy and paste in a box drawn with Effortless Building's "Cube" shape, with the keys J, K,
 U, H and Delete, and the material list for such a box. This spec describes the next version, with Geo's changes from
-the walkthrough of 0.3.0 (inbox request 752, in [plan.md](plan.md) "Decisions"), none of which is built yet:
-Building Planner's own box for Copy and the material list, the copy at the aim worked by the mouse, larger boxes, the
-material list counting real blocks, ghost blocks left out of both while they're hidden, the block mix's changes, the
-radial menu's five buttons in a new layout that joins its opening animation, "Building Planner" in place of "Effortless
-Building" where players see it, and Geo's hand-edited icons, which 0.3.0 doesn't have. The build steps are in
-[plan.md](plan.md) ("The walkthrough's changes").
+the walkthrough of 0.3.0 (inbox request 752, in [plan.md](plan.md) "Decisions"). Built so far: ghost blocks left out of
+Copy and the material list while they're hidden (`CopyRules.blocks` and `MaterialCount.of` take whether ghost blocks
+show; the material list no longer shows them). Not built yet: Building Planner's own box for Copy and the material
+list, the copy at the aim worked by the mouse, larger boxes, the material list counting real blocks (while ghost blocks
+are hidden, its list for now opens nothing, with the message for a box without ghost blocks), the block mix's changes,
+the radial menu's five buttons in a new layout that joins its opening animation, "Building Planner" in place of
+"Effortless Building" where players see it, and Geo's hand-edited icons, which 0.3.0 doesn't have. The build steps are
+in [plan.md](plan.md) ("The walkthrough's changes").
 
 ## What players get
 

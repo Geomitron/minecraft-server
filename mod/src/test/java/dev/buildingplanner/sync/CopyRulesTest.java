@@ -41,14 +41,39 @@ class CopyRulesTest {
 		Map<BlockPos, BlockState> world = Map.of(realOnly, dirt, both, dirt, new BlockPos(-1, 0, 0), dirt);
 
 		Map<BlockPos, BlockState> copied = CopyRules.blocks(new BlockPos(0, 0, 0), new BlockPos(1, 1, 1), layer,
-			pos -> world.getOrDefault(pos, air));
+			pos -> world.getOrDefault(pos, air), true);
 
 		assertEquals(Map.of(ghostOnly, stone, realOnly, dirt, both, glass), copied);
 	}
 
 	@Test
+	void whileGhostBlocksAreHiddenTakesOnlyTheRealBlocksLeavingOutTheGhostBlocksInTheBox() {
+		BlockPos ghostOnly = new BlockPos(0, 0, 0);
+		BlockPos realOnly = new BlockPos(1, 0, 0);
+		BlockPos both = new BlockPos(0, 1, 0);
+		Layer layer = new Layer();
+		layer.set(ghostOnly, stone);
+		layer.set(both, glass);
+		Map<BlockPos, BlockState> world = Map.of(realOnly, dirt, both, dirt);
+
+		Map<BlockPos, BlockState> copied = CopyRules.blocks(new BlockPos(0, 0, 0), new BlockPos(1, 1, 1), layer,
+			pos -> world.getOrDefault(pos, air), false);
+
+		assertEquals(Map.of(realOnly, dirt, both, dirt), copied);
+	}
+
+	@Test
 	void takesNothingFromABoxOfAirWithNoGhostBlocks() {
-		assertEquals(Map.of(), CopyRules.blocks(new BlockPos(0, 0, 0), new BlockPos(3, 3, 3), new Layer(), pos -> air));
+		assertEquals(Map.of(),
+			CopyRules.blocks(new BlockPos(0, 0, 0), new BlockPos(3, 3, 3), new Layer(), pos -> air, true));
+	}
+
+	@Test
+	void takesNothingFromABoxOfOnlyGhostBlocksWhileTheyAreHidden() {
+		Layer layer = new Layer();
+		layer.set(new BlockPos(1, 1, 1), stone);
+		assertEquals(Map.of(),
+			CopyRules.blocks(new BlockPos(0, 0, 0), new BlockPos(3, 3, 3), layer, pos -> air, false));
 	}
 
 	@Test

@@ -50,12 +50,39 @@ class MaterialCountTest {
 		layer.set(new BlockPos(0, 66, 0), bricks);
 
 		MaterialCount count = MaterialCount.of(layer, new BlockPos(0, 63, -1), new BlockPos(9, 65, 1),
-			pos -> world.getOrDefault(pos, air), BlockState::equals);
+			pos -> world.getOrDefault(pos, air), BlockState::equals, true);
 
 		assertEquals(10, count.total().getInt(bricks));
 		assertEquals(6, count.missing().getInt(bricks));
 		assertEquals(1, count.wrong().getInt(bricks));
 		assertEquals(1, count.total().size());
+	}
+
+	/** A box with ghost bricks, some built, and real stone with no ghost block over it: shown counts the bricks. */
+	@Test
+	void aBoxWithGhostAndRealBlocksCountsOnlyTheGhostBlocksWhileTheyShowAndNothingWhileTheyAreHidden() {
+		Layer layer = new Layer();
+		Map<BlockPos, BlockState> world = new HashMap<>();
+		for (int x = 0; x < 4; x++) {
+			layer.set(new BlockPos(x, 64, 0), bricks);
+			world.put(new BlockPos(x, 64, 0), x < 2 ? bricks : stone);
+			world.put(new BlockPos(x, 64, 1), stone);
+		}
+		BlockPos min = new BlockPos(0, 64, 0);
+		BlockPos max = new BlockPos(3, 64, 1);
+
+		MaterialCount shown = MaterialCount.of(layer, min, max, pos -> world.getOrDefault(pos, air), BlockState::equals,
+			true);
+		assertEquals(4, shown.total().getInt(bricks));
+		assertEquals(2, shown.missing().getInt(bricks));
+		assertEquals(2, shown.wrong().getInt(bricks));
+		assertEquals(1, shown.total().size());
+
+		MaterialCount hidden = MaterialCount.of(layer, min, max, pos -> world.getOrDefault(pos, air),
+			BlockState::equals, false);
+		assertTrue(hidden.isEmpty());
+		assertTrue(hidden.missing().isEmpty());
+		assertTrue(hidden.wrong().isEmpty());
 	}
 
 	@Test
@@ -64,12 +91,12 @@ class MaterialCountTest {
 		layer.set(new BlockPos(5, 70, 5), stairsNorth);
 		BlockPos at = new BlockPos(5, 70, 5);
 
-		MaterialCount strict = MaterialCount.of(layer, at, at, pos -> stairsEast, BlockState::equals);
+		MaterialCount strict = MaterialCount.of(layer, at, at, pos -> stairsEast, BlockState::equals, true);
 		assertEquals(1, strict.missing().getInt(stairsNorth));
 		assertEquals(1, strict.wrong().getInt(stairsNorth));
 
 		MaterialCount sameBlock = MaterialCount.of(layer, at, at, pos -> stairsEast,
-			(ghost, real) -> ghost.getBlock() == real.getBlock());
+			(ghost, real) -> ghost.getBlock() == real.getBlock(), true);
 		assertEquals(1, sameBlock.total().getInt(stairsNorth));
 		assertTrue(sameBlock.missing().isEmpty());
 		assertTrue(sameBlock.wrong().isEmpty());
@@ -80,6 +107,6 @@ class MaterialCountTest {
 		Layer layer = new Layer();
 		layer.set(new BlockPos(0, 64, 0), bricks);
 		assertTrue(MaterialCount.of(layer, new BlockPos(1, 64, 0), new BlockPos(5, 64, 5), pos -> bricks,
-			BlockState::equals).isEmpty());
+			BlockState::equals, true).isEmpty());
 	}
 }
