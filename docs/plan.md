@@ -347,7 +347,8 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it, not
 [building-planner.md](building-planner.md) is the design, with Geo's answers (766). The steps come in this order,
 each small enough for one child. A step that changes nothing players see goes to `main` once its checks pass (inbox
 request 429). A step that changes what players see is committed without pushing, and goes to `main` once Geo has seen
-its in-game screenshots, with the changes outlined in red; steps 1 to 3 go to Geo together, as do steps 7 to 10.
+its in-game screenshots, with the changes outlined in red; steps 1 to 3 go to Geo together, as do step 5 and steps 7
+to 10.
 Nothing goes to the server or the pack before the last step.
 
 1. **The mouse modes and the copy at the aim** ("Building Planner's mouse modes" and "Copy and paste"): `MouseMode`,
