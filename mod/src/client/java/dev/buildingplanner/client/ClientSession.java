@@ -3,6 +3,7 @@ package dev.buildingplanner.client;
 import dev.buildingplanner.BuildingPlanner;
 import dev.buildingplanner.ClientConfig;
 import dev.buildingplanner.input.MouseMode;
+import dev.buildingplanner.layer.BoxCount;
 import dev.buildingplanner.layer.Layer;
 import dev.buildingplanner.look.GhostsShown;
 import dev.buildingplanner.sync.CopyRules;
@@ -23,13 +24,12 @@ import java.util.Optional;
 import java.util.function.Supplier;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
@@ -44,6 +44,7 @@ final class ClientSession {
 	private final LayerReplica replica;
 	private final Clipboard clipboard = new Clipboard();
 	private final BoxDraw box = new BoxDraw();
+	private final BoxList list = new BoxList();
 	private int clientSeq;
 	/**
 	 * Whether to remove old plans' placements at the next tick: at the session's start, and after each change of level,
@@ -118,6 +119,7 @@ final class ClientSession {
 		if (box.on()) {
 			box.update(replica.layer(), tiles.shown());
 		}
+		list.update(box.shown(), replica.layer(), tiles.shown());
 		followAim();
 	}
 
@@ -153,6 +155,11 @@ final class ClientSession {
 	/** The box being drawn now, as it shows, or null. */
 	BoxDraw.Shown boxShown() {
 		return box.shown();
+	}
+
+	/** The kinds of block in the box being drawn, for the list under the crosshair. */
+	List<BoxList.Entry> boxList() {
+		return list.entries();
 	}
 
 	/** The box, for the in-game checks. */
@@ -298,17 +305,22 @@ final class ClientSession {
 	 * and where there is none, the real block from the player's world other than air, without block entity contents
 	 * ({@link CopyRules#blocks}), while ghost blocks are hidden only the real blocks. The copy then shows at the aim. A
 	 * box with nothing to copy, or more blocks than the server's cap for an edit, which its paste would exceed, leaves
-	 * any earlier copy, with a message.
+	 * any earlier copy, with a message; the blocks are counted ({@link BoxCount}) before any is taken, so a large box
+	 * over the cap takes none.
 	 */
 	void copy(BlockPos min, BlockPos max) {
-		Level level = Minecraft.getInstance().level;
-		Map<BlockPos, BlockState> blocks = CopyRules.blocks(min, max, replica.layer(),
-			pos -> level == null ? Blocks.AIR.defaultBlockState() : level.getBlockState(pos), tiles.shown());
-		Optional<PlayerMessage> refusal = CopyRules.refusal(blocks.size(), maxEditBlocks);
+		ClientLevel level = Minecraft.getInstance().level;
+		if (level == null) {
+			return;
+		}
+		BoxCount.Sections world = BoxList.realSections(level);
+		int count = BoxCount.of(min, max, replica.layer(), world, tiles.shown()).values().intStream().sum();
+		Optional<PlayerMessage> refusal = CopyRules.refusal(count, maxEditBlocks);
 		if (refusal.isPresent()) {
 			show(refusal.get());
 			return;
 		}
+		Map<BlockPos, BlockState> blocks = CopyRules.blocks(min, max, replica.layer(), world, tiles.shown());
 		clipboard.place(blocks, GhostAim.copyOrigin(replica.layer(), tiles.shown()));
 		if (clipboard.atAim()) {
 			show(PlayerMessage.copied(blocks.size()));

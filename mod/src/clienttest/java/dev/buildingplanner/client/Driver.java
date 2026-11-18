@@ -476,9 +476,21 @@ public final class Driver implements ClientModInitializer {
 			}
 			case "modehud" -> {
 				// modehud: the line of the mouse mode's controls as the player reads it, or hidden.
-				Field f = BuildingPlannerClient.class.getDeclaredField("modeHud");
-				f.setAccessible(true);
-				return ((ModeHud) f.get(null)).text();
+				return modeHud().text();
+			}
+			case "modewrap" -> {
+				// modewrap: the controls as they wrap on the screen now, lines separated by " / ", or hidden.
+				return modeHud().wrappedText();
+			}
+			case "boxlist" -> {
+				// boxlist: the list under the crosshair: the right edge of its cells, the screen's width, the bottom of
+				// its rows and the top of the controls, in GUI pixels, then its rows; or hidden.
+				return modeHud().listText();
+			}
+			case "breaklist" -> {
+				// breaklist: Effortless Building's shape under way and how many kinds of real block its break list
+				// holds.
+				return EffortlessDriver.breakList();
 			}
 			case "slot" -> {
 				// slot: the hotbar slot selected, from 0, and the item in the main hand, e.g. "0 minecraft:stone_bricks".
@@ -720,6 +732,12 @@ public final class Driver implements ClientModInitializer {
 		Field f = BuildingPlannerClient.class.getDeclaredField("MIX");
 		f.setAccessible(true);
 		return (BlockMix) f.get(null);
+	}
+
+	private static ModeHud modeHud() throws Exception {
+		Field f = BuildingPlannerClient.class.getDeclaredField("modeHud");
+		f.setAccessible(true);
+		return (ModeHud) f.get(null);
 	}
 
 	static ClientSession session() throws Exception {

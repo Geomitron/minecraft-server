@@ -1,6 +1,7 @@
 # Step 9's in-game checks: showing and hiding ghost blocks with N and the radial menu's button, drawing while they're
-# hidden, the choice kept across a restart, where the radial menu's buttons sit, with screenshots, copy and paste with
-# the copy at the aim worked by the mouse, the material list, and N on a server without Building Planner. Sourced by inside.sh, which provides drv, val,
+# hidden, the choice kept across a restart, where the radial menu's buttons sit, with screenshots, the box with its
+# list under the crosshair, copy and paste with the copy at the aim worked by the mouse, the material list, and N on a
+# server without Building Planner. Sourced by inside.sh, which provides drv, val,
 # check, keys, xdo, click, use_click, attack_click, client_said, start_server, stop_server, start_client, stop_client,
 # no_planner_message and $ADDON. Players stand on the flat world's grass, whose top is at y -61.
 
@@ -330,6 +331,8 @@ check "the first click sets the first corner, and the box follows the aim on its
 drv 1 "lookat 3.5 -59 3.5" "wait 5" > /dev/null
 check "to the opposite corner" eval 'box_is "COPY 1 3,-59,3..5,-59,4 white SINGLE" &&
 	[[ $(val 1 modehud) == "Copy: $second_line (3 × 1 × 2)" ]]'
+check "the list under the crosshair counts the box's blocks: the stairs and the glowstone" eval \
+	'drv 1 "wait 5" > /dev/null && [[ $(val 1 boxlist) == *" | minecraft:glowstone 1, minecraft:oak_stairs 1" ]]'
 drv 1 "wait 200" > /dev/null
 shot 1 box-copy-first-click
 attack_click 1
@@ -339,6 +342,8 @@ check "the second click sets the opposite corner, and the height follows the aim
 drv 1 "lookat 3.5 -59.5 3.5" "wait 5" > /dev/null
 check "down to the stone bricks" eval 'box_is "COPY 2 3,-60,3..5,-59,4 white SINGLE" &&
 	[[ $(val 1 modehud) == "Copy: $height_line (3 × 2 × 2)" ]]'
+check "and the list counts the stone bricks too, most numerous first" eval 'drv 1 "wait 5" > /dev/null &&
+	[[ $(val 1 boxlist) == *" | minecraft:stone_bricks 6, minecraft:glowstone 1, minecraft:oak_stairs 1" ]]'
 shot 1 box-copy-second-click
 attack_click 1
 drv 1 "wait 5" > /dev/null
@@ -654,6 +659,11 @@ drv 1 "lookat 3.5 -59 3.5" "wait 5" > /dev/null
 check "the Material list button during a box for Copy switches it to the material list, keeping its corner" eval \
 	'box_is "MATERIAL_LIST 1 3,-59,3..5,-59,4 white SINGLE" &&
 	[[ $(val 1 modehud) == "Material list: $second_line (3 × 1 × 2)" ]]'
+# At 854 by 480, GUI scale 2, this line wraps onto two lines, with the box's size whole.
+wrap=$(val 1 modewrap)
+echo "  the material list's controls as they wrap: $wrap" >> /out/checks.log
+check "the controls line wraps without breaking the box's size" eval \
+	'[[ $wrap == *" / "* && $wrap == *"(3 × 1 × 2)" && ${wrap%% / *} != *"("* ]]'
 drv 1 "wait 200" > /dev/null
 shot 1 box-material-list-first-click
 attack_click 1
@@ -665,6 +675,62 @@ lines=$(chat_lines 1)
 use_click 1
 check "a right click before the third click ends the box, with no message" eval \
 	'drv 1 "wait 10" > /dev/null && box_is "none SINGLE" && (($(chat_lines 1) == lines))'
+
+# The list under the crosshair for a box of 144 by 3 by 144 over a real floor of 40 kinds of block, at 854 by 480,
+# GUI scale 2: strips 3 wide from the box's west side, the first 144 long and each next one 1 shorter, so the kinds
+# are in strip order, most numerous first. The box is as wide as the chunks the game loads around the player on the
+# dev server (its view distance is 6) allow, and goes from the grass east of the strips to the far corner.
+kinds=(stone granite polished_granite diorite polished_diorite andesite polished_andesite cobblestone oak_planks
+	spruce_planks birch_planks jungle_planks acacia_planks dark_oak_planks mangrove_planks cherry_planks bamboo_planks
+	crimson_planks warped_planks bricks stone_bricks mossy_stone_bricks sandstone red_sandstone white_wool orange_wool
+	magenta_wool light_blue_wool yellow_wool lime_wool pink_wool gray_wool light_gray_wool cyan_wool purple_wool
+	blue_wool brown_wool green_wool red_wool black_wool)
+drv 1 "cmd tp @s -151.5 -40 8.5 0 30" "wait 100" > /dev/null
+fills=()
+for i in "${!kinds[@]}"; do
+	fills+=("cmd fill $((-224 + 3 * i)) -60 -64 $((-222 + 3 * i)) -60 $((79 - i)) minecraft:${kinds[i]}")
+done
+drv 1 "${fills[@]}" "await real -105 -60 40 minecraft:black_wool" > /dev/null
+expected=""
+for i in $(seq 0 28); do
+	if ((i == 0)); then
+		sep=""
+	elif ((i % 10 == 0)); then
+		sep=" / "
+	else
+		sep=", "
+	fi
+	expected+="${sep}minecraft:${kinds[i]} $((3 * (144 - i)))"
+done
+expected+=", +11"
+copy_button
+drv 1 "lookat -80.5 -60 79.5" "wait 5" > /dev/null
+attack_click 1
+drv 1 "lookat -223.5 -60 -63.5" "wait 5" > /dev/null
+attack_click 1
+drv 1 "lookat -223.5 -57.5 -63.5" "wait 10" > /dev/null
+list=$(val 1 boxlist)
+echo "  the list for 40 kinds: $list" >> /out/checks.log
+check "a box of 144 by 3 by 144 over 40 kinds of block" box_is "COPY 2 -224,-60,-64..-81,-58,79 white SINGLE"
+read -r right width bottom top _ <<< "$list"
+check "lists them in rows of 10 that end inside the screen and above the controls line, with a +N cell" eval \
+	'((right <= width - 4 && bottom <= top)) && [[ ${list#* | } == "$expected" ]]'
+drv 1 "wait 200" > /dev/null
+shot 1 box-list-wrapped
+use_click 1
+check "a right click ends the box and its list" eval 'drv 1 "wait 10" > /dev/null && box_is "none SINGLE" &&
+	[[ $(val 1 boxlist) == hidden ]]'
+
+# A shape drawn with the break click over real blocks shows no list of them (hook E8): it erases ghost blocks and
+# leaves the real ones.
+drv 1 "cmd tp @s -92.5 -57 4.5 0 30" "wait 20" "ebmode LINE" "lookat -90.5 -60 0.5" "wait 5" > /dev/null
+attack_click 1
+drv 1 "lookat -95.5 -60 0.5" "wait 10" > /dev/null
+check "a break shape over real grass lists none of it" eval '[[ $(val 1 breaklist) == "BREAKING 0" ]]'
+attack_click 1
+drv 1 "wait 5" "ebmode SINGLE" > /dev/null
+check "and the shape ends" eval '[[ $(val 1 breaklist) == "none 0" ]]'
+drv 1 "cmd tp @s 8.5 -56 9.5 0 30" "wait 100" > /dev/null
 
 # The limits. A box from a corner on the grass at 120 -60 64; Planner1 then flies 210 blocks east, as a player may
 # while drawing, and the corner's chunks unload. An opposite corner 261 blocks from it is past the limit on a side,

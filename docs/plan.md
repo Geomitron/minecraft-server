@@ -369,7 +369,10 @@ Nothing goes to the server or the pack before the last step.
 3. **The count and the list under the crosshair**: `BoxCount` reading whole sections, the wrapped list with its "+N"
    cell, and E8 clearing Effortless Building's break list during a session. Done when unit tests cover the count by
    sections against a count position by position, the wrap and the "+N" cell at 854 by 480, GUI scale 2, and
-   `step9.sh`'s list check passes with its shot.
+   `step9.sh`'s list check passes with its shot. Built (`BoxCount`, with Copy counting a box by it before taking any
+   block, and `BoxListLayout`, with their unit tests, `BoxList`, the list and the size kept whole in `ModeHud`'s
+   wrapped line, and E8's wrap of the break list; `step9.sh`'s list checks pass, with a box of 144 by 3 by 144, the
+   widest the dev server's view distance loads, and the E8 check).
 4. **Hidden ghost blocks left out** (`CopyRules` and `MaterialCount` taking whether ghost blocks show, and the material
    list no longer showing them). Done when the unit tests cover a box with both kinds of block, shown and hidden, and
    `step9.sh`'s hidden copy check passes. Built (`CopyRules.blocks` and `MaterialCount.of` take whether ghost blocks

@@ -3,6 +3,7 @@ package dev.buildingplanner.sync;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import dev.buildingplanner.layer.Layer;
+import dev.buildingplanner.layer.TestSections;
 import java.util.Map;
 import java.util.Optional;
 import net.minecraft.SharedConstants;
@@ -14,7 +15,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 class CopyRulesTest {
-	private static BlockState air;
 	private static BlockState stone;
 	private static BlockState dirt;
 	private static BlockState glass;
@@ -23,7 +23,6 @@ class CopyRulesTest {
 	static void bootstrap() {
 		SharedConstants.tryDetectVersion();
 		Bootstrap.bootStrap();
-		air = Blocks.AIR.defaultBlockState();
 		stone = Blocks.STONE.defaultBlockState();
 		dirt = Blocks.DIRT.defaultBlockState();
 		glass = Blocks.GLASS.defaultBlockState();
@@ -41,7 +40,7 @@ class CopyRulesTest {
 		Map<BlockPos, BlockState> world = Map.of(realOnly, dirt, both, dirt, new BlockPos(-1, 0, 0), dirt);
 
 		Map<BlockPos, BlockState> copied = CopyRules.blocks(new BlockPos(0, 0, 0), new BlockPos(1, 1, 1), layer,
-			pos -> world.getOrDefault(pos, air), true);
+			TestSections.of(world), true);
 
 		assertEquals(Map.of(ghostOnly, stone, realOnly, dirt, both, glass), copied);
 	}
@@ -57,23 +56,23 @@ class CopyRulesTest {
 		Map<BlockPos, BlockState> world = Map.of(realOnly, dirt, both, dirt);
 
 		Map<BlockPos, BlockState> copied = CopyRules.blocks(new BlockPos(0, 0, 0), new BlockPos(1, 1, 1), layer,
-			pos -> world.getOrDefault(pos, air), false);
+			TestSections.of(world), false);
 
 		assertEquals(Map.of(realOnly, dirt, both, dirt), copied);
 	}
 
 	@Test
 	void takesNothingFromABoxOfAirWithNoGhostBlocks() {
-		assertEquals(Map.of(),
-			CopyRules.blocks(new BlockPos(0, 0, 0), new BlockPos(3, 3, 3), new Layer(), pos -> air, true));
+		assertEquals(Map.of(), CopyRules.blocks(new BlockPos(0, 0, 0), new BlockPos(3, 3, 3), new Layer(),
+			TestSections.of(Map.of()), true));
 	}
 
 	@Test
 	void takesNothingFromABoxOfOnlyGhostBlocksWhileTheyAreHidden() {
 		Layer layer = new Layer();
 		layer.set(new BlockPos(1, 1, 1), stone);
-		assertEquals(Map.of(),
-			CopyRules.blocks(new BlockPos(0, 0, 0), new BlockPos(3, 3, 3), layer, pos -> air, false));
+		assertEquals(Map.of(), CopyRules.blocks(new BlockPos(0, 0, 0), new BlockPos(3, 3, 3), layer,
+			TestSections.of(Map.of()), false));
 	}
 
 	@Test

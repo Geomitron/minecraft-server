@@ -16,9 +16,12 @@ K, U, H and Delete and the radial menu's Turn, Mirror and Clear buttons (`MouseM
 and `ModeHud`; with no Block mix button in the radial menu yet, the Block mix key B puts the copy away); and Building
 Planner's own box for Copy and the material list, drawn with three left clicks, with its outline, its controls line and
 its limits, switching between the two (`BoxCorners`, `BoxDraw`, `BoxOutline` and the box's lines in `ModeHud`; the
-server's limit on one edit is still 50,000 blocks). Not built yet: the count and the list under the crosshair, the
-server's limit of 200,000 blocks, the material list counting real blocks (while ghost blocks are hidden, its list for
-now opens nothing, with the message for a box without ghost blocks), the block mix's changes,
+server's limit on one edit is still 50,000 blocks); and the box's blocks counted by whole sections and listed under
+the crosshair in rows that wrap, ending with a "+N" cell, with Copy counting a box the same way before it takes any
+block, and no list of real blocks under Effortless Building's break shapes (`BoxCount`, `BoxList`, `BoxListLayout`
+and hook E8). Not built yet: the server's limit of 200,000 blocks, the material list counting real blocks (while
+ghost blocks are hidden, its list for now opens nothing, with the message for a box without ghost blocks), the block
+mix's changes,
 the radial menu's five buttons in a new layout that joins its opening animation, "Building Planner" in place of
 "Effortless Building" where players see it, and Geo's hand-edited icons, which 0.3.0 doesn't have. The build steps are
 in [plan.md](plan.md) ("The walkthrough's changes").
@@ -485,8 +488,9 @@ white, with each action in dark aqua. The drafts, for Geo's review once built:
 - a box for the material list: the same, starting "Material list:";
 - the copy at the aim: "Left-click to paste, Scroll to turn, Middle-click to mirror, Right-click to put away".
 
-A line too wide for the screen wraps onto a second line above it. Effortless Building's own line during its shapes
-stays as it is.
+A line too wide for the screen wraps onto a second line above it, breaking only at spaces outside the box's size, which
+goes after the last word that leaves it room, or alone on the line below. Effortless Building's own line during its
+shapes stays as it is.
 
 ### Boxes for Copy and the material list
 
@@ -514,15 +518,18 @@ corner would break a limit, the box draws red, the line on screen says which lim
 of the box is too far away to read. Move closer."), and the click doesn't set the corner. A box never shrinks to fit a
 limit.
 
-While the box is drawn, the blocks in it show under the crosshair: each block's item with its count, most numerous
-first, 20 apart from 10 right of the screen's middle, as Effortless Building's own list starts (`RenderHandler.
-drawBreakingStacks`). Where the next would pass 4 from the screen's right edge, the list goes on in a new row 20 below,
-starting at the same place; the last row that clears the controls line ends with a cell "+N" for the kinds of block
-left out. The blocks are counted by the copy's rule (`CopyRules`): at each position the ghost block, while ghost blocks
-show, and otherwise the real block, leaving out air. The count (`BoxCount`) reads whole 16-block sections: a section
-the box takes in whole, with no ghost blocks, is counted from its palette (`LevelChunkSection.getStates().count`), a
-section of only air (`hasOnlyAir`) is skipped, and only the sections the box cuts or that hold ghost blocks are read
-position by position. It runs again when a corner moves, at most once every 5 ticks.
+While the box is drawn, the blocks in it show under the crosshair (`BoxList`, laid out by `BoxListLayout`): each block's
+item, as Litematica's material list gives it (`MaterialCache`), with its count, most numerous first, 20 apart from 10
+right of the screen's middle and 8 above it, drawn as Effortless Building draws its own list (`RenderHandler.
+drawBreakingStacks`). A count shows at most three characters, so it stays within its cell: up to 999 as it is, then
+rounded in thousands ("12k") and millions ("3M"). Where the next cell would pass 4 from the screen's right edge, the
+list goes on in a new row 20 below, starting at the same place; the last row that clears the controls line ends with a
+cell "+N" for the kinds of block left out. A box past a limit shows no list. The blocks are counted by the copy's rule
+(`CopyRules`): at each position the ghost block, while ghost blocks show, and otherwise the real block, leaving out air.
+The count (`BoxCount`) reads whole 16-block sections: a section the box takes in whole, with no ghost blocks, is counted
+from its palette (`LevelChunkSection.getStates().count`), a section of only air (`hasOnlyAir`) is skipped, and only the
+sections the box cuts or that hold ghost blocks are read position by position. It runs again when a corner moves, at
+most once every 5 ticks.
 
 The third click ends the mode and hands the box, by its lowest and highest corners, to Copy or the material list.
 
@@ -640,13 +647,15 @@ placement list, as for tiles.
 
 When a box for Copy is drawn, Copy takes, at each position in the box, the ghost block from the player's copy of the
 layer while ghost blocks show; where there is none, or while they're hidden, it takes the real block from the player's
-world (`ClientLevel.getBlockState`), any block state but air, without block entity contents. So where a position has
-both a ghost block and a real block, the copy takes the ghost block while ghost blocks show (`CopyRules.blocks`). Each
-block keeps its world position relative to the box. The copy's box is the smallest box around the copied blocks, and
-its schematic holds structure void in every position with no copied block, so the ghost blocks under its empty space
-show. When the box has no blocks to copy, the player gets a message and nothing changes. A copy of more blocks than the
-server's block cap is refused with a message, since its paste would be. Otherwise the new copy replaces any earlier one,
-the player gets the message "Copied 120 blocks." (a draft for Geo's review), and the copy shows at the aim.
+world (the chunk sections the game holds), any block state but air, without block entity contents. So where a position
+has both a ghost block and a real block, the copy takes the ghost block while ghost blocks show (`CopyRules.blocks`).
+Each block keeps its world position relative to the box. The copy's box is the smallest box around the copied blocks,
+and its schematic holds structure void in every position with no copied block, so the ghost blocks under its empty space
+show. Copy counts the box's blocks first, with `BoxCount`, and takes them, skipping sections with none, only when the
+count is neither 0 nor over the cap. When the box has no blocks to copy, the player gets a message and nothing changes. A copy of more
+blocks than the server's block cap is refused with a message, since its paste would be. Otherwise the new copy replaces
+any earlier one, the player gets the message "Copied 120 blocks." (a draft for Geo's review), and the copy shows at the
+aim.
 
 The copy at the aim is one of Building Planner's mouse modes (see "Building Planner's mouse modes"). Each client tick
 the copy's origin, its corner with the lowest coordinates, goes on the block beside the face the player aims at, real
@@ -829,9 +838,12 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   click makes the copy, with its message, places no real block, doesn't reach the other player, and leaves
   Effortless Building's mode as it was. The copy's corner sits on the aimed block and follows the aim, and Litematica
   neither selects nor lists it.
-- A box of 200 by 3 by 200 over a floor of 40 kinds of block, at 854 by 480, GUI scale 2, shows the list in rows that
-  end inside the screen, with a "+N" cell; it's shot. A box past the side limit, or over a chunk not loaded, draws red,
-  says which limit, and its click sets no corner.
+- At 854 by 480, GUI scale 2, the list counts a small box's blocks, most numerous first, and the material list box's
+  controls line wraps onto two lines with the box's size whole. A box of 144 by 3 by 144 (as wide as the chunks the dev
+  server's view distance of 6 loads around the player allows) over a floor of 40 kinds of block shows the list in rows
+  of 10 that end inside the screen and above the controls line, with a "+11" cell; it's shot. A break shape drawn in
+  Line mode over real grass has an empty break list (E8). A box past the side limit, or over a chunk not loaded, draws
+  red, says which limit, and its click sets no corner.
 - With the copy at the aim, the controls line shows its controls. A notch down turns it a quarter turn clockwise, a
   notch up back, and the hotbar slot stays; a middle click, facing south, flips it east to west, with its stairs
   turning with it, and picks no block.

@@ -110,7 +110,8 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		KeyMappingHelper.registerKeyMapping(SHOW_HIDE);
 		glow = EditGlow.registered();
 		BoxOutline.registered(BuildingPlannerClient::boxShown);
-		modeHud = new ModeHud(BuildingPlannerClient::mouseMode, BuildingPlannerClient::boxShown);
+		modeHud = new ModeHud(BuildingPlannerClient::mouseMode, BuildingPlannerClient::boxShown,
+			() -> session == null ? List.of() : session.boxList());
 		HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(BuildingPlanner.MOD_ID, "mode_controls"),
 			modeHud);
 		ClientPlayNetworking.registerGlobalReceiver(Payloads.Hello.TYPE, (hello, context) -> hello(hello));

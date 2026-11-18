@@ -11,8 +11,11 @@ import net.minecraft.client.resources.language.I18n;
 import nl.requios.effortlessbuilding.buildmode.BuildModeEnum;
 import nl.requios.effortlessbuilding.buildmode.BuildModes;
 import nl.requios.effortlessbuilding.buildmode.ModeOptions;
+import nl.requios.effortlessbuilding.buildpipeline.BuildPipeline;
+import nl.requios.effortlessbuilding.buildpipeline.BuildPipelineClient;
 import nl.requios.effortlessbuilding.modifier.ArrayModifier;
 import nl.requios.effortlessbuilding.modifier.ModifierSystem;
+import nl.requios.effortlessbuilding.utilities.BreakDisplayTracker;
 
 /**
  * The driver's commands for Effortless Building, in a class of their own so the driver still loads on a client without
@@ -30,6 +33,13 @@ final class EffortlessDriver {
 	/** Effortless Building's build mode. */
 	static String mode() {
 		return BuildModes.CLIENT.getBuildMode().name();
+	}
+
+	/** The shape under way (none, PLACING or BREAKING) and how many kinds of real block its break list holds. */
+	static String breakList() {
+		BuildPipeline.BuildState state = BuildPipelineClient.getBuildState();
+		BreakDisplayTracker list = BuildPipelineClient.BREAK_DISPLAY;
+		return (state == null ? "none" : state.name()) + " " + (list.breakable.size() + list.rejected.size());
 	}
 
 	/** Effortless Building's array modifier alone; a count of 0 clears it. */

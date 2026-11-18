@@ -23,6 +23,7 @@ import nl.requios.effortlessbuilding.buildpipeline.BuildPipelineClient;
 import nl.requios.effortlessbuilding.network.BreakBuildModePacket;
 import nl.requios.effortlessbuilding.network.PlaceBuildModePacket;
 import nl.requios.effortlessbuilding.utilities.BlockSet;
+import nl.requios.effortlessbuilding.utilities.BreakDisplayTracker;
 import nl.requios.effortlessbuilding.utilities.ItemUsageTracker;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -30,8 +31,8 @@ import org.spongepowered.asm.mixin.injection.At;
 /**
  * Effortless Building's client pipeline, on a server with Building Planner: a finished shape goes into the layer
  * instead of to the server as real blocks (hooks E1 to E3), the mix starts shapes (E6), the preview has no "missing
- * items" tint (E8), shapes can start on ghost blocks (E9), and clicks without a placeable item stay vanilla's and a
- * mouse mode's go to it (E14).
+ * items" tint and a break shape no list of real blocks (E8), shapes can start on ghost blocks (E9), and clicks without
+ * a placeable item stay vanilla's and a mouse mode's go to it (E14).
  */
 @Mixin(value = BuildPipelineClient.class, remap = false)
 abstract class BuildPipelineClientMixin {
@@ -108,6 +109,21 @@ abstract class BuildPipelineClientMixin {
 			tracker.initialize();
 		} else {
 			original.call(tracker, player, positions, item, creative);
+		}
+	}
+
+	/**
+	 * Hook E8, for a shape drawn with the break click: it erases ghost blocks and leaves the real blocks under it, so
+	 * Effortless Building's list of them, drawn in one row that never wraps, shows nothing.
+	 */
+	@WrapOperation(method = "updateDisplayTrackers", at = @At(value = "INVOKE",
+		target = "Lnl/requios/effortlessbuilding/utilities/BreakDisplayTracker;compute(Lnet/minecraft/world/entity/player/Player;Lnl/requios/effortlessbuilding/utilities/BlockSet;)V"))
+	private static void buildingplanner$noBreakList(BreakDisplayTracker tracker, Player player, BlockSet blocks,
+		Operation<Void> original) {
+		if (BuildingPlannerClient.active()) {
+			tracker.initialize();
+		} else {
+			original.call(tracker, player, blocks);
 		}
 	}
 
