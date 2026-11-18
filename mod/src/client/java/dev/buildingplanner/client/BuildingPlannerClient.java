@@ -103,7 +103,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		if (loader.isModLoaded("effortlessbuilding")) {
 			effortless = true;
 			heldClicks = new HeldClicks(config);
-			mixPanel = new MixPanel(MIX, EffortlessShapes::mixApplies);
+			mixPanel = new MixPanel(MIX, EffortlessShapes::mixApplies, BLOCK_MIX::getTranslatedKeyMessage);
 			HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(BuildingPlanner.MOD_ID, "mix_panel"), mixPanel);
 		}
 		KeyMappingHelper.registerKeyMapping(BLOCK_MIX);

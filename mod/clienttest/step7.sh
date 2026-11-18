@@ -1,9 +1,9 @@
 # Step 7's in-game checks: Effortless Building's shapes drawn as ghost blocks, in Single mode with the array modifier
-# and as a Line, starting on ghost blocks and erasing, the block-mix picker and its inventory toggle, the mix in
-# shapes, the mix panel and the picker's "Turn off", what clicks do with a pickaxe, an apple, nothing, a water bucket
-# or redstone dust in hand, and a client without Effortless Building. Sourced by inside.sh, which provides drv, val,
-# check, keys, click, use_click, attack_click, client_said, start_client and stop_client. Shapes are drawn with
-# Planner1 looking straight down, so each block's position is known.
+# and as a Line, starting on ghost blocks and erasing, the block-mix picker, its inventory toggle and the click that
+# adds or takes out a block, the mix in shapes, the mix panel and the picker's "Clear Mix", what clicks do with a
+# pickaxe, an apple, nothing, a water bucket or redstone dust in hand, and a client without Effortless Building.
+# Sourced by inside.sh, which provides drv, val, check, keys, click, use_click, attack_click, client_said, start_client
+# and stop_client. Shapes are drawn with Planner1 looking straight down, so each block's position is known.
 
 check "client 1 starts a session on hello" drv 1 "await session" "await noscreen"
 check "client 2 starts a session on hello" drv 2 "await session" "await noscreen"
@@ -39,28 +39,59 @@ check "a Line adds its ghost blocks on both clients" eval 'drv 1 "await block 5 
 check "and no real blocks" eval '[[ $(val 1 "real 7 -60 9") == minecraft:air ]]'
 drv 1 "ebmode SINGLE" > /dev/null
 
-# The block-mix picker: B opens it with every block; the toggle limits it to the player's inventory, cobblestone and
-# mossy cobblestone; Planner1 picks both, at 80 to 20, and turns the mix on.
+# The block-mix picker: B opens it with "Only my inventory" on, listing the inventory's cobblestone and mossy
+# cobblestone; turned off, it lists every block, and it stays off when the picker opens again. Planner1 picks both with
+# a click each, takes mossy cobblestone out with a second click and adds it back with a third, sets their shares to 80
+# and 20, and turns the mix on. The picker's shots are at 854 by 480, GUI scale 2, and in a window of 1920 by 1080 at
+# GUI scale 4.
 drv 1 "cmd clear @s" "cmd give @s minecraft:cobblestone 5" "cmd give @s minecraft:mossy_cobblestone 5" \
 	"cmd tp @s 2 -58 -5 0 5" "wait 20" > /dev/null
+# picker_shot <name>: shoots the open picker at both sizes, <name> and <name>-1920x1080.
+picker_shot() {
+	drv 1 "notoasts" "wait 5" "shot $1" "window 1920 1080 4" "wait 20" "notoasts" "wait 5" "shot $1-1920x1080" \
+		"window 854 480 2" "wait 20" > /dev/null
+}
 keys 1 key b
 check "B opens the block-mix picker" drv 1 "await screen Block mix"
-check "the picker lists every block in the game" eval '(( $(val 1 pickershown) > 1000 ))'
-check "with the mix off, the picker has no Turn off button" eval '[[ $(val 1 texts) != *"Turn off"* ]]'
-drv 1 "notoasts" "wait 5" "shot picker-all" > /dev/null
+check "with Only my inventory on" eval '[[ $(val 1 texts) == *"Only my inventory: ON"* ]]'
+check "listing only the inventory's two blocks" eval '[[ $(val 1 pickershown) == 2 ]]'
+check "with the buttons Use mix, Clear Mix and Cancel" \
+	eval '[[ $(val 1 texts) == *"| Use mix | Clear Mix | Cancel" && $(val 1 texts) != *"Turn off"* ]]'
+picker_shot picker-opens
 read -r x y < <(val 1 "widget 0 Only my inventory")
 click 1 "$x" "$y"
-check "its toggle limits the list to the blocks in the inventory" eval '[[ $(val 1 pickershown) == 2 ]]'
+check "turned off, the toggle lists every block in the game" eval '(( $(val 1 pickershown) > 1000 ))'
+drv 1 "notoasts" "wait 5" "shot picker-all" > /dev/null
+read -r x y < <(val 1 "widget 0 Cancel")
+click 1 "$x" "$y"
+drv 1 "await noscreen" > /dev/null
+keys 1 key b
+check "the picker opens again with the toggle as the player left it" \
+	eval 'drv 1 "await screen Block mix" > /dev/null && [[ $(val 1 texts) == *"Only my inventory: OFF"* ]]'
+read -r x y < <(val 1 "widget 0 Only my inventory")
+click 1 "$x" "$y"
+check "and turned on again, it lists the inventory's two blocks" eval '[[ $(val 1 pickershown) == 2 ]]'
 for cell in 0 1; do
 	read -r x y < <(val 1 "gridcell $cell")
 	click 1 "$x" "$y"
 done
+check "a click on each block adds it to the mix" \
+	eval '[[ $(val 1 pickermix) == "minecraft:cobblestone:1,minecraft:mossy_cobblestone:1" ]]'
+read -r x y < <(val 1 "gridcell 1")
+click 1 "$x" "$y"
+check "a second click on a block takes it out" eval '[[ $(val 1 pickermix) == "minecraft:cobblestone:1" ]]'
+picker_shot picker-unpicked
+read -r x y < <(val 1 "gridcell 1")
+click 1 "$x" "$y"
+check "and a third adds it back" \
+	eval '[[ $(val 1 pickermix) == "minecraft:cobblestone:1,minecraft:mossy_cobblestone:1" ]]'
 for share in 0:80 1:20; do
 	read -r x y < <(val 1 "widget ${share%%:*} Percentage of the mix")
 	click 1 "$x" "$y"
 	keys 1 key ctrl+a type "${share##*:}"
 done
-drv 1 "wait 10" "notoasts" "wait 5" "shot picker-inventory" > /dev/null
+drv 1 "wait 10" > /dev/null
+picker_shot picker-inventory
 read -r x y < <(val 1 "widget 0 Use mix")
 click 1 "$x" "$y"
 check "Use mix turns the mix on, 80 cobblestone to 20 mossy cobblestone" \
@@ -69,8 +100,8 @@ check "with a message" client_said 1 "Block mix on. Press B to change it or turn
 drv 1 "notoasts" "wait 5" "shot mix-on-message" > /dev/null
 
 # The mix panel shows while the mix applies: with cobblestone held in Single mode, and no screen open.
-panel="Block mix | 80% | 20%"
-check "the panel shows the mix's shares beside their blocks' icons" \
+panel="Block mix | 80% | 20% | B: Edit Mix"
+check "the panel shows the mix's shares beside their blocks' icons, and B: Edit Mix under them" \
 	eval '[[ $(val 1 panel) == "$panel" ]]'
 keys 1 key F1
 check "the panel hides while the HUD is hidden (F1)" eval 'drv 1 "wait 5" > /dev/null; [[ $(val 1 panel) == hidden ]]'
@@ -143,8 +174,8 @@ check "in Disable with the mix on, the use click opens a door" \
 	eval 'drv 1 "wait 10" > /dev/null; [[ $(val 1 "realstate 30 -60 0") == *open=true* ]]'
 drv 1 "notoasts" "wait 5" "shot disable-with-mix" "ebmode SINGLE" > /dev/null
 
-# B with the mix on opens the picker on the mix, with a Turn off button, which turns the mix off. The panel, back with
-# cobblestone in hand, hides while the picker is open.
+# B with the mix on opens the picker on the mix. "Clear Mix" empties the mix and turns it off, and the picker stays open
+# to pick again; Cancel then closes it. The panel, back with cobblestone in hand, hides while the picker is open.
 drv 1 "cmd item replace entity @s weapon.mainhand with minecraft:cobblestone" "cmd tp @s 2 -58 -5 0 5" "wait 20" \
 	> /dev/null
 check "back in Single mode with cobblestone held, the panel shows" eval '[[ $(val 1 panel) == "$panel" ]]'
@@ -152,15 +183,22 @@ keys 1 key b
 check "B with the mix on opens the picker" drv 1 "await screen Block mix"
 check "on the mix, 80 cobblestone to 20 mossy cobblestone" \
 	eval '[[ $(val 1 pickermix) == "minecraft:cobblestone:80,minecraft:mossy_cobblestone:20" ]]'
-check "with a Turn off button" eval '[[ $(val 1 texts) == *"Turn off"* ]]'
+check "with Clear Mix and no Turn off" eval '[[ $(val 1 texts) == *"Clear Mix"* && $(val 1 texts) != *"Turn off"* ]]'
 check "the panel hides while the picker is open" eval '[[ $(val 1 panel) == hidden ]]'
 check "and the mix stays on until a button is pressed" eval '[[ $(val 1 mix) == on* ]]'
-drv 1 "notoasts" "wait 5" "shot mix-picker-turn-off" > /dev/null
-read -r x y < <(val 1 "widget 0 Turn off")
+picker_shot mix-picker-clear
+read -r x y < <(val 1 "widget 0 Clear Mix")
 click 1 "$x" "$y"
-check "Turn off turns the mix off and closes the picker" \
-	eval 'drv 1 "await noscreen" > /dev/null && [[ $(val 1 mix) == off* ]]'
+check "Clear Mix empties the mix and turns it off" \
+	eval 'drv 1 "wait 10" > /dev/null; [[ $(val 1 mix) == off* && $(val 1 mix) != *minecraft* ]]'
+check "and empties the picker's mix" eval '[[ -z $(val 1 pickermix) ]]'
 check "with a message" client_said 1 "Block mix off."
+check "and the picker stays open" drv 1 "await screen Block mix"
+picker_shot mix-cleared
+read -r x y < <(val 1 "widget 0 Cancel")
+click 1 "$x" "$y"
+check "Cancel then closes the picker, leaving the mix off" \
+	eval 'drv 1 "await noscreen" > /dev/null && [[ $(val 1 mix) == off* && $(val 1 mix) != *minecraft* ]]'
 check "and the panel hides" eval '[[ $(val 1 panel) == hidden ]]'
 drv 1 "notoasts" "wait 5" "shot mix-off-message" > /dev/null
 

@@ -35,10 +35,6 @@ final class BlockMix {
 		on = !parts.isEmpty();
 	}
 
-	void turnOff() {
-		on = false;
-	}
-
 	/** The sum of the blocks' weights. */
 	int total() {
 		return parts.stream().mapToInt(Part::weight).sum();

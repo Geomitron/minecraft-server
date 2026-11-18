@@ -398,6 +398,9 @@ Nothing goes to the server or the pack before the last step.
    edit of exactly 200,000 blocks sent through the server to both games, and a box and an edit over it refused).
 7. **The block mix's changes** ("The block mix and its panel"): the click that toggles, "Clear Mix", "Only my
    inventory" on at launch, and "B: Edit Mix" in the panel. Done when `step7.sh`'s mix checks pass with their shots.
+   Built (`BlockMixScreen` toggling a block with a click, keeping "Only my inventory" while the game runs, and its
+   "Clear Mix" emptying and turning off the mix with the screen left open, and `MixPanel`'s "B: Edit Mix" line;
+   `step7.sh`'s mix checks pass, with shots of the screen at 854 by 480 and 1920 by 1080).
 8. **The radial menu's five buttons**: the two rows above the wrench, undo and redo, the Block mix button with the
    Randomizer Bag, the selected look for the current mode's button, E19, and E20 with the widgets moving with the
    menu's animation. Done when `step9.sh`'s radial menu checks pass at all three sizes, with the shots 1 and 2 frames

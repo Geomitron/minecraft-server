@@ -22,7 +22,10 @@ the crosshair in rows that wrap, ending with a "+N" cell, with Copy counting a b
 block, and no list of real blocks under Effortless Building's break shapes (`BoxCount`, `BoxList`, `BoxListLayout`
 and hook E8); and the server's limit of 200,000 blocks an edit, with its undo list dropping a player's oldest steps
 past 2,000,000 blocks (`SyncLimits.DEFAULT` for a config file with no value, and `UndoHistory`; the server's own
-config file on the live server still has 50000 written until the release). Not built yet: the block mix's changes, the radial menu's five buttons in a new layout that joins its opening animation, "Building Planner" in place of
+config file on the live server still has 50000 written until the release); and the block mix screen's click that adds
+or takes out a block, its "Clear Mix" that keeps the screen open, and "Only my inventory" on at launch, with "B: Edit
+Mix" under the mix panel (`BlockMixScreen` and `MixPanel`). Not built yet: the radial menu's five buttons in a new
+layout that joins its opening animation, with its Block mix button, "Building Planner" in place of
 "Effortless Building" where players see it, and Geo's hand-edited icons, which 0.3.0 doesn't have. The build steps are
 in [plan.md](plan.md) ("The walkthrough's changes").
 
@@ -775,10 +778,11 @@ on the dev server; [plan.md](plan.md) says which build step makes or rewrites ea
 - Single mode with the array modifier, and a Line shape, add ghost blocks on both clients, and no real blocks.
 - A shape started on a ghost block goes on top of it.
 - The mix key opens the mix screen listing only the inventory's two blocks, with "Only my inventory" on; turned off,
-  it lists every block. Clicking both, clicking one again to take it out and once more to add it back, typing their
-  shares and "Use mix" turns the mix on and closes the screen, with its message, and the panel shows both blocks'
-  percentages ("80%", "20%") and "B: Edit Mix". F1 hides the panel and shows it again. The panel is shot at GUI scale
-  2 and, in a window of 1920 by 1080, at 4. The radial menu's "Block mix" button opens the same screen.
+  it lists every block, and stays off when the screen opens again. Clicking both, clicking one again to take it out
+  and once more to add it back, typing their shares and "Use mix" turns the mix on and closes the screen, with its
+  message, and the panel shows both blocks' percentages ("80%", "20%") and "B: Edit Mix". F1 hides the panel and
+  shows it again. The screen and the panel are shot at GUI scale 2 and, in a window of 1920 by 1080, at 4. The radial
+  menu's "Block mix" button opens the same screen.
 - With the mix on and a block held, each block of a 20-block shape is the mix's block at its position, on both
   clients. With the mix on and a pickaxe or an apple held, the panel hides, the place click draws no ghost block and
   places no real one, and an apple's break click breaks the real block as without mods. In Disable, with the mix on and

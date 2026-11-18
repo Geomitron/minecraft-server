@@ -27,31 +27,34 @@ import net.minecraft.world.level.block.Block;
 
 /**
  * The block-mix picker: every block in the game, with search and a toggle that limits the list to the blocks in the
- * player's inventory. Clicking a block adds it to the mix (up to nine), each with a share; "Use mix" turns the mix on.
- * Opened while the mix is on, it shows the mix to change, and "Turn off" turns it off.
+ * player's inventory. Clicking a block adds it to the mix (up to nine), each with a share, or takes it out when it's in
+ * the mix; "Use mix" turns the mix on. Opened while the mix is on, it shows the mix to change. "Clear Mix" empties the
+ * mix and turns it off, and the picker stays open to pick again.
  */
 final class BlockMixScreen extends Screen {
 	private static final int CELL = 18;
 	private static final int TEXT = 0xFFFFFFFF;
 	private static final int GREY = 0xFFA0A0A0;
 
+	/** The "Only my inventory" toggle: on at each launch, then as the player last left it while the game runs. */
+	private static boolean inventoryOnly = true;
+
 	private final BlockMix mix;
 	private final Runnable onUse;
-	private final Runnable onTurnOff;
+	private final Runnable onTurnedOff;
 	/** The mix being edited; the player's mix changes only on "Use mix". */
 	private final List<BlockMix.Part> parts;
 	/** Every block that has an item of its own, in the registry's order. */
 	private final List<Block> allBlocks;
 	private List<Block> shown;
 	private String search = "";
-	private boolean inventoryOnly;
 	private Button use;
 
-	private BlockMixScreen(BlockMix mix, Runnable onUse, Runnable onTurnOff) {
+	private BlockMixScreen(BlockMix mix, Runnable onUse, Runnable onTurnedOff) {
 		super(Component.translatable("buildingplanner.ui.block_mix.title"));
 		this.mix = mix;
 		this.onUse = onUse;
-		this.onTurnOff = onTurnOff;
+		this.onTurnedOff = onTurnedOff;
 		this.parts = new ArrayList<>(mix.parts());
 		this.allBlocks = BuiltInRegistries.BLOCK.stream()
 			.filter(block -> block.asItem() instanceof BlockItem item && item.getBlock() == block)
@@ -60,11 +63,11 @@ final class BlockMixScreen extends Screen {
 	}
 
 	/**
-	 * Opens the picker on the player's mix; {@code onUse} runs after "Use mix" turns it on, and {@code onTurnOff} after
-	 * "Turn off", which shows only while the mix is on, turns it off.
+	 * Opens the picker on the player's mix; {@code onUse} runs after "Use mix" turns it on, and {@code onTurnedOff}
+	 * after "Clear Mix" turns off a mix that was on.
 	 */
-	static void open(BlockMix mix, Runnable onUse, Runnable onTurnOff) {
-		Minecraft.getInstance().setScreenAndShow(new BlockMixScreen(mix, onUse, onTurnOff));
+	static void open(BlockMix mix, Runnable onUse, Runnable onTurnedOff) {
+		Minecraft.getInstance().setScreenAndShow(new BlockMixScreen(mix, onUse, onTurnedOff));
 	}
 
 	private int contentWidth() {
@@ -80,6 +83,7 @@ final class BlockMixScreen extends Screen {
 		int left = left();
 		int contentWidth = contentWidth();
 		int toggleWidth = 140;
+		refilter();
 
 		EditBox searchBox = new EditBox(font, left, 18, contentWidth - toggleWidth - 4, 20,
 			Component.translatable("buildingplanner.ui.block_mix.search"));
@@ -130,16 +134,14 @@ final class BlockMixScreen extends Screen {
 		}).build();
 		use.active = canUse();
 		buttons.add(use);
-		if (mix.isOn()) {
-			buttons.add(Button.builder(Component.translatable("buildingplanner.ui.block_mix.turn_off"), button -> {
-				mix.turnOff();
-				onClose();
-				onTurnOff.run();
-			}).build());
-		}
 		buttons.add(Button.builder(Component.translatable("buildingplanner.ui.block_mix.clear"), button -> {
+			boolean wasOn = mix.isOn();
 			parts.clear();
+			mix.use(List.of());
 			rebuildWidgets();
+			if (wasOn) {
+				onTurnedOff.run();
+			}
 		}).build());
 		buttons.add(Button.builder(CommonComponents.GUI_CANCEL, button -> onClose()).build());
 		int buttonWidth = (contentWidth - 4 * (buttons.size() - 1)) / buttons.size();
@@ -173,8 +175,11 @@ final class BlockMixScreen extends Screen {
 		return parts.stream().anyMatch(part -> part.weight() > 0);
 	}
 
-	private void add(Block block) {
-		if (parts.size() < BlockMix.MAX_BLOCKS && parts.stream().noneMatch(part -> part.block() == block)) {
+	/** Takes the block out of the mix being edited when it's in it, and otherwise adds it with a share of 1. */
+	private void toggle(Block block) {
+		if (parts.removeIf(part -> part.block() == block)) {
+			rebuildWidgets();
+		} else if (parts.size() < BlockMix.MAX_BLOCKS) {
 			parts.add(new BlockMix.Part(block, 1));
 			rebuildWidgets();
 		}
@@ -277,7 +282,7 @@ final class BlockMixScreen extends Screen {
 		public void onClick(MouseButtonEvent event, boolean doubleClick) {
 			int index = indexAt(event.x(), event.y());
 			if (index >= 0) {
-				add(shown.get(index));
+				toggle(shown.get(index));
 			}
 		}
 

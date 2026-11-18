@@ -4,6 +4,7 @@ import dev.buildingplanner.look.SmallText;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BooleanSupplier;
+import java.util.function.Supplier;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElement;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
@@ -14,7 +15,8 @@ import net.minecraft.world.item.ItemStack;
 
 /**
  * The mix panel at the right edge of the screen: while the block mix applies, it shows the mix's blocks (each block's
- * icon and its percentage), so the player always knows they're placing a mix. It hides while the mix doesn't apply,
+ * icon and its percentage), so the player always knows they're placing a mix, then the line "B: Edit Mix" with the
+ * mix key as the player has bound it. It hides while the mix doesn't apply,
  * while a screen is open, and while the HUD is hidden (F1). It draws at {@link SmallText}'s size, as narrow as its
  * widest line.
  */
@@ -27,11 +29,13 @@ final class MixPanel implements HudElement {
 
 	private final BlockMix mix;
 	private final BooleanSupplier applies;
+	private final Supplier<Component> key;
 
-	/** {@code applies} is the mix rule now. */
-	MixPanel(BlockMix mix, BooleanSupplier applies) {
+	/** {@code applies} is the mix rule now, and {@code key} the mix key's name as the player has bound it. */
+	MixPanel(BlockMix mix, BooleanSupplier applies, Supplier<Component> key) {
 		this.mix = mix;
 		this.applies = applies;
+		this.key = key;
 	}
 
 	boolean shows() {
@@ -41,6 +45,10 @@ final class MixPanel implements HudElement {
 
 	private Component title() {
 		return Component.translatable("buildingplanner.ui.block_mix.title");
+	}
+
+	private Component editLine() {
+		return Component.translatable("buildingplanner.ui.block_mix.edit", key.get());
 	}
 
 	/**
@@ -57,6 +65,7 @@ final class MixPanel implements HudElement {
 		for (BlockMix.Part part : mix.parts()) {
 			lines.add(BlockMix.percent(part.weight(), total));
 		}
+		lines.add(editLine().getString());
 		return String.join(" | ", lines);
 	}
 
@@ -69,12 +78,13 @@ final class MixPanel implements HudElement {
 		List<BlockMix.Part> parts = mix.parts();
 		int total = mix.total();
 		Component title = title();
+		Component edit = editLine();
 		int percentWidth = 0;
 		for (BlockMix.Part part : parts) {
 			percentWidth = Math.max(percentWidth, font.width(BlockMix.percent(part.weight(), total)));
 		}
-		int width = Math.max(font.width(title), ROW + percentWidth);
-		int height = font.lineHeight + 2 + parts.size() * ROW;
+		int width = Math.max(Math.max(font.width(title), font.width(edit)), ROW + percentWidth);
+		int height = font.lineHeight + 2 + parts.size() * ROW + 2 + font.lineHeight;
 
 		// Drawn from the panel's right edge, halfway down the screen, at the panel's scale.
 		graphics.pose().pushMatrix();
@@ -96,6 +106,7 @@ final class MixPanel implements HudElement {
 			graphics.text(font, percent, x + ROW + percentWidth - font.width(percent), textY, TEXT);
 			y += ROW;
 		}
+		graphics.text(font, edit, x, y + 2, TEXT);
 		graphics.pose().popMatrix();
 	}
 }
