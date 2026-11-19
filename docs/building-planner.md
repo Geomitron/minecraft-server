@@ -804,7 +804,8 @@ OPEN: what each row shows. A) The block's icon and its three counts, so the pane
 B) The block's icon, its name and its three counts, which makes the panel about twice as wide (a name such as
 "Polished Blackstone Brick Stairs" takes about 160 of the 427 across a screen of 854 by 480 at GUI scale 2). Either
 shows at most 10 rows, Litematica's own Info HUD limit (`materialListHudMaxLines`), then "+N more". Recommended: A,
-since Geo asked for a significantly narrower mix panel (709 Q1) and each block's icon tells it apart.
+since Geo wanted the mix panel small ("significantly vertically narrower", scaled to about 70%, 709 Q1) and each
+block's icon tells it apart.
 
 OPEN: when "Missing" changes. A) Building Planner counts the box again every 2 seconds while the panel shows a list
 whose box it can count (as for Refresh), so "Missing" drops as the group builds, on the panel and the screen alike, and

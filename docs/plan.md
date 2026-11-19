@@ -319,7 +319,7 @@ OPEN marks wait on Geo's answers, and the steps below assume the answers it reco
 answer; each later step waits for the answers its own text names. The steps come in this order, each small enough for
 one child. A step that changes nothing players see beyond what Geo already decided goes to `main` once its checks pass
 (inbox request 429). A step that changes what players see is committed without pushing, and goes to `main` once Geo
-has seen its in-game screenshots, with the changes outlined in red; steps 3 to 5 go to Geo together. Nothing goes to
+has seen its in-game screenshots, with the changes outlined in red; steps 2 to 5 go to Geo together. Nothing goes to
 the server or the pack before the last step.
 
 1. **A record for each setting changed once** ("Settings Building Planner changes once" and "Litematica's area
