@@ -149,7 +149,7 @@ Building Planner as built, from inbox requests 469, 473, 477, 482, 483, 485, 570
   me through using all the features we have available, with space for me to provide feedback and suggestions on how to
   adjust the experience of using the mod. Once I'm happy with it, we can publish a guide on how to use it.").
 
-From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it, not built yet:
+From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
 
 - Ghost blocks show see-through at 0.8 opacity by default: "render blocks as translucent is true", "ghostBlockAlpha
   default to 0.8" (608 note). A player's own change to either stays.
@@ -246,7 +246,7 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it, not
   description in Geo's wording: "Plan builds together using ghost blocks that everyone on the server can see." Geo saw
   the radial menu without "Copy real blocks", with "Material list" in its slot, and the rule that where a ghost block
   stands over a different real block, Copy takes the ghost block (742 revision 2).
-- Geo's walkthrough of 0.3.0 on the server (752) settles these for the next version:
+- Geo's walkthrough of 0.3.0 on the server (752) settles these:
   - **Copy and paste without keys:** "We don't need keys." While the copy shows at the aim, its controls show on
     screen: a left click pastes, a right click leaves the copy, the scroll wheel turns the copy and a middle click
     mirrors it, ahead of what those do otherwise ("you're not able to scroll to different tools on the hotbar with
@@ -288,8 +288,25 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it, not
   - **Messages:** none when a box ends early (Q9 A, the walkthrough's Q3).
   - **"Clear Mix":** keeps the block mix screen open to pick a new mix (Q10 A).
 
-  Geo saw steps 1 to 3 in the game (774) and kept the controls line where Effortless Building draws its own, though
-  a chat message covers its left end for about 10 seconds (Q1 A).
+  Geo saw the mouse modes, the box and the list under the crosshair in the game (774) and kept the controls line
+  where Effortless Building draws its own, though a chat message covers its left end for about 10 seconds (Q1 A).
+- Geo's walkthrough of 0.4.0 on the server (784) settles these for 0.5.0. Geo left every feedback box empty but F11,
+  and gave this feedback in comments and a note:
+  - **Litematica's area selection:** it still showed ("I'm still seeing the old selection box", c1, image 1), with a
+    one-block box with orange edges that Geo couldn't remove (c2, image 2). Both are the selection, and its origin,
+    that Litematica saved for the server on Geo's computer. 0.4.0 turns the drawing off only where the record 0.3.0
+    writes is missing, so on Geo's computer it never did. Each setting Building Planner changes once gets its own record, so 766 Q7 A
+    reaches players who ran 0.3.0 or 0.4.0.
+  - **The material list:** "In the material list UI, I want to customize it to just have a specific set of controls. I
+    want Info HUD to show a similar pinned visual box like the block mix box, but with the list of blocks, along with
+    total, available, and missing, sorted just like the full view is, with the multiplier the full view has. We can
+    remove the "Litematica menu", export, and "write to file" buttons, and instead replace them with some simple custom
+    controls to save and load material lists, which should be global per player and persistent across game closes.
+    There's also an autosave material list for the last one collected (not necessarily the last one loaded)" (c3).
+  - **M:** "M should be default bound to freecam's menu, not litematica. We shouldn't need to be able to access
+    Litematica's menu" (c3). Litematica's "Tool Mode" button is at the bottom of its menu (F11).
+
+  The spec marks with OPEN the choices c3 leaves, for Geo to answer.
 - The shared layer replaces the decisions above that concern separate plans: named plans that move and turn as a whole
   (411 Q1), plan growth (411 Q2), who deletes a plan (411 Q3, 420 Q9), starting a plan with N (420 Q1, 469 Q1), hiding
   a plan with Litematica or Syncmatica (420 Q2, 469 Q2), the paste's target plan (485 Q3), Litematica's Edit Schematic
@@ -297,142 +314,47 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it, not
 
 ## Agent-ready work
 
-**Building Planner 0.3.0, the shared layer** (the decisions above from inbox request 608 on;
-[building-planner.md](building-planner.md) is the design). Hold to repeat and the look of ghost blocks are built
-(`step10.sh`). The steps below come in this order, each small enough for one child, which pushes it to
-`main` once its check passes (inbox request 429).
+**Building Planner 0.5.0** (784, in "Decisions" above). [building-planner.md](building-planner.md) is the design; its
+OPEN marks wait on Geo's answers, and the steps below assume the answers it recommends. Steps 1 and 2 depend on no
+answer; each later step waits for the answers its own text names. The steps come in this order, each small enough for
+one child. A step that changes nothing players see beyond what Geo already decided goes to `main` once its checks pass
+(inbox request 429). A step that changes what players see is committed without pushing, and goes to `main` once Geo
+has seen its in-game screenshots, with the changes outlined in red; steps 3 to 5 go to Geo together. Nothing goes to
+the server or the pack before the last step.
 
-1. **The block mix's rules.** Built (`step7.sh`): the mix applies only while the main hand holds a block, and in
-   Disable every click is vanilla's (hooks E5 and E6). With anything but an item that places a block in hand, every
-   click acts as without mods, in every mode (hooks E13 to E15, 704).
-2. **The mix screen's "Turn off" and the mix panel.** Built (`MixPanel`, `SmallText` and `BlockMixScreen` in the
-   client; `step7.sh` passes), as Geo approved them in 709.
-3. **The radial menu's widgets and the two speed sliders** (hooks E11 and E12; the sliders set E10's gaps and are kept
-   in the client config). Built (`RadialMenuWidgets` and `RepeatSlider` in the client, `RepeatSpeed`, with its
-   unit tests, and `ClientConfig`; `step10.sh` passes), in the layout Geo chose in 709. The radial menu's
-   buttons come with steps 9 and 10.
-4. **The layer's storage and files** (common): columns of 16-block sections with palettes, and the area files. Built
-   (`dev.buildingplanner.layer`, with its unit tests).
-5. **The server's layer**: the store, column watching, edits in world positions with their checks, undo and redo,
-   messages and protocol version 3. Done when unit tests over the simulated network cover a snapshot then later edits
-   in order, every rejection, undo and redo across dimensions, and a save and reload. Built (`LayerSync` and
-   `LayerStore` in `dev.buildingplanner.server`, the payloads in `dev.buildingplanner.sync.Payloads`, with unit
-   tests).
-6. **The import, and Syncmatica off the server**: the one-time import, and removing hook S1, `SyncmaticaPlans`, the
-   delete check, the plan files' archive, `max-plan-side` and Syncmatica from `fabric.mod.json`, the build and the dev
-   server. Done when the import's unit tests pass and the dev server, started on a dev world with shared plans and
-   without Syncmatica, logs the import and serves the same blocks. Built (`PlanImport` in
-   `dev.buildingplanner.server`, with `PlanImportTest` and the in-game check `import.sh`).
-7. **The player's layer and its tiles**: the copy of the layer, column watching, tiles, shapes and erasing in world
-   positions, and the edit glow on the layer. Built (`LayerReplica` in `dev.buildingplanner.sync`, with its unit
-   tests, and `Tiles` and `ClientSession` in the client; `step6.sh`, `step7.sh` and `import.sh` pass).
-8. **Tiles out of sight, and Syncmatica off the client**: hooks L4 to L7, L1 as a guard, removing S2, S3, L2, L3,
-   "Start a plan" and `remove-loaded.sh`, the removal of old plan placements at a session's start, and the mixin
-   plugin's Litematica rule. Built (the hooks in `dev.buildingplanner.mixin.litematica`, `OldPlans` in the client;
-   `step6.sh`, with its checks on hidden tiles, and `step8.sh` pass).
-9. **Show or hide**: the key, the radial menu button, showing again when drawing, and the tool item off by default.
-   Built (`GhostsShown`, with its unit tests, the switch and its chat lines in `Tiles` and `ClientSession`, and
-   `RadialButton` and `RadialMenuWidgets` in the client, with the buttons' place, triggers and icons as Geo chose them
-   in 729 and 732; `step9.sh`'s checks other than copy, paste and the material list, and `step10.sh`, pass).
-10. **Copy and paste on the layer**: the "Cube" box for Copy, which takes the ghost blocks and the real blocks in it
-    (E1, E6), the copy following the aim, and the radial menu's buttons. Built (`BoxWait`, `GhostAim`, hook E17,
-    `CopyRules` with its unit tests, and the copy in `Clipboard` and `ClientSession`, with the radial menu's Copy and
-    Paste buttons in layout B's slots and Material list in the row above them, and Turn, Mirror and Clear in the row
-    above that while a copy exists, with step 9's triggers and icons; `step9.sh`'s copy and paste checks pass).
-11. **The material list for a marked area.** Built (`MaterialCount`, with its unit tests, and `GhostMaterialList`,
-    with the radial menu's Material list button waiting for a "Cube" box as Copy does; `step9.sh`'s material list
-    checks pass).
-12. **Texts for Geo**: every text players see that the steps added or changed (messages, key names, button and slider
-    labels, the panel) goes to Geo as editable text, and Geo's version is built in. Built: the game shows the wording
-    Geo approved in 742 (`en_us.json`, and the description in `fabric.mod.json`), with `step9.sh` and `step10.sh`
-    checking the texts exactly.
-13. **The release**: version 0.3.0, as Geo approved it in 746. Released: the GitHub release `building-planner-0.3.0`
-    (`c2d951a`), on the server after a backup, with Syncmatica removed (the import found no shared plans), and in the
-    pack without Syncmatica, with the guide's list of mods and the README in the wording Geo approved (`59ed2a9`).
-    "Current setup" above describes it. Geo's walkthrough (752) drew ghost blocks on the server from the updated pack.
-
-**The walkthrough's changes** (752, in "Decisions" above), as one update with Geo's hand-edited icons.
-[building-planner.md](building-planner.md) is the design, with Geo's answers (766). The steps come in this order,
-each small enough for one child. A step that changes nothing players see goes to `main` once its checks pass (inbox
-request 429). A step that changes what players see is committed without pushing, and goes to `main` once Geo has seen
-its in-game screenshots, with the changes outlined in red; steps 1 to 3 go to Geo together, as do step 5 and steps 7
-to 10.
-Nothing goes to the server or the pack before the last step.
-
-1. **The mouse modes and the copy at the aim** ("Building Planner's mouse modes" and "Copy and paste"): `MouseMode`,
-   hooks M1 to M5, E14's and E15's new condition, E21 and E22, `ModeHud` with the controls line, the copy put away
-   and brought back by Paste (`Clipboard` keeps the schematic), the counterclockwise turn, and the keys J, K, U, H
-   and Delete removed with their texts and icons. Done when unit tests cover `Turn`'s counterclockwise quarter and
-   which actions end a mode, and `step9.sh`'s copy, paste and put-away checks pass, with the driver's `scroll` and
-   middle click. Built (`MouseMode` and `Turn.turnedCounterclockwise`, with their unit tests, hooks M1 to M5 in
-   `dev.buildingplanner.mixin.minecraft`, E14's and E15's new condition, E21 and E22, `ModeHud`, and `Clipboard`
-   keeping the copy put away; `step9.sh`'s copy, paste and put-away checks pass, sending the wheel and the middle
-   button with xdotool).
-2. **Building Planner's box** ("Boxes for Copy and the material list"): `BoxDraw` with its three left clicks, the first
-   corner rule, the outline through MaLiLib, switching between Copy and the material list, the limits with the red box
-   and its line, and `BoxWait`, E1's and E2's box calls, E13's box rule and E17 removed. Done when unit tests cover the
-   corner rule, the second corner's plane and the height (pure functions over the eye, the look and the first
-   corner), and each limit, and `step9.sh`'s box checks pass. Built (`BoxCorners` and `MouseMode.BOX`, with their unit
-   tests, `BoxDraw`, `BoxOutline`, the box's lines in `ModeHud`, and `GhostAim.aim`; `step9.sh`'s box checks pass,
-   with shots of a box for Copy and for the material list after its first and second clicks, and of each limit).
-3. **The count and the list under the crosshair**: `BoxCount` reading whole sections, the wrapped list with its "+N"
-   cell, and E8 clearing Effortless Building's break list during a session. Done when unit tests cover the count by
-   sections against a count position by position, the wrap and the "+N" cell at 854 by 480, GUI scale 2, and
-   `step9.sh`'s list check passes with its shot. Built (`BoxCount`, with Copy counting a box by it before taking any
-   block, and `BoxListLayout`, with their unit tests, `BoxList`, the list and the size kept whole in `ModeHud`'s
-   wrapped line, and E8's wrap of the break list; `step9.sh`'s list checks pass, with a box of 144 by 3 by 144, the
-   widest the dev server's view distance loads, and the E8 check).
-4. **Hidden ghost blocks left out** (`CopyRules` and `MaterialCount` taking whether ghost blocks show, and the material
-   list no longer showing them). Done when the unit tests cover a box with both kinds of block, shown and hidden, and
-   `step9.sh`'s hidden copy check passes. Built (`CopyRules.blocks` and `MaterialCount.of` take whether ghost blocks
-   show, with their unit tests, and the material list leaves hidden ghost blocks hidden; `step9.sh`'s hidden copy and
-   hidden material list checks pass).
-5. **Real blocks in the material list** ("The material list"): `MaterialCount` counting the real blocks in "Total" (766
-   Q4 A), and an empty list for an empty box. Done when a unit test gives the worked example's counts and
-   `step9.sh`'s material list checks pass. Built (`MaterialCount.of` takes the real blocks as `BoxCount` reads them,
-   with its unit tests including the worked example, `GhostMaterialList` opens for any box, the message for a box
-   without ghost blocks is gone, and the title reads "Material list for the blocks in the box"; `step9.sh`'s material
-   list checks pass, with shots of the list for a box with ghost and real blocks shown and hidden, and of an empty
-   list).
-6. **The server's cap and undo budget**: `max-edit-blocks` at 200,000, and `UndoHistory` dropping old steps past
-   the budget of 2,000,000 blocks a player. Done when unit tests cover an edit at the cap, one over it, and the budget
-   dropping the oldest steps while keeping the newest. Built (`SyncLimits.DEFAULT` at 200,000, the wire's own most, and
-   `UndoHistory`'s block budget, with `UndoHistoryTest`, `LayerSyncTest`'s edit at the cap and `PayloadsTest`'s edit of
-   the most blocks at their largest in the room `registerLarge` is given; `step9.sh`'s cap checks pass, with an
-   edit of exactly 200,000 blocks sent through the server to both games, and a box and an edit over it refused).
-7. **The block mix's changes** ("The block mix and its panel"): the click that toggles, "Clear Mix", "Only my
-   inventory" on at launch, and "B: Edit mix" in the panel. Done when `step7.sh`'s mix checks pass with their shots.
-   Built (`BlockMixScreen` toggling a block with a click, keeping "Only my inventory" while the game runs, and its
-   "Clear Mix" emptying and turning off the mix with the screen left open, and `MixPanel`'s "B: Edit mix" line;
-   `step7.sh`'s mix checks pass, with shots of the screen at 854 by 480 and 1920 by 1080).
-8. **The radial menu's five buttons**: the two rows above the wrench, undo and redo, the Block mix button with the
-   Randomizer Bag, the selected look for the current mode's button, E19, and E20 with the widgets moving with the
-   menu's animation. Done when `step9.sh`'s radial menu checks pass at all three sizes, with the shots 1 and 2 frames
-   after opening, and `step10.sh`'s slider checks still pass. Built (`RadialButton` placed from the menu's middle each
-   frame by `RadialMenuWidgets`, hooks E16, E19 and E20, and the Block mix button doing what B does; `step9.sh`'s
-   radial menu checks pass at all three sizes, with the driver's shots 1 and 2 frames after opening and its reading of
-   the ring's selected segment, `step7.sh`'s Block mix button check passes, and `step8.sh` and `step10.sh` pass).
-9. **Building Planner's name and the key heading**: E18, and E23 moving Effortless Building's keys under "Building
-   Planner". Done when `step9.sh`'s corner text and Controls checks pass with their shots. Built (`RadialMenuMixin`'s
-   E18 and `KeyBindingsMixin`'s E23, with `buildingplanner.ui.radial.credits`; `step9.sh`'s corner text and Controls
-   checks pass, reading the strings the menu draws and the key binds screen's headings through the driver's
-   `ScreenProbe`, with shots of the menu at 854 by 480 and of Controls scrolled to the heading).
-10. **Litematica's area selection**: its drawing turned off once, as the look of ghost blocks is set. Done when
-    `step9.sh`'s selection check passes and `step10.sh`'s look checks cover the option. Built
-    (`LookDefaults.AREA_SELECTION_RENDERING` and `LitematicaLook` turning off Litematica's
-    "enableAreaSelectionBoxesRendering" while it's at its default, with the unit test; `step9.sh`'s selection check
-    passes, with shots of a selection drawn and of the same selection after the restart, not drawn, and `step10.sh`'s
-    look checks cover a first start, the player's turning it back on kept across a restart, and the option set alone
-    with the record gone).
-11. **Texts for Geo**: every text the steps added or changed (the controls lines, the messages, the button names, "Clear
-    Mix", "B: Edit mix", the key heading and the material list's title) goes to Geo as editable text, and Geo's version
-    is built in, with `step7.sh` and `step9.sh` checking the texts exactly. Built: `en_us.json` has the wording Geo
-    approved in inbox request 781, and the two scripts check each of its 15 texts exactly.
-12. **The release**: version 0.4.0 with Geo's hand-edited icons, after Geo's approval: the GitHub release, on the
-    server after a backup (with `max-edit-blocks=200000` in its `config/buildingplanner.properties`, which has
-    50000 written), and in the pack. The README and the guide's setup steps describe nothing 0.4.0 changes, so they
-    stay as they are. Released, as Geo approved it in 782: the GitHub release `building-planner-0.4.0` (not latest),
-    on the server since 3:17 AM ET, November 18th, and in the pack.
+1. **A record for each setting changed once** ("Settings Building Planner changes once" and "Litematica's area
+   selection"): `LookDefaults` and `LitematicaLook` with one record for each group, and the drawing of area selections
+   under `area-selection-off-applied`. Done when unit tests cover each group's rules, including a config that holds
+   only `look-defaults-applied=true` getting the area selection group and not the look group again, and `step9.sh`'s
+   selection check passes with its shots: a selection with an origin, saved with the record 0.3.0 and 0.4.0 leave,
+   drawn before the start and gone after it. `step10.sh`'s look checks pass with a record for each group.
+2. **M opens Freecam's menu** ("Keys"): the `menu-key-applied` group, and Freecam 1.5.1 (`lwrkvqym`) on the dev
+   clients. Done when unit tests cover the group's rules (Freecam's key set only while it has no key, Litematica's
+   hotkey cleared only while it's "M", the record written only with both mods loaded), and `step10.sh`'s key checks
+   pass: M opens Freecam's screen and no Litematica screen, M then L opens none of Litematica's, and a player's own
+   Freecam key stays.
+3. **The list screen's buttons and saved lists** ("The screen's buttons" and "Saved lists"; waits for the answers on
+   where lists are kept, how many and how they're named): hook L10, the lists file with "Last counted", the "Save list"
+   and "Saved lists" screens, and Refresh counting only a box the game holds. Done when unit tests cover the file (a
+   save and a read back, a name saved twice replacing the first, an unknown item dropped, a damaged file renamed, and
+   "Last counted" replaced by a count and not by an opening), and `step9.sh`'s screen, saved list and Refresh checks
+   pass, with shots of the screen at 854 by 480 and 1920 by 1080, GUI scale 2, and of both new screens.
+4. **The material list panel** ("The material list panel"; waits for the answers on where it sits, its rows, when
+   "Missing" changes and the panel after a restart): `MaterialPanel`, the "Info HUD" switch through `getHudRenderer`,
+   the panel kept on across lists, the recount every 2 seconds, and the panel's state in the client config. Done when
+   unit tests cover the panel's rows as a pure function (the screen's order and filters, the multiplier, the colours
+   of "Missing", "+N more" and an empty list), and `step9.sh`'s panel checks pass, with shots at 854 by 480 and 1920 by
+   1080, GUI scales 2 and 4, with the mix panel on too.
+5. **The "Material lists" button** ("The Material lists button"; waits for the answers on how a list is reopened and
+   the button's icon): the sixth `RadialButton`, in the slot over redo, with its icon. Done when `step9.sh`'s radial
+   menu checks pass at all three sizes with six buttons, its "Material lists" check passes, and `step8.sh` and
+   `step10.sh` still pass.
+6. **Texts for Geo**: every text steps 3 to 5 add (the buttons' labels, the two screens' titles, fields and buttons,
+   "Last counted", the date and time a name starts with, the Refresh message, the panel's heading, column headings,
+   "+N more" and "No blocks to list.", and the button's name) goes to Geo as editable text, and Geo's version is built
+   in, with `step9.sh` checking each text exactly.
+7. **The release**: version 0.5.0, after Geo's approval: the GitHub release, on the server after a backup, and in the
+   pack, as 0.4.0 was released, with the README and the guide's setup steps checked against what 0.5.0 changes.
 
 ## Design work: Building Planner
 

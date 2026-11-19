@@ -5,33 +5,20 @@ ghost blocks that everyone on the server sees and edits live, then builds them b
 Building; Litematica draws the ghost blocks, out of sight. It hooks into unchanged copies of both. Geo's decisions
 behind it are in [plan.md](plan.md) ("Decisions").
 
-**What's built.** The server and the player pack run Building Planner 0.3.0: the shared layer, drawing, hold to repeat,
-the block mix, show or hide, copy and paste in a box drawn with Effortless Building's "Cube" shape, with the keys J, K,
-U, H and Delete, and the material list for such a box. This spec describes the next version, with Geo's changes from
-the walkthrough of 0.3.0 (inbox request 752, in [plan.md](plan.md) "Decisions"). Built so far: ghost blocks left out of
-Copy and the material list while they're hidden (`CopyRules.blocks` and `MaterialCount.of` take whether ghost blocks
-show; the material list no longer shows them); the material list counting the real blocks in the box as well, in
-"Total" (`MaterialCount` through `BoxCount`, with the list opening empty for a box with no blocks, in place of a
-message); and the copy at the aim worked by the mouse, with its controls line,
-put away by a right click or by the actions that end a mouse mode and brought back by Paste, in place of the keys J,
-K, U, H and Delete and the radial menu's Turn, Mirror and Clear buttons (`MouseMode`, hooks M1 to M5, E21 and E22,
-and `ModeHud`); and Building
-Planner's own box for Copy and the material list, drawn with three left clicks, with its outline, its controls line and
-its limits, switching between the two (`BoxCorners`, `BoxDraw`, `BoxOutline` and the box's lines in `ModeHud`); and the box's blocks counted by whole sections and listed under
-the crosshair in rows that wrap, ending with a "+N" cell, with Copy counting a box the same way before it takes any
-block, and no list of real blocks under Effortless Building's break shapes (`BoxCount`, `BoxList`, `BoxListLayout`
-and hook E8); and the server's limit of 200,000 blocks an edit, with its undo list dropping a player's oldest steps
-past 2,000,000 blocks (`SyncLimits.DEFAULT` for a config file with no value, and `UndoHistory`; the server's own
-config file on the live server still has 50000 written until the release); and the block mix screen's click that adds
-or takes out a block, its "Clear Mix" that keeps the screen open, and "Only my inventory" on at launch, with "B: Edit
-Mix" under the mix panel (`BlockMixScreen` and `MixPanel`); and the radial menu's five buttons in two rows above the
-wrench, undo and redo, joining the menu's opening animation, with the Block mix button showing the Randomizer Bag and
-the button for the mouse mode that's on showing selected in place of a mode segment (`RadialButton`,
-`RadialMenuWidgets` and hooks E16, E19 and E20); and "Building Planner" in place of "Effortless Building" in the radial
-menu's corner, with Effortless Building's four keys under the "Building Planner" heading in Controls (hooks E18 and
-E23); and Litematica's drawing of area selections turned off once with the look of ghost blocks (`LookDefaults` and
-`LitematicaLook`). Not built yet: Geo's hand-edited icons, which 0.3.0 doesn't have. The build steps are in
-[plan.md](plan.md) ("The walkthrough's changes").
+**What's built.** The server and the player pack run Building Planner 0.4.0, which has everything this spec describes
+except the next version's changes from Geo's walkthrough of 0.4.0 (inbox request 784, in [plan.md](plan.md)
+"Decisions"):
+
+- each setting Building Planner changes once has its own record, so Litematica's drawing of area selections goes off
+  for players who ran 0.3.0 (see "Settings Building Planner changes once");
+- M opens Freecam's menu, and nothing opens Litematica's (see "Keys");
+- the material list's screen without "Export", its export type and "Litematica menu", with "Save list" and "Saved
+  lists" in their place, the saved lists and the list kept as "Last counted", the material list panel, Refresh counting
+  only a box the game holds, and the radial menu's "Material lists" button (see "The material list").
+
+0.4.0 turns the drawing of area selections off under the record 0.3.0 had already written, so on a computer that ran
+0.3.0 it never does. Places marked OPEN wait on Geo's answer. The build steps are in [plan.md](plan.md) ("Building
+Planner 0.5.0").
 
 ## What players get
 
@@ -91,16 +78,21 @@ E23); and Litematica's drawing of area selections turned off once with the look 
   blocks, also puts the copy away; undo, redo and the speed sliders keep it at the aim. The radial menu's Paste button
   brings back the most recent copy at the aim.
 - **Material list.** The player presses the "Material list" button in the radial menu and draws a box: Litematica's
-  material list opens for the blocks inside, ghost blocks and real blocks alike, with how many of each block the
+  material list screen opens for the blocks inside, ghost blocks and real blocks alike, with how many of each block the
   ghost blocks still need. While ghost blocks are hidden, it lists only the real blocks and leaves the ghost blocks
-  hidden. A box with no blocks opens an empty list.
+  hidden. A box with no blocks opens an empty list. The screen's "Info HUD" button pins the list to the screen as a
+  panel like the block mix's, with each block's "Total", "Available" and "Missing", in the screen's order and with its
+  multiplier. "Save list" keeps the list under a name, across game restarts and on every server, and "Saved lists"
+  opens a kept list again. The latest list counted from a box is always kept too, as "Last counted". The radial menu's
+  "Material lists" button opens the current list (see "The material list").
 - **Building Planner's name.** Where players see Effortless Building's name in the game, the corner of the radial
   menu, it reads "Building Planner". Effortless Building's four keys in Controls show under the "Building Planner"
   heading, with Building Planner's own.
 - **Litematica's area selection.** On each player's computer, once, Building Planner turns off Litematica's drawing of
-  area selections, so a selection a player left in Litematica no longer shows as a large see-through box while
-  Litematica's tool is off (see "Litematica's area selection"). The player can turn it back on in Litematica's
-  settings.
+  area selections, so a selection a player left in Litematica, with its corners and its origin, doesn't show (see
+  "Litematica's area selection").
+- **M opens Freecam's menu.** On each player's computer, once, Building Planner binds M to Freecam's menu and takes M
+  from Litematica's menu, which players then have no key to open (see "Keys").
 - **How ghost blocks look.** On each player's computer, once, Building Planner turns on Litematica's "render blocks as
   translucent" and sets its ghost block alpha to 0.8, so ghost blocks draw see-through. It sets each only if the player
   hasn't changed it from Litematica's default (off, and 0.5), and never again, so a player's own later change stays.
@@ -134,8 +126,8 @@ menus, so it adds nothing to the registries Fabric API syncs at login, and playe
   import of the plans Syncmatica shared. They run only on a dedicated server, which is how the group plays.
 - **Client:** the player's copy of the layer and its column watching, the tiles that hand it to Litematica and the
   hooks that hide them, the show or hide switch, the Effortless Building capture, hold to repeat, the radial menu's
-  buttons and sliders, the block mix and its panel, copy and paste, the material list, the edit glow, the look of
-  ghost blocks, and the check for a server without the add-on.
+  buttons and sliders, the block mix and its panel, copy and paste, the material list with its panel and saved lists,
+  the edit glow, the settings it changes once, and the check for a server without the add-on.
 
 `fabric.mod.json` depends on Fabric API, which both sides run. Litematica, MaLiLib and Effortless Building run only on
 players' computers, so the add-on lists them under `suggests` (Fabric Loader warns at start about a missing
@@ -222,6 +214,7 @@ Litematica, under `src/main/java/fi/dy/masa/litematica/`:
 | L7 | `render/schematic/ChunkRendererSchematicVbo.java`, `getOverlayType(BlockState, BlockState)` | `@ModifyReturnValue` | While Building Planner has a session, turn `EXTRA` into `NONE`. Litematica marks a real block as extra wherever a placement's box holds air there (`schematicOverlayTypeExtra`, on by default), and a tile's box is a whole chunk column's sections, so every real block in it would be marked. The layer holds only blocks to place, so no real block is extra. Missing and wrong blocks keep their colours. |
 | L8 | `schematic/placement/PlacementManagerTaskRebuild.java`, `run()`; `PlacementManagerTask.java`'s constructors | `@WrapMethod`; a number for each task, in the order they're made (`RebuildOrder`) | Run the rebuilds of one chunk column one at a time. Litematica's background threads (at least two) rebuild a column from its placements' blocks as they are when the rebuild runs, so two rebuilds of one column at once could end with the older one's result, read before an edit's blocks were written. |
 | L9 | `schematic/placement/PlacementManagerDaemonHandler.java`, `removeRebuildTasksFor` and `removeDeferredTasksFor` | `@WrapMethod` | A running rebuild drops from the queue only the rebuilds of its column made before it began, whose edits it reads. Litematica's rebuild drops every queued rebuild of its column as it ends, and as it unloads a column with no placements, including one queued for an edit written after it read the column, which would leave that edit undrawn. Elsewhere (a new rebuild replacing the queued ones, an unload) every queued rebuild of the column still goes. |
+| L10 | `gui/GuiMaterialList.java`, private `createButtons()` | `@WrapOperation` on its `createButton(int, int, ButtonListener.Type)` calls for `EXPORT` and `EXPORT_TYPE`, returning 0; `@WrapWithCondition` on `addButton` with the `ButtonListenerChangeMenu`; `@Inject` at tail | For Building Planner's list only (`GhostMaterialList`): no "Export" button, no export type button ("Write to file", which cycles), and no "Litematica menu" button, which `createButtons` adds at the bottom right; "Save list" and "Saved lists" go where "Export" and the export type were, in the same row, which the method moves to the bottom left when the screen is narrow (`isNarrow`). Other material lists keep their buttons. |
 
 Public Litematica API the add-on calls: `LitematicaSchematic.createEmptySchematic`, `getSubRegionContainer`,
 `getAreaSize`; `LitematicaBlockStateContainer`'s `get` and `set`; `SchematicPlacement.createFor`,
@@ -229,12 +222,16 @@ Public Litematica API the add-on calls: `LitematicaSchematic.createEmptySchemati
 `SchematicPlacementManager.getAllSchematicsPlacements`, `addSchematicPlacement`, `removeSchematicPlacement`,
 `setSelectedSchematicPlacement`, `markChunkForRebuild`; `AreaSelection`'s constructor and `addSubRegionBox`; `Box`'s
 constructor; `PositionUtils.getTransformedBlockPos`, `getMinCorner`, `getMaxCorner`;
-`SchematicWorldHandler.getSchematicWorld`; `MaterialListBase` (extended, with `setMaterialListEntries`),
-`MaterialListUtils.getMaterialList`, `DataManager.setMaterialList`, `GuiMaterialList`'s constructor and MaLiLib's
-`GuiBase.openGui`; `BlockUtils.areStatesEqualIgnoringAge`, `Configs.Generic.MATERIAL_LIST_IGNORE_STATE`,
-`Configs.Visuals.IGNORE_CROP_AGE`; `Configs.Visuals.RENDER_BLOCKS_AS_TRANSLUCENT`,
-`GHOST_BLOCK_ALPHA`, `Configs.Generic.TOOL_ITEM_ENABLED` and `Configs.saveToFile`. From MaLiLib:
-`RenderEventHandler.registerWorldLastRenderer` and `RenderUtils`' batched box and text-plate drawing.
+`SchematicWorldHandler.getSchematicWorld`; `MaterialListBase` (extended, with `setMaterialListEntries`, and its
+`getHudRenderer`, `getMaterialsFiltered`, `getMultiplier`, `setMultiplier`, `getSortCriteria`, `getSortInReverse`,
+`toJson` and `fromJson`), `MaterialListHudRenderer` (extended), `MaterialListEntry`'s constructor and getters,
+`MaterialListSorter`, `MaterialListUtils.getMaterialList` and `updateAvailableCounts`, `DataManager.setMaterialList`,
+`GuiMaterialList`'s constructor and MaLiLib's `GuiBase.openGui` and `addMessage`; `BlockUtils.areStatesEqualIgnoringAge`,
+`Configs.Generic.MATERIAL_LIST_IGNORE_STATE`, `Configs.Visuals.IGNORE_CROP_AGE`;
+`Configs.Visuals.RENDER_BLOCKS_AS_TRANSLUCENT`, `GHOST_BLOCK_ALPHA`, `ENABLE_AREA_SELECTION_RENDERING`,
+`Configs.Generic.TOOL_ITEM_ENABLED`, `Hotkeys.OPEN_GUI_MAIN_MENU` and `Configs.saveToFile`. From MaLiLib:
+`RenderEventHandler.registerWorldLastRenderer` and `RenderUtils`' batched box and text-plate drawing. From Minecraft:
+`KeyMapping.setKey`, `KeyMapping.resetMapping` and `Options.save`, for Freecam's key.
 
 Fabric API: `PayloadTypeRegistry` (`registerLarge` for column snapshots), `ServerPlayNetworking`,
 `ClientPlayNetworking` (`canSend`), `ServerPlayConnectionEvents`, `ClientPlayConnectionEvents`, `ClientTickEvents`,
@@ -429,16 +426,30 @@ button acts again on reaching 0, so use repeats every 4 ticks; `MultiPlayerGameM
 `continueDestroyBlock` set `destroyDelay` to 5 after a creative destroy, and `continueDestroyBlock` counts it down on
 the next 5 ticks and destroys on the one after, so attack repeats every 6 ticks.
 
-How ghost blocks look: on the first client tick of a game run, after Litematica has loaded its config, Building Planner
-reads `config/buildingplanner-client.properties` on the player's computer. When it doesn't hold
-`look-defaults-applied=true`, Building Planner sets Litematica's `Visuals` options `renderBlocksAsTranslucent` to on and
-`ghostBlockAlpha` to 0.8, and its `Generic` option `toolItemEnabled` to off, each only while it still equals
-Litematica's default (off, 0.5, and on; `Configs.java`), then calls `Configs.saveToFile()` and writes the line. With
-the tool item off, Litematica's tool (a stick by default) does nothing, since the stick and Litematica's tool modes
-play no part in planning. When the file holds the line, it does nothing, so a player's own later change, even back to
-a default, stays. It doesn't need a session, so it happens before the player joins any server. If setting or saving
-fails, it logs a warning, writes no line and tries again at the next start. An option the player already set to the
-value Building Planner would set looks the same as one it set.
+### Settings Building Planner changes once
+
+On the first client tick of a game run, after Litematica has loaded its config and Minecraft its options, Building
+Planner reads `config/buildingplanner-client.properties` on the player's computer. Each group of settings it changes
+once has a record of its own in that file. For each group whose record the file doesn't hold, it changes each
+setting only while the setting still has its mod's default, saves that mod's config, and writes the record. When the
+file holds a group's record, it does nothing for that group, so a player's own later change, even back to a default,
+stays. A group added in a later version has a new record, so it reaches every player once, whatever earlier version
+wrote the file. None needs a session, so they happen before the player joins any server. If changing or saving a group
+fails, Building Planner logs a warning, writes no record for that group and tries again at the next start. A setting
+the player already had at the value Building Planner would set looks the same as one it set.
+
+| Record | Settings, with their defaults | Building Planner sets |
+|---|---|---|
+| `look-defaults-applied=true` | Litematica's `Visuals` options `renderBlocksAsTranslucent` (off) and `ghostBlockAlpha` (0.5), and its `Generic` option `toolItemEnabled` (on) (`Configs.java`) | on, 0.8 and off, then `Configs.saveToFile()` |
+| `area-selection-off-applied=true` | Litematica's `Visuals` option `enableAreaSelectionBoxesRendering` (on) | off, then `Configs.saveToFile()` (see "Litematica's area selection") |
+| `menu-key-applied=true` | Freecam's key "Config GUI" (`key.freecam.config.open`, unbound) and Litematica's hotkey `openGuiMainMenu` ("M") | M for Freecam's key, then `KeyMapping.resetMapping()` and `Options.save()`; no key for Litematica's hotkey, then `Configs.saveToFile()` (see "Keys"). Only with both Freecam and Litematica loaded. |
+
+With the tool item off, Litematica's tool (a stick by default) does nothing, since the stick and Litematica's tool modes
+play no part in planning. `look-defaults-applied` is the record Building Planner 0.3.0 and 0.4.0 wrote for every
+setting they changed once, so a computer that ran 0.3.0 holds it while `enableAreaSelectionBoxesRendering` is still on,
+as Geo's did (784, image 1). A computer whose first version was 0.4.0 has the option off already, and gets
+`area-selection-off-applied` without a change, unless its player turned the option back on, which the next version
+turns off again, once.
 
 ### Show or hide
 
@@ -543,8 +554,8 @@ The third click ends the mode and hands the box, by its lowest and highest corne
 
 Hooks E11 and E12 add Building Planner's widgets to Effortless Building's radial menu (opened by holding its key, left
 Alt by default; it closes when the key is let go): two sliders, "Build speed" and "Break speed", just under the menu's
-left-hand buttons (the wrench, undo and redo, and the row under them), and five buttons: "Show or hide ghost blocks",
-Copy, "Material list", Paste and "Block mix". The
+left-hand buttons (the wrench, undo and redo, and the row under them), and six buttons: "Show or hide ghost blocks",
+Copy, "Material list", Paste, "Block mix" and "Material lists". The
 widgets sit by the menu's middle, as its own buttons do (`RadialMenuWidgets`): the menu's left-hand buttons are 20
 across with their middles 26 apart, the leftmost 157 left of the middle, in two rows 13 above and below it, so they
 span 167 to 95 left of the middle and end 23 below it. The sliders, with 2 between
@@ -581,11 +592,11 @@ player lets go of the menu's key with the pointer over it (hook E16; Escape clos
 click of any mouse button over it, which leaves the menu open; after a click has acted, letting the key go acts on
 nothing. Each action plays the menu's quiet click (`RadialMenu.playRadialMenuSound`). "Show or hide ghost blocks" does
 what its key does (see "Show or hide"), "Block mix" what the block mix key does (see "The block mix and its panel"),
-Copy and "Material list" start a box (see "Boxes for Copy and the material list"), and Paste brings back the most recent
-copy (see "Copy and paste").
+Copy and "Material list" start a box (see "Boxes for Copy and the material list"), Paste brings back the most recent
+copy (see "Copy and paste"), and "Material lists" opens the current material list (see "The Material lists button").
 
-The five buttons sit in two rows above the wrench, undo and redo, in their columns: "Show or hide ghost blocks",
-"Block mix" and "Material list" 39 above the middle, and Copy and Paste 65 above it, over the wrench and undo. They
+The six buttons sit in two rows above the wrench, undo and redo, in their columns: "Show or hide ghost blocks",
+"Block mix" and "Material list" 39 above the middle, and Copy, Paste and "Material lists" 65 above it. They
 meet nothing the menu draws at 854 by 480, GUI scale 2, and at 1920 by 1080, GUI scales 2 and 4.
 
 Each icon is a 16 by 16 image of its own in `mod/src/main/resources/assets/buildingplanner/textures/gui/radial/`, named
@@ -597,14 +608,41 @@ OpenRouter model, then edited by hand in Paint.NET: `ghost_blocks_shown` and `gh
 `material_list` from set 3, `google/gemini-3-pro-image`. The eye on `ghost_blocks_shown` and `ghost_blocks_hidden`, with
 the slash over it, was then redrawn at 12 by 10 pixels, the size Geo picked (inbox request 768). The "Block mix" button
 shows Effortless Building's own Randomizer Bag item texture (`effortlessbuilding:textures/item/randomizerbag.png`),
-drawn from Effortless Building's jar, which copies none of it.
+drawn from Effortless Building's jar, which copies none of it. The "Material lists" button shows Minecraft's Book and
+Quill item texture (`minecraft:textures/item/writable_book.png`), drawn from the game's own (see the OPEN on its icon
+in "The Material lists button").
 
 ### Keys
 
 Building Planner's keys, each changeable in Controls under the heading "Building Planner": "Block mix" (B) and "Show or
 hide ghost blocks" (N). Neither is a default key, or part of a default key combination, of Minecraft 26.3, Litematica,
-MaLiLib, Effortless Building 4.3 or Freecam 1.5.1. Copy, the material list and Paste have buttons in the radial menu and no keys, and the copy at
-the aim is worked by the mouse.
+MaLiLib, Effortless Building 4.3 or Freecam 1.5.1. Copy, the material list, Paste and the material lists have buttons
+in the radial menu and no keys, and the copy at the aim is worked by the mouse.
+
+M opens Freecam's menu, as Geo wants: "M should be default bound to freecam's menu, not litematica. We shouldn't need
+to be able to access Litematica's menu" (784, note c3). Freecam 1.5.1 has a key "Config GUI" under the heading
+"Freecam" in Controls, with no key by default (`config/ModBindings.java`, `KEY_CONFIG_GUI`), which opens its settings
+screen through the Cloth Config its jar bundles (`ClothConfigScreenProvider`). Litematica opens its menu with its own
+hotkey `openGuiMainMenu`, "M" by default, which MaLiLib runs when M is let go with no other key pressed
+(`KeybindSettings.RELEASE_EXCLUSIVE`) and which isn't in Minecraft's Controls. Building Planner sets both once (see
+"Settings Building Planner changes once"): Freecam's key to M while it has no key, and Litematica's hotkey to none while
+it's "M". A Freecam key the player bound already, and a Litematica hotkey the player moved, stay as they are. M is a
+default key of no other mod in the pack. Changing Freecam's own default instead (a hook into its key's builder) would
+reach no one who has played: Minecraft saves every key in `options.txt`, unbound ones too, and reads the saved key over
+the default.
+
+With M opening Freecam's screen, Litematica's other hotkeys that start with M ("M,L" for its material list, "M,C" for
+its settings, "M,T", "M,R", "M,G" and the rest) can't be typed either: Freecam's screen opens on M's press, before the
+second key, and those hotkeys act only with no screen open (`KeybindSettings.DEFAULT`'s `Context.INGAME`). So players
+lose, with no way back in the game:
+
+- Litematica's menu and every screen in it: its settings (the look of ghost blocks, the drawing of area selections,
+  its colours, its hotkeys), loading schematics, the list of placements, area selections, the schematic verifier,
+  Litematica's own material lists, and its tool mode, whose button is at the bottom of the menu (784, F11);
+- Litematica's switches for all its drawing (M,R) and for schematics (M,G); N shows and hides ghost blocks instead.
+
+None of these plays a part in planning with Building Planner, which keeps the settings it needs as it sets them.
+Building Planner's material list has its own way back, in place of M,L (see "The material list"). A player who wants Litematica's menu back would edit `config/litematica.json` by hand.
 
 Effortless Building's four keys ("Open Radial Menu", "Open Modifier Settings", "Undo" and "Redo") show under the raw
 heading `key.category.effortlessbuilding.keybindings`: Minecraft 26.3 names a key category by the translation
@@ -694,11 +732,17 @@ missing and the wrong block where it has another block, unless Litematica's "mat
 in another state) or "ignoreCropAge" options count it as built. While ghost blocks are hidden, the box's ghost blocks
 count as if there were none, and they stay hidden. The counts become a Litematica material list of Building Planner's
 own (`GhostMaterialList`, a `MaterialListBase` filled through `MaterialListUtils.getMaterialList`), titled "Material
-list for the blocks in the box", which it sets as Litematica's material list
-(`DataManager.setMaterialList`), so Litematica's material list key reopens it, and opens (`GuiMaterialList`).
-Litematica's Refresh button counts the same box again, while the player is still in its dimension. Counting the layer
-rather than Litematica's schematic world leaves out the copy, which Litematica also draws; the copy, if it was at the
-aim, was put away when the box started. A box with no blocks opens the list with nothing in it.
+list for the blocks in the box". It becomes the current list: Building Planner sets it as Litematica's material list
+(`DataManager.setMaterialList`), keeps it as "Last counted" (see "Saved lists"), and opens its screen
+(`GuiMaterialList`). Counting the layer rather than Litematica's schematic world leaves out the copy, which Litematica
+also draws; the copy, if it was at the aim, was put away when the box started. A box with no blocks opens the list
+with nothing in it.
+
+Litematica's Refresh button counts the list's box again, and keeps the new counts as "Last counted", while Building
+Planner has a session, the player is in the box's dimension, and the game holds every chunk the box touches, as a box
+needs when it's drawn. Otherwise the counts stay as they were, and the screen says "Move closer to the box to count it
+again." (`GuiBase.addMessage`), since a chunk the game doesn't hold would count as air and every ghost block in it as
+missing. On another server, Refresh counts that server's blocks in the same box.
 
 Litematica's list has four columns (`gui/widgets/WidgetMaterialListEntry.java`): "Item"; "Total", the count for the
 plan; "Missing", how many are still to place, in green at 0, in gold when "Available" covers it, and in red otherwise;
@@ -716,6 +760,118 @@ built as real oak planks, and 20 real stone blocks with no ghost blocks over the
 | Oak Planks | 10 | 4 (red) | 3 (red) |
 | Stone | 20 | 0 (green) | 0 (green) |
 
+The screen's "Multiplier" field multiplies the counts, as for any Litematica list (`WidgetMaterialListEntry`): "Total"
+times the multiplier, and "Missing" the same as that whenever the multiplier isn't 1, since Litematica then counts for
+that many new copies of the build. Clicking a column's heading sorts the list by it (`MaterialListSorter`), by "Total"
+at first, most first.
+
+#### The screen's buttons
+
+Geo kept Litematica's buttons on the screen except three (784, note c3: "We can remove the "Litematica menu", export,
+and "write to file" buttons, and instead replace them with some simple custom controls to save and load material
+lists"). Hook L10 takes "Export", its export type button ("Write to file") and "Litematica menu" off the screen for
+Building Planner's lists, and puts "Save list" and "Saved lists" where the first two were. The screen keeps "Refresh",
+"Hide available", "Info HUD", "Clear ignored", "Clear cache" and "Multiplier". Escape closes it, as it does every
+Litematica screen.
+
+#### The material list panel
+
+Geo: "I want Info HUD to show a similar pinned visual box like the block mix box, but with the list of blocks, along
+with total, available, and missing, sorted just like the full view is, with the multiplier the full view has" (784,
+note c3). The screen's "Info HUD" button turns the panel on and off (`MaterialPanel`, drawn through
+`HudElementRegistry`, as the mix panel is), for whichever list is current: counting a new box or opening a saved list
+keeps the panel on, showing that list. Litematica's own Info HUD for the list draws nothing: `GhostMaterialList`
+overrides `getHudRenderer()` with a `MaterialListHudRenderer` whose switch is the panel's and whose `render` draws
+nothing, so the button's label ("Info HUD: ON" or "OFF"), which reads `getShouldRenderCustom()`, shows the panel's
+state. `DataManager.setMaterialList` turns the old list's Info HUD off when another list becomes current, so Building
+Planner turns the panel back on after it, when it was on.
+
+The panel draws as the mix panel does: a dark see-through box, at `SmallText`'s size, hidden while a screen is open and
+while the HUD is hidden (F1). It shows the heading "Material list", with the multiplier after it when it isn't 1
+("Material list ×4"), then the column headings "Total", "Available" and "Missing", then a row for each of the list's
+rows in the screen's order, leaving out what the screen leaves out ("Hide available" and the rows the player ignored).
+Each count reads as the screen shows it, with the multiplier, and "Missing" in the screen's colours: green at 0, gold
+when "Available" covers it, red otherwise. "Available" counts the player's inventory again every 2 seconds, as
+Litematica's own Info HUD does (`MaterialListUtils.updateAvailableCounts`). A list with no rows to show has "No blocks
+to list." under the heading.
+
+OPEN: where the panel sits. A) In the top-left corner, 4 from each edge. B) At the left edge, centred top to bottom,
+as the mix panel is at the right. C) At the right edge, above the mix panel. Recommended: A, since the game draws
+nothing in that corner outside the debug screen (F3), while chat runs up the left edge from the bottom and the mix
+panel takes the right edge's middle.
+
+OPEN: what each row shows. A) The block's icon and its three counts, so the panel is as narrow as the counts allow.
+B) The block's icon, its name and its three counts, which makes the panel about twice as wide (a name such as
+"Polished Blackstone Brick Stairs" takes about 160 of the 427 across a screen of 854 by 480 at GUI scale 2). Either
+shows at most 10 rows, Litematica's own Info HUD limit (`materialListHudMaxLines`), then "+N more". Recommended: A,
+since Geo asked for a significantly narrower mix panel (709 Q1) and each block's icon tells it apart.
+
+OPEN: when "Missing" changes. A) Building Planner counts the box again every 2 seconds while the panel shows a list
+whose box it can count (as for Refresh), so "Missing" drops as the group builds, on the panel and the screen alike, and
+"Last counted" follows. B) Only Refresh counts again, as for Litematica's own lists, so the panel's "Missing" stays as
+counted until the player presses Refresh. Recommended: A, since a pinned list is for building from. Counting reads
+whole sections (`BoxCount`), so a house-sized box should take about a millisecond; a box of 256 a side full of ghost blocks
+could take about half a second, a pause the player would see every 2 seconds, so a box of more than 1,000,000 blocks
+counts again only on Refresh.
+
+OPEN: whether the panel stays on after the game restarts. A) It does, with the same list, until the player turns it
+off. B) It starts off at each launch, as the block mix does (477 Q3). Recommended: A, since a list pinned for a build
+is still wanted the next evening.
+
+#### Saved lists
+
+Geo: "save and load material lists, which should be global per player and persistent across game closes. There's
+also an autosave material list for the last one collected (not necessarily the last one loaded)" (784, note c3).
+
+A saved list keeps its name, when it was saved, its box (dimension and two corners), its counts (each row's item, its
+"Total", its "Missing" and how many of those are the wrong block), and the screen's multiplier, sort and "Hide
+available". "Available" isn't kept: it is counted from the player's inventory whenever the list shows. The lists are
+kept in one file on the player's computer, `config/buildingplanner-material-lists.json`, written whole on each change
+and read when the game starts, so they're the same on every server with Building Planner; a file that can't be read is
+renamed with `.unreadable` at its end and the player starts with no lists. An item the game doesn't know drops from
+the list it's in.
+
+"Save list" opens a small screen with a name field, filled in to start with the date and time ("Nov 19, 6:21 PM"),
+and "Save" and "Cancel". Saving with the name of a kept list replaces it. "Saved lists" opens a screen listing the
+kept lists, newest first, with "Last counted" always at the top: each row shows its name, when it was saved and its
+box's size ("12 × 5 × 8"), with "Open" and "Delete"; "Delete" asks again before it deletes. "Open" makes the list
+current, with its counts as kept, and opens its screen, where Refresh counts its box again when the game holds it.
+Changes to an opened list (Refresh, the multiplier, the sort) aren't kept until the player saves it again.
+
+"Last counted" holds the latest list counted from a box: each box drawn for the material list, and each Refresh or
+recount, replaces it. Opening a saved list doesn't. It can't be deleted, and "Save list" keeps a copy of it under a name.
+
+OPEN: where the lists are kept. A) On each player's computer, in one file, shared by every server with Building Planner they play
+on. B) On the server, for each player, so they follow the player to another computer, on this server only; that needs
+new messages between the game and the server (protocol version 4), a server update with the release, and a player
+whose game is on another protocol version gets no lists. Recommended: A, since it needs nothing from the server and
+each player plays from one computer.
+
+OPEN: how many lists are kept. A) As many as the player saves, each a few kilobytes. B) The 50 newest, the oldest
+deleted when a new one is saved. Recommended: A, since nothing grows without the player saving.
+
+OPEN: how lists are named. A) The player types a name when saving, with the date and time filled in to start. B)
+Each list is named by its date and time and box size, with no field to type in. Recommended: A, since a name like
+"North tower" finds a list faster than a date.
+
+#### The Material lists button
+
+Litematica's material list hotkey (M,L) reopens the current list, but M opens Freecam's menu (see "Keys"), so a player
+needs another way to reopen a list.
+
+OPEN: how a player reopens the current list or a saved one. A) A sixth radial menu button, "Material lists", in the
+free slot over the redo button, 65 above the menu's middle beside Copy and Paste, which opens the current list's
+screen, or the "Saved lists" screen when there's no current list; like the other buttons, it acts when the menu's key
+is let go over it or on a click. B) A key in Controls under "Building Planner", with no key at first, which does the
+same. C) The "Material list" button opens the current list when there is one, with a "New box" button on its screen to
+draw a box, which changes how "Material list" works from 752's decision. Recommended: A, since every other planning
+action is a radial menu button and the slot is free.
+
+OPEN: the "Material lists" button's icon (with A above). A) Minecraft's own Book and Quill item, drawn from the game's
+textures, as "Block mix" shows Effortless Building's Randomizer Bag. B) Generated icons in the other buttons' style
+for Geo to pick from and edit by hand, as in 738. Recommended: A, since it fits the menu's pixel style without a round
+of generating and picking icons.
+
 ### Litematica's area selection
 
 Litematica keeps drawing an area selection a player made with its tool: `OverlayRenderer.renderBoxes` draws the current
@@ -723,18 +879,31 @@ selection's boxes, with see-through sides (`renderAreaSelectionBoxSides`, white 
 Litematica's rendering and its option "enableAreaSelectionBoxesRendering" (on by default) are on, whatever the player
 holds and whether or not the tool is on. Litematica saves the selection for each server and dimension
 (`DataManager.savePerDimensionData`: the simple selection, its default mode, in `area_simple`, and a normal selection by
-its file) and restores it when the player comes back. Since Building Planner turned Litematica's tool item off, a player
-who left a selection on the server has no tool to change or clear it, and it stays drawn there, as Geo saw. So
-Building Planner turns off "enableAreaSelectionBoxesRendering" once on each player's computer, as it sets the look of
-ghost blocks: only while the option is still at Litematica's default, and never again. Every selection, on every
-server and in singleplayer, then stops drawing until the player turns the option back on in Litematica's settings
-("Visuals").
+its file) and restores it when the player comes back. A selection may also have an origin of its own, which Litematica
+draws under the same option as a one-block outline in orange (`colorAreaOrigin`, #FF9010), or in cyan with orange
+sides while it's selected. Since Building Planner turned Litematica's tool item off, a player who left a selection on
+the server has no tool to change or clear it, and it stays drawn there.
+
+That is what Geo saw in the walkthrough of 0.4.0 (784). Litematica's file for the server's overworld on Geo's computer
+holds a simple selection of one box, 10 by 4 by 1 blocks (image 1, with its corners' red and blue outlines and its axes'
+red, green and blue lines), and an origin 26 and 19 blocks from the box's corner (image 2): the one-block box's lines
+in the screenshot are exactly #FF9010, with no tint inside it. Litematica's other orange outlines don't match: a
+placement's box takes a colour from a fixed list in which no orange is #FF9010 (`OverlayRenderer.KELLY_COLORS`), and
+Geo's file for the server lists no placements; the schematic overlay's "wrong state"
+(#FF9010 too) needs a real block in the position and tints the block's sides (`schematicOverlayEnableSides`, on by
+default). Geo's Litematica config still has "enableAreaSelectionBoxesRendering" on, and Building Planner's client config
+holds `look-defaults-applied=true`, which 0.3.0 wrote, so 0.4.0 changed nothing (see "Settings Building Planner changes
+once").
+
+Building Planner turns off "enableAreaSelectionBoxesRendering" once on each player's computer, under its own record:
+only while the option is still at Litematica's default, and never again. Every selection and its origin, on every server
+and in singleplayer, then stops drawing. The selections stay in Litematica's files, unused.
 
 ### When the server lacks the mod
 
 On joining, the client checks with `ClientPlayNetworking.canSend` that the server takes all five of its payloads. When
 it doesn't, Building Planner stays off for that server, silently: the player sees no message, and its keys, its radial
-menu buttons and its sliders do nothing, and the mix panel doesn't show. While it's off, Effortless Building's shapes
+menu buttons and its sliders do nothing, and neither the mix panel nor the material list panel shows. While it's off, Effortless Building's shapes
 place nothing: its place and break packets (hooks E1 and E2) and its undo and redo packets (E4) aren't sent, so a
 server that runs Effortless Building without Building Planner never changes real blocks for them. The same holds from
 joining until the server's `hello` arrives. A `hello` with another protocol version leaves it off the same way, so a
@@ -830,7 +999,7 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
 - With ghost blocks hidden, a shape shows them again, then draws, with its message the first time only and never
   "Ghost blocks shown.".
 - Hidden ghost blocks stay hidden after a restart, until N shows them.
-- At 854 by 480, GUI scale 2, and at 1920 by 1080, GUI scales 2 and 4, the five buttons meet nothing the menu draws in
+- At 854 by 480, GUI scale 2, and at 1920 by 1080, GUI scales 2 and 4, the six buttons meet nothing the menu draws in
   any mode (its ring, buttons, mode options, mode names, descriptions and corner text), the sliders, each other or the
   screen's edges (the driver's `radialclear`), in the two rows' slots (the driver's `slots`), each with its hover
   text; each is shot, with the buttons' boxes in the log. Shots taken 1 and 2 frames after the menu opens show the
@@ -875,13 +1044,36 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   describes, places and erases nothing, and puts the copy away. With ghost blocks hidden, the same box lists only the
   planks and stone that are built, and ghost blocks stay hidden. Litematica's list and the button's hover text are shot
   at 1920 by 1080, GUI scales 2 and 4. A box with no blocks opens an empty list.
-- A simple area selection Litematica saved for the server before the session, with its drawing of selections on, shows
-  as a large box in the view, which is shot; after Building Planner's first start on that computer, with its record
-  that it set the look gone, the option is off, the selection is still there, and it no longer shows in the same view.
+- The material list's screen shows "Refresh", "Hide available", "Info HUD", "Clear ignored", "Clear cache", "Save
+  list", "Saved lists" and "Multiplier", and no "Export", "Write to file" or "Litematica menu" (the driver's
+  `ScreenProbe` reads the buttons' labels), at 854 by 480 and 1920 by 1080, GUI scale 2, each shot.
+- "Info HUD" shows the panel once the screen closes, with the list's rows in the screen's order and their counts, and
+  the label reads "Info HUD: ON"; with the multiplier at 4 the heading and every count change as the screen's do;
+  sorting by "Missing" on the screen reorders the panel; "Hide available" leaves out the rows it hides on the screen;
+  picking up 3 oak planks raises "Available" within 2 seconds. A second box keeps the panel on with the new list. F1
+  hides it. The panel is shot at 854 by 480 and at 1920 by 1080, GUI scales 2 and 4, with the mix panel on too.
+- With the panel on and its box loaded, placing 2 of the missing oak planks as real blocks lowers "Missing" by 2
+  within 2 seconds (OPEN: when "Missing" changes, answer A).
+- "Save list" with the name "Planks" keeps the list; "Saved lists" shows "Last counted" first, then "Planks", with
+  their sizes. A new box replaces "Last counted" and leaves "Planks"; opening "Planks" doesn't change "Last counted".
+  After a restart both are still there, and "Open" on "Planks" shows its counts as kept, with "Available" counted
+  again. "Delete" asks again, then removes it. A lists file cut short is renamed with `.unreadable`, and the game
+  starts with no lists.
+- Refresh on a list whose box is in chunks the game doesn't hold (Planner1 teleported 300 blocks away) keeps the counts
+  and shows its message; back at the box, Refresh counts again and replaces "Last counted".
+- The radial menu's "Material lists" button opens the current list's screen, and with no list since the game started
+  and no lists kept, the "Saved lists" screen.
+- A simple area selection with an origin, which Litematica saved for the server before the session, with its drawing
+  of selections on and Building Planner's client config holding `look-defaults-applied=true` without
+  `area-selection-off-applied`, as 0.3.0 and 0.4.0 leave it on a computer that ran 0.3.0, shows as a large box and an
+  orange one-block box in the view, which is shot. After the next start, the option is off,
+  `area-selection-off-applied=true` is written, the selection and its origin are still in Litematica's data, and
+  neither shows in the same view.
 - On the same server with Building Planner left out, N makes no message and leaves ghost blocks shown, and the mouse
   works as without the add-on.
 
-`step10.sh`, hold to repeat and the look of ghost blocks. The driver counts the ticks each mouse button was down and
+`step10.sh`, hold to repeat and the settings Building Planner changes once, with Freecam 1.5.1 (Modrinth version
+`lwrkvqym`, the pack's) on both clients. The driver counts the ticks each mouse button was down and
 notes the client tick of each edit the client sends (a mixin in the `clienttest` source set), and the script holds the
 real buttons with xdotool while Planner1 is teleported one block every two ticks along a row, looking straight down:
 
@@ -901,9 +1093,16 @@ real buttons with xdotool while Planner1 is teleported one block every two ticks
 - The radial menu's wrench button opens Effortless Building's Modifiers screen.
 - Holding use in Line mode (which needs two clicks) and with the mode disabled sends no edit.
 - Each client's first start leaves Litematica's options at on and 0.8 (and the tool item and the drawing of area
-  selections off), saved in its config, and the line in Building Planner's client config.
-- A player's own change (off and 0.3) survives a restart. With the line gone and the server stopped, so the client
-  joins nothing, a start sets only the option still at its default (on) and keeps the 0.3.
+  selections off), Freecam's "Config GUI" key at M and Litematica's `openGuiMainMenu` with no key, saved in
+  Litematica's config and Minecraft's `options.txt`, and the three records in Building Planner's client config.
+- A player's own change (off and 0.3) survives a restart. With the records gone and the server stopped, so the client
+  joins nothing, a start sets only the option still at its default (on) and keeps the 0.3. With only
+  `area-selection-off-applied` gone and the drawing of area selections turned back on, a start turns it off and
+  changes nothing else.
+- With Freecam's key bound to K by the player and the `menu-key-applied` record gone, a start leaves it at K and
+  still takes M from Litematica's menu.
+- In the game, M opens Freecam's settings screen (the driver's `ScreenProbe` reads its class) and no Litematica screen;
+  M then L opens no Litematica screen either. Escape closes Freecam's screen.
 
 The import's unit tests (`PlanImportTest`) build the layer from files the writers' own code makes: a `placements.json`
 from Syncmatica's `ServerPlacement.toJson`, with turned, mirrored and overlapping plans and one with a moved and turned
@@ -941,3 +1140,9 @@ other in the game's own copy of the layer, again after a restart, which doesn't 
 - That no MaLiLib or Litematica hotkey bound to the scroll wheel or the middle button acts while a mouse mode takes
   them; the defaults bind none.
 - The real server's view distance, which sets how far a box may reach in loaded chunks; the dev server's is 6.
+- That the orange one-block box in Geo's screenshot (784, image 2) is the selection's origin: its colour and Geo's
+  Litematica file say so, and Geo seeing it gone after the next version settles it.
+- How long counting a list's box again every 2 seconds takes in the game, and whether a player notices it; the 1,000,000
+  block limit on it is expected, not measured.
+- That Freecam's settings screen opens on M's press before MaLiLib reads a second key, so Litematica's M hotkeys can't
+  be typed; `step10.sh` checks M then L.
