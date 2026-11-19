@@ -18,7 +18,7 @@ just before Building Planner 0.4.0 was installed, 1.5 GB), `minecraft-backup-202
 (the world just before Building Planner 0.2.0 was installed, 1.5 GB), `minecraft-backup-2026-11-15-pre-building-planner.tar.gz` (the world just before
 Building Planner 0.1.0 was installed, 1.5 GB), `minecraft-backup-2026-11-14-pre-fabric.tar.gz` (the world just before
 the switch to Fabric, 1.5 GB), `minecraft-archive-2026-10-29-1.21.11.tar.gz` and `minecraft-backup-2025-12-12.tar.gz`.
-The 0.3.0 jar is kept in `/root/bp-0.4.0-stage/` for a rollback. To take Building Planner off the server, remove
+To take Building Planner off the server, remove
 `mods/building-planner-0.4.0.jar` and run
 `systemctl restart minecraft.service`.
 The vanilla `server.jar` stays in place: to switch back, change the jar in `ExecStart` to `server.jar`, then run
