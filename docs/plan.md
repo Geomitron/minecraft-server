@@ -346,7 +346,10 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
   - **Filled ghost blocks (809):** a real block fills its ghost block when it's the same block placed the same way
     (facing, axis, top or bottom half, slab type and door hinge), whatever it connects to (Q1 C), and any change to
     the real block counts: placing by hand, commands such as /fill, pistons, flowing water and growing plants (Q2 A).
-    A removed ghost block doesn't come back if the real block is broken later.
+    A removed ghost block doesn't come back if the real block is broken later. A block placed several to a spot
+    (candles, sea pickles, snow layers, turtle eggs, pink petals) fills its ghost block only at the same count (823
+    Q1 B). Drawing a ghost block where the real block already fills it removes any older ghost block there, and undo
+    brings the older one back (823 Q2 B).
   - **Overlapping shapes (811):** where a new shape covers older ghost blocks, the new shape's blocks stay (Q4 A).
     Geo saw most or all of the older shape disappear (Q1 C), which that rule doesn't explain: a bug in 0.5.0 that the
     test game hasn't reproduced, so 0.6.0 logs a warning in the game when it happens again.
