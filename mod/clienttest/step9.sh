@@ -268,17 +268,18 @@ done
 check "ghost blocks still show after the hover shots" eval '[[ $(val 1 ghosts) == "shown, "* ]]'
 drv 1 "window 854 480 2" "wait 20" > /dev/null
 
-# Without a copy, the menu shows five buttons, each with its hover text, at its middle from the menu's middle: show or
-# hide, Block mix and Material list in the row 39 above it, and Copy and Paste in the row 65 above it, at the left.
+# Without a copy, the menu shows six buttons, each with its hover text, at its middle from the menu's middle: show or
+# hide, Block mix and Material list in the row 39 above it, and Copy, Paste and Material lists in the row 65 above it, at
+# the left.
 # Shot with the pointer on the menu's middle, over no button, then with the pointer on Block mix, for its hover text.
 slots="Show or hide ghost blocks [N] @ -157,-39 | Block mix [B] @ -131,-39 | Material list @ -105,-39 | \
-Copy @ -157,-65 | Paste @ -131,-65"
+Copy @ -157,-65 | Paste @ -131,-65 | Material lists @ -105,-65"
 radial_open
 xdo 1 mousemove --window %w 427 240
 drv 1 "wait 10" "notoasts" "wait 5" "notoasts" "shot radial-no-copy" > /dev/null
 echo "  radial-no-copy buttons: $(val 1 buttons)" >> /out/checks.log
 echo "  radial-no-copy corner text: $(val 1 cornertext)" >> /out/checks.log
-check "without a copy, the menu shows its five buttons in their slots, with their hover texts" \
+check "without a copy, the menu shows its six buttons in their slots, with their hover texts" \
 	eval '[[ $(val 1 slots) == "$slots" ]]'
 # Building Planner's name, where Effortless Building draws its own: the text at the menu's lower right.
 check "the menu's corner text reads \"Building Planner\"" eval '[[ $(val 1 cornertext) == "Building Planner | "* ]]'
@@ -654,7 +655,7 @@ house_box
 check "the copy is the house with the gold block and the ghost stone again: 27 blocks" \
 	eval 'drv 1 "wait 5" > /dev/null && copy_is 1 "^origin [-0-9,]+ NONE NONE unselected 27 blocks$"'
 
-# With the copy at the aim, the menu shows the same five buttons, none of them for turning, mirroring or clearing the
+# With the copy at the aim, the menu shows the same six buttons, none of them for turning, mirroring or clearing the
 # copy; shot at 1920 by 1080, GUI scales 2 and 4, with the pointer off the buttons, and failing unless the buttons
 # meet nothing.
 radial_copy_shot() {
@@ -676,7 +677,7 @@ radial_open
 xdo 1 mousemove --window %w 427 240
 drv 1 "wait 10" "notoasts" "wait 5" "notoasts" "shot radial-with-copy" > /dev/null
 echo "  radial-with-copy buttons: $(val 1 buttons)" >> /out/checks.log
-check "with the copy at the aim, the menu shows the same five buttons in their slots, with their hover texts" eval \
+check "with the copy at the aim, the menu shows the same six buttons in their slots, with their hover texts" eval \
 	'copy_is 1 "^origin " && [[ $(val 1 slots) == "$slots" ]]'
 xdo 1 mousemove --window %w 5 5
 radial_let_go
@@ -1372,8 +1373,14 @@ check "and the server's file keeps the row's box as Last counted" eval \
 	[[ $(val 1 "listfile $lists_file") == "minecraft:overworld 20,-60,-10..29,-59,-10 "* ]]'
 drv 1 "close" "wait 5" > /dev/null
 planks_list=$(val 1 currentlist)
-# The panel on, with Planks, for the restarts below: Planner1 carries 3 oak planks then.
-reopen
+# The radial menu's "Material lists" button opens the current list's screen, Planks, where the panel is turned on for
+# the restarts below: Planner1 carries 3 oak planks then. The screen opens once the menu has closed.
+radial_open
+radial_point "Material lists"
+xdo 1 keyup Alt_L
+check "the radial menu's Material lists button opens the current list's screen" eval \
+	'drv 1 "await screen Material list for the blocks in the box" "wait 10" > /dev/null &&
+	[[ $(val 1 currentlist) == "$planks_list" ]]'
 mat_click "Info HUD"
 drv 1 "close" "wait 60" > /dev/null
 planks_panel="$panel_head | minecraft:stone 20 0 0 green | minecraft:oak_planks 10 3 4 red"
@@ -1412,6 +1419,13 @@ start_client 1
 check "after Planner1's game restarts, the panel shows the same list, Saved lists the same lists, and Open shows Planks as kept" \
 	saved_lists_again 1 lists-after-game-restart
 drv 1 "close" "wait 5" > /dev/null
+radial_open
+radial_point "Material lists"
+xdo 1 keyup Alt_L
+check "and the radial menu's Material lists button opens Planks' screen" eval \
+	'drv 1 "await screen Material list for the blocks in the box" "wait 10" > /dev/null &&
+	[[ $(val 1 currentlist) == "$planks_list" ]]'
+drv 1 "close" "wait 5" > /dev/null
 stop_client 1
 stop_server "$lists_log"
 lists_log=server-lists-again
@@ -1434,6 +1448,11 @@ check "Planner2 sees none of Planner1's lists, and no panel" eval 'drv 2 "await 
 # The game's chat toast comes once Planner1 joins after it; let it come, then clear it.
 drv 2 "wait 60" "notoasts" "wait 5" "notoasts" "shot saved-lists-none" "wait 10" "close" > /dev/null
 drv 1 "await session" "await noscreen" > /dev/null
+check "for Planner2, with no current list, the radial menu's Material lists button opens Saved lists" eval \
+	'xdo 2 keydown Alt_L > /dev/null && drv 2 "await screen Build Modes" "wait 10" > /dev/null &&
+	xdo 2 mousemove --window %w $(val 2 "widget 0 Material lists") > /dev/null && drv 2 "wait 5" > /dev/null &&
+	xdo 2 keyup Alt_L > /dev/null && drv 2 "await screen Saved lists" "wait 10" > /dev/null && [[ -z $(val 2 savedlists) ]]'
+drv 2 "close" "wait 5" > /dev/null
 
 # A lists file cut short: the server, restarted, logs an error at Planner1's join, renames the file with .unreadable,
 # and Planner1 has no lists; a new save writes a new file.

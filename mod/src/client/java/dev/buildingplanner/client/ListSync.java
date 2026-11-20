@@ -101,6 +101,16 @@ final class ListSync {
 		}
 	}
 
+	/** The radial menu's "Material lists" button: opens the current list's screen, or "Saved lists" without one. */
+	void openCurrent() {
+		GhostMaterialList list = currentList();
+		if (list != null) {
+			GuiBase.openGui(new GuiMaterialList(list));
+		} else {
+			SavedListsScreen.open(null);
+		}
+	}
+
 	/** Keeps the list under the name on the server, replacing a kept list of that name. */
 	void save(String name, ListData list) {
 		if (ListLimits.nameProblem(name).isEmpty() && fits(list)) {

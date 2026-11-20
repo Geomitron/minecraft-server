@@ -60,6 +60,7 @@
 	"buildingplanner.ui.radial.copy": "Copy",
 	"buildingplanner.ui.radial.paste": "Paste",
 	"buildingplanner.ui.radial.material_list": "Material list",
+	"buildingplanner.ui.radial.material_lists": "Material lists",
 	"buildingplanner.ui.mode.copy": "Left-click to %s, Scroll to %s, Middle-click to %s, Right-click to %s",
 	"buildingplanner.ui.mode.copy.paste": "paste",
 	"buildingplanner.ui.mode.copy.turn": "turn",

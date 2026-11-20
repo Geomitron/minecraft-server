@@ -27,12 +27,13 @@ import net.minecraft.resources.Identifier;
  * and are as wide as the longest label either shows needs at the current size, plus {@link #PAD} on each side, reaching
  * further left than the buttons. Each is {@link #HEIGHT} high, and they end 55 below the middle.
  *
- * <p>Building Planner's five buttons ({@link RadialButton}) sit in two rows above the wrench, undo and redo, in their
+ * <p>Building Planner's six buttons ({@link RadialButton}) sit in two rows above the wrench, undo and redo, in their
  * columns (middles 157, 131 and 105 left of the menu's middle): "Show or hide ghost blocks", "Block mix" and "Material
- * list" 39 above the middle, and Copy and Paste 65 above it, over the wrench and undo. "Show or hide ghost blocks" and
- * "Block mix" do what their keys do; Copy, Paste and "Material list" have no keys, and each shows selected while its
- * mouse mode is on, when no mode segment does (E19). Each icon is a texture of its own ({@link RadialButton#icon}),
- * and "Block mix" shows Effortless Building's Randomizer Bag.
+ * list" 39 above the middle, and Copy, Paste and "Material lists" 65 above it. "Show or hide ghost blocks" and "Block
+ * mix" do what their keys do; Copy, Paste, "Material list" and "Material lists" have no keys, and Copy, Paste and
+ * "Material list" each show selected while its mouse mode is on, when no mode segment does (E19). Each icon is a
+ * texture of its own ({@link RadialButton#icon}), "Block mix" shows Effortless Building's Randomizer Bag, and
+ * "Material lists" Minecraft's Book and Quill.
  *
  * <p>The widgets join the menu's opening animation (E20): the menu places its ring and buttons at {@link #factor} of
  * their distance and size from its middle, which grows from 0.8 to 1 over its first frames, and {@link #place} places
@@ -54,6 +55,7 @@ public final class RadialMenuWidgets {
 	private static final int[] MATERIAL_LIST_SLOT = {-105, -39};
 	private static final int[] COPY_SLOT = {-157, -65};
 	private static final int[] PASTE_SLOT = {-131, -65};
+	private static final int[] MATERIAL_LISTS_SLOT = {-105, -65};
 
 	private static final Identifier SHOWN = RadialButton.icon("ghost_blocks_shown");
 	private static final Identifier HIDDEN = RadialButton.icon("ghost_blocks_hidden");
@@ -63,6 +65,9 @@ public final class RadialMenuWidgets {
 	/** Effortless Building's Randomizer Bag item texture, drawn from its jar. */
 	private static final Identifier RANDOMIZER_BAG =
 		Identifier.fromNamespaceAndPath("effortlessbuilding", "textures/item/randomizerbag.png");
+	/** Minecraft's Book and Quill item texture, drawn from the game's own. */
+	private static final Identifier BOOK_AND_QUILL =
+		Identifier.fromNamespaceAndPath("minecraft", "textures/item/writable_book.png");
 
 	/** A widget the menu places from its middle each frame. */
 	interface Placed {
@@ -91,6 +96,8 @@ public final class RadialMenuWidgets {
 			BuildingPlannerClient::copy));
 		widgets.add(button(PASTE_SLOT, "paste", PASTE,
 			() -> BuildingPlannerClient.mouseMode() == MouseMode.COPY_AT_AIM, BuildingPlannerClient::paste));
+		widgets.add(button(MATERIAL_LISTS_SLOT, "material_lists", BOOK_AND_QUILL, () -> false,
+			BuildingPlannerClient::materialLists));
 		return widgets;
 	}
 
@@ -123,8 +130,8 @@ public final class RadialMenuWidgets {
 	 * Hook E16: the radial menu is closing, by its key let go or by Escape. As the menu then acts on its own button
 	 * under the pointer unless a click acted since it opened ({@code actedByClick}), so does the Building Planner button
 	 * under the pointer now, which may have moved since the last frame. Returns that button's action, or null, for the
-	 * hook to run once the menu has closed, so "Block mix" can open its screen: closing grabs the mouse, which moves the
-	 * pointer to the window's middle.
+	 * hook to run once the menu has closed, so "Block mix" and "Material lists" can open their screens: closing grabs
+	 * the mouse, which moves the pointer to the window's middle.
 	 */
 	public static Runnable menuClosing(List<? extends GuiEventListener> children, boolean actedByClick) {
 		if (actedByClick) {

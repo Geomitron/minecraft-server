@@ -293,6 +293,16 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		boxButton(BoxDraw.Purpose.MATERIAL_LIST, MouseMode.Action.MATERIAL_LIST_BUTTON);
 	}
 
+	/**
+	 * The radial menu's "Material lists" button: the current material list's screen, or "Saved lists" when there's no
+	 * current list. Opening a screen keeps the mouse mode.
+	 */
+	static void materialLists() {
+		if (session != null) {
+			session.lists().openCurrent();
+		}
+	}
+
 	/** After the button's action on the mouse mode, starts, ends or switches a box, dropping a shape under way. */
 	private static void boxButton(BoxDraw.Purpose purpose, MouseMode.Action button) {
 		if (session == null) {
