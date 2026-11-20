@@ -8,7 +8,7 @@ Building Planner 0.5.0 from the release `building-planner-0.5.0` (`/home/minecra
 from `/home/minecraft`:
 `/usr/lib/jvm/java-25-openjdk-amd64/bin/java -Xmx6G -Xms1G -jar fabric-server-mc.26.3-loader.0.20.1-launcher.1.1.2.jar nogui`,
 port 25565. Survival, hard, whitelist enforced (11 players), online mode. None of the mods adds blocks or items, so players without
-mods can join: an unmodded 26.3 client joined a dev server with the same mods (`def7603`). The world (`world/`) is 1.9 GB.
+mods can join: an unmodded 26.3 client joined a dev server with the same mods (`b739caf`). The world (`world/`) is 1.9 GB.
 Building Planner keeps the shared ghost blocks in `world/building-planner/layer/`, and each player's material lists
 in `world/building-planner/material-lists/`, a folder it creates once a player counts a box. Its one-time import of Syncmatica's shared
 plans found none (Syncmatica's list in `world/syncmatica/placements.json` was empty), so the ghost blocks started
