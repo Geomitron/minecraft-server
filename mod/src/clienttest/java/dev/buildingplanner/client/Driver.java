@@ -455,6 +455,17 @@ public final class Driver implements ClientModInitializer {
 				}
 				return "layer " + layer + " drawn " + drawn;
 			}
+			case "rendered" -> {
+				// rendered <chunk x1> <chunk z1> <chunk x2> <chunk z2>: what Litematica's renderer last built for each
+				// of those columns (see RenderProbe).
+				return RenderProbe.columns(Integer.parseInt(a[1]), Integer.parseInt(a[2]), Integer.parseInt(a[3]),
+					Integer.parseInt(a[4]));
+			}
+			case "rerender" -> {
+				// rerender: Litematica throws away what it built and builds every column again.
+				RenderProbe.rerender();
+				return "ok";
+			}
 			case "look" -> {
 				// look: Litematica's renderBlocksAsTranslucent and ghostBlockAlpha now.
 				return "translucent=" + Configs.Visuals.RENDER_BLOCKS_AS_TRANSLUCENT.getBooleanValue()
