@@ -439,6 +439,22 @@ public final class Driver implements ClientModInitializer {
 				}
 				return String.valueOf(count);
 			}
+			case "countbox" -> {
+				// countbox x1 y1 z1 x2 y2 z2 <block>: how many positions of the box hold that block in this game's copy
+				// of the layer, and how many Litematica's schematic world shows it at, as "layer N drawn N".
+				int layer = 0;
+				int drawn = 0;
+				for (BlockPos pos : BlockPos.betweenClosed(pos(a, 1), pos(a, 4))) {
+					if (BuiltInRegistries.BLOCK.getKey(session().replica().layer().get(pos).getBlock()).toString()
+						.equals(a[7])) {
+						layer++;
+					}
+					if (blockId(pos).equals(a[7])) {
+						drawn++;
+					}
+				}
+				return "layer " + layer + " drawn " + drawn;
+			}
 			case "look" -> {
 				// look: Litematica's renderBlocksAsTranslucent and ghostBlockAlpha now.
 				return "translucent=" + Configs.Visuals.RENDER_BLOCKS_AS_TRANSLUCENT.getBooleanValue()
