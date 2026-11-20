@@ -18,7 +18,7 @@ except the next version's changes from Geo's walkthrough of 0.4.0 (inbox request
   "Material lists" button (see "The material list", and Geo's answers in inbox request 786).
 
 0.4.0 turns the drawing of area selections off under the record 0.3.0 had already written, so on a computer that ran
-0.3.0 it never does. Places marked OPEN wait on Geo's answer. The build steps are in [plan.md](plan.md) ("Building
+0.3.0 it never does. The build steps are in [plan.md](plan.md) ("Building
 Planner 0.5.0").
 
 ## What players get
@@ -905,18 +905,10 @@ lists and panel come back when they return. On a server without Building Planner
 Building Planner stays off (see "When the server lacks the mod"): the panel doesn't show, and the radial menu's
 buttons do nothing. A singleplayer world runs no server side, so it has no lists either.
 
-OPEN: what a game on the other version of Building Planner sees, from the release until the player's next launch. A)
-Protocol version 4, as above: a 0.4.0 game on the 0.5.0 server, and a 0.5.0 game on the 0.4.0 server, have Building
-Planner off, as on a server without it: no ghost blocks, no lists, and Effortless Building's shapes draw nothing. B)
-Protocol version 3 stays, and the list messages are optional: a 0.4.0 game on the 0.5.0 server keeps everything 0.4.0
-has, and a 0.5.0 game on the 0.4.0 server keeps the ghost blocks and the material list without saved lists, "Last
-counted" or the panel's return, which then need a state of their own and checks. B matches Geo's reading of 786 Q1 B
-("a player whose game doesn't match the server's version of Building Planner sees no lists"); A turns the ghost blocks
-off too. C) A, and the server's join handler, which already checks which payloads the game takes, sends a game
-that takes the hello but not the list payloads a chat message telling the player to restart Minecraft from "Server
-Pack". Recommended: C, since the pack updates every player at launch, so only a player who rejoins after the release
-without restarting the game, or whose update failed, meets it; A and C have one state to build and check, and C tells
-that player why the ghost blocks are gone (asked in 788).
+A game on another version than the server's, such as a 0.4.0 game on the 0.5.0 server, has Building Planner off with
+no message, as on a server without it: no ghost blocks, no lists, and Effortless Building's shapes draw nothing.
+Protocol version 4 gives the game and the server one version of their messages to build and check, which is the
+simplest; Geo left this to the agent, since no other player has Building Planner yet (788).
 
 #### The Material lists button
 
@@ -963,7 +955,7 @@ place nothing: its place and break packets (hooks E1 and E2) and its undo and re
 server that runs Effortless Building without Building Planner never changes real blocks for them. The same holds from
 joining until the server's `hello` arrives. A `hello` with another protocol version leaves it off the same way, so a
 player whose game still has Building Planner 0.4.0 (protocol version 3) sees no ghost blocks and no lists on a server
-with 0.5.0 until their next launch updates it (see the OPEN in "The lists on the server"). A
+with 0.5.0 until their next launch updates it. A
 singleplayer world, or a LAN host's own world, runs no server side, and Effortless Building works there as it does
 without Building Planner. The server sends nothing to a player who can't receive it (`ServerPlayNetworking.canSend`),
 so players without the add-on, or without any mods, join and play as before. It sends `hello` only to a game that also

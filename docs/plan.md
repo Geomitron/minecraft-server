@@ -319,6 +319,9 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
   - **The panel:** in the top-left corner (Q6 A), each row the block's icon and its three counts (Q7 A), counting the
     box again every 2 seconds while it shows its list (Q8 A), and staying on with the same list after a restart, until
     the player turns it off (Q9 A).
+  - **A game on another version:** Geo left it to the agent ("Doesn't matter; no users will have that old version
+    installed, as it has not been distributed yet", 788), so the simplest stands: protocol version 4, and a game on
+    another version than the server's has Building Planner off, with no message.
 - The shared layer replaces the decisions above that concern separate plans: named plans that move and turn as a whole
   (411 Q1), plan growth (411 Q2), who deletes a plan (411 Q3, 420 Q9), starting a plan with N (420 Q1, 469 Q1), hiding
   a plan with Litematica or Syncmatica (420 Q2, 469 Q2), the paste's target plan (485 Q3), Litematica's Edit Schematic
@@ -326,10 +329,8 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
 
 ## Agent-ready work
 
-**Building Planner 0.5.0** (784 and 786, in "Decisions" above). [building-planner.md](building-planner.md) is the
-design. Its one OPEN mark, on what a game on the other version of Building Planner sees ("The lists on the server"),
-waits on Geo; steps 3 and 8 assume the answer it recommends (protocol version 4), and every other step depends on no
-answer. The steps come in this order, each small enough for one child. A step that changes nothing players see beyond
+**Building Planner 0.5.0** (784, 786 and 788, in "Decisions" above). [building-planner.md](building-planner.md) is
+the design, and Geo's answers settle every choice in it. The steps come in this order, each small enough for one child. A step that changes nothing players see beyond
 what Geo already decided goes to `main` once its checks pass (inbox request 429). A step that changes what players see
 is committed without pushing, and goes to `main` once Geo has seen its in-game screenshots, with the changes outlined
 in red; steps 2 and 4 to 6 go to Geo together. Nothing goes to the server or the pack before the last step.
@@ -345,7 +346,7 @@ in red; steps 2 and 4 to 6 go to Geo together. Nothing goes to the server or the
    hotkey cleared only while it's "M", the record written only with both mods loaded), and `step10.sh`'s key checks
    pass: M opens Freecam's screen and no Litematica screen, M then L opens none of Litematica's, and a player's own
    Freecam key stays.
-3. **The lists on the server** ("The lists on the server"; assumes the recommended answer to its OPEN): protocol
+3. **The lists on the server** ("The lists on the server"): protocol
    version 4, the seven payloads, the server's store of each player's lists with its files, its limits and its sends
    at join, and the game's side of the messages, which keeps the index, sends `current_list` when it counts a box, and
    makes the `current` it receives at join the current list, with no new screens. Done when unit tests cover the
@@ -386,8 +387,7 @@ in red; steps 2 and 4 to 6 go to Geo together. Nothing goes to the server or the
    and a restart; the log shows Building Planner start with no error, and after a player saves a list,
    `world/building-planner/material-lists/` contains their file. Then the pack's push to `main`. "Current setup" in this
    plan is updated to 0.5.0, protocol version 4, the new backup and the lists' folder, and the README and the guide's setup
-   steps are checked against what 0.5.0 changes, including that a player who was in the game during the release
-   relaunches it to get 0.5.0.
+   steps are checked against what 0.5.0 changes.
 
 ## Design work: Building Planner
 
