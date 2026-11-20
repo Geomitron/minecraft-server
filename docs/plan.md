@@ -326,6 +326,33 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
   - **0.4.1 first:** the box fix and the M key (steps 1 and 2 below) go to players as Building Planner 0.4.1 before
     the rest of 0.5.0, with M opening Freecam's menu as its screenshot showed (790 Q1 A). The server keeps 0.4.0, since
     both change only the players' game.
+  - **The save and load screens:** as their screenshots showed, with their texts as written (804 Q1 A).
+  - **The panel and its button:** as their screenshots showed (807 Q3 A), with the panel's column headings "All",
+    "Hold" and "Need" (807 PR1, Geo's wording). The panel shows only the rows that fit above the hotbar and counts the
+    rest in "+N more" (Q1 B). Only drawing a box or pressing Refresh replaces "Last counted"; the panel's recount
+    updates only the panel and the screen (Q2 B).
+- Building Planner 0.6.0 takes the six changes Geo asked for on November 20th: delete limits the same as the copy
+  box's, a ghost block removed once the real block fills it (those already filled too), editing ghost blocks from
+  Freecam as from the player, every feature working in Freecam, an older shape's ghost blocks not disappearing under a
+  new shape, and the copy placed with Satisfactory's controls. Settled so far:
+  - **The copy's placement (806):** against the face aimed at, with its middle under the crosshair (Q1 B); a notch up
+    turns it clockwise (Q2 B); it snaps flush to the player's recent pastes, and holding Left Ctrl keeps it in line
+    with the last paste (Q3 C); the middle click still mirrors it (Q4 A); H locks it, the arrow keys move it a block
+    forward, back, left or right, and Page Up and Page Down move it up or down (Q5 A); R switches between Single, Zoop
+    and Vertical (Q6 A); its box is blue when it can be pasted, yellow when it would replace ghost blocks, and red when
+    the server would refuse it (Q7 B).
+  - **Deleting (808):** a Delete button in the radial menu draws a box the way Copy does, then deletes every ghost
+    block in it (Q1 A).
+  - **Filled ghost blocks (809):** a real block fills its ghost block when it's the same block placed the same way
+    (facing, axis, top or bottom half, slab type and door hinge), whatever it connects to (Q1 C), and any change to
+    the real block counts: placing by hand, commands such as /fill, pistons, flowing water and growing plants (Q2 A).
+    A removed ghost block doesn't come back if the real block is broken later.
+  - **Overlapping shapes (811):** where a new shape covers older ghost blocks, the new shape's blocks stay (Q4 A).
+    Geo saw most or all of the older shape disappear (Q1 C), which that rule doesn't explain: a bug still to find.
+  - **Settled by the agent:** editing in Freecam aims from the camera whenever Freecam's camera is on, since Geo asked
+    to edit ghost blocks there "like I would as the player"; ghost blocks filled before 0.6.0 are found as each chunk
+    loads; a filled ghost block goes without a glow, since Litematica already draws it as nothing.
+  - **Texts:** the controls line's and the Delete button's go to Geo with the build's screenshots.
 - The shared layer replaces the decisions above that concern separate plans: named plans that move and turn as a whole
   (411 Q1), plan growth (411 Q2), who deletes a plan (411 Q3, 420 Q9), starting a plan with N (420 Q1, 469 Q1), hiding
   a plan with Litematica or Syncmatica (420 Q2, 469 Q2), the paste's target plan (485 Q3), Litematica's Edit Schematic
@@ -333,12 +360,12 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
 
 ## Agent-ready work
 
-**Building Planner 0.5.0** (784, 786, 788 and 790, in "Decisions" above). [building-planner.md](building-planner.md) is
+**Building Planner 0.5.0** (784, 786, 788, 790, 804 and 807, in "Decisions" above). [building-planner.md](building-planner.md) is
 the design, and Geo's answers settle every choice in it. The steps come in this order, each small enough for one child. A step that changes nothing players see beyond
 what Geo already decided goes to `main` once its checks pass (inbox request 429). A step that changes what players see
 is committed without pushing, and goes to `main` once Geo has seen its in-game screenshots, with the changes outlined
-in red; steps 4 to 6 go to Geo together. Apart from 0.4.1, nothing goes to the server or the pack before the last
-step.
+in red, and with step 7's texts for that step. Apart from 0.4.1, nothing goes to the server or the pack before the
+last step.
 
 1. **A record for each setting changed once** ("Settings Building Planner changes once" and "Litematica's area
    selection"): `LookDefaults` and `LitematicaLook` with one record for each group, and the drawing of area selections
@@ -384,9 +411,10 @@ step.
    "Material lists" check passes, and `step8.sh` and `step10.sh` still pass.
 7. **Texts for Geo**: every text steps 4 to 6 add (the buttons' labels, the two screens' titles, fields and buttons,
    "Last counted", the date and time a name starts with, the Refresh message, the panel's heading, column headings,
-   "+N more" and "No blocks to list.", and the button's name) goes to Geo as editable text, and Geo's version is built
-   in, with `step9.sh` checking each text exactly.
-8. **The release**: version 0.5.0, after Geo's approval, released as 0.4.0 was: the GitHub release, then the server
+   "+N more" and "No blocks to list.", and the button's name) goes to Geo as editable text with its step's
+   screenshots, and Geo's version is built in, with `step9.sh` checking each text exactly. The same step builds in the
+   panel's rows above the hotbar and "Last counted" as 807 decided, and the version 0.5.0.
+8. **The release**: after Geo's approval, released as 0.4.0 was: the GitHub release, then the server
    and the pack in one sitting, since protocol version 4 turns Building Planner off for a game and a server on
    different versions. On the server: a backup of the world named for 0.5.0, the jar in `mods/` in place of 0.4.0's,
    and a restart; the log shows Building Planner start with no error, and after a player saves a list,
