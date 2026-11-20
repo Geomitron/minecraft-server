@@ -20,31 +20,44 @@ final class AreaProbe {
 	private AreaProbe() {
 	}
 
-	/** Litematica's simple area selection becomes the one box between the corners, saved as Litematica saves it. */
-	static String selectBox(BlockPos first, BlockPos second) {
+	/**
+	 * Litematica's simple area selection becomes the one box between the corners, with the origin of its own when one
+	 * is given, saved as Litematica saves it.
+	 */
+	static String selectBox(BlockPos first, BlockPos second, BlockPos origin) {
 		AreaSelectionSimple area = DataManager.getSimpleArea();
 		if (area.getAllSubRegionBoxes().isEmpty()) {
 			area.createNewSubRegionBox(first, "Area");
 		}
 		area.setSelectedSubRegionCornerPos(first, Corner.CORNER_1);
 		area.setSelectedSubRegionCornerPos(second, Corner.CORNER_2);
+		if (origin != null) {
+			area.setExplicitOrigin(origin);
+		}
 		DataManager.save(true);
 		return selection();
 	}
 
-	/** Litematica's simple area selection becomes a box far from everything, saved, so no view has it in sight. */
+	/**
+	 * Litematica's simple area selection becomes a box far from everything, with its origin far away too, saved, so no
+	 * view has either in sight.
+	 */
 	static String moveAway() {
-		return selectBox(new BlockPos(0, -64, -1000), new BlockPos(0, -64, -1000));
+		return selectBox(new BlockPos(0, -64, -1000), new BlockPos(0, -64, -1000), new BlockPos(0, -64, -1000));
 	}
 
-	/** Litematica's selection mode, then the boxes of its simple area selection as {@code corner..corner}, or none. */
+	/**
+	 * Litematica's selection mode, then the boxes of its simple area selection as {@code corner..corner}, or none, then
+	 * {@code origin x,y,z} when the selection has an origin of its own.
+	 */
 	static String selection() {
 		List<String> boxes = new ArrayList<>();
 		for (Box box : DataManager.getSimpleArea().getAllSubRegionBoxes()) {
 			boxes.add(corner(box.getPos1()) + ".." + corner(box.getPos2()));
 		}
+		BlockPos origin = DataManager.getSimpleArea().getExplicitOrigin();
 		return DataManager.getSelectionManager().getSelectionMode() + " "
-			+ (boxes.isEmpty() ? "none" : String.join(" ", boxes));
+			+ (boxes.isEmpty() ? "none" : String.join(" ", boxes)) + (origin == null ? "" : " origin " + corner(origin));
 	}
 
 	private static String corner(BlockPos pos) {

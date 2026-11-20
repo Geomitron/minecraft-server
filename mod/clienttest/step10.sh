@@ -13,13 +13,15 @@ for n in 1 2; do
 	check "client $n saved both to Litematica's config" eval \
 		'tr -d " \n\r" < run/client'$n'/config/litematica.json | grep -q "\"ghostBlockAlpha\":0.8" &&
 		 tr -d " \n\r" < run/client'$n'/config/litematica.json | grep -Eq "\"renderBlocksAsTranslucent\":(true|\{\"enabled\":true)"'
-	check "client $n recorded it in Building Planner's own config" eval \
+	check "client $n recorded the look group in Building Planner's own config" eval \
 		'grep -q "^look-defaults-applied=true" run/client'$n'/'$marker
 	check "client $n's first start turns Litematica's drawing of area selections off" eval \
 		'[[ $(val '$n' areaoption) == false ]]'
 	check "and saves that to Litematica's config" eval \
 		'tr -d " \n\r" < run/client'$n'/config/litematica.json |
 		 grep -Eq "\"enableAreaSelectionBoxesRendering\":(false|\{\"enabled\":false)"'
+	check "client $n recorded the area selection group in Building Planner's own config" eval \
+		'grep -q "^area-selection-off-applied=true" run/client'$n'/'$marker
 	check "client $n's first start turns Litematica's tool item off" eval '[[ $(val '$n' toolitem) == false ]]'
 	check "and saves that to Litematica's config" eval \
 		'tr -d " \n\r" < run/client'$n'/config/litematica.json | grep -Eq "\"toolItemEnabled\":(false|\{\"enabled\":false)"'
@@ -255,6 +257,37 @@ start_client 2
 check "a client that joins no server sets the option left at its default, and keeps the player's alpha" \
 	eval 'drv 2 "wait 60" > /dev/null && [[ $(val 2 look) == "translucent=true alpha=0.3" ]]'
 check "and turns the drawing of area selections, which was at its default, off" eval '[[ $(val 2 areaoption) == false ]]'
-check "and records it" eval 'grep -q "^look-defaults-applied=true" run/client2/'$marker
+check "and records each group" eval \
+	'grep -q "^look-defaults-applied=true" run/client2/'$marker' && grep -q "^area-selection-off-applied=true" run/client2/'$marker
 check "and saves it" eval \
 	'tr -d " \n\r" < run/client2/config/litematica.json | grep -q "\"ghostBlockAlpha\":0.3"'
+
+# Each group has its record of its own. With only the look group's record left, as 0.3.0 and 0.4.0 leave it, the look
+# stays as the player has it (Litematica's own defaults, which the look group would change) and only the drawing of area
+# selections, turned back on, is set.
+drv 2 "setlook false 0.5" "setareaoption true" > /dev/null
+stop_client 2
+sed -i '/^area-selection-off-applied=/d' "run/client2/$marker"
+start_client 2
+check "with only the look group's record left, the look is left as it is" \
+	eval 'drv 2 "wait 60" > /dev/null && [[ $(val 2 look) == "translucent=false alpha=0.5" ]]'
+check "the drawing of area selections is turned off" eval '[[ $(val 2 areaoption) == false ]]'
+check "and its record is written beside the look group's" eval \
+	'grep -q "^look-defaults-applied=true" run/client2/'$marker' && grep -q "^area-selection-off-applied=true" run/client2/'$marker
+
+# With only the area selection group's record left, the drawing the player turned back on stays on and the look is set.
+drv 2 "setareaoption true" > /dev/null
+stop_client 2
+sed -i '/^look-defaults-applied=/d' "run/client2/$marker"
+start_client 2
+check "with only the area selection group's record left, the look is set" \
+	eval 'drv 2 "wait 60" > /dev/null && [[ $(val 2 look) == "translucent=true alpha=0.8" ]]'
+check "and the drawing of area selections the player turned on stays on" eval '[[ $(val 2 areaoption) == true ]]'
+check "and the look group's record is written" eval 'grep -q "^look-defaults-applied=true" run/client2/'$marker
+
+# With both records left, nothing is set again.
+drv 2 "setlook false 0.5" > /dev/null
+stop_client 2
+start_client 2
+check "with both records left, the player's look stays" \
+	eval 'drv 2 "wait 60" > /dev/null && [[ $(val 2 look) == "translucent=false alpha=0.5" ]] && [[ $(val 2 areaoption) == true ]]'

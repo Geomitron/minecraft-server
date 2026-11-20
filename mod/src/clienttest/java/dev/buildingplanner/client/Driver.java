@@ -381,9 +381,10 @@ public final class Driver implements ClientModInitializer {
 				return "ok";
 			}
 			case "selbox" -> {
-				// selbox <x1> <y1> <z1> <x2> <y2> <z2>: Litematica's simple area selection becomes that one box, saved as
-				// Litematica saves it for the server and dimension.
-				return AreaProbe.selectBox(pos(a, 1), pos(a, 4));
+				// selbox <x1> <y1> <z1> <x2> <y2> <z2> [<ox> <oy> <oz>]: Litematica's simple area selection becomes that
+				// one box, with that origin of its own when one is given, saved as Litematica saves it for the server
+				// and dimension.
+				return AreaProbe.selectBox(pos(a, 1), pos(a, 4), a.length > 7 ? pos(a, 7) : null);
 			}
 			case "selaway" -> {
 				// selaway: Litematica's simple area selection moves to a box far from everything, so no view shows it.

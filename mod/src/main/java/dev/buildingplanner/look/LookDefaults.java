@@ -4,11 +4,13 @@ import dev.buildingplanner.ClientConfig;
 import java.io.IOException;
 
 /**
- * How Building Planner sets Litematica up on a player's computer, once: ghost blocks translucent, at 0.8 opacity, and
- * Litematica's tool item off, since the stick and Litematica's tool modes play no part in planning, and its drawing of
- * area selections off, since a selection left from before has no tool to change or clear it. An option the player has
- * changed from Litematica's default keeps the player's value, and once the defaults are set, the player's
- * {@link ClientConfig} records it, so a later change of the player's own is never overwritten.
+ * How Building Planner sets Litematica up on a player's computer, once for each group of settings: the look of ghost
+ * blocks and the tool item (ghost blocks translucent, at 0.8 opacity, and Litematica's tool item off, since the stick
+ * and Litematica's tool modes play no part in planning), and the drawing of area selections (off, since a selection
+ * left from before has no tool to change or clear it). A setting the player has changed from Litematica's default keeps
+ * the player's value, and once a group's settings are set, the player's {@link ClientConfig} holds that group's own
+ * record, so a later change of the player's own is never overwritten, and a group added in a later version still
+ * reaches a player whose file holds only the earlier groups' records.
  */
 public final class LookDefaults {
 	/** What Building Planner sets {@code renderBlocksAsTranslucent} to. */
@@ -20,7 +22,10 @@ public final class LookDefaults {
 	/** What Building Planner sets {@code enableAreaSelectionBoxesRendering} to. */
 	public static final boolean AREA_SELECTION_RENDERING = false;
 
-	static final String APPLIED = "look-defaults-applied";
+	/** The record of the look group (ghost blocks translucent at 0.8 opacity, tool item off); 0.3.0 and 0.4.0 wrote it too. */
+	static final String LOOK_APPLIED = "look-defaults-applied";
+	/** The record of the area selection group. */
+	static final String AREA_SELECTION_APPLIED = "area-selection-off-applied";
 
 	private LookDefaults() {
 	}
@@ -35,13 +40,23 @@ public final class LookDefaults {
 		return Double.compare(current, litematicaDefault) == 0 ? ours : current;
 	}
 
-	/** Whether the player's config records that the defaults were set. */
-	public static boolean applied(ClientConfig config) {
-		return Boolean.parseBoolean(config.get(APPLIED));
+	/** Whether the player's config records that the look group was set. */
+	public static boolean lookApplied(ClientConfig config) {
+		return Boolean.parseBoolean(config.get(LOOK_APPLIED));
 	}
 
-	/** Records in the player's config that the defaults were set. */
-	public static void markApplied(ClientConfig config) throws IOException {
-		config.set(APPLIED, "true");
+	/** Records in the player's config that the look group was set. */
+	public static void markLookApplied(ClientConfig config) throws IOException {
+		config.set(LOOK_APPLIED, "true");
+	}
+
+	/** Whether the player's config records that the area selection group was set. */
+	public static boolean areaSelectionApplied(ClientConfig config) {
+		return Boolean.parseBoolean(config.get(AREA_SELECTION_APPLIED));
+	}
+
+	/** Records in the player's config that the area selection group was set. */
+	public static void markAreaSelectionApplied(ClientConfig config) throws IOException {
+		config.set(AREA_SELECTION_APPLIED, "true");
 	}
 }

@@ -9,11 +9,11 @@ import fi.dy.masa.malilib.config.options.ConfigDouble;
 import java.io.IOException;
 
 /**
- * Sets how Litematica draws ghost blocks, and turns its tool item and its drawing of area selections off, once on a
- * player's computer, whether or not they join a server with Building Planner: translucent blocks at 0.8 opacity, no
- * tool item and no area selections drawn, for each option the player hasn't changed from Litematica's default. It
- * saves Litematica's config, then records that in the player's {@link ClientConfig}, so a later change of the
- * player's own stays.
+ * Sets how Litematica draws ghost blocks and its tool item, and turns its drawing of area selections off, once each on
+ * a player's computer, whether or not they join a server with Building Planner: translucent blocks at 0.8 opacity and
+ * no tool item, then no area selections drawn, for each option the player hasn't changed from Litematica's default.
+ * Each group saves Litematica's config, then records that in the player's {@link ClientConfig} under a record of its
+ * own, so a later change of the player's own stays and a player who ran an earlier version gets each group it lacks.
  */
 final class LitematicaLook {
 	private LitematicaLook() {
@@ -21,38 +21,53 @@ final class LitematicaLook {
 
 	/** Call once Litematica has loaded its config, once a game run. */
 	static void setOnce(ClientConfig config) {
-		if (LookDefaults.applied(config)) {
-			return;
+		if (!LookDefaults.lookApplied(config)) {
+			try {
+				setLook();
+				Configs.saveToFile();
+				LookDefaults.markLookApplied(config);
+			} catch (IOException | RuntimeException e) {
+				BuildingPlanner.LOGGER.warn("Couldn't set Litematica's ghost block look and tool item", e);
+			}
 		}
-		try {
-			ConfigBoolean translucent = Configs.Visuals.RENDER_BLOCKS_AS_TRANSLUCENT;
-			boolean translucentNow = LookDefaults.choose(translucent.getBooleanValue(), translucent.getDefaultBooleanValue(),
-				LookDefaults.TRANSLUCENT);
-			if (translucentNow != translucent.getBooleanValue()) {
-				translucent.setBooleanValue(translucentNow);
+		if (!LookDefaults.areaSelectionApplied(config)) {
+			try {
+				setAreaSelection();
+				Configs.saveToFile();
+				LookDefaults.markAreaSelectionApplied(config);
+			} catch (IOException | RuntimeException e) {
+				BuildingPlanner.LOGGER.warn("Couldn't turn Litematica's drawing of area selections off", e);
 			}
-			ConfigDouble alpha = Configs.Visuals.GHOST_BLOCK_ALPHA;
-			double alphaNow = LookDefaults.choose(alpha.getDoubleValue(), alpha.getDefaultDoubleValue(),
-				LookDefaults.GHOST_ALPHA);
-			if (Double.compare(alphaNow, alpha.getDoubleValue()) != 0) {
-				alpha.setDoubleValue(alphaNow);
-			}
-			ConfigBoolean toolItem = Configs.Generic.TOOL_ITEM_ENABLED;
-			boolean toolItemNow = LookDefaults.choose(toolItem.getBooleanValue(), toolItem.getDefaultBooleanValue(),
-				LookDefaults.TOOL_ITEM);
-			if (toolItemNow != toolItem.getBooleanValue()) {
-				toolItem.setBooleanValue(toolItemNow);
-			}
-			ConfigBoolean areaSelection = Configs.Visuals.ENABLE_AREA_SELECTION_RENDERING;
-			boolean areaSelectionNow = LookDefaults.choose(areaSelection.getBooleanValue(),
-				areaSelection.getDefaultBooleanValue(), LookDefaults.AREA_SELECTION_RENDERING);
-			if (areaSelectionNow != areaSelection.getBooleanValue()) {
-				areaSelection.setBooleanValue(areaSelectionNow);
-			}
-			Configs.saveToFile();
-			LookDefaults.markApplied(config);
-		} catch (IOException | RuntimeException e) {
-			BuildingPlanner.LOGGER.warn("Couldn't set Litematica's ghost block look, tool item and area selection", e);
+		}
+	}
+
+	private static void setLook() {
+		ConfigBoolean translucent = Configs.Visuals.RENDER_BLOCKS_AS_TRANSLUCENT;
+		boolean translucentNow = LookDefaults.choose(translucent.getBooleanValue(), translucent.getDefaultBooleanValue(),
+			LookDefaults.TRANSLUCENT);
+		if (translucentNow != translucent.getBooleanValue()) {
+			translucent.setBooleanValue(translucentNow);
+		}
+		ConfigDouble alpha = Configs.Visuals.GHOST_BLOCK_ALPHA;
+		double alphaNow = LookDefaults.choose(alpha.getDoubleValue(), alpha.getDefaultDoubleValue(),
+			LookDefaults.GHOST_ALPHA);
+		if (Double.compare(alphaNow, alpha.getDoubleValue()) != 0) {
+			alpha.setDoubleValue(alphaNow);
+		}
+		ConfigBoolean toolItem = Configs.Generic.TOOL_ITEM_ENABLED;
+		boolean toolItemNow = LookDefaults.choose(toolItem.getBooleanValue(), toolItem.getDefaultBooleanValue(),
+			LookDefaults.TOOL_ITEM);
+		if (toolItemNow != toolItem.getBooleanValue()) {
+			toolItem.setBooleanValue(toolItemNow);
+		}
+	}
+
+	private static void setAreaSelection() {
+		ConfigBoolean areaSelection = Configs.Visuals.ENABLE_AREA_SELECTION_RENDERING;
+		boolean areaSelectionNow = LookDefaults.choose(areaSelection.getBooleanValue(),
+			areaSelection.getDefaultBooleanValue(), LookDefaults.AREA_SELECTION_RENDERING);
+		if (areaSelectionNow != areaSelection.getBooleanValue()) {
+			areaSelection.setBooleanValue(areaSelectionNow);
 		}
 	}
 }

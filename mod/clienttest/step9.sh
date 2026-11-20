@@ -163,19 +163,20 @@ press 1 n
 check "hidden again" eval 'drv 1 "wait 5" > /dev/null && [[ $(val 1 ghosts) == "hidden, "* ]]'
 
 # Litematica's area selection. A player who left a simple selection on the server before Building Planner turned
-# Litematica's tool off has no tool to change or clear it, and it kept drawing as a large see-through box. Here client
-# 1 makes a selection of 4 by 3 by 4 blocks on the grass and turns Litematica's drawing of selections on, as it is by
-# default, and the view is shot with the selection and with it moved far away, with ghost blocks hidden so nothing else
-# is in it.
-# The selection is then saved, with the option on and Building Planner's record that it set its defaults gone, as for a
-# player who updates; after the restart, the option is off, the selection is still there, and the same view shows
-# no more difference with it and with it moved away than the sky and the grass's light make between two shots (some
-# hundreds of pixels). shotdiff counts the pixels two shots differ at.
+# Litematica's tool off has no tool to change or clear it, and it kept drawing as a large see-through box, with its
+# origin as a one-block outline. Here client 1 makes a selection of 4 by 3 by 4 blocks on the grass with an origin of
+# its own beside it, and turns Litematica's drawing of selections on, as it is by default, and the view is shot with
+# the selection and with it moved far away, with ghost blocks hidden so nothing else is in it.
+# The selection is then saved, with the option on and with the record that 0.3.0 and 0.4.0 leave (the look group's,
+# kept) but not the area selection group's, as for a player who updates; after the restart, the option is off, the
+# selection and its origin are still there, and the same view shows no more difference with it and with it moved away
+# than the sky and the grass's light make between two shots (some hundreds of pixels). shotdiff counts the pixels
+# two shots differ at.
 # The animals the flat world starts with wander through the view, so they're killed first.
 area_clear="cmd kill @e[type=!minecraft:player]"
 area_view="cmd tp @s 31.5 -57 24.5 0 35"
-area_box="SIMPLE 30,-61,30..33,-59,33"
-drv 1 "$area_clear" "$area_view" "selbox 30 -61 30 33 -59 33" "setareaoption true" "wait 40" > /dev/null
+area_box="SIMPLE 30,-61,30..33,-59,33 origin 35,-61,31"
+drv 1 "$area_clear" "$area_view" "selbox 30 -61 30 33 -59 33 35 -61 31" "setareaoption true" "wait 40" > /dev/null
 check "Litematica holds the selection, which it draws at its default" eval \
 	'[[ $(val 1 selinfo) == "$area_box" ]] && [[ $(val 1 areaoption) == true ]]'
 shot 1 area-selection-drawn
@@ -184,9 +185,11 @@ shot 1 area-selection-away
 area_drawn=$(val 1 "shotdiff area-selection-drawn area-selection-away")
 echo "  pixels the selection changes: $area_drawn" >> /out/checks.log
 check "with the option on, the view with the selection differs from the view with it moved away" eval '((area_drawn > 10000))'
-drv 1 "selbox 30 -61 30 33 -59 33" "wait 5" > /dev/null
+drv 1 "selbox 30 -61 30 33 -59 33 35 -61 31" "wait 5" > /dev/null
 stop_client 1
-sed -i '/^look-defaults-applied=/d' "$config"
+check "the first start wrote the look group's record, which 0.3.0 and 0.4.0 write, and the area selection group's" eval \
+	'grep -q "^look-defaults-applied=true" "$config" && grep -q "^area-selection-off-applied=true" "$config"'
+sed -i '/^area-selection-off-applied=/d' "$config"
 cp /out/client1.log /out/client1-before-restart.log
 start_client 1
 check "after a restart, client 1 starts a session with ghost blocks still hidden" eval \
@@ -194,8 +197,9 @@ check "after a restart, client 1 starts a session with ghost blocks still hidden
 	 [[ $(val 1 ghosts) =~ ^hidden,\ [1-9][0-9]*\ tiles,\ 0\ placements$ ]] &&
 	 [[ $(val 1 "layer 4 -59 3") == minecraft:glowstone ]] && [[ $(val 1 "get 4 -59 3") == minecraft:air ]]'
 check "Building Planner turned the drawing of area selections off, once" eval \
-	'[[ $(val 1 areaoption) == false ]] && grep -q "^look-defaults-applied=true" "$config"'
-check "and the selection from before is still there" eval '[[ $(val 1 selinfo) == "$area_box" ]]'
+	'[[ $(val 1 areaoption) == false ]] && grep -q "^area-selection-off-applied=true" "$config" &&
+	 grep -q "^look-defaults-applied=true" "$config"'
+check "and the selection from before, with its origin, is still there" eval '[[ $(val 1 selinfo) == "$area_box" ]]'
 drv 1 "$area_clear" "$area_view" "wait 40" > /dev/null
 shot 1 area-selection-hidden
 drv 1 "selaway" "wait 40" > /dev/null
