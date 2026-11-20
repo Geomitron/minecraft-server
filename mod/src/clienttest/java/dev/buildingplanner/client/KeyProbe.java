@@ -4,6 +4,7 @@ import com.mojang.blaze3d.platform.InputConstants;
 import dev.buildingplanner.look.MenuKey;
 import fi.dy.masa.litematica.config.Configs;
 import fi.dy.masa.litematica.config.Hotkeys;
+import fi.dy.masa.malilib.event.InputEventHandler;
 import fi.dy.masa.malilib.hotkeys.IKeybind;
 import java.io.IOException;
 import net.minecraft.client.KeyMapping;
@@ -44,5 +45,41 @@ final class KeyProbe {
 		menu.addKey(InputConstants.KEY_M);
 		Configs.saveToFile();
 		return menuKeys();
+	}
+
+	/** Litematica's two layer hotkeys as they show, or none. */
+	static String layerKeys() {
+		return "next=" + display(Hotkeys.LAYER_NEXT.getKeybind()) + " previous=" + display(Hotkeys.LAYER_PREVIOUS.getKeybind());
+	}
+
+	private static String display(IKeybind hotkey) {
+		String shown = hotkey.getKeysDisplayString();
+		return shown.isEmpty() ? "none" : shown;
+	}
+
+	/**
+	 * The player's own change, saved as Litematica's screen saves it: each layer hotkey becomes the key named, one of
+	 * PAGE_UP, PAGE_DOWN, K or none.
+	 */
+	static String setLayerKeys(String next, String previous) throws IOException {
+		set(Hotkeys.LAYER_NEXT.getKeybind(), next);
+		set(Hotkeys.LAYER_PREVIOUS.getKeybind(), previous);
+		// MaLiLib looks a press up in a table of which hotkeys each key can trigger, which its config screen rebuilds
+		// after a change; without that, a key added to a hotkey wouldn't act.
+		InputEventHandler.getKeybindManager().updateUsedKeys();
+		Configs.saveToFile();
+		return layerKeys();
+	}
+
+	private static void set(IKeybind hotkey, String key) {
+		hotkey.clearKeys();
+		switch (key) {
+			case "PAGE_UP" -> hotkey.addKey(InputConstants.KEY_PAGEUP);
+			case "PAGE_DOWN" -> hotkey.addKey(InputConstants.KEY_PAGEDOWN);
+			case "K" -> hotkey.addKey(InputConstants.KEY_K);
+			case "none" -> {
+			}
+			default -> throw new IllegalArgumentException(key);
+		}
 	}
 }

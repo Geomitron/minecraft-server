@@ -3,6 +3,7 @@ package dev.buildingplanner.client;
 import dev.buildingplanner.BuildingPlanner;
 import dev.buildingplanner.ClientConfig;
 import com.mojang.blaze3d.platform.InputConstants;
+import dev.buildingplanner.look.LayerKeys;
 import dev.buildingplanner.look.LookDefaults;
 import dev.buildingplanner.look.MenuKey;
 import fi.dy.masa.litematica.config.Configs;
@@ -17,9 +18,10 @@ import net.minecraft.client.Minecraft;
 
 /**
  * Sets how Litematica draws ghost blocks and its tool item, turns its drawing of area selections off, and gives M to
- * Freecam's menu instead of Litematica's, once each on a player's computer, whether or not they join a server with
- * Building Planner: translucent blocks at 0.8 opacity and no tool item, then no area selections drawn, then M, for
- * each option the player hasn't changed from its default. Each group saves the config it changed, then records that in
+ * Freecam's menu instead of Litematica's, and frees Page Up and Page Down from its layer hotkeys, once each on a
+ * player's computer, whether or not they join a server with Building Planner: translucent blocks at 0.8 opacity and no
+ * tool item, then no area selections drawn, then M, then Page Up and Page Down, for each option the player hasn't
+ * changed from its default. Each group saves the config it changed, then records that in
  * the player's {@link ClientConfig} under a record of its own, so a later change of the player's own stays and a
  * player who ran an earlier version gets each group it lacks.
  */
@@ -48,6 +50,31 @@ final class LitematicaLook {
 			}
 		}
 		setMenuKey(config);
+		setLayerKeys(config);
+	}
+
+	/**
+	 * Takes Page Up from Litematica's {@code layerNext} and Page Down from its {@code layerPrevious}, each while it is
+	 * still that key alone, then saves Litematica's config and records the group, once Litematica is loaded.
+	 */
+	private static void setLayerKeys(ClientConfig config) {
+		if (LayerKeys.applied(config) || !LayerKeys.applies(FabricLoader.getInstance().isModLoaded("litematica"))) {
+			return;
+		}
+		try {
+			IKeybind next = Hotkeys.LAYER_NEXT.getKeybind();
+			if (LayerKeys.clear(next.getKeys(), InputConstants.KEY_PAGEUP)) {
+				next.clearKeys();
+			}
+			IKeybind previous = Hotkeys.LAYER_PREVIOUS.getKeybind();
+			if (LayerKeys.clear(previous.getKeys(), InputConstants.KEY_PAGEDOWN)) {
+				previous.clearKeys();
+			}
+			Configs.saveToFile();
+			LayerKeys.markApplied(config);
+		} catch (IOException | RuntimeException e) {
+			BuildingPlanner.LOGGER.warn("Couldn't free Page Up and Page Down from Litematica's layer hotkeys", e);
+		}
 	}
 
 	/**

@@ -7,6 +7,13 @@
 # selections turned off, saved to its config, and recorded. Each client also saved a first start before it joined the
 # server.
 marker=config/buildingplanner-client.properties
+
+# layer_json <client> <hotkey>: that hotkey's entry in the client's Litematica config, compacted, up to the next entry
+# of the file's Hotkeys section (each entry starts with a quoted name and a colon). It goes to the log too.
+layer_json() {
+	tr -d ' \n\r\t' < "run/client$1/config/litematica.json" | grep -o "\"$2\":.*" |
+		sed -E 's/^("[^"]*":(\{[^{}]*(\{[^{}]*\})*[^{}]*\}|"[^"]*"|[^,{}]*)).*/\1/' | tee -a /out/checks.log
+}
 for n in 1 2; do
 	check "client $n starts a session on hello" drv $n "await session" "await noscreen"
 	check "client $n's first start sets translucent blocks at 0.8" \
@@ -35,6 +42,13 @@ for n in 1 2; do
 		 tee -a /out/checks.log | grep -vq "\"M\""'
 	check "client $n recorded the menu key group in Building Planner's own config" eval \
 		'grep -q "^menu-key-applied=true" run/client'$n'/'$marker
+	check "client $n's first start frees Page Up and Page Down from Litematica's layer hotkeys" eval \
+		'[[ $(val '$n' layerkeys) == "next=none previous=none" ]]'
+	check "and saves both to its config, where neither holds Page Up or Page Down" eval \
+		'layer_json '$n' layerNext | grep -q . && layer_json '$n' layerPrevious | grep -q . &&
+		 ! layer_json '$n' layerNext | grep -q PAGE_ && ! layer_json '$n' layerPrevious | grep -q PAGE_'
+	check "client $n recorded the layer keys group in Building Planner's own config" eval \
+		'grep -q "^layer-keys-applied=true" run/client'$n'/'$marker
 done
 
 # M opens Freecam's screen, and no screen of Litematica's. Litematica's M,L hotkey for its material list (M held, then
@@ -51,6 +65,24 @@ check "M then L opens none of Litematica's screens, only Freecam's" eval 'drv 1 
 drv 1 "notoasts" "wait 5" "shot freecam-menu-after-m-l" "wait 5" > /dev/null
 keys 1 key Escape
 check "and Escape closes it" drv 1 "await noscreen"
+
+# A Page Up press reaches a key mapping bound to it (the driver's own), once Litematica's layer hotkeys have no key. As
+# controls, the same press does not while the player has Litematica's hotkey on Page Up (the driver's setlayerkeys),
+# and does once it has no key again. A press is a real key press (X's name for Page Up is Prior), in the game with no
+# screen open, where Litematica's hotkeys act.
+# page_up_presses: presses Page Up and prints how many reached the key mapping.
+page_up_presses() {
+	drv 1 "pagepresses" > /dev/null
+	keys 1 key Prior
+	drv 1 "wait 10" > /dev/null
+	val 1 pagepresses
+}
+check "a Page Up press reaches a key mapping bound to it" eval '[[ $(page_up_presses) == 1 ]]'
+drv 1 "setlayerkeys PAGE_UP PAGE_DOWN" > /dev/null
+check "with Litematica's layer hotkey on Page Up again, the press doesn't (the check can tell)" eval \
+	'[[ $(page_up_presses) == 0 ]]'
+drv 1 "setlayerkeys none none" > /dev/null
+check "and with both hotkeys cleared again, it does" eval '[[ $(page_up_presses) == 1 ]]'
 
 # walk <from> <to>: the commands that move Planner1 one block east every two ticks, 2.5 -55 5.5 and on, looking
 # straight down, so each held click lands on a new block of the row z 5 at y -60 (-61 is the grass below).
@@ -487,3 +519,26 @@ stop_client 2
 start_client 2
 check "with every record left, the player's own keys stay" \
 	eval 'drv 2 "wait 60" > /dev/null && [[ $(val 2 menukeys) == "freecam=key.keyboard.m litematica=M" ]]'
+
+# With only the layer keys group's record gone, a hotkey the player moved to K stays, and the other, which is Page Down
+# again, goes.
+drv 2 "setlayerkeys K PAGE_DOWN" > /dev/null
+check "the player's own layer hotkeys, next on K and previous on Page Down, as set" eval \
+	'[[ $(val 2 layerkeys) == "next=K previous=PAGE_DOWN" ]]'
+stop_client 2
+sed -i '/^layer-keys-applied=/d' "run/client2/$marker"
+start_client 2
+check "with only the layer keys group's record gone, the hotkey the player moved stays at K, and Page Down goes" \
+	eval 'drv 2 "wait 60" > /dev/null && [[ $(val 2 layerkeys) == "next=K previous=none" ]]'
+check "and the group's record is written" eval 'grep -q "^layer-keys-applied=true" run/client2/'$marker
+check "and saves the moved hotkey to Litematica's config" eval 'layer_json 2 layerNext | grep -q K'
+check "and the menu keys group left the player's own keys alone" \
+	eval '[[ $(val 2 menukeys) == "freecam=key.keyboard.m litematica=M" ]]'
+
+# With all records left, nothing is set again: both hotkeys back on Page Up and Page Down, as a player might set them,
+# and a restart leaves both.
+drv 2 "setlayerkeys PAGE_UP PAGE_DOWN" > /dev/null
+stop_client 2
+start_client 2
+check "with every record left, the player's own layer hotkeys stay" \
+	eval 'drv 2 "wait 60" > /dev/null && [[ $(val 2 layerkeys) == "next=PAGE_UP previous=PAGE_DOWN" ]]'

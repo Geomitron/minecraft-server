@@ -1552,8 +1552,9 @@ real buttons with xdotool while Planner1 is teleported one block every two ticks
   Ctrl+Y undo and redo it. A left click with a stick aimed at a real stone breaks nothing. A shape's preview, a box and
   the copy are shot from the camera at 854 by 480 and 1920 by 1080, GUI scale 2.
 - Each client's first start leaves Litematica's options at on and 0.8 (and the tool item and the drawing of area
-  selections off), Freecam's "Config GUI" key at M and Litematica's `openGuiMainMenu` with no key, saved in
-  Litematica's config and Minecraft's `options.txt`, and the three records in Building Planner's client config.
+  selections off), Freecam's "Config GUI" key at M, Litematica's `openGuiMainMenu`, `layerNext` and `layerPrevious`
+  with no key, saved in Litematica's config and Minecraft's `options.txt`, and the four records in Building Planner's
+  client config.
 - A player's own change (off and 0.3) survives a restart. With the records gone and the server stopped, so the client
   joins nothing, a start sets only the option still at its default (on) and keeps the 0.3. With only
   `area-selection-off-applied` gone and the drawing of area selections turned back on, a start turns it off and
@@ -1561,6 +1562,12 @@ real buttons with xdotool while Planner1 is teleported one block every two ticks
   look and leaves the drawing of area selections the player turned on; with every record left, nothing changes.
 - With Freecam's key bound to K by the player, Litematica's hotkey "M" and the `menu-key-applied` record gone, a start
   leaves it at K and still takes M from Litematica's menu, and writes the record.
+- With `layerNext` moved to K by the player, `layerPrevious` at Page Down again and the `layer-keys-applied` record
+  gone, a start leaves `layerNext` at K, takes Page Down from `layerPrevious`, and writes the record; with every
+  record left, hotkeys back on Page Up and Page Down stay through a restart.
+- A Page Up press, a real key press with no screen open, reaches a key mapping of the driver's bound to Page Up once
+  both layer hotkeys have no key. As controls, it doesn't while `layerNext` is on Page Up again (the driver refreshes
+  MaLiLib's table of used keys after setting it, as its config screen does), and does once the hotkey has no key again.
 - In the game, M opens Freecam's settings screen (the driver's `screenclass` reads the open screen's class, Cloth
   Config's) and no Litematica screen; M held with L pressed opens no Litematica screen either. Escape closes Freecam's
   screen. Both screens are shot.
@@ -1660,9 +1667,6 @@ other in the game's own copy of the layer, again after a restart, which doesn't 
   check at chunk load take on the real server (expected microseconds a section, not measured).
 - That the copy's keys reach Building Planner while Freecam's camera is on: Freecam 1.5.1 wraps `KeyMapping.set` and
   `setAll` (its `KeyMappingMixin`, seen in its jar, its source not read) to hold key states for its camera.
-- That Minecraft's keys see Page Up and Page Down once Litematica's `layerNext` and `layerPrevious` have no key: read in
-  MaLiLib's source (`KeybindSettings.DEFAULT` cancels a hotkey's key, and `MixinKeyboard` then cancels
-  `KeyboardHandler.keyPress`), not tried in the game.
 - Satisfactory's controls as the wiki describes them, not played: the wiki's pages leave out whether a locked hologram
   stays locked after it's placed, and how its snapping toggle works on a keyboard (see "Satisfactory's controls").
 - That no MaLiLib or Litematica hotkey bound to the scroll wheel or the middle button acts while a mouse mode takes

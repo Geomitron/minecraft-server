@@ -68,6 +68,7 @@ public final class Driver implements ClientModInitializer {
 
 	@Override
 	public void onInitializeClient() {
+		PageProbe.register();
 		ClientTickEvents.START_CLIENT_TICK.register(mc -> SentPackets.startTick());
 		ClientTickEvents.END_CLIENT_TICK.register(this::tick);
 	}
@@ -523,6 +524,19 @@ public final class Driver implements ClientModInitializer {
 				// setmenukeys <K or M>: the player's own change: Freecam's key to that letter and Litematica's menu
 				// hotkey back to M, saved as their screens save them.
 				return KeyProbe.setMenuKeys(a[1]);
+			}
+			case "layerkeys" -> {
+				// layerkeys: Litematica's layer hotkeys now, as "next=PAGE_UP previous=PAGE_DOWN" or none for each.
+				return KeyProbe.layerKeys();
+			}
+			case "setlayerkeys" -> {
+				// setlayerkeys <next> <previous>: the player's own change: each layer hotkey to PAGE_UP, PAGE_DOWN, K or
+				// none, saved as Litematica's screen saves it.
+				return KeyProbe.setLayerKeys(a[1], a[2]);
+			}
+			case "pagepresses" -> {
+				// pagepresses: how many Page Up presses reached the driver's key mapping bound to it since the last call.
+				return String.valueOf(PageProbe.take());
 			}
 			case "screenclass" -> {
 				// screenclass: the class of the screen open now, or none.
