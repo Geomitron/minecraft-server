@@ -283,10 +283,16 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 
 	/**
 	 * The radial menu's Copy button: puts the copy away and starts a box around the ghost blocks and real blocks to copy,
-	 * or ends a box for Copy, or switches a box for the material list to Copy. Does nothing while Building Planner is off.
+	 * or ends a box for Copy, or switches a box for Delete or the material list to Copy. Does nothing while Building
+	 * Planner is off.
 	 */
 	static void copy() {
 		boxButton(BoxDraw.Purpose.COPY, MouseMode.Action.COPY_BUTTON);
+	}
+
+	/** The radial menu's Delete button: as {@link #copy()}, for a box whose ghost blocks are erased. */
+	static void delete() {
+		boxButton(BoxDraw.Purpose.DELETE, MouseMode.Action.DELETE_BUTTON);
 	}
 
 	/** The radial menu's "Material list" button: as {@link #copy()}, for a box whose blocks the material list counts. */

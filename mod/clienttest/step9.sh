@@ -1,7 +1,8 @@
 # Step 9's in-game checks: showing and hiding ghost blocks with N and the radial menu's button, drawing while they're
 # hidden, the choice kept across a restart, where the radial menu's buttons sit, with screenshots, the menu's corner
 # text, the key headings in Controls, the box with its
-# list under the crosshair, copy and paste with the copy at the aim worked by the mouse, the material list, the counted
+# list under the crosshair, copy and paste with the copy at the aim worked by the mouse, the Delete box, the material
+# list, the counted
 # list kept on the server across restarts, the list screen's buttons, saving, opening and deleting lists, the lists
 # across restarts and on another computer, a damaged lists file, the server's limits, Refresh far from the box, and N on
 # a server without Building Planner. Sourced by inside.sh, which provides drv, val,
@@ -253,8 +254,8 @@ check "nor at GUI scale 4" radial_shot 1920 1080 4 radial-all-1920x1080-gui4
 check "where they grow with the menu too" frames_grow
 drv 1 "cmd tick rate 20" "wait 5" > /dev/null
 press 1 n
-# The show or hide button's hover text. The pointer leaves the button before the key is let go, so closing the menu
-# leaves ghost blocks shown.
+# The show or hide button's and the Delete button's hover texts. The pointer leaves the button before the key is let
+# go, so closing the menu leaves ghost blocks shown and starts no box.
 drv 1 "ebmode SINGLE" > /dev/null
 for scale in 2 4; do
 	drv 1 "window 1920 1080 $scale" "wait 20" > /dev/null
@@ -262,28 +263,35 @@ for scale in 2 4; do
 	radial_point "Show or hide ghost blocks"
 	drv 1 "wait 10" "notoasts" "shot radial-hover-1920x1080-gui$scale" > /dev/null
 	echo "  radial-hover-1920x1080-gui$scale buttons: $(val 1 buttons)" >> /out/checks.log
+	radial_point "Delete"
+	drv 1 "wait 10" "notoasts" "shot radial-delete-hover-1920x1080-gui$scale" > /dev/null
+	echo "  radial-delete-hover-1920x1080-gui$scale buttons: $(val 1 buttons)" >> /out/checks.log
 	xdo 1 mousemove --window %w 5 5
 	radial_let_go
 done
 check "ghost blocks still show after the hover shots" eval '[[ $(val 1 ghosts) == "shown, "* ]]'
+check "and no box started" eval '[[ $(val 1 drawbox) == none* ]]'
 drv 1 "window 854 480 2" "wait 20" > /dev/null
 
-# Without a copy, the menu shows six buttons, each with its hover text, at its middle from the menu's middle: show or
-# hide, Block mix and Material list in the row 39 above it, and Copy, Paste and Material lists in the row 65 above it, at
-# the left.
+# Without a copy, the menu shows seven buttons, each with its hover text, at its middle from the menu's middle: show or
+# hide, Block mix and Material list in the row 39 above it, Copy, Paste and Material lists in the row 65 above it, at
+# the left, and Delete 91 above it, over Copy.
 # Shot with the pointer on the menu's middle, over no button, then with the pointer on Block mix, for its hover text.
 slots="Show or hide ghost blocks [N] @ -157,-39 | Block mix [B] @ -131,-39 | Material list @ -105,-39 | \
-Copy @ -157,-65 | Paste @ -131,-65 | Material lists @ -105,-65"
+Copy @ -157,-65 | Paste @ -131,-65 | Material lists @ -105,-65 | Delete @ -157,-91"
 radial_open
 xdo 1 mousemove --window %w 427 240
 drv 1 "wait 10" "notoasts" "wait 5" "notoasts" "shot radial-no-copy" > /dev/null
 echo "  radial-no-copy buttons: $(val 1 buttons)" >> /out/checks.log
 echo "  radial-no-copy corner text: $(val 1 cornertext)" >> /out/checks.log
-check "without a copy, the menu shows its six buttons in their slots, with their hover texts" \
+check "without a copy, the menu shows its seven buttons in their slots, with their hover texts" \
 	eval '[[ $(val 1 slots) == "$slots" ]]'
 # Building Planner's name, where Effortless Building draws its own: the text at the menu's lower right.
 check "the menu's corner text reads \"Building Planner\"" eval '[[ $(val 1 cornertext) == "Building Planner | "* ]]'
 check "and the menu draws no \"Effortless Building\"" eval '[[ $(val 1 drawntexts) != *"Effortless Building"* ]]'
+radial_point "Delete"
+drv 1 "wait 10" "notoasts" "shot radial-delete-hover-854x480-gui2" > /dev/null
+echo "  radial-delete-hover-854x480-gui2 buttons: $(val 1 buttons)" >> /out/checks.log
 radial_point "Block mix"
 drv 1 "wait 10" "notoasts" "shot radial-block-mix-hover" > /dev/null
 xdo 1 mousemove --window %w 5 5
@@ -364,10 +372,15 @@ controls="Left-click to paste, Scroll to turn, Middle-click to mirror, Right-cli
 first_line="Left-click to set the first corner, Right-click to cancel"
 second_line="Left-click to set the opposite corner, Right-click to cancel"
 height_line="Left-click to set the height, Right-click to cancel"
-# copy_button and paste_button: a click on the radial menu's Copy or Paste button.
+# copy_button, delete_button and paste_button: a click on the radial menu's Copy, Delete or Paste button.
 copy_button() {
 	radial_open
 	radial_click "Copy"
+	radial_let_go
+}
+delete_button() {
+	radial_open
+	radial_click "Delete"
 	radial_let_go
 }
 paste_button() {
@@ -655,7 +668,7 @@ house_box
 check "the copy is the house with the gold block and the ghost stone again: 27 blocks" \
 	eval 'drv 1 "wait 5" > /dev/null && copy_is 1 "^origin [-0-9,]+ NONE NONE unselected 27 blocks$"'
 
-# With the copy at the aim, the menu shows the same six buttons, none of them for turning, mirroring or clearing the
+# With the copy at the aim, the menu shows the same seven buttons, none of them for turning, mirroring or clearing the
 # copy; shot at 1920 by 1080, GUI scales 2 and 4, with the pointer off the buttons, and failing unless the buttons
 # meet nothing.
 radial_copy_shot() {
@@ -677,14 +690,15 @@ radial_open
 xdo 1 mousemove --window %w 427 240
 drv 1 "wait 10" "notoasts" "wait 5" "notoasts" "shot radial-with-copy" > /dev/null
 echo "  radial-with-copy buttons: $(val 1 buttons)" >> /out/checks.log
-check "with the copy at the aim, the menu shows the same six buttons in their slots, with their hover texts" eval \
+check "with the copy at the aim, the menu shows the same seven buttons in their slots, with their hover texts" eval \
 	'copy_is 1 "^origin " && [[ $(val 1 slots) == "$slots" ]]'
 xdo 1 mousemove --window %w 5 5
 radial_let_go
 
 # While a mouse mode is on, its button shows selected, in the menu's blue, and no mode segment does: Paste while the
-# copy is at the aim, Copy and Material list while a box is drawn for them. With the mode ended, the player's mode,
-# Line, shows selected again. Each is shot at 854 by 480 with the pointer in the screen's corner, off every button.
+# copy is at the aim, Copy, Material list and Delete while a box is drawn for them. With the mode ended, the player's
+# mode, Line, shows selected again. Each is shot at 854 by 480 with the pointer in the screen's corner, off every
+# button.
 # selected_shot <name>: moves the pointer off the buttons and shoots the open menu as <name>.
 selected_shot() {
 	xdo 1 mousemove --window %w 5 5
@@ -709,7 +723,12 @@ selected_shot radial-material-list-selected
 check "while it's drawn for the material list, Material list shows selected" eval \
 	'[[ $(val 1 drawbox) == "MATERIAL_LIST 0 "* ]] && [[ $(val 1 selectedbuttons) == "Material list" ]]'
 check "and no mode segment does" eval '[[ $(val 1 "ringselected radial-material-list-selected") == none ]]'
-radial_click "Material list"
+radial_click "Delete"
+selected_shot radial-delete-selected
+check "while it's drawn for Delete, Delete shows selected" eval \
+	'[[ $(val 1 drawbox) == "DELETE 0 "* ]] && [[ $(val 1 selectedbuttons) == Delete ]]'
+check "and no mode segment does" eval '[[ $(val 1 "ringselected radial-delete-selected") == none ]]'
+radial_click "Delete"
 selected_shot radial-line-selected
 check "with the box ended, no button shows selected, and Line's segment does" eval '[[ $(val 1 drawbox) == none* ]] &&
 	[[ $(val 1 selectedbuttons) == none ]] && [[ $(val 1 "ringselected radial-line-selected") == LINE ]]'
@@ -762,10 +781,34 @@ check "a box over more blocks than the server's limit gives a message" \
 	client_said 1 "That box has 204000 blocks, more than the server's limit of 200000."
 shot 1 copy-too-many-message
 check "and keeps the earlier copy" eval '[[ $(copy_kept) == "$earlier" ]]'
+# A Delete box over Big and one more ghost block on its top corner holds 200,001 ghost blocks, more than one erase may
+# take: it draws red with its line, and its click sets no corner and erases nothing. The box starts in the space above
+# that block.
+drv 1 "edit 139 -10 51 139 -10 51 minecraft:stone" "await block 139 -10 51 minecraft:stone" > /dev/null
+delete_button
+drv 1 "lookat 139.5 -9 51.5" "wait 5" > /dev/null
+attack_click 1
+drv 1 "lookat 60.5 -9 2.5" "wait 5" > /dev/null
+attack_click 1
+drv 1 "lookat 60.5 -60.5 2.5" "wait 10" > /dev/null
+check "a Delete box over more ghost blocks than the server's limit draws red" \
+	box_is "DELETE 2 60,-61,2..139,-9,51 red SINGLE"
+check "with its line saying so" eval '[[ $(val 1 modehud) == "Too many blocks | Delete: $height_line (80 × 53 × 50)" ]]'
+drv 1 "wait 200" > /dev/null
+shot 1 box-delete-too-many
+attack_click 1
+check "and its click sets no corner and erases nothing" eval 'drv 1 "wait 5" > /dev/null &&
+	box_is "DELETE 2 60,-61,2..139,-9,51 red SINGLE" && [[ $(val 1 holdlog) == *" edits=0 "* ]] &&
+	[[ $(val 2 "get 139 -10 51") == minecraft:stone ]]'
+drv 1 "lookat 60.5 -9.5 2.5" "wait 5" > /dev/null
+check "a box over fewer ghost blocks draws white again" box_is "DELETE 2 60,-10,2..139,-9,51 white SINGLE"
+use_click 1
+check "a right click ends it" eval 'drv 1 "wait 10" > /dev/null && box_is "none SINGLE"'
 # Erasing Big is another edit of 200,000 blocks, and leaves the layer as the later checks expect it.
-drv 1 "edit 60 -60 2 139 -11 51 minecraft:air" > /dev/null
+drv 1 "edit 60 -60 2 139 -11 51 minecraft:air" "edit 139 -10 51 139 -10 51 minecraft:air" > /dev/null
 check "erasing all of Big reaches both games" eval 'drv 2 "await block 60 -60 2 minecraft:air" \
-	"await block 139 -11 51 minecraft:air" && drv 1 "await block 139 -11 51 minecraft:air"'
+	"await block 139 -11 51 minecraft:air" "await block 139 -10 51 minecraft:air" &&
+	drv 1 "await block 139 -11 51 minecraft:air"'
 
 # A box of one block: three clicks on the glowstone at 4 -59 3, the first on its side.
 drv 1 "cmd tp @s 8.5 -56 9.5 0 30" "wait 40" > /dev/null
@@ -811,6 +854,118 @@ lines=$(chat_lines 1)
 use_click 1
 check "a right click before the third click ends the box, with no message" eval \
 	'drv 1 "wait 10" > /dev/null && box_is "none SINGLE" && (($(chat_lines 1) == lines))'
+
+# The Delete button during a box for Copy switches it to Delete, keeping its first corner, and Copy, Delete and
+# Material list each switch it from the others. A Delete box's list counts only the ghost blocks in it. The Delete
+# button pressed again ends its box. switch_to <button>: a click on that button of the radial menu, then the aim on the
+# opposite corner.
+switch_to() {
+	radial_open
+	radial_click "$1"
+	radial_let_go
+	drv 1 "lookat 3.5 -59 3.5" "wait 5" > /dev/null
+}
+copy_button
+drv 1 "lookat 5.5 -59 4.5" "wait 5" > /dev/null
+attack_click 1
+switch_to Delete
+check "the Delete button during a box for Copy switches it to Delete, keeping its corner" eval \
+	'box_is "DELETE 1 3,-59,3..5,-59,4 white SINGLE" && [[ $(val 1 modehud) == "Delete: $second_line (3 × 1 × 2)" ]]'
+check "its list counts the ghost blocks in it" eval 'drv 1 "wait 5" > /dev/null &&
+	[[ $(val 1 boxlist) == *" | minecraft:glowstone 1, minecraft:oak_stairs 1" ]]'
+switch_to "Material list"
+check "Material list switches a box for Delete, keeping its corner" \
+	box_is "MATERIAL_LIST 1 3,-59,3..5,-59,4 white SINGLE"
+switch_to Delete
+check "Delete switches it back" box_is "DELETE 1 3,-59,3..5,-59,4 white SINGLE"
+switch_to Copy
+check "and Copy switches a box for Delete, keeping its corner" box_is "COPY 1 3,-59,3..5,-59,4 white SINGLE"
+switch_to Delete
+switch_to Delete
+check "the Delete button pressed again ends its box, leaving the player's mode" box_is "none SINGLE"
+
+# Starting a Delete box while ghost blocks are hidden shows them first, as starting a shape does.
+press 1 n
+check "with ghost blocks hidden" eval '[[ $(val 1 ghosts) == "hidden, "* ]]'
+delete_button
+check "the Delete button shows them and starts its box" eval '[[ $(val 1 ghosts) == "shown, "* ]] &&
+	[[ $(val 1 drawbox) == "DELETE 0 "* ]] && [[ $(val 1 modehud) == "Delete: $first_line" ]]'
+use_click 1
+check "a right click ends it" eval 'drv 1 "wait 10" > /dev/null && box_is "none SINGLE"'
+
+# A Delete box of 40 by 40 by 10 over 16,000 ghost oak planks, a ghost oak door among them in the box's top layer whose
+# upper half stands above the box, and a real stone among the planks, which a stone doesn't fill. The box's first
+# corner is the plank at its south-west bottom corner, aimed at on its side; it's shot before the third click at 854 by
+# 480 and at 1920 by 1080. The third click erases the 16,001 ghost blocks, the door's upper half among them, as one
+# edit, which Planner2 sees glow with Planner1's name, and leaves the real stone; one Ctrl+Z brings them all back.
+drv 1 "cmd tp @s 219.5 -30 60.5 180 30" "cmd tp Planner2 223.5 -30 62.5 180 30" "wait 100" > /dev/null
+drv 1 "edit 200 -60 0 239 -51 39 minecraft:oak_planks" \
+	"edit 239 -51 39 239 -51 39 minecraft:oak_door[half=lower,facing=north]" \
+	"edit 239 -50 39 239 -50 39 minecraft:oak_door[half=upper,facing=north]" \
+	"cmd setblock 205 -60 5 minecraft:stone" > /dev/null
+check "both clients show the ghost blocks" eval 'drv 2 "await block 200 -60 0 minecraft:oak_planks" \
+	"await block 238 -51 39 minecraft:oak_planks" "await block 239 -50 39 minecraft:oak_door" > /dev/null &&
+	drv 1 "await block 239 -50 39 minecraft:oak_door" "await real 205 -60 5 minecraft:stone" > /dev/null &&
+	[[ $(val 1 "layer 205 -60 5") == minecraft:oak_planks ]]'
+delete_button
+drv 1 "lookat 200.5 -59.5 39.9" "wait 5" > /dev/null
+check "a Delete box's first corner on a ghost block's side is that block" \
+	box_is "DELETE 0 200,-60,39..200,-60,39 white SINGLE"
+attack_click 1
+drv 1 "lookat 239.5 -60 0.5" "wait 5" > /dev/null
+attack_click 1
+drv 1 "lookat 239.5 -50.5 0.5" "wait 10" > /dev/null
+check "its three clicks draw a box of 40 by 40 by 10" eval 'box_is "DELETE 2 200,-60,0..239,-51,39 white SINGLE" &&
+	[[ $(val 1 modehud) == "Delete: $height_line (40 × 10 × 40)" ]]'
+list=$(val 1 boxlist)
+echo "  the Delete box's list: $list" >> /out/checks.log
+check "and its list counts only the ghost blocks in it, not the real stone" eval \
+	'[[ $list == *" | minecraft:oak_planks 15999, minecraft:oak_door 1" ]]'
+drv 1 "wait 200" > /dev/null
+shot 1 box-delete-854x480
+drv 1 "window 1920 1080 2" "wait 20" "notoasts" > /dev/null
+shot 1 box-delete-1920x1080
+echo "  box-delete-1920x1080 box: $(val 1 drawbox)" >> /out/checks.log
+drv 1 "window 854 480 2" "wait 20" > /dev/null
+attack_click 1
+check "the third click erases the ghost blocks, with a message" client_said 1 "Erased 16001 ghost blocks."
+check "as one edit" eval '[[ $(val 1 holdlog) == *" edits=1 "* ]]'
+check "and ends the box, leaving the player's mode" box_is "none SINGLE"
+check "Planner2 sees them go, the door's upper half above the box with them" drv 2 \
+	"await block 200 -60 0 minecraft:air" "await block 239 -51 39 minecraft:air" "await block 239 -50 39 minecraft:air" \
+	"await block 238 -51 39 minecraft:air"
+# An edit over 512 blocks glows as its area's outline, which keeps no list of blocks.
+check "glowing with Planner1's name" drv 2 "await glow Planner1:0"
+shot 2 delete-erased-seen
+check "no ghost plank is left in the box for either player" eval \
+	'[[ $(val 1 "countbox 200 -60 0 239 -51 39 minecraft:oak_planks") == "layer 0 "* ]] &&
+	[[ $(val 2 "countbox 200 -60 0 239 -51 39 minecraft:oak_planks") == "layer 0 "* ]]'
+check "and the real stone stays" eval '[[ $(val 1 "real 205 -60 5") == minecraft:stone ]]'
+drv 1 "close" > /dev/null
+keys 1 keydown ctrl key z sleep 0.3 keyup ctrl
+check "one Ctrl+Z brings them all back" drv 2 "await block 200 -60 0 minecraft:oak_planks" \
+	"await block 239 -51 39 minecraft:oak_door" "await block 239 -50 39 minecraft:oak_door" \
+	"await block 238 -51 39 minecraft:oak_planks"
+check "every one of them" eval '[[ $(val 2 "countbox 200 -60 0 239 -51 39 minecraft:oak_planks") == "layer 15999 "* ]]'
+
+# A Delete box without ghost blocks, over the grass south of the planks, gives its message and changes nothing.
+delete_button
+drv 1 "lookat 210.5 -60 45.5" "wait 5" > /dev/null
+attack_click 1
+drv 1 "lookat 214.5 -60 48.5" "wait 5" > /dev/null
+attack_click 1
+drv 1 "lookat 214.5 -58.5 48.5" "wait 10" > /dev/null
+check "a Delete box over no ghost blocks" box_is "DELETE 2 210,-60,45..214,-59,48 white SINGLE"
+attack_click 1
+check "gives its message" client_said 1 "There are no ghost blocks in that box to erase."
+shot 1 delete-nothing-message
+check "and changes nothing" eval '[[ $(val 1 holdlog) == *" edits=0 "* ]] && box_is "none SINGLE" &&
+	[[ $(val 1 "real 210 -61 45") == minecraft:grass_block ]] &&
+	[[ $(val 2 "countbox 200 -60 0 239 -51 39 minecraft:oak_planks") == "layer 15999 "* ]]'
+drv 1 "edit 200 -60 0 239 -50 39 minecraft:air" > /dev/null
+check "erasing the planks reaches both games" eval 'drv 2 "await block 200 -60 0 minecraft:air" \
+	"await block 239 -50 39 minecraft:air" > /dev/null && drv 1 "await block 239 -50 39 minecraft:air"'
+drv 1 "cmd tp @s 8.5 -56 9.5 0 30" "cmd tp Planner2 101.5 0 26.5 0 30" "wait 40" > /dev/null
 
 # The list under the crosshair for a box of 144 by 3 by 144 over a real floor of 40 kinds of block, at 854 by 480,
 # GUI scale 2: strips 3 wide from the box's west side, the first 144 long and each next one 1 shorter, so the kinds

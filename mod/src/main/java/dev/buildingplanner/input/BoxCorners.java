@@ -6,7 +6,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * The corners of Building Planner's box for Copy and the material list, drawn with three left clicks as Effortless
+ * The corners of Building Planner's box for Copy, Delete and the material list, drawn with three left clicks as Effortless
  * Building's "Cube" draws ({@code Cube.findSecondPos}, which calls {@code Floor.findFloor}, and {@code
  * ThreeClicksBuildMode.findHeight}), with Building Planner's own reach and limits. Each corner comes from the player's
  * eyes and the way they look; none of them shrinks a box to fit a limit.
@@ -22,7 +22,9 @@ public final class BoxCorners {
 		/** A side longer than {@link #MAX_SIDE}. */
 		SIDE,
 		/** A chunk the box touches isn't loaded in the player's game, which then knows neither its blocks nor its ghost blocks. */
-		NOT_LOADED
+		NOT_LOADED,
+		/** A Delete box holds more ghost blocks than the server's cap for one edit, so one erase can't take them. */
+		TOO_MANY_BLOCKS
 	}
 
 	/** Whether the player's game has a chunk loaded. */

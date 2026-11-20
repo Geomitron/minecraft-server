@@ -169,7 +169,7 @@ Effortless Building, under `common/src/main/java/nl/requios/effortlessbuilding/`
 | # | File, method | Hook | Purpose |
 |---|---|---|---|
 | E1 | `buildpipeline/BuildPipelineClient.java`, `handleClick` | `@WrapWithCondition` on `PacketHandler.sendToServer(PlaceBuildModePacket)`, reading the local `BlockSet blocks` | Take the finished shape (every entry, after mode, modifiers, mix and constraints) into the layer; don't send the packet. `getFirstClickHit()` is still set here, so block states use the first click's face. |
-| E2 | same method | `@WrapWithCondition` on `PacketHandler.sendToServer(BreakBuildModePacket)` | Erase the shape's positions from the layer; don't send. |
+| E2 | same method | `@WrapWithCondition` on `PacketHandler.sendToServer(BreakBuildModePacket)` | Erase the ghost blocks among the shape's positions, in the game's copy of the layer, with the other half of each two-block ghost block (`GhostErase.of`); don't send. A shape over no ghost blocks sends no edit. |
 | E3 | same method | `@WrapWithCondition` on `PlacedBlockTracker.clientTrackAll` | Don't record ghost positions as real blocks the player placed. |
 | E4 | `network/PacketHandler.java`, `sendToServer(UndoPacket)` and `sendToServer(RedoPacket)` | `@Inject` at head, cancellable | Route undo and redo to the layer. Covers both the Ctrl+Z/Ctrl+Y keys (`fabric/.../EffortlessBuildingClient.java`, client tick) and the radial menu (`buildmode/ModeOptions.java`, `performAction`). |
 | E5 | `buildpipeline/RandomizerSystem.java`, `processBlocks` | `@Inject` at head, cancellable | While the mix applies, give each entry its block from the mix (`entry.item`, `entry.blockState`), chosen by a fixed hash of the position so the preview and the result match. |
@@ -694,14 +694,17 @@ erasing has the same limits as a box for Copy. It starts Building Planner's box 
 of a box holds for it: a corner aimed at up to 256 blocks away, at most 256 blocks a side, the world's full height,
 every chunk the box touches loaded, the three left clicks, the right click that leaves, and the switch between purposes
 with the corners kept. Its controls line starts "Delete:". Its count and the list under the crosshair take only the
-ghost blocks in the box, since Delete leaves real blocks as they are, and the box draws red with "Too many blocks" past
-the block cap (200,000). Starting a Delete box while ghost blocks are hidden shows them first, as starting a shape does
-(see "Show or hide").
+ghost blocks in the box (`GhostErase.counts`), since Delete leaves real blocks as they are, and the box draws red with
+"Too many blocks" past the block cap (200,000; `BoxCorners.Limit.TOO_MANY_BLOCKS`). That check (`GhostErase.overCap`)
+runs again whenever a corner moves, counts a section the box takes in whole from its number of ghost blocks, and stops
+once the count passes the cap. Starting a Delete box, or switching a box to Delete, while ghost blocks are hidden shows
+them first, as starting a shape does (see "Show or hide").
 
-The third click sends one erase edit, air at each position in the box that holds a ghost block, so one undo brings
-them all back and other players see them glow as they go. The player sees "Erased 120 ghost blocks.", or, for a box
-without ghost blocks, "There are no ghost blocks in that box to erase." and nothing changes. These texts, and the
-button's name and icon, go to Geo with the build's screenshots.
+The third click sends one erase edit (`GhostErase.inBox`), air at each position in the box that holds a ghost block and
+at the other half of each two-block ghost block among them, inside the box or not, so one undo brings them all back and
+other players see them glow as they go. The player sees "Erased 120 ghost blocks." ("Erased 1 ghost block." for one),
+counting the edit's positions, or, for a box without ghost blocks, "There are no ghost blocks in that box to erase."
+and nothing changes. These texts, and the button's name and icon, go to Geo with the build's screenshots.
 
 Effortless Building's shapes drawn with the break click keep Effortless Building's own limits (in survival, reach 32,
 64 a side and 2,000 positions a shape, counted whether or not they hold ghost blocks), and erase only the ghost blocks
@@ -759,8 +762,7 @@ copy (see "Copy and paste"), and "Material lists" opens the current material lis
 
 The buttons sit in rows above the wrench, undo and redo, in their columns: "Show or hide ghost blocks", "Block mix"
 and "Material list" 39 above the middle, Copy, Paste and "Material lists" 65 above it, and Delete 91 above it, over
-Copy. The first two rows meet nothing the menu draws at 854 by 480, GUI scale 2, and at 1920 by 1080, GUI scales 2
-and 4; Delete's place is unchecked until its build's screenshots.
+Copy. They meet nothing the menu draws at 854 by 480, GUI scale 2, and at 1920 by 1080, GUI scales 2 and 4.
 
 Each icon is a 16 by 16 image of its own in `mod/src/main/resources/assets/buildingplanner/textures/gui/radial/`, named
 by what it shows: `ghost_blocks_shown`, `ghost_blocks_hidden`, `copy`, `paste` and `material_list`. Changing an icon
@@ -1411,13 +1413,13 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
 - With ghost blocks hidden, a shape shows them again, then draws, with its message the first time only and never
   "Ghost blocks shown.".
 - Hidden ghost blocks stay hidden after a restart, until N shows them.
-- At 854 by 480, GUI scale 2, and at 1920 by 1080, GUI scales 2 and 4, the six buttons meet nothing the menu draws in
-  any mode (its ring, buttons, mode options, mode names, descriptions and corner text), the sliders, each other or the
-  screen's edges (the driver's `radialclear`), in the two rows' slots (the driver's `slots`), each with its hover
-  text; each is shot, with the buttons' boxes in the log. Shots taken 1 and 2 frames after the menu opens show the
-  buttons nearer the middle and smaller than when it's open, as the menu's own are. With Effortless Building's mode
-  Line, no mode segment shows selected while the copy is at the aim or a box is drawn, and Paste, Copy or "Material
-  list" does; with the box ended, Line's segment does, and no button.
+- At 854 by 480, GUI scale 2, and at 1920 by 1080, GUI scales 2 and 4, the seven buttons meet nothing the menu draws
+  in any mode (its ring, buttons, mode options, mode names, descriptions and corner text), the sliders, each other or
+  the screen's edges (the driver's `radialclear`), in their rows' slots (the driver's `slots`), each with its hover
+  text; each is shot, with the buttons' boxes in the log, and so is Delete's hover text. Shots taken 1 and 2 frames
+  after the menu opens show the buttons nearer the middle and smaller than when it's open, as the menu's own are. With
+  Effortless Building's mode Line, no mode segment shows selected while the copy is at the aim or a box is drawn, and
+  Paste, Copy, "Material list" or Delete does; with the box ended, Line's segment does, and no button.
 - The menu's corner text reads "Building Planner", and Controls shows Building Planner's keys and Effortless Building's
   under the "Building Planner" heading, with no raw key name; each is shot.
 - The Copy button starts a box: the controls line shows "Copy: Left-click to set the first corner, Right-click to
@@ -1451,6 +1453,15 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   gives its message; a box of one block has its own message.
 - The Copy button during its own box ends it; the "Material list" button during a Copy box switches it, keeping its
   corners, and its line starts "Material list:".
+- The Delete box ("The Delete box"): Copy, Delete and "Material list" each switch a box from the others, keeping its
+  corners, and Delete's line starts "Delete:", its list counting only ghost blocks; Delete during its own box ends it.
+  The Delete button with ghost blocks hidden shows them and starts its box. A Delete box of 40 by 40 by 10 over 16,000
+  ghost oak planks, with a ghost door in its top layer whose upper half stands above the box and a real stone among the
+  planks, lists the planks and the door and not the stone, and is shot at 854 by 480 and 1920 by 1080; its third click
+  says "Erased 16001 ghost blocks.", sends one edit, takes the door's upper half too and leaves the real stone, and the
+  other player sees them go, glowing with Planner1's name. One Ctrl+Z brings them all back. A Delete box over grass
+  without ghost blocks gives its message and sends no edit. A Delete box over 200,001 ghost blocks draws red with "Too
+  many blocks", and its click sets no corner and sends no edit.
 - A box for the material list around 10 ghost oak planks, 6 of them built as real oak planks, and 20 real stone
   blocks, with ghost blocks shown and a copy at the aim, opens Litematica's material list as "The material list"
   describes, places and erases nothing, and puts the copy away. With ghost blocks hidden, the same box lists only the
@@ -1525,7 +1536,8 @@ real buttons with xdotool while Planner1 is teleported one block every two ticks
   then sends an edit 4 ticks after the button goes down and then every 2 ticks, and holding attack one every 10. After
   a restart the sliders show the same settings, and holding use still repeats every 2 ticks.
 - With both sliders dragged to 20 blocks a second, a quick use click and a quick attack click each send one edit, and
-  holding either sends its first repeat 4 ticks after the button goes down and then one every tick.
+  holding either sends its first repeat 4 ticks after the button goes down and then one every tick. The rows held over
+  with attack after the first are four ghost blocks high, since a break that meets no ghost block sends no edit.
 - The radial menu's wrench button opens Effortless Building's Modifiers screen.
 - Holding use in Line mode (which needs two clicks) and with the mode disabled sends no edit.
 - Editing from Freecam: the driver switches Freecam's camera on (`Freecam.toggle`, as its key does), puts its eyes 10

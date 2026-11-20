@@ -4,6 +4,7 @@ import dev.buildingplanner.BuildingPlanner;
 import dev.buildingplanner.ClientConfig;
 import dev.buildingplanner.input.MouseMode;
 import dev.buildingplanner.layer.BoxCount;
+import dev.buildingplanner.layer.GhostErase;
 import dev.buildingplanner.layer.Layer;
 import dev.buildingplanner.layer.LayerColumn;
 import dev.buildingplanner.look.GhostsShown;
@@ -44,7 +45,7 @@ final class ClientSession {
 	private final SelfCheck check;
 	private final LayerReplica replica;
 	private final Clipboard clipboard = new Clipboard();
-	private final BoxDraw box = new BoxDraw();
+	private final BoxDraw box;
 	private final BoxList list = new BoxList();
 	private final ListSync lists = new ListSync();
 	private int clientSeq;
@@ -68,6 +69,7 @@ final class ClientSession {
 	ClientSession(int maxEditBlocks, EditGlow glow, Identifier dimension, LongSet loadedChunks, ClientConfig config,
 		Supplier<String> showHideKey) {
 		this.maxEditBlocks = maxEditBlocks;
+		this.box = new BoxDraw(maxEditBlocks);
 		this.glow = glow;
 		this.config = config;
 		this.showHideKey = showHideKey;
@@ -191,26 +193,31 @@ final class ClientSession {
 	}
 
 	/**
-	 * Copy's or the material list's button: starts a box for that purpose, or, while a box is drawn, ends it when it's
-	 * for the same purpose and otherwise switches it to that purpose, keeping its corners. Returns whether a box started.
+	 * Copy's, Delete's or the material list's button: starts a box for that purpose, or, while a box is drawn, ends it
+	 * when it's for the same purpose and otherwise switches it to that purpose, keeping its corners. A box for Delete
+	 * shows hidden ghost blocks first, as drawing a shape does. Returns whether a box started.
 	 */
 	boolean boxButton(BoxDraw.Purpose purpose) {
-		if (box.on()) {
-			if (box.purpose() == purpose) {
-				box.end();
-			} else {
-				box.switchTo(purpose);
-			}
+		boolean started = !box.on();
+		if (!started && box.purpose() == purpose) {
+			box.end();
 			return false;
 		}
-		box.start(purpose);
+		if (purpose == BoxDraw.Purpose.DELETE) {
+			showForDrawing();
+		}
+		if (started) {
+			box.start(purpose);
+		} else {
+			box.switchTo(purpose);
+		}
 		box.update(replica.layer(), tiles.shown());
-		return true;
+		return started;
 	}
 
 	/**
-	 * The left click while a box is drawn: sets its next corner, and after the third hands the box to Copy or the
-	 * material list. Returns whether the click made the copy, which is then at the aim.
+	 * The left click while a box is drawn: sets its next corner, and after the third hands the box to Copy, Delete or
+	 * the material list. Returns whether the click made the copy, which is then at the aim.
 	 */
 	boolean boxClick() {
 		BoxDraw.Finished finished = box.click(replica.layer(), tiles.shown());
@@ -219,9 +226,24 @@ final class ClientSession {
 		}
 		switch (finished.purpose()) {
 			case COPY -> copy(finished.min(), finished.max());
+			case DELETE -> erase(finished.min(), finished.max());
 			case MATERIAL_LIST -> materialList(finished.min(), finished.max());
 		}
 		return clipboard.atAim();
+	}
+
+	/**
+	 * Erases every ghost block in the box from {@code min} to {@code max}, with the other half of each two-block ghost
+	 * block, as one edit ({@link GhostErase#inBox}), so one undo brings them all back, saying how many; a box without
+	 * ghost blocks changes nothing, with its message.
+	 */
+	void erase(BlockPos min, BlockPos max) {
+		Map<BlockPos, BlockState> erase = GhostErase.inBox(replica.layer(), min, max);
+		if (erase.isEmpty()) {
+			show(PlayerMessage.nothingToErase());
+		} else if (sendShape(EditKind.ERASE, erase)) {
+			show(PlayerMessage.erased(erase.size()));
+		}
 	}
 
 	void close() {
@@ -298,22 +320,23 @@ final class ClientSession {
 	/**
 	 * Sends a shape the player drew, or a paste, as one edit, {@code blocks} being world positions and states in the
 	 * order drawn (air to erase), after showing hidden ghost blocks. A shape over the server's block cap isn't sent,
-	 * with the server's message.
+	 * with the server's message. Returns whether it was sent.
 	 */
-	void sendShape(EditKind kind, Map<BlockPos, BlockState> blocks) {
+	boolean sendShape(EditKind kind, Map<BlockPos, BlockState> blocks) {
 		if (blocks.isEmpty() || replica.dimension() == null) {
-			return;
+			return false;
 		}
 		showForDrawing();
 		if (blocks.size() > maxEditBlocks) {
 			show(PlayerMessage.tooManyBlocks(blocks.size(), maxEditBlocks));
-			return;
+			return false;
 		}
 		List<LayerChange> changes = new ArrayList<>(blocks.size());
 		blocks.forEach((pos, state) -> changes.add(new LayerChange(pos.immutable(), state)));
 		// Columns loaded this tick are asked for first, as the server checks an edit's columns are watched.
 		sendWatches();
 		ClientPlayNetworking.send(new Payloads.Edit(replica.dimension(), ++clientSeq, kind, changes));
+		return true;
 	}
 
 	void undo() {

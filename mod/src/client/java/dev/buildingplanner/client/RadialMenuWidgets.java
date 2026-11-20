@@ -27,13 +27,13 @@ import net.minecraft.resources.Identifier;
  * and are as wide as the longest label either shows needs at the current size, plus {@link #PAD} on each side, reaching
  * further left than the buttons. Each is {@link #HEIGHT} high, and they end 55 below the middle.
  *
- * <p>Building Planner's six buttons ({@link RadialButton}) sit in two rows above the wrench, undo and redo, in their
+ * <p>Building Planner's seven buttons ({@link RadialButton}) sit in rows above the wrench, undo and redo, in their
  * columns (middles 157, 131 and 105 left of the menu's middle): "Show or hide ghost blocks", "Block mix" and "Material
- * list" 39 above the middle, and Copy, Paste and "Material lists" 65 above it. "Show or hide ghost blocks" and "Block
- * mix" do what their keys do; Copy, Paste, "Material list" and "Material lists" have no keys, and Copy, Paste and
+ * list" 39 above the middle, Copy, Paste and "Material lists" 65 above it, and Delete 91 above it, over Copy. "Show or
+ * hide ghost blocks" and "Block mix" do what their keys do; the others have no keys, and Copy, Delete, Paste and
  * "Material list" each show selected while its mouse mode is on, when no mode segment does (E19). Each icon is a
- * texture of its own ({@link RadialButton#icon}), "Block mix" shows Effortless Building's Randomizer Bag, and
- * "Material lists" Minecraft's Book and Quill.
+ * texture of its own ({@link RadialButton#icon}), "Block mix" shows Effortless Building's Randomizer Bag, "Material
+ * lists" Minecraft's Book and Quill, and Delete Minecraft's Barrier.
  *
  * <p>The widgets join the menu's opening animation (E20): the menu places its ring and buttons at {@link #factor} of
  * their distance and size from its middle, which grows from 0.8 to 1 over its first frames, and {@link #place} places
@@ -56,6 +56,7 @@ public final class RadialMenuWidgets {
 	private static final int[] COPY_SLOT = {-157, -65};
 	private static final int[] PASTE_SLOT = {-131, -65};
 	private static final int[] MATERIAL_LISTS_SLOT = {-105, -65};
+	private static final int[] DELETE_SLOT = {-157, -91};
 
 	private static final Identifier SHOWN = RadialButton.icon("ghost_blocks_shown");
 	private static final Identifier HIDDEN = RadialButton.icon("ghost_blocks_hidden");
@@ -68,6 +69,8 @@ public final class RadialMenuWidgets {
 	/** Minecraft's Book and Quill item texture, drawn from the game's own. */
 	private static final Identifier BOOK_AND_QUILL =
 		Identifier.fromNamespaceAndPath("minecraft", "textures/item/writable_book.png");
+	/** Minecraft's Barrier item texture, drawn from the game's own. */
+	private static final Identifier BARRIER = Identifier.fromNamespaceAndPath("minecraft", "textures/item/barrier.png");
 
 	/** A widget the menu places from its middle each frame. */
 	interface Placed {
@@ -98,6 +101,8 @@ public final class RadialMenuWidgets {
 			() -> BuildingPlannerClient.mouseMode() == MouseMode.COPY_AT_AIM, BuildingPlannerClient::paste));
 		widgets.add(button(MATERIAL_LISTS_SLOT, "material_lists", BOOK_AND_QUILL, () -> false,
 			BuildingPlannerClient::materialLists));
+		widgets.add(button(DELETE_SLOT, "delete", BARRIER,
+			() -> BuildingPlannerClient.drawingBoxFor(BoxDraw.Purpose.DELETE), BuildingPlannerClient::delete));
 		return widgets;
 	}
 

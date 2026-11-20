@@ -1,8 +1,9 @@
 package dev.buildingplanner.client;
 
 import dev.buildingplanner.input.MixRule;
+import dev.buildingplanner.layer.GhostErase;
+import dev.buildingplanner.layer.OtherHalf;
 import dev.buildingplanner.sync.EditKind;
-import fi.dy.masa.litematica.world.SchematicWorldHandler;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import net.minecraft.client.Minecraft;
@@ -15,11 +16,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.block.state.properties.BedPart;
-import net.minecraft.world.level.block.state.properties.BlockStateProperties;
-import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import nl.requios.effortlessbuilding.buildmode.BuildModeEnum;
@@ -83,9 +80,11 @@ public final class EffortlessShapes {
 		}
 		Map<BlockPos, BlockState> otherHalves = new LinkedHashMap<>();
 		states.forEach((pos, state) -> {
-			BlockPos other = otherHalf(pos, state);
+			// The placing rules give only the half placed first, which the game completes as it places it; a ghost
+			// block gets both.
+			BlockPos other = OtherHalf.of(pos, state);
 			if (other != null) {
-				otherHalves.put(other, otherHalfState(state));
+				otherHalves.put(other, OtherHalf.state(state));
 			}
 		});
 		otherHalves.forEach(states::putIfAbsent);
@@ -93,45 +92,16 @@ public final class EffortlessShapes {
 	}
 
 	/**
-	 * Where the other half of a two-block block is (a door's or a tall plant's upper half, a bed's head), or null for a
-	 * block of one. The placing rules give only the half placed first, which the game completes as it places it; a
-	 * ghost block gets both.
-	 */
-	private static BlockPos otherHalf(BlockPos pos, BlockState state) {
-		if (state.hasProperty(BlockStateProperties.DOUBLE_BLOCK_HALF)) {
-			return state.getValue(BlockStateProperties.DOUBLE_BLOCK_HALF) == DoubleBlockHalf.LOWER ? pos.above() : pos.below();
-		}
-		if (state.hasProperty(BlockStateProperties.BED_PART) && state.hasProperty(BlockStateProperties.HORIZONTAL_FACING)) {
-			Direction facing = state.getValue(BlockStateProperties.HORIZONTAL_FACING);
-			return state.getValue(BlockStateProperties.BED_PART) == BedPart.FOOT ? pos.relative(facing)
-				: pos.relative(facing.getOpposite());
-		}
-		return null;
-	}
-
-	/** The state of the other half, for a state {@link #otherHalf} finds one for. */
-	private static BlockState otherHalfState(BlockState state) {
-		if (state.hasProperty(BlockStateProperties.DOUBLE_BLOCK_HALF)) {
-			return state.cycle(BlockStateProperties.DOUBLE_BLOCK_HALF);
-		}
-		return state.cycle(BlockStateProperties.BED_PART);
-	}
-
-	/**
-	 * Hook E2: the player finished a shape with the break click, which erases its ghost blocks, with the other
-	 * half of each two-block ghost block, as breaking either half of a real door or bed breaks both.
+	 * Hook E2: the player finished a shape with the break click, which erases the ghost blocks among its positions in
+	 * the game's copy of the layer, with the other half of each two-block ghost block, as breaking either half of a real
+	 * door or bed breaks both ({@link GhostErase#of}). A shape over no ghost blocks sends nothing.
 	 */
 	public static void erase(BlockSet blocks) {
-		Map<BlockPos, BlockState> states = new LinkedHashMap<>();
-		Level ghosts = SchematicWorldHandler.getSchematicWorld();
-		for (BlockPos pos : blocks.validPositions()) {
-			states.put(pos, Blocks.AIR.defaultBlockState());
-			BlockPos other = ghosts == null ? null : otherHalf(pos, ghosts.getBlockState(pos));
-			if (other != null) {
-				states.put(other, Blocks.AIR.defaultBlockState());
-			}
+		ClientSession session = BuildingPlannerClient.session();
+		if (session != null) {
+			BuildingPlannerClient.captureShape(EditKind.ERASE,
+				GhostErase.of(session.replica().layer(), blocks.validPositions()));
 		}
-		BuildingPlannerClient.captureShape(EditKind.ERASE, states);
 	}
 
 	/**

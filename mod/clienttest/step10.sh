@@ -160,7 +160,7 @@ check "and at GUI scale 4" radial_at 1920 1080 4
 drv 1 "window 854 480 2" "wait 20" > /dev/null
 
 # The menu's buttons' names, which texts lists after the sliders' labels.
-buttons="Show or hide ghost blocks | Block mix | Material list | Copy | Paste | Material lists"
+buttons="Show or hide ghost blocks | Block mix | Material list | Copy | Paste | Material lists | Delete"
 xdo 1 keydown Alt_L
 check "the radial menu shows both sliders at their first settings" eval 'drv 1 "await screen Build Modes" > /dev/null &&
 	[[ $(val 1 texts) == "Build speed: 5 blocks/s | Break speed: 3.33 blocks/s | $buttons" ]]'
@@ -181,10 +181,11 @@ check "and they're kept in Building Planner's client config" eval \
 	'grep -q "^place-repeat-ticks=2" run/client1/'$marker' && grep -q "^erase-repeat-ticks=10" run/client1/'$marker
 
 # hold_at <button> <name> <period>: holds the button over the row z 5 from 2 -60 5, as above, and checks the edits
-# came every <period> ticks. For erasing, the row is filled first.
+# came every <period> ticks. For erasing, the row is filled first, four blocks high: a break that meets no ghost block
+# sends no edit, and at a repeat every tick the player, one block on every 2 ticks, breaks some places twice or more.
 hold_at() {
 	if [[ $1 == 1 ]]; then
-		drv 1 "edit 2 -60 5 40 -60 5 minecraft:stone_bricks" "await block 40 -60 5 minecraft:stone_bricks" > /dev/null
+		drv 1 "edit 2 -60 5 40 -57 5 minecraft:stone_bricks" "await block 40 -57 5 minecraft:stone_bricks" > /dev/null
 	else
 		drv 1 "edit 2 -60 5 40 -57 5 minecraft:air" "await block 40 -60 5 minecraft:air" > /dev/null
 	fi

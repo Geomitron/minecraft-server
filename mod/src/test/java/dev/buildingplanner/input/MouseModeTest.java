@@ -12,12 +12,13 @@ class MouseModeTest {
 	@Test
 	void theCopyAtTheAimEndsWithARightClickAndTheModsOtherActions() {
 		assertEquals(EnumSet.of(Action.RIGHT_CLICK, Action.CHOOSE_BUILD_MODE, Action.SHOW_OR_HIDE, Action.COPY_BUTTON,
-			Action.MATERIAL_LIST_BUTTON, Action.PASTE_BUTTON, Action.BLOCK_MIX, Action.LEAVE), ending(MouseMode.COPY_AT_AIM));
+			Action.DELETE_BUTTON, Action.MATERIAL_LIST_BUTTON, Action.PASTE_BUTTON, Action.BLOCK_MIX, Action.LEAVE),
+			ending(MouseMode.COPY_AT_AIM));
 	}
 
 	/**
-	 * A box keeps going through its left clicks, the wheel, the middle click, undo and redo, and through Copy and
-	 * "Material list", which end or switch it themselves; everything else ends it.
+	 * A box keeps going through its left clicks, the wheel, the middle click, undo and redo, and through Copy, Delete
+	 * and "Material list", which end or switch it themselves; everything else ends it.
 	 */
 	@Test
 	void aBoxEndsWithARightClickAndTheModsOtherActionsButItsOwnButtons() {

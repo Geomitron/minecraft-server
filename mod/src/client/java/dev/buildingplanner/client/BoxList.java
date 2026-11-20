@@ -1,6 +1,7 @@
 package dev.buildingplanner.client;
 
 import dev.buildingplanner.layer.BoxCount;
+import dev.buildingplanner.layer.GhostErase;
 import dev.buildingplanner.layer.Layer;
 import fi.dy.masa.litematica.materials.MaterialCache;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
@@ -20,8 +21,10 @@ import net.minecraft.world.level.chunk.status.ChunkStatus;
 
 /**
  * The blocks in the box being drawn, for the list under the crosshair: each block's item, as Litematica's material list
- * gives it ({@code MaterialCache}), with its count, most numerous first, counted by the copy's rule ({@link BoxCount}).
- * It counts again when a corner moves, at most once every {@value #EVERY} ticks. A box past a limit has no list.
+ * gives it ({@code MaterialCache}), with its count, most numerous first, counted by the copy's rule ({@link BoxCount}),
+ * or for a Delete box its ghost blocks alone ({@link GhostErase#counts}), since Delete leaves real blocks as they are.
+ * It counts again when a corner moves or the box changes purpose, at most once every {@value #EVERY} ticks. A box past
+ * a limit has no list.
  */
 final class BoxList {
 	private static final int EVERY = 5;
@@ -30,6 +33,7 @@ final class BoxList {
 	record Entry(ItemStack item, int count) {
 	}
 
+	private BoxDraw.Purpose purpose;
 	private BlockPos min;
 	private BlockPos max;
 	private int sinceCount = EVERY;
@@ -45,21 +49,24 @@ final class BoxList {
 		sinceCount++;
 		ClientLevel level = Minecraft.getInstance().level;
 		if (box == null || box.min() == null || box.limit() != null || level == null) {
+			purpose = null;
 			min = null;
 			max = null;
 			entries = List.of();
 			return;
 		}
-		if (box.min().equals(min) && box.max().equals(max) || sinceCount < EVERY) {
+		if (box.purpose() == purpose && box.min().equals(min) && box.max().equals(max) || sinceCount < EVERY) {
 			return;
 		}
 		sinceCount = 0;
+		purpose = box.purpose();
 		min = box.min();
 		max = box.max();
 		Object2IntOpenHashMap<Item> items = new Object2IntOpenHashMap<>();
 		MaterialCache cache = MaterialCache.getInstance();
-		for (Object2IntMap.Entry<BlockState> block : BoxCount.of(min, max, layer, realSections(level), ghostsShown)
-			.object2IntEntrySet()) {
+		Object2IntOpenHashMap<BlockState> blocks = purpose == BoxDraw.Purpose.DELETE ? GhostErase.counts(layer, min, max)
+			: BoxCount.of(min, max, layer, realSections(level), ghostsShown);
+		for (Object2IntMap.Entry<BlockState> block : blocks.object2IntEntrySet()) {
 			ItemStack item = cache.getRequiredBuildItemForState(block.getKey());
 			if (!item.isEmpty()) {
 				items.addTo(item.getItem(), item.getCount() * block.getIntValue());

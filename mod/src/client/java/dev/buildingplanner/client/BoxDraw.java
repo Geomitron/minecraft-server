@@ -1,6 +1,7 @@
 package dev.buildingplanner.client;
 
 import dev.buildingplanner.input.BoxCorners;
+import dev.buildingplanner.layer.GhostErase;
 import dev.buildingplanner.layer.Layer;
 import java.util.OptionalInt;
 import net.minecraft.client.Minecraft;
@@ -13,16 +14,19 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Building Planner's box for Copy or the material list, one of its mouse modes: three left clicks set the first corner,
- * the opposite corner on the same level, and the height ({@link BoxCorners}). Between clicks the box follows the aim,
- * with the corners set so far fixed. A box past a limit draws red, and its click sets no corner. It uses none of
- * Effortless Building's classes.
+ * Building Planner's box for Copy, Delete or the material list, one of its mouse modes: three left clicks set the first
+ * corner, the opposite corner on the same level, and the height ({@link BoxCorners}). Between clicks the box follows the
+ * aim, with the corners set so far fixed. A box past a limit draws red, and its click sets no corner; a Delete box's
+ * limits include the server's cap for one edit, on the ghost blocks it holds. It uses none of Effortless Building's
+ * classes.
  */
 final class BoxDraw {
 	/** What the box is for. */
 	enum Purpose {
 		/** The ghost blocks and real blocks in the box become the copy. */
 		COPY,
+		/** The ghost blocks in the box are erased, as one edit. */
+		DELETE,
 		/** Litematica's material list opens for the blocks in the box. */
 		MATERIAL_LIST
 	}
@@ -43,6 +47,8 @@ final class BoxDraw {
 	record Finished(Purpose purpose, BlockPos min, BlockPos max) {
 	}
 
+	/** The server's cap on the blocks of one edit, which a Delete box's ghost blocks may not pass. */
+	private final int maxEditBlocks;
 	private Purpose purpose;
 	private BlockPos first;
 	private BlockPos second;
@@ -50,6 +56,17 @@ final class BoxDraw {
 	private Shown shown;
 	/** The corner the aim gave at the last update, which the next left click sets. */
 	private BlockPos next;
+	/**
+	 * The last box whose ghost blocks were checked against the cap, by its corners, and whether it passed it: the check
+	 * runs again only when the corners move. The third click's erase is checked against the cap again as it's sent.
+	 */
+	private BlockPos cappedMin;
+	private BlockPos cappedMax;
+	private boolean overCap;
+
+	BoxDraw(int maxEditBlocks) {
+		this.maxEditBlocks = maxEditBlocks;
+	}
 
 	/** Whether a box is drawn. */
 	boolean on() {
@@ -66,11 +83,13 @@ final class BoxDraw {
 		first = null;
 		second = null;
 		shown = null;
+		cappedMin = null;
 	}
 
-	/** The box is for the other purpose now, keeping the corners set so far. */
+	/** The box is for another purpose now, keeping the corners set so far; the next {@link #update} checks its limits. */
 	void switchTo(Purpose purpose) {
 		this.purpose = purpose;
+		cappedMin = null;
 		if (shown != null) {
 			shown = new Shown(purpose, shown.corners(), shown.min(), shown.max(), shown.aimed(), shown.limit());
 		}
@@ -133,9 +152,25 @@ final class BoxDraw {
 		to = BoxCorners.withinHeight(to, minY, maxY);
 		// ClientLevel.hasChunk is always true; the chunk cache holds only the chunks the game has loaded.
 		ClientChunkCache chunks = level.getChunkSource();
-		shown = new Shown(purpose, corners, BlockPos.min(from, to), BlockPos.max(from, to), aimed,
-			BoxCorners.limit(from, to, (x, z) -> chunks.getChunk(x, z, ChunkStatus.FULL, false) != null));
+		BlockPos min = BlockPos.min(from, to);
+		BlockPos max = BlockPos.max(from, to);
+		BoxCorners.Limit limit = BoxCorners.limit(from, to,
+			(x, z) -> chunks.getChunk(x, z, ChunkStatus.FULL, false) != null);
+		if (limit == null && purpose == Purpose.DELETE && overCap(layer, min, max)) {
+			limit = BoxCorners.Limit.TOO_MANY_BLOCKS;
+		}
+		shown = new Shown(purpose, corners, min, max, aimed, limit);
 		next = to;
+	}
+
+	/** Whether the box holds more ghost blocks than one edit may erase, counted again only when its corners moved. */
+	private boolean overCap(Layer layer, BlockPos min, BlockPos max) {
+		if (!min.equals(cappedMin) || !max.equals(cappedMax)) {
+			cappedMin = min;
+			cappedMax = max;
+			overCap = GhostErase.overCap(layer, min, max, maxEditBlocks);
+		}
+		return overCap;
 	}
 
 	/**
