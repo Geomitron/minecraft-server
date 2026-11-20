@@ -12,12 +12,14 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import net.fabricmc.fabric.api.entity.event.v1.ServerEntityLevelChangeEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerChunkEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.SectionPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
@@ -25,10 +27,14 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.level.chunk.LevelChunkSection;
 import net.minecraft.world.level.storage.LevelResource;
 
 /**
- * Connects the server's shared layer ({@link LayerSync}, protocol 4) and each player's material lists
+ * Connects the server's shared layer ({@link LayerSync}, protocol 5) and each player's material lists
  * ({@link MaterialLists}) to the game: one of each per running server, fed by the payload handlers (which Fabric runs on
  * the server thread) and sending only to players who can receive Building Planner's payloads. The layer lives in
  * {@code <world>/building-planner/layer/}; before that folder exists, the server builds it from the plans Syncmatica
@@ -81,6 +87,22 @@ public final class ServerSync {
 			if (layer != null) {
 				layerStore.tick(layer, System.currentTimeMillis());
 				lists.tick(System.currentTimeMillis());
+			}
+		});
+		ServerTickEvents.END_SERVER_TICK.register(server -> {
+			if (layer != null) {
+				layer.removeFilled();
+			}
+		});
+		// Fires for each chunk that loads, from the first ones the server loads at start.
+		ServerChunkEvents.CHUNK_LOAD.register((level, chunk, generated) -> {
+			if (layer == null) {
+				return;
+			}
+			if (level.getServer().isSameThread()) {
+				chunkLoaded(level, chunk);
+			} else {
+				level.getServer().execute(() -> chunkLoaded(level, chunk));
 			}
 		});
 		// Players are still connected, but the server reads no more edits or list messages.
@@ -173,6 +195,31 @@ public final class ServerSync {
 		BuildingPlanner.LOGGER.info("Building Planner live sync: {} blocks an edit", limits.maxEditBlocks());
 	}
 
+	/**
+	 * Hook S1: a real block changed in one of the server's loaded chunks ({@code LevelChunkMixin}). Changes made off the
+	 * server thread are left to the check at chunk load.
+	 */
+	public static void realChanged(ServerLevel level, BlockPos pos, BlockState state) {
+		if (layer != null && level.getServer().isSameThread()) {
+			layer.realChanged(level.dimension().identifier(), pos, state);
+		}
+	}
+
+	private static void chunkLoaded(ServerLevel level, LevelChunk chunk) {
+		if (layer == null) {
+			return;
+		}
+		ChunkPos at = chunk.getPos();
+		layer.chunkLoaded(level.dimension().identifier(), at.x(), at.z(), sectionY -> {
+			int index = chunk.getSectionIndexFromSectionY(sectionY);
+			if (index < 0 || index >= chunk.getSectionsCount()) {
+				return null;
+			}
+			LevelChunkSection section = chunk.getSection(index);
+			return section.hasOnlyAir() ? null : section::getBlockState;
+		});
+	}
+
 	private static String playerName(ServerPlayer player) {
 		return player.getGameProfile().name();
 	}
@@ -226,6 +273,15 @@ public final class ServerSync {
 			public boolean insideBorder(Identifier dimension, BlockPos pos) {
 				ServerLevel level = level(dimension);
 				return level != null && level.getWorldBorder().isWithinBounds(pos);
+			}
+
+			@Override
+			public BlockState realBlock(Identifier dimension, BlockPos pos) {
+				ServerLevel level = level(dimension);
+				LevelChunk chunk = level == null ? null
+					: level.getChunkSource().getChunkNow(SectionPos.blockToSectionCoord(pos.getX()),
+						SectionPos.blockToSectionCoord(pos.getZ()));
+				return chunk == null ? null : chunk.getBlockState(pos);
 			}
 
 			private ServerLevel level(Identifier dimension) {

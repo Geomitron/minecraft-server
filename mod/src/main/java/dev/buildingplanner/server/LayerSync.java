@@ -1,5 +1,6 @@
 package dev.buildingplanner.server;
 
+import dev.buildingplanner.layer.FillRule;
 import dev.buildingplanner.layer.Layer;
 import dev.buildingplanner.layer.LayerColumn;
 import dev.buildingplanner.layer.LayerSection;
@@ -32,6 +33,10 @@ import net.minecraft.world.level.block.state.BlockState;
  * applied edit goes, through the {@link Outbox}, to every player who watches a column it touches, its author included.
  * Each block takes the value of the last edit, in this order, that wrote it; there are no locks and no owners.
  * Messages to one player keep their order, so nothing falls between a column's snapshot and the edits after it.
+ *
+ * <p>Ghost blocks real blocks fill ({@link FillRule}) leave the layer: hook S1 and the check at chunk load note them,
+ * and the end of each server tick removes them as an edit by no player. Edits, undo and redo don't write a ghost block
+ * over a real block that fills it.
  */
 public final class LayerSync {
 	/** How many chunks past the server's view distance a watched column may be. */
@@ -57,6 +62,22 @@ public final class LayerSync {
 
 		/** Whether the position is inside the dimension's world border. */
 		boolean insideBorder(Identifier dimension, BlockPos pos);
+
+		/** The real block at the position, or null when the server hasn't loaded its chunk; never loads one. */
+		BlockState realBlock(Identifier dimension, BlockPos pos);
+	}
+
+	/** One loaded chunk's real blocks, for the check at chunk load. */
+	@FunctionalInterface
+	public interface RealChunk {
+		/** The section at that section y, or null when it holds only air (or lies outside the build height). */
+		RealSection section(int sectionY);
+	}
+
+	/** One section's real blocks, by their coordinates within the section. */
+	@FunctionalInterface
+	public interface RealSection {
+		BlockState get(int x, int y, int z);
 	}
 
 	/** Where a player is: their dimension and the column they stand in. */
@@ -70,6 +91,8 @@ public final class LayerSync {
 	/** Each player's watched columns, by {@link Layer#key}, all in the dimension they were in when they watched. */
 	private final Map<UUID, Watched> watched = new HashMap<>();
 	private final UndoHistory<Step> history = new UndoHistory<>();
+	/** Positions, by {@link BlockPos#asLong}, whose ghost block a real block filled this tick, by dimension. */
+	private final Map<Identifier, LongSet> filled = new LinkedHashMap<>();
 
 	/** {@code layers} are the layers read from the files, by dimension; the sync owns them from here. */
 	public LayerSync(int maxEditBlocks, Map<Identifier, Layer> layers, Outbox outbox, World world) {
@@ -149,8 +172,8 @@ public final class LayerSync {
 	/**
 	 * Checks and applies one edit: the dimension is the player's own, the edit is within the block cap, and every
 	 * position is in a column the player watches, within the build height and inside the world border. A failed check
-	 * changes nothing and answers the player with {@code rejected}. An edit that changed a block goes on the player's
-	 * undo list and clears their redo list.
+	 * changes nothing and answers the player with {@code rejected}. A ghost block a real block already fills isn't
+	 * written. An edit that changed a block goes on the player's undo list and clears their redo list.
 	 */
 	public void edit(UUID player, Identifier dimension, int clientSeq, List<LayerChange> changes) {
 		Optional<PlayerMessage> problem = check(player, dimension, changes);
@@ -164,6 +187,9 @@ public final class LayerSync {
 		Map<BlockPos, StepBlock> step = new LinkedHashMap<>();
 		for (LayerChange change : changes) {
 			BlockState state = change.state().isAir() ? AIR : change.state();
+			if (builtOver(dimension, change.pos(), state)) {
+				continue;
+			}
 			BlockState before = layer.set(change.pos(), state);
 			if (before != state) {
 				applied.add(new LayerChange(change.pos(), state));
@@ -206,6 +232,88 @@ public final class LayerSync {
 		history.redone(player, applyStep(player, step.get()));
 	}
 
+	/**
+	 * Hook S1: a real block changed in a loaded chunk. When it fills the ghost block there, the position waits for
+	 * {@link #removeFilled} at the end of the tick. One map lookup for a dimension without ghost blocks, and one for a
+	 * column without any.
+	 */
+	public void realChanged(Identifier dimension, BlockPos pos, BlockState real) {
+		if (real.isAir()) {
+			return;
+		}
+		Layer layer = layers.get(dimension);
+		if (layer != null && FillRule.fills(real, layer.get(pos))) {
+			filled.computeIfAbsent(dimension, key -> new LongLinkedOpenHashSet()).add(pos.asLong());
+		}
+	}
+
+	/**
+	 * A chunk loaded: each of the column's sections that holds ghost blocks is compared with the chunk's real blocks,
+	 * and the filled positions wait for {@link #removeFilled}, as S1's do.
+	 */
+	public void chunkLoaded(Identifier dimension, int chunkX, int chunkZ, RealChunk real) {
+		Layer layer = layers.get(dimension);
+		LayerColumn column = layer == null ? null : layer.column(chunkX, chunkZ);
+		if (column == null) {
+			return;
+		}
+		column.sections().forEach((sectionY, section) -> {
+			RealSection blocks = real.section(sectionY);
+			if (blocks == null) {
+				return;
+			}
+			for (int y = 0; y < LayerSection.SIDE; y++) {
+				for (int z = 0; z < LayerSection.SIDE; z++) {
+					for (int x = 0; x < LayerSection.SIDE; x++) {
+						BlockState ghost = section.get(LayerSection.index(x, y, z));
+						if (!ghost.isAir() && FillRule.fills(blocks.get(x, y, z), ghost)) {
+							filled.computeIfAbsent(dimension, key -> new LongLinkedOpenHashSet()).add(BlockPos.asLong(
+								(chunkX << LayerSection.SHIFT) + x, (sectionY << LayerSection.SHIFT) + y,
+								(chunkZ << LayerSection.SHIFT) + z));
+						}
+					}
+				}
+			}
+		});
+	}
+
+	/**
+	 * At the end of the server tick: removes the ghost blocks noted since the last call that real blocks still fill, as
+	 * one edit for each dimension, split at the block cap. The edit belongs to no player, so no undo list gains a step,
+	 * and it goes to each watcher as an {@code applied} by {@link Payloads#FILLED_AUTHOR} with no client sequence.
+	 */
+	public void removeFilled() {
+		if (filled.isEmpty()) {
+			return;
+		}
+		filled.forEach((dimension, positions) -> {
+			Layer layer = layers.get(dimension);
+			List<LayerChange> removed = new ArrayList<>();
+			positions.forEach((long packed) -> {
+				BlockPos pos = BlockPos.of(packed);
+				if (builtOver(dimension, pos, layer.get(pos))) {
+					layer.set(pos, AIR);
+					removed.add(new LayerChange(pos, AIR));
+				}
+			});
+			for (int from = 0; from < removed.size(); from += maxEditBlocks) {
+				List<LayerChange> part = removed.subList(from, Math.min(removed.size(), from + maxEditBlocks));
+				broadcast(dimension, part, new Payloads.Applied(dimension, Payloads.FILLED_AUTHOR, Payloads.NO_CLIENT_SEQ,
+					part));
+			}
+		});
+		filled.clear();
+	}
+
+	/** Whether the server has the position's chunk loaded and its real block fills the ghost block. */
+	private boolean builtOver(Identifier dimension, BlockPos pos, BlockState ghost) {
+		if (ghost.isAir()) {
+			return false;
+		}
+		BlockState real = world.realBlock(dimension, pos);
+		return real != null && FillRule.fills(real, ghost);
+	}
+
 	private Optional<PlayerMessage> check(UUID player, Identifier dimension, List<LayerChange> changes) {
 		Optional<Place> place = world.place(player);
 		if (place.isEmpty() || !place.get().dimension().equals(dimension)) {
@@ -230,22 +338,30 @@ public final class LayerSync {
 		return Optional.empty();
 	}
 
-	/** Sets each block from its before-state to its after-state where the layer still holds the before-state. */
+	/**
+	 * Sets each block from its before-state to its after-state where the layer still holds the before-state, except
+	 * where a real block already fills the after-state. The notice counts the blocks left as they are, leaving out those
+	 * whose real block fills the before-state: built since, not changed by another player.
+	 */
 	private Step applyStep(UUID player, Step step) {
-		Layer layer = layers.computeIfAbsent(step.dimension(), key -> new Layer());
+		Identifier dimension = step.dimension();
+		Layer layer = layers.computeIfAbsent(dimension, key -> new Layer());
 		List<StepBlock> done = new ArrayList<>(step.blocks().size());
+		int left = 0;
 		for (StepBlock block : step.blocks()) {
-			if (layer.get(block.pos()) == block.before()) {
+			if (layer.get(block.pos()) != block.before()) {
+				if (!builtOver(dimension, block.pos(), block.before())) {
+					left++;
+				}
+			} else if (!builtOver(dimension, block.pos(), block.after())) {
 				layer.set(block.pos(), block.after());
 				done.add(block);
 			}
 		}
 		if (!done.isEmpty()) {
 			List<LayerChange> changes = done.stream().map(block -> new LayerChange(block.pos(), block.after())).toList();
-			broadcast(step.dimension(), changes, new Payloads.Applied(step.dimension(), player, Payloads.NO_CLIENT_SEQ,
-				changes));
+			broadcast(dimension, changes, new Payloads.Applied(dimension, player, Payloads.NO_CLIENT_SEQ, changes));
 		}
-		int left = step.blocks().size() - done.size();
 		if (left > 0) {
 			outbox.send(player, new Payloads.Notice(PlayerMessage.blocksLeftAsTheyAre(left)));
 		}

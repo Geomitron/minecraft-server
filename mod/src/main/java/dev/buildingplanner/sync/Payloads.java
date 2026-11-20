@@ -23,14 +23,16 @@ import net.minecraft.world.level.block.state.BlockState;
 
 /**
  * Building Planner's network payloads for the shared layer and the material lists, namespace {@code buildingplanner},
- * protocol version 4. Dimensions travel as their ids; block states as ids in the block-state registry and items as ids
+ * protocol version 5. Dimensions travel as their ids; block states as ids in the block-state registry and items as ids
  * in the item registry, since both sides run the same vanilla blocks and items.
  */
 public final class Payloads {
 	/** Raised whenever a payload's layout changes; a client that sees another version turns Building Planner off. */
-	public static final int PROTOCOL_VERSION = 4;
-	/** Marks an {@code applied} that answers no edit of the player's: an undo or a redo. */
+	public static final int PROTOCOL_VERSION = 5;
+	/** Marks an {@code applied} that answers no edit of the player's: an undo, a redo, or ghost blocks real ones filled. */
 	public static final int NO_CLIENT_SEQ = -1;
+	/** The author of an {@code applied} that removes ghost blocks real blocks filled, which games draw without a glow. */
+	public static final UUID FILLED_AUTHOR = new UUID(0L, 0L);
 	/** Room for {@link SyncLimits#WIRE_MAX_EDIT_BLOCKS} changes at their largest (a long and a three-byte id each). */
 	static final int MAX_EDIT_BYTES = SyncLimits.WIRE_MAX_EDIT_BLOCKS * 12 + 64 * 1024;
 	/** Room for 131,072 columns in one {@code watch} or {@code unwatch}, far more than the largest view distance loads. */
@@ -274,7 +276,7 @@ public final class Payloads {
 
 	/**
 	 * One edit as the server applied it, with the changes that changed a block, to every player who watches a column it
-	 * touches, its author included.
+	 * touches, its author included. Ghost blocks real blocks filled leave as an edit by {@link #FILLED_AUTHOR}.
 	 */
 	public record Applied(Identifier dimension, UUID author, int clientSeq, List<LayerChange> changes)
 		implements CustomPacketPayload {

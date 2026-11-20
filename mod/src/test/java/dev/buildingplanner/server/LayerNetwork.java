@@ -14,15 +14,19 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 
 /**
  * A server's {@link LayerSync} and simulated players' games joined by in-order queues, one each way per game, as one
@@ -40,6 +44,9 @@ final class LayerNetwork {
 	static final int MAX_EDIT_BLOCKS = 100;
 
 	final LayerSync server;
+	/** The real blocks that aren't air, in the overworld; every chunk is loaded unless {@link #unloaded} holds it. */
+	final Map<BlockPos, BlockState> real = new HashMap<>();
+	final Set<ChunkPos> unloaded = new HashSet<>();
 	private final Map<UUID, LayerSync.Place> places = new HashMap<>();
 	private final Map<UUID, Game> games = new LinkedHashMap<>();
 
@@ -68,7 +75,32 @@ final class LayerNetwork {
 			public boolean insideBorder(Identifier dimension, BlockPos pos) {
 				return Math.abs(pos.getX()) <= BORDER && Math.abs(pos.getZ()) <= BORDER;
 			}
+
+			@Override
+			public BlockState realBlock(Identifier dimension, BlockPos pos) {
+				if (unloaded.contains(new ChunkPos(pos.getX() >> 4, pos.getZ() >> 4))) {
+					return null;
+				}
+				return dimension.equals(OVERWORLD) ? real.getOrDefault(pos, Blocks.AIR.defaultBlockState())
+					: Blocks.AIR.defaultBlockState();
+			}
 		});
+	}
+
+	/** A real block changes in the overworld, which hook S1 reports. */
+	void build(BlockPos pos, BlockState state) {
+		if (state.isAir()) {
+			real.remove(pos);
+		} else {
+			real.put(pos, state);
+		}
+		server.realChanged(OVERWORLD, pos, state);
+	}
+
+	/** The server tick ends, removing the ghost blocks real ones filled; then every message is read. */
+	void endTick() {
+		server.removeFilled();
+		settle();
 	}
 
 	/** A player who joins in the overworld, standing in column 0, 0. */

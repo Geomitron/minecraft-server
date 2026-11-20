@@ -5,6 +5,9 @@
 	"plugin": "dev.buildingplanner.BuildingPlannerMixinPlugin",
 	"compatibilityLevel": "JAVA_25",
 	"mixins": [],
+	"server": [
+		"minecraft.LevelChunkMixin"
+	],
 	"client": [
 		"effortless.BlockPreviewRendererMixin",
 		"effortless.BuildModeEyeMixin",

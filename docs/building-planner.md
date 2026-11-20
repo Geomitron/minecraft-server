@@ -490,9 +490,10 @@ the server drops each position whose real block fills the new ghost block, where
 loaded the chunk, the ghost block goes when the chunk loads.
 
 Ghost blocks already filled, such as those built before 0.6.0, go as each chunk loads: on Fabric API's
-`ServerChunkEvents.CHUNK_LOAD`, and for the chunks already loaded when the server starts, the server compares the real
-blocks with the ghost blocks in that chunk's sections that hold ghost blocks, and removes the filled ones by the same
-edit as S1's. Players see ghost blocks only in chunks loaded around them, which the server has loaded first, so no
+`ServerChunkEvents.CHUNK_LOAD`, which also fires for the chunks the server loads as it starts (it reads the layer at
+`SERVER_STARTING`, before any level loads), the server compares the real blocks with the ghost blocks in that chunk's
+sections that hold ghost blocks, skipping a section of only air, and removes the filled ones at the end of the tick by
+the same edit as S1's. Players see ghost blocks only in chunks loaded around them, which the server has loaded first, so no
 player sees a filled ghost block. A section needs 4,096 comparisons, expected to take microseconds (not measured), and
 a chunk without ghost blocks costs one lookup.
 
@@ -1465,7 +1466,8 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   panel on with the new list. F1 hides it and shows it again. "Info HUD" turns it off.
 - The panel sits 4 from the screen's top and left edges, and each row shows the block's icon and its three counts.
   With the panel on and its box loaded, placing 2 of the missing oak planks as real blocks lowers "Need" ("Missing" on
-  the screen) by 2 within 2 seconds, on the panel and the screen, and taking them away raises it again.
+  the screen) by 2 within 2 seconds, on the panel and the screen. Taking them away lowers "All" by 2, since building
+  them removed their ghost blocks, and drawing the ghost blocks again raises "All" and "Need" back.
 - The panel's headings read "All", "Hold" and "Need". A list of 13 kinds of block, one all built, one covered by what
   Planner1 carries and the rest missing, shows its first rows in green, gold and red. With the mix panel on too, at 1920
   by 1080 (GUI scales 2 and 4) it shows 10 rows, then "+3 more". At 854 by 480 and GUI scale 2 it shows 9 rows, then
@@ -1576,6 +1578,34 @@ The self-check's unit tests (`ColumnCheckTest`) cover the comparisons as pure fu
 or erased, are ignored; a block lost or changed outside them, in the edit's section or another, is reported; Litematica
 missing a block or holding nothing is reported, and other placements' boxes are left out; and a column gets at most one
 warning a minute, with each of 300 columns keeping its own minute.
+
+`filled.sh`, ghost blocks the real world fills ("Ghost blocks the real world fills"), more than 16 blocks from the
+world's spawn, where Planner2, who isn't an operator, may build:
+
+- Real blocks placed by hand, by Planner1 and by Planner2 in Effortless Building's Disable mode, by `/fill`, by a piston
+  and by water flowing into ghost water remove their ghost blocks: a tick after the real block shows, first on the
+  client that learns of it from the server, then on the other, the ghost block is gone, and neither client shows a
+  glow. The ghost blocks beside them stay.
+- A stair placed facing the other way leaves its ghost block; one facing the same way, waterlogged, fills it.
+- Breaking filled blocks brings no ghost block back.
+- A paste onto built blocks (the driver's `pastehere`, which copies a box and pastes it where it was copied from)
+  changes nothing, with no glow.
+- Ghost blocks saved over matching real blocks while the server ran without the add-on are gone once their chunk
+  loads, and a ghost stair under a real stair facing the other way stays.
+- Neither client's log has a self-check warning, checked before the restarts and at the end.
+- Planner2 is shot at 854 by 480 and 1920 by 1080, GUI scale 2, looking at a ghost wall before and after real blocks
+  fill half of it.
+
+The fill rule's unit tests (`FillRuleTest`) cover each property it compares or ignores: a stair facing another way or
+upside down, a log on another axis, a door with the other hinge or its other half, a bed's other part, a button on
+another face, a sign turned another way and a hopper, piston, dripstone tip and crafter facing another way stay; a
+stair of another shape or waterlogged, a fence or wall with other connections, a waterlogged slab, a crop of another
+age, an open or powered door, an occupied bed, a lit furnace and an extended piston fill it; a top or double slab
+doesn't fill a bottom one; air fills nothing. `LayerFillTest` covers the end-of-tick edit (by the nil author with no
+client sequence, to every watcher, only for blocks still filled when the tick ends, split at the block cap), an edit's
+filter (positions a real block fills are dropped, unless the server hasn't loaded their chunk; a paste onto built blocks
+changes nothing and leaves no undo step), undo and redo skipping positions built since, the undo notice counting only
+blocks another player changed, and the check at chunk load reading only the sections that hold ghost blocks.
 
 The import's unit tests (`PlanImportTest`) build the layer from files the writers' own code makes: a `placements.json`
 from Syncmatica's `ServerPlacement.toJson`, with turned, mirrored and overlapping plans and one with a moved and turned

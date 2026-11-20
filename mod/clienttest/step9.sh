@@ -912,8 +912,8 @@ done
 check "the hover shots start no box" box_is "none SINGLE"
 drv 1 "window 854 480 2" "wait 20" > /dev/null
 
-# A row of 10 ghost oak planks, 6 of them built for real, with a row of 10 real stone blocks on each side of it. Both
-# players fly again, lifted first.
+# A row of 10 ghost oak planks, 6 of them built for real, which removes their ghost blocks, with a row of 10 real stone
+# blocks on each side of it. Both players fly again, lifted first.
 drv 1 "cmd tp @s 24.5 -51 -4.5 180 30" "cmd tp Planner2 24.5 -51 -3.5 180 30" "wait 40" "fly true" > /dev/null
 drv 2 "fly true" > /dev/null
 drv 1 "cmd tp @s 24.5 -56 -4.5 180 30" "edit 20 -60 -10 29 -60 -10 minecraft:oak_planks" \
@@ -990,7 +990,7 @@ check "the box opens Litematica's material list: 30 blocks in all, 4 planks miss
 check "ghost blocks still show" eval '[[ $(val 1 ghosts) == "shown, "* ]]'
 check "the box places and erases nothing, and ends, leaving the player's mode" eval '
 	[[ $(val 1 "real 26 -60 -10") == minecraft:air ]] && [[ $(val 1 "real 20 -59 -10") == minecraft:air ]] &&
-	[[ $(val 1 "layer 20 -60 -10") == minecraft:oak_planks ]] && box_is "none SINGLE"'
+	[[ $(val 1 "layer 26 -60 -10") == minecraft:oak_planks ]] && box_is "none SINGLE"'
 check "and leaves the copy put away" copy_is 1 "^away .* 10 blocks$"
 for scale in 2 4; do
 	drv 1 "window 1920 1080 $scale" "wait 20" "notoasts" "shot material-list-1920x1080-gui$scale" > /dev/null
@@ -1216,14 +1216,18 @@ check "F1 hides the panel" eval '[[ $(val 1 matpanel) == hidden ]]'
 press 1 F1
 check "and shows it again" panel_is 1 "$panel_head | minecraft:oak_planks 10 3 4 red"
 # The recount: 2 of the missing planks built for real lower "Missing" by 2 within 2 seconds, on the panel and the
-# screen; taking them away again brings it back.
+# screen; taking them away again lowers "Total" by 2, since building them removed their ghost blocks, and drawing the
+# ghost blocks again brings both back.
 drv 1 "cmd fill 26 -60 -10 27 -60 -10 minecraft:oak_planks" "await real 27 -60 -10 minecraft:oak_planks" > /dev/null
 check "with its box loaded, 2 of the missing planks built lower Missing by 2 within 2 seconds" \
 	panel_is 1 "$panel_head | minecraft:oak_planks 10 3 2 gold" 45
 reopen
 check "on the screen too" eval '[[ $(val 1 matlist) == *" | minecraft:oak_planks 10/2" ]]'
 drv 1 "close" "cmd fill 26 -60 -10 27 -60 -10 minecraft:air" "await real 27 -60 -10 minecraft:air" > /dev/null
-check "and taken away, they're missing again" panel_is 1 "$panel_head | minecraft:oak_planks 10 3 4 red" 45
+check "and taken away, they leave the list, their ghost blocks gone" \
+	panel_is 1 "$panel_head | minecraft:oak_planks 8 3 2 gold" 45
+drv 1 "edit 26 -60 -10 27 -60 -10 minecraft:oak_planks" > /dev/null
+check "drawn again as ghost blocks, they're missing again" panel_is 1 "$panel_head | minecraft:oak_planks 10 3 4 red" 45
 drv 1 "cmd clear @s minecraft:oak_planks" > /dev/null
 
 # Shots of the panel, with the mix panel on too (a mix of stone bricks, held), for a list of 13 kinds of block: 10 rows, then "+3 more". Each kind
@@ -1451,8 +1455,10 @@ mat_click "Refresh"
 check "Refresh replaces Last counted, with the panel on: the game's index and the server's file have this list" eval \
 	'drv 1 "wait 10" "await listfile $lists_file" > /dev/null &&
 	[[ $(val 1 listindex) == "last counted 10x2x3 | Row 10x2x1 | Planks 10x2x3" ]]'
-drv 1 "close" "cmd fill 26 -60 -10 27 -60 -10 minecraft:air" "await real 27 -60 -10 minecraft:air" "wait 5" > /dev/null
-# A new box, around the row alone, replaces it again, and Planks is opened again for the restarts below.
+drv 1 "close" "cmd fill 26 -60 -10 27 -60 -10 minecraft:air" "await real 27 -60 -10 minecraft:air" \
+	"edit 26 -60 -10 27 -60 -10 minecraft:oak_planks" "await block 27 -60 -10 minecraft:oak_planks" "wait 5" > /dev/null
+# The 2 planks are taken away and drawn again as ghost blocks. A new box, around the row alone, replaces it again, and
+# Planks is opened again for the restarts below.
 radial_open
 radial_point "Material list"
 radial_let_go

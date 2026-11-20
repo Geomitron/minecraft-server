@@ -238,15 +238,15 @@ final class ClientSession {
 	}
 
 	/**
-	 * An edit the server applied: into the copy and the tiles, glowing when someone else made it, while ghost blocks
-	 * show.
+	 * An edit the server applied: into the copy and the tiles, glowing when another player made it, while ghost blocks
+	 * show. Ghost blocks real blocks filled go without a glow.
 	 */
 	void receive(Payloads.Applied applied) {
 		List<LayerChange> changes = replica.receive(applied);
 		raiseCopy();
 		Minecraft minecraft = Minecraft.getInstance();
 		if (!changes.isEmpty() && tiles.shown() && minecraft.player != null
-			&& !applied.author().equals(minecraft.player.getUUID())) {
+			&& !applied.author().equals(minecraft.player.getUUID()) && !applied.author().equals(Payloads.FILLED_AUTHOR)) {
 			glow.add(changes.stream().map(LayerChange::pos).toList(), applied.author());
 		}
 	}
