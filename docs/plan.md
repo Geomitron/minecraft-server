@@ -348,6 +348,8 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
     A removed ghost block doesn't come back if the real block is broken later.
   - **Overlapping shapes (811):** where a new shape covers older ghost blocks, the new shape's blocks stay (Q4 A).
     Geo saw most or all of the older shape disappear (Q1 C), which that rule doesn't explain: a bug still to find.
+    Both shapes were drawn in the same session, often floors about 20 blocks long, and Geo thinks the older shape came
+    back once the new one was removed (811 revision 2).
   - **Settled by the agent:** editing in Freecam aims from the camera whenever Freecam's camera is on, since Geo asked
     to edit ghost blocks there "like I would as the player"; ghost blocks filled before 0.6.0 are found as each chunk
     loads; a filled ghost block goes without a glow, since Litematica already draws it as nothing.
