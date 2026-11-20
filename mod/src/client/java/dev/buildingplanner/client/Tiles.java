@@ -26,7 +26,8 @@ import net.minecraft.world.level.block.state.BlockState;
  * draw, so a tile's empty space never hides the copy's blocks. Tiles aren't saved and have no file.
  *
  * <p>Litematica rebuilds what it draws one chunk column at a time, so an edit writes its blocks into the tile and
- * rebuilds only that column. An edit that needs another height, or empties the column, replaces or removes the tile.
+ * rebuilds only that column. An edit that needs another height, or empties the column, replaces or removes the tile;
+ * a replaced tile goes only after its replacement is in.
  *
  * <p>While the player hides ghost blocks, the tiles stay up to date but out of Litematica, so showing them needs no
  * reload.
@@ -76,11 +77,12 @@ final class Tiles implements LayerReplica.Listener {
 			}
 			return;
 		}
-		if (tile != null) {
-			remove(key);
-		}
+		Tile replaced = tile;
 		tile = create(chunkX, chunkZ, column, lowest, highest);
 		if (tile == null) {
+			if (replaced != null) {
+				remove(key);
+			}
 			return;
 		}
 		// Known as a tile before Litematica sees it, which selects a new placement when none is selected (hook L4).
@@ -94,6 +96,15 @@ final class Tiles implements LayerReplica.Listener {
 			// Setting the placement up registers its chunks with Litematica (SchematicPlacement.onModified calls
 			// onPostPlacementChange), which draws it though it was never added; removing it releases them.
 			manager().removeSchematicPlacement(tile.placement());
+		}
+		// The old tile goes only once the new one is in, so the column always has a placement: removing a column's
+		// last placement makes Litematica unload it, dropping every rebuild queued for it.
+		if (replaced != null) {
+			if (shown) {
+				manager().removeSchematicPlacement(replaced.placement());
+			}
+			parts.remove(replaced.placement());
+			parts.remove(replaced.container());
 		}
 	}
 
