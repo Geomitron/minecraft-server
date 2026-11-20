@@ -520,6 +520,31 @@ public final class Driver implements ClientModInitializer {
 				// screenclass: the class of the screen open now, or none.
 				return screenClass();
 			}
+			case "freecam" -> {
+				// freecam <true|false>: Freecam's camera on or off, as its key switches it; its state after.
+				return FreecamProbe.set(Boolean.parseBoolean(a[1]));
+			}
+			case "playercontrol" -> {
+				// playercontrol <true|false>: Freecam's "Player control" on or off; its state after.
+				return FreecamProbe.setPlayerControl(Boolean.parseBoolean(a[1]));
+			}
+			case "allowinteraction" -> {
+				// allowinteraction: whether Freecam's "Allow interaction" option is on.
+				return FreecamProbe.allowInteraction();
+			}
+			case "camera" -> {
+				// camera: the game's camera entity's class, eye position and facing.
+				return FreecamProbe.camera();
+			}
+			case "camtp" -> {
+				// camtp x y z yaw pitch: the camera entity's eyes to that point, turned that way.
+				return FreecamProbe.moveCamera(Double.parseDouble(a[1]), Double.parseDouble(a[2]),
+					Double.parseDouble(a[3]), Float.parseFloat(a[4]), Float.parseFloat(a[5]));
+			}
+			case "camlookat" -> {
+				// camlookat x y z: turns the camera entity to look at that point, which may be fractional.
+				return FreecamProbe.lookAt(Double.parseDouble(a[1]), Double.parseDouble(a[2]), Double.parseDouble(a[3]));
+			}
 			case "shotdiff" -> {
 				// shotdiff <shot> <shot>: how many pixels of the two screenshots' upper 6 tenths (the view, not the chat
 				// and the lines of text below it) differ by more than a little.

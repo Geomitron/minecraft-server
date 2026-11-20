@@ -1,6 +1,7 @@
 # Step 10's in-game checks: hold to repeat in Effortless Building's Single mode, with the radial menu's speed sliders,
-# and the look Building Planner sets for Litematica's ghost blocks once. Sourced by inside.sh, which provides drv, val,
-# check, keys, xdo, start_client, stop_client and stop_server. Each client starts with a fresh game folder, so its first start is the first start.
+# editing from Freecam's camera, and the look Building Planner sets for Litematica's ghost blocks once. Sourced by
+# inside.sh, which provides drv, val, check, keys, xdo, use_click, attack_click, client_said, start_client, stop_client
+# and stop_server. Each client starts with a fresh game folder, so its first start is the first start.
 
 # The look, on a first start: both of Litematica's look options are set and its tool item and its drawing of area
 # selections turned off, saved to its config, and recorded. Each client also saved a first start before it joined the
@@ -261,6 +262,161 @@ xdo 1 keyup Alt_L
 # The chat, full of the checks' teleports, fades over 10 seconds first.
 drv 1 "wait 220" "notoasts" "wait 5" "shot modifiers" "close" "await noscreen" > /dev/null
 drv 1 "ebmode DISABLED" > /dev/null
+
+# Editing from Freecam: with Freecam's camera on, 10 blocks north of Planner1 and with its "Allow interaction" off, as
+# by default, shapes, boxes and the copy aim from the camera. Planner1 stands at 70.5 -60 40.5 facing east and looking
+# up at the sky, so their own aim meets no block; the camera's eyes are at 70.5 -56.5 30.5, and it looks north and down
+# at the grass, whose top is at y -60 here.
+# cam <x y z>: the camera looks at that point, as a mouse move would. cam_shot <name>: shoots the camera's view at
+# 854 by 480 and at 1920 by 1080, both at GUI scale 2, as <name>-854x480 and <name>-1920x1080, once the chat has faded.
+# Each point the camera aims at is chosen so its line of sight passes no ghost block on the way.
+cam() {
+	drv 1 "camlookat $1 $2 $3" "wait 5" > /dev/null
+}
+# state_has <client> <x y z> <text>: the state Litematica shows there contains the text.
+state_has() {
+	[[ $(val "$1" "state $2") == *"$3"* ]]
+}
+cam_shot() {
+	drv 1 "wait 210" "notoasts" "wait 5" "shot $1-854x480" "window 1920 1080 2" "wait 20" "notoasts" \
+		"shot $1-1920x1080" "window 854 480 2" "wait 20" > /dev/null
+}
+drv 1 "cmd tp @s 70.5 -60 40.5 -90 -60" "cmd tp Planner2 60.5 -60 45.5 180 10" "cmd clear @s" \
+	"cmd item replace entity @s weapon.mainhand with minecraft:stone_bricks" "ebmode SINGLE" "ebarray 0" "wait 40" \
+	> /dev/null
+check "Freecam's camera comes on" eval '[[ $(val 1 "freecam true") == true ]] && drv 1 "wait 10" > /dev/null &&
+	[[ $(val 1 "camtp 70.5 -56.5 30.5 180 30") == "FreeCamera 70.5,-56.5,30.5 north" ]]'
+check "with its \"Allow interaction\" off, as by default" eval '[[ $(val 1 allowinteraction) == false ]]'
+
+# A Single shape goes where the camera aims, on client 1 and client 2, as a ghost block alone.
+cam 70.5 -60 25.5
+drv 1 "holdreset" > /dev/null
+use_click 1
+check "from Freecam's camera, a Single shape goes where the camera aims" drv 1 \
+	"await block 70 -60 25 minecraft:stone_bricks"
+check "for the other player too" drv 2 "await block 70 -60 25 minecraft:stone_bricks"
+check "placing no real block" eval '[[ $(val 1 "real 70 -60 25") == minecraft:air ]]'
+
+# A Line shape: the first click at 66 -60 24, the second at 74 -60 24, its line of sight from the camera. The preview
+# is shot between the clicks.
+drv 1 "ebmode LINE" > /dev/null
+cam 66.5 -60 24.5
+use_click 1
+cam 74.5 -60 24.5
+cam_shot freecam-preview
+use_click 1
+check "a Line shape goes where the camera aims, from its first click to its second" eval \
+	'drv 1 "await block 74 -60 24 minecraft:stone_bricks" > /dev/null &&
+	 [[ $(val 1 "countblocks 60 80 -60 24 minecraft:stone_bricks") == 9 ]] &&
+	 [[ $(val 1 "get 66 -60 24") == minecraft:stone_bricks ]]'
+
+# A stair drawn with the camera facing north faces north, though Planner1 faces east.
+drv 1 "ebmode SINGLE" "cmd item replace entity @s weapon.mainhand with minecraft:oak_stairs" "wait 5" > /dev/null
+cam 70.5 -60 27.5
+use_click 1
+check "a stair drawn with the camera facing north faces north" eval \
+	'drv 1 "await block 70 -60 27 minecraft:oak_stairs" > /dev/null && state_has 1 "70 -60 27" "facing=north"'
+
+# The break click erases the ghost block the camera aims at, leaving the real grass under it.
+drv 1 "cmd item replace entity @s weapon.mainhand with minecraft:stone_bricks" "wait 5" > /dev/null
+cam 70.5 -59 25.5
+attack_click 1
+check "the break click erases the ghost block where the camera aims" drv 1 "await block 70 -60 25 minecraft:air"
+check "leaving the real block under it" eval '[[ $(val 1 "real 70 -61 25") =~ ^minecraft:(grass_block|dirt)$ ]]'
+
+# A box for Copy around the line, drawn with the camera's aim and three left clicks, which Freecam would otherwise
+# cancel, and the copy at the camera's aim. copy_button: a click on the radial menu's Copy button.
+copy_button() {
+	xdo 1 keydown Alt_L
+	drv 1 "await screen Build Modes" "wait 10" > /dev/null
+	radial_button "Copy"
+	xdo 1 click 1
+	drv 1 "wait 5" > /dev/null
+	xdo 1 keyup Alt_L
+	drv 1 "await noscreen" "wait 5" > /dev/null
+}
+# radial_button <name>: puts the pointer on the open radial menu's button of that name.
+radial_button() {
+	local x y
+	read -r x y < <(val 1 "widget 0 $1")
+	xdo 1 mousemove --window %w "$x" "$y"
+	drv 1 "wait 5" > /dev/null
+}
+copy_button
+cam 64.5 -60 23.5
+check "with Freecam's camera on, a box for Copy starts at the camera's aim" eval \
+	'[[ $(val 1 drawbox) == "COPY 0 64,-60,23..64,-60,23 white SINGLE" ]]'
+attack_click 1
+cam 68.5 -60 24.5
+check "the first left click sets its first corner, and the box follows the camera's aim" eval \
+	'[[ $(val 1 drawbox) == "COPY 1 64,-60,23..68,-60,24 white SINGLE" ]]'
+cam 75.5 -60 24.5
+cam_shot freecam-box
+attack_click 1
+cam 75.5 -59.5 24.5
+check "the second sets the opposite corner, and the height follows the camera's aim" eval \
+	'[[ $(val 1 drawbox) == "COPY 2 64,-60,23..75,-60,24 white SINGLE" ]]'
+attack_click 1
+check "the third copies the line's 9 ghost blocks" client_said 1 "Copied 9 blocks."
+cam 60.5 -60 22.5
+check "the copy goes where the camera aims" drv 1 "await copy origin 60,-60,22 NONE NONE unselected 9 blocks"
+cam 63.5 -60 21.5
+check "and follows the camera's aim" drv 1 "await copy origin 63,-60,21 NONE NONE"
+cam_shot freecam-copy
+# The camera faces north and Planner1 east: a middle click mirrors it left to right for the camera's facing.
+xdo 1 click 2
+check "a middle click mirrors the copy by the camera's facing" drv 1 "await copy origin 63,-60,21 FRONT_BACK NONE"
+use_click 1
+check "a right click puts the copy away" eval 'drv 1 "wait 10" > /dev/null && [[ $(val 1 copy) == "away "* ]]'
+
+# The radial menu and N work as without Freecam: letting the menu's key go over its show or hide button hides ghost
+# blocks, and N shows them again.
+xdo 1 keydown Alt_L
+check "the radial menu opens with Freecam's camera on" drv 1 "await screen Build Modes"
+drv 1 "wait 10" > /dev/null
+radial_button "Show or hide ghost blocks"
+xdo 1 keyup Alt_L
+check "and its show or hide button hides ghost blocks" eval 'drv 1 "await noscreen" "wait 5" > /dev/null &&
+	[[ $(val 1 ghosts) == "hidden, "* ]]'
+drv 1 "close" "wait 5" > /dev/null
+before=$(val 1 presses)
+keys 1 key n
+check "N shows them again" eval 'drv 1 "await pressedafter '"$before"'" "wait 2" > /dev/null &&
+	[[ $(val 1 ghosts) == "shown, "* ]]'
+
+# The block mix: a Line shape of 12 blocks along z 20, from the camera, takes its blocks from the mix. Ctrl+Z undoes it,
+# and Ctrl+Y redoes it.
+mixed() {
+	echo $(($(val 1 "countblocks 60 80 -60 20 minecraft:stone_bricks") +
+		$(val 1 "countblocks 60 80 -60 20 minecraft:mossy_stone_bricks")))
+}
+drv 1 "setmix minecraft:stone_bricks:50,minecraft:mossy_stone_bricks:50" "ebmode LINE" > /dev/null
+cam 66.5 -60 20.5
+use_click 1
+cam 77.5 -60 20.5
+use_click 1
+check "with the block mix on, a Line shape from the camera takes the mix's blocks" eval \
+	'drv 1 "await block 77 -60 20 minecraft:stone_bricks|minecraft:mossy_stone_bricks" > /dev/null &&
+	 [[ $(mixed) == 12 ]] && (($(val 1 "countblocks 60 80 -60 20 minecraft:mossy_stone_bricks") > 0)) &&
+	 (($(val 1 "countblocks 60 80 -60 20 minecraft:stone_bricks") > 0))'
+keys 1 keydown ctrl key z sleep 0.3 keyup ctrl
+check "Ctrl+Z undoes it" eval 'drv 1 "await block 77 -60 20 minecraft:air" > /dev/null && [[ $(mixed) == 0 ]]'
+keys 1 keydown ctrl key y sleep 0.3 keyup ctrl
+check "Ctrl+Y redoes it" eval \
+	'drv 1 "await block 77 -60 20 minecraft:stone_bricks|minecraft:mossy_stone_bricks" > /dev/null && [[ $(mixed) == 12 ]]'
+drv 1 "setmix" "ebmode SINGLE" > /dev/null
+
+# A left click with a stick, which places no block, aimed by the camera at a real stone, stays Freecam's: with
+# "Allow interaction" off, it breaks nothing.
+drv 1 "cmd setblock 72 -60 28 minecraft:stone" "cmd item replace entity @s weapon.mainhand with minecraft:stick" \
+	"wait 10" > /dev/null
+cam 72.5 -59 28.5
+attack_click 1
+check "a left click with a stick from Freecam's camera breaks no real block" eval \
+	'drv 1 "wait 20" > /dev/null && [[ $(val 1 "real 72 -60 28") == minecraft:stone ]]'
+check "Freecam's camera goes off" eval '[[ $(val 1 "freecam false") == false ]] && drv 1 "wait 10" > /dev/null &&
+	[[ $(val 1 camera) == LocalPlayer* ]]'
+drv 1 "cmd clear @s" "ebmode DISABLED" > /dev/null
 
 # The look, after the player's own change: translucent off and alpha 0.3, and the drawing of area selections turned
 # back on, saved; a restart keeps all three.

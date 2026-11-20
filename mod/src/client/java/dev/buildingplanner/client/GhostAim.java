@@ -3,7 +3,7 @@ package dev.buildingplanner.client;
 import dev.buildingplanner.layer.Layer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.LevelHeightAccessor;
@@ -22,7 +22,7 @@ import net.minecraft.world.phys.Vec3;
  * show.
  */
 final class GhostAim {
-	/** How far the copy follows the player's aim. */
+	/** How far the copy follows the player's aim, from the camera while Freecam's is on. */
 	static final double COPY_REACH = 64;
 
 	private GhostAim() {
@@ -59,19 +59,19 @@ final class GhostAim {
 	}
 
 	/**
-	 * The block the player aims at within {@code reach} of their eyes, the nearer of a real block and a ghost block, with
+	 * The block the player aims at within {@code reach} of the eyes they aim from ({@link Aim}), the nearer of a real block and a ghost block, with
 	 * the face aimed at; null when they aim at nothing.
 	 */
 	static BlockHitResult aim(Layer layer, boolean shown, double reach) {
 		Minecraft mc = Minecraft.getInstance();
-		Player player = mc.player;
-		if (player == null || mc.level == null) {
+		Entity from = Aim.entity();
+		if (from == null || mc.level == null) {
 			return null;
 		}
-		Vec3 from = player.getEyePosition();
-		ClipContext context = new ClipContext(from, from.add(player.getLookAngle().scale(reach)),
-			ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player);
-		BlockHitResult hit = nearer(mc.level.clip(context), ghostHit(layer, shown, mc.level, context), from);
+		Vec3 eye = from.getEyePosition();
+		ClipContext context = new ClipContext(eye, eye.add(from.getLookAngle().scale(reach)),
+			ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, mc.player);
+		BlockHitResult hit = nearer(mc.level.clip(context), ghostHit(layer, shown, mc.level, context), eye);
 		return hit != null && hit.getType() == HitResult.Type.BLOCK ? hit : null;
 	}
 

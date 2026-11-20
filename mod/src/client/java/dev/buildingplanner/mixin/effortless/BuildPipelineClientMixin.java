@@ -6,6 +6,7 @@ import com.llamalad7.mixinextras.injector.v2.WrapWithCondition;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
+import dev.buildingplanner.client.Aim;
 import dev.buildingplanner.client.BuildingPlannerClient;
 import dev.buildingplanner.client.ClickRule;
 import dev.buildingplanner.client.EffortlessShapes;
@@ -13,12 +14,14 @@ import java.util.Collection;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 import nl.requios.effortlessbuilding.buildpipeline.BuildPipelineClient;
 import nl.requios.effortlessbuilding.network.BreakBuildModePacket;
 import nl.requios.effortlessbuilding.network.PlaceBuildModePacket;
@@ -32,7 +35,8 @@ import org.spongepowered.asm.mixin.injection.At;
  * Effortless Building's client pipeline, on a server with Building Planner: a finished shape goes into the layer
  * instead of to the server as real blocks (hooks E1 to E3), the mix starts shapes (E6), the preview has no "missing
  * items" tint and a break shape no list of real blocks (E8), shapes can start on ghost blocks (E9), and clicks without
- * a placeable item stay vanilla's and a mouse mode's go to it (E14).
+ * a placeable item stay vanilla's and a mouse mode's go to it (E14). A shape's first click and its preview aim from
+ * Freecam's camera while it's on (E24).
  */
 @Mixin(value = BuildPipelineClient.class, remap = false)
 abstract class BuildPipelineClientMixin {
@@ -143,5 +147,21 @@ abstract class BuildPipelineClientMixin {
 	private static BlockState buildingplanner$startOnGhosts(Level level, BlockPos pos, Operation<BlockState> original) {
 		BlockState real = original.call(level, pos);
 		return BuildingPlannerClient.active() ? EffortlessShapes.startBlock(level, pos, real) : real;
+	}
+
+	/** Hook E24: a shape's first click and its preview aim from the camera while Freecam's is on ({@link Aim}). */
+	@WrapOperation(method = {"handleClick", "getPreviewBlocks"}, at = @At(value = "INVOKE",
+		target = "Lnet/minecraft/world/entity/player/Player;getEyePosition()Lnet/minecraft/world/phys/Vec3;"), require = 2)
+	private static Vec3 buildingplanner$eyeAtAim(Player player, Operation<Vec3> original) {
+		Entity aim = Aim.forEffortless(player);
+		return aim == player ? original.call(player) : aim.getEyePosition();
+	}
+
+	/** Hook E24, for the look. */
+	@WrapOperation(method = {"handleClick", "getPreviewBlocks"}, at = @At(value = "INVOKE",
+		target = "Lnet/minecraft/world/entity/player/Player;getLookAngle()Lnet/minecraft/world/phys/Vec3;"), require = 2)
+	private static Vec3 buildingplanner$lookAtAim(Player player, Operation<Vec3> original) {
+		Entity aim = Aim.forEffortless(player);
+		return aim == player ? original.call(player) : aim.getLookAngle();
 	}
 }

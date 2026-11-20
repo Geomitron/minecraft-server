@@ -31,6 +31,7 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
@@ -421,17 +422,18 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	}
 
 	/**
-	 * Hook M4: the middle click mirrors the copy at the aim left to right for the way the player faces, and does nothing
-	 * while a box is drawn; returns whether the game's pick block is skipped.
+	 * Hook M4: the middle click mirrors the copy at the aim left to right for the way the player faces, or the camera
+	 * while Freecam's is on ({@link Aim}), and does nothing while a box is drawn; returns whether the game's pick block
+	 * is skipped.
 	 */
 	public static boolean middleClick() {
-		Minecraft mc = Minecraft.getInstance();
 		MouseMode mode = mouseMode();
-		if (mode == null || mc.player == null) {
+		Entity aimer = Aim.entity();
+		if (mode == null || aimer == null) {
 			return false;
 		}
 		if (mode == MouseMode.COPY_AT_AIM) {
-			session.mirrorCopy(mc.player.getDirection());
+			session.mirrorCopy(aimer.getDirection());
 		}
 		return true;
 	}

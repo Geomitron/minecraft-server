@@ -7,6 +7,7 @@
 	"mixins": [],
 	"client": [
 		"effortless.BlockPreviewRendererMixin",
+		"effortless.BuildModeEyeMixin",
 		"effortless.BuildModesMixin",
 		"effortless.BuildPipelineClientMixin",
 		"effortless.BuildPipelineMixin",
@@ -26,6 +27,7 @@
 		"litematica.SchematicUtilsMixin",
 		"litematica.WidgetListSchematicPlacementsMixin",
 		"minecraft.MinecraftMouseModeMixin",
+		"minecraft.MinecraftUseItemMixin",
 		"minecraft.MouseHandlerMixin"
 	],
 	"injectors": {

@@ -1254,24 +1254,29 @@ Freecam 1.5.1 moves the camera as an entity of its own (`FreeCamera`, a client-s
 the game's camera entity (`Minecraft.setCameraEntity`), and leaves the player standing where they were. Building
 Planner's aim (`Aim`) is the eye position and look direction of the camera entity (`Minecraft.getCameraEntity()`),
 which is the player whenever Freecam's camera is off, so nothing changes then. While Freecam's "Player control" is on,
-which moves the player and keeps the camera still, the aim is the player's. `GhostAim`, `BoxDraw`, the copy's aim and
-mirror, and E1's block states (each placed with a `BlockPlaceContext` for the camera entity) read it. Reaches count
+which moves the player and keeps the camera still, the aim is the player's; `Aim` reads that option from Freecam's
+`Freecam.isPlayerControlEnabled()` by reflection, since Building Planner never compiles against Freecam, and the rule
+itself is `AimSource`. `GhostAim`, `BoxDraw`, the copy's aim and mirror, and E1's block states (each placed with a
+`BlockPlaceContext` for the camera entity) read it. Reaches count
 from the camera: 256 for a box's corner, 64 for the copy, and Effortless Building's own for shapes. Freecam loads no
 chunks, so ghost blocks, boxes and edits reach only the chunks the game has loaded around the player: a box that
 touches an unloaded chunk draws red, and the server refuses a shape outside them with its usual message. The server checks no
 reach, so it needs no change.
 
-Effortless Building 4.3 aims from the player in each of these places, and hooks E24 to E26 give it the aim instead:
+Effortless Building 4.3 aims from the player in each of these places, and hooks E24 to E26 give it the aim instead,
+while Building Planner has a session and the player asked about is the one at this computer:
 
 | # | File, method | Hook | Purpose |
 |---|---|---|---|
-| E24 | `buildpipeline/BuildPipelineClient.java`, `handleClick` and `getPreviewBlocks`; `render/BlockPreviewRenderer.java`, `render` | `@WrapOperation` on `Entity.getEyePosition()` and `getLookAngle()` | A shape's first click, its preview, and the preview's first block aim from the camera. |
-| E25 | `buildpipeline/BuildPipeline.java`, `getPlayerLookVec` | `@WrapOperation` on `Entity.getLookAngle()` | The modes' later clicks follow the camera's look. |
+| E24 | `buildpipeline/BuildPipelineClient.java`, `handleClick` and `getPreviewBlocks`; `render/BlockPreviewRenderer.java`, `getPlacementState(BlockItem, Minecraft, ItemStack)` | `@WrapOperation` on `Player.getEyePosition()` and `getLookAngle()`; in `getPlacementState`, also `@ModifyArg` on the player of the `OpenBlockPlaceContext` it builds | A shape's first click, its preview, and the preview's first block aim from the camera, and that block faces as E1's would. |
+| E25 | `buildpipeline/BuildPipeline.java`, `getPlayerLookVec` | `@WrapOperation` on `Player.getLookAngle()` | The modes' later clicks follow the camera's look. |
 | E26 | `buildmode/buildmodes/Floor.java` `findFloor`, `Line.java`, `Wall.java`; `buildmode/ThreeClicksBuildMode.java` `findHeight` | `@ModifyExpressionValue` on the `new Vec3` each builds from the player's position and eye height | The later clicks' lines of sight start at the camera. |
 
 Freecam's own hooks cancel `Minecraft.startAttack`, `continueAttack` and `pickBlockOrEntity` at their head while its
 "Allow interaction" is off (`MinecraftMixin`), the methods where hooks M1, M3 and M4 work the box and the copy, so M1,
-M3 and M4 have a priority that runs them first. Effortless Building's shapes start from its own client tick, which
+M3 and M4 (`MinecraftMouseModeMixin`) have priority 900, below Freecam's default 1000: a mixin of lower priority is
+applied first, and its hooks at a method's head run first. M2 is in a mixin of its own (`MinecraftUseItemMixin`) at the
+default, since Freecam doesn't cancel `startUseItem`. Effortless Building's shapes start from its own client tick, which
 reads the keys, so Freecam's cancelling doesn't stop them.
 
 ### Litematica's area selection
@@ -1501,7 +1506,7 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   works as without the add-on, and the material list panel doesn't show; with Building Planner back, the panel shows
   again with the same list.
 
-`step10.sh`, hold to repeat and the settings Building Planner changes once, with Freecam 1.5.1 (Modrinth version
+`step10.sh`, hold to repeat, editing from Freecam and the settings Building Planner changes once, with Freecam 1.5.1 (Modrinth version
 `lwrkvqym`, the pack's) on both clients. The driver counts the ticks each mouse button was down and
 notes the client tick of each edit the client sends (a mixin in the `clienttest` source set), and the script holds the
 real buttons with xdotool while Planner1 is teleported one block every two ticks along a row, looking straight down:
@@ -1521,6 +1526,17 @@ real buttons with xdotool while Planner1 is teleported one block every two ticks
   holding either sends its first repeat 4 ticks after the button goes down and then one every tick.
 - The radial menu's wrench button opens Effortless Building's Modifiers screen.
 - Holding use in Line mode (which needs two clicks) and with the mode disabled sends no edit.
+- Editing from Freecam: the driver switches Freecam's camera on (`Freecam.toggle`, as its key does), puts its eyes 10
+  blocks north of Planner1, who faces east looking up at the sky, and turns it as a mouse move would (`camlookat`);
+  Freecam's "Allow interaction" is off, as by default. A Single shape goes where the camera aims, on both clients, with
+  no real block; a Line shape goes from the camera's first click to its second; a stair drawn with the camera facing
+  north faces north; the break click erases the ghost block the camera aims at and leaves the real block under it. A
+  box for Copy starts at the camera's aim, follows it after the first and second left clicks, and the third copies its
+  ghost blocks; the copy goes to the camera's aim and follows it, and a middle click mirrors it by the camera's facing
+  (`FRONT_BACK`, where Planner1's east would give `LEFT_RIGHT`). The radial menu opens and its show or hide button
+  hides ghost blocks, N shows them again, a Line shape with the block mix on takes the mix's blocks, and Ctrl+Z and
+  Ctrl+Y undo and redo it. A left click with a stick aimed at a real stone breaks nothing. A shape's preview, a box and
+  the copy are shot from the camera at 854 by 480 and 1920 by 1080, GUI scale 2.
 - Each client's first start leaves Litematica's options at on and 0.8 (and the tool item and the drawing of area
   selections off), Freecam's "Config GUI" key at M and Litematica's `openGuiMainMenu` with no key, saved in
   Litematica's config and Minecraft's `options.txt`, and the three records in Building Planner's client config.

@@ -7,8 +7,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientChunkCache;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 
@@ -90,19 +90,19 @@ final class BoxDraw {
 	}
 
 	/**
-	 * Follows the aim: the box from the corners set so far to the next corner the player aims at, aiming at ghost blocks
+	 * Follows the aim: the box from the corners set so far to the next corner the player aims at ({@link Aim}), aiming at ghost blocks
 	 * in {@code layer} while they're {@code ghostsShown}. Runs once a client tick and before each left click.
 	 */
 	void update(Layer layer, boolean ghostsShown) {
 		Minecraft mc = Minecraft.getInstance();
-		Player player = mc.player;
+		Entity aimer = Aim.entity();
 		ClientLevel level = mc.level;
-		if (purpose == null || player == null || level == null) {
+		if (purpose == null || aimer == null || level == null) {
 			shown = null;
 			return;
 		}
-		Vec3 eye = player.getEyePosition();
-		Vec3 look = player.getLookAngle();
+		Vec3 eye = aimer.getEyePosition();
+		Vec3 look = aimer.getLookAngle();
 		BlockPos from;
 		BlockPos to;
 		if (first == null) {

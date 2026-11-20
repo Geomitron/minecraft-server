@@ -53,12 +53,14 @@ public final class EffortlessShapes {
 
 	/**
 	 * Hook E1: the player finished a shape with the place click. Each valid entry gets the block Effortless Building
-	 * would place: the mix's (set by hook E5) or the held block, by its placement rules with the first click's face,
-	 * then the shape's mirror and turn.
+	 * would place: the mix's (set by hook E5) or the held block, by its placement rules with the first click's face and
+	 * the facing of the player at the aim (Freecam's camera while it's on, see {@link Aim}), then the shape's mirror and
+	 * turn.
 	 */
 	public static void place(BlockSet blocks) {
 		Minecraft mc = Minecraft.getInstance();
 		Player player = mc.player;
+		Player placer = Aim.placer();
 		BlockHitResult first = BuildPipelineClient.getFirstClickHit();
 		Direction face = first != null ? first.getDirection() : Direction.UP;
 		Vec3 hit = first != null ? first.getLocation() : Vec3.atCenterOf(blocks.firstPos);
@@ -76,7 +78,7 @@ public final class EffortlessShapes {
 			BlockHitResult blockHit = new BlockHitResult(new Vec3(hit.x, pos.getY() + yFraction, hit.z), face, pos,
 				false);
 			BlockState state = item.getBlock().getStateForPlacement(
-				new BlockPlaceContext(player, InteractionHand.MAIN_HAND, stack, blockHit));
+				new BlockPlaceContext(placer, InteractionHand.MAIN_HAND, stack, blockHit));
 			states.put(pos, entry.applyTransforms(state != null ? state : item.getBlock().defaultBlockState()));
 		}
 		Map<BlockPos, BlockState> otherHalves = new LinkedHashMap<>();
