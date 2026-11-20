@@ -333,7 +333,7 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
 - Building Planner 0.6.0 takes the six changes Geo asked for on November 20th: delete limits the same as the copy
   box's, a ghost block removed once the real block fills it (those already filled too), editing ghost blocks from
   Freecam as from the player, every feature working in Freecam, an older shape's ghost blocks not disappearing under a
-  new shape, and the copy placed with Satisfactory's controls. Settled so far:
+  new shape, and the copy placed with Satisfactory's controls. Settled:
   - **The copy's placement (806):** against the face aimed at, with its middle under the crosshair (Q1 B); a notch up
     turns it clockwise (Q2 B); it snaps flush to the player's recent pastes, and holding Left Ctrl keeps it in line
     with the last paste (Q3 C); the middle click still mirrors it (Q4 A); H locks it, the arrow keys move it a block
@@ -341,13 +341,15 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
     and Vertical (Q6 A); its box is blue when it can be pasted, yellow when it would replace ghost blocks, and red when
     the server would refuse it (Q7 B).
   - **Deleting (808):** a Delete button in the radial menu draws a box the way Copy does, then deletes every ghost
-    block in it (Q1 A).
+    block in it (Q1 A). Its icon is a Minecraft item, as "Material lists" uses the Book and Quill (Geo); the agent
+    picked the Barrier, which Geo sees in the build's screenshots.
   - **Filled ghost blocks (809):** a real block fills its ghost block when it's the same block placed the same way
     (facing, axis, top or bottom half, slab type and door hinge), whatever it connects to (Q1 C), and any change to
     the real block counts: placing by hand, commands such as /fill, pistons, flowing water and growing plants (Q2 A).
     A removed ghost block doesn't come back if the real block is broken later.
   - **Overlapping shapes (811):** where a new shape covers older ghost blocks, the new shape's blocks stay (Q4 A).
-    Geo saw most or all of the older shape disappear (Q1 C), which that rule doesn't explain: a bug still to find.
+    Geo saw most or all of the older shape disappear (Q1 C), which that rule doesn't explain: a bug in 0.5.0, whose
+    fix ships as 0.5.1 if it's ready before the rest of 0.6.0.
     Both shapes were drawn in the same session, often floors about 20 blocks long, and Geo thinks the older shape came
     back once the new one was removed (811 revision 2).
   - **Settled by the agent:** editing in Freecam aims from the camera whenever Freecam's camera is on, since Geo asked
@@ -358,6 +360,102 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
   (411 Q1), plan growth (411 Q2), who deletes a plan (411 Q3, 420 Q9), starting a plan with N (420 Q1, 469 Q1), hiding
   a plan with Litematica or Syncmatica (420 Q2, 469 Q2), the paste's target plan (485 Q3), Litematica's Edit Schematic
   actions syncing live (411 Q5), and Syncmatica on the server and in the pack (408 Q2).
+
+## Agent-ready work
+
+**Building Planner 0.6.0** (the bullet "Building Planner 0.6.0 takes the six changes" in "Decisions" above: 806, 808,
+809, 811 and the choices the agent settled). [building-planner.md](building-planner.md) is the design, and Geo's
+answers settle every choice in it; the texts players see are proposed, for Geo to edit in step 11. The steps come in
+this order, each small enough for one child. A step that changes nothing players see goes to `main` once its checks
+pass (inbox request 429). A step that changes what players see is committed without pushing, and goes to `main` once
+Geo has seen its in-game screenshots, with the changes outlined in red, and its texts. Each step adds its checks to the
+spec's "In-game checks", and every step's checks include `step6.sh` to `step10.sh`, and `overlap.sh` once step 1 has
+it, still passing. Screenshots are at 854 by 480 and 1920 by 1080, GUI scale 2, plus GUI scale 4 where a step says so.
+Filled ghost blocks need protocol version 5, so apart from 0.5.1 nothing goes to the server or the pack before the last
+step, when the server and the pack update together.
+
+1. **Older shapes stay drawn** ("Overlapping shapes"): the fix for an older shape's ghost blocks disappearing under a
+   new shape, with the cause and `mod/clienttest/overlap.sh` from the child that reproduces it as this step's input.
+   Done when `overlap.sh` passes: an older shape's ghost blocks outside a new shape stay in the layer and stay drawn,
+   for Planner1 and Planner2, with shots of both shapes before and after, and a unit test covers the fixed code where
+   it runs outside the game. The fix changes nothing beyond what Geo decided, so it goes to `main` once its checks pass.
+   If it's ready before the rest, it ships as Building Planner 0.5.1 with Geo's approval, released as 0.2.1 was: in
+   the pack, and on the server too only if the fix is on the server's side, with protocol version 4.
+2. **Editing from Freecam** ("Editing from Freecam"): `Aim` from the camera entity, read by `GhostAim`, `BoxDraw`, the
+   copy's aim and E1's block states; hooks E24 to E26; and a priority for M1, M3 and M4 that runs them before Freecam's
+   cancelling hooks. Done when unit tests cover `Aim` (the camera entity while Freecam's camera is on, the player with
+   "Player control" on or Freecam off), and new `step10.sh` checks pass with Freecam's camera on and 10 blocks from
+   Planner1, "Allow interaction" off: a Single shape and a Line shape go where the camera aims; a stair drawn with the
+   camera facing north faces north; the break click erases where the camera aims; a box for Copy and the copy at the
+   aim follow the camera's aim, and the middle click mirrors by the camera's facing; the radial menu, the block mix, N,
+   undo and redo work as without Freecam; and a left click with a stick breaks no real block. Shots of a shape's
+   preview, a box and the copy from the camera.
+3. **Ghost blocks the real world fills** ("Ghost blocks the real world fills"): the rule for a filled ghost block,
+   hook S1 and the end-of-tick edit with the nil author and no glow, the check as each chunk loads, edits that skip
+   filled positions, the undo notice's count, and protocol version 5. Done when unit tests cover the rule for each
+   property it compares or ignores (a stair facing another way and a log on another axis stay; a fence or wall with
+   other connections, a waterlogged slab and a crop of another age fill it; a top slab doesn't fill a bottom one; a
+   door with the other hinge stays), an edit's filter, the split at the block cap and the undo's count; `step8.sh`'s
+   other-version check hands the client a `hello` of protocol version 4; and a new script, `filled.sh`, passes: real
+   blocks placed by hand, by `/fill`, by a piston and by water remove their ghost blocks within a tick, for Planner1
+   and Planner2, with no glow; a stair placed facing the other way leaves its ghost block; breaking a filled block
+   brings no ghost block back; a paste onto built blocks changes nothing; and ghost blocks saved over matching real
+   blocks while the server ran without the hook are gone once their chunk loads. Shots of a wall half built, before
+   and after.
+4. **The Delete box** ("The Delete box"): `BoxDraw.Purpose.DELETE`, its count of ghost blocks only, the erase edit and
+   its messages, the seventh `RadialButton` above Copy with the Barrier's icon, and hook E2 sending air only where
+   ghost blocks are. Done when unit tests cover the box's count, the erase edit (only positions with ghost blocks,
+   both halves of a door) and E2's filter, and new `step9.sh` checks pass: a Delete box of 40 by 40 by 10 erases its
+   ghost blocks as one edit, which one undo brings back, and Planner2 sees them glow; a box without ghost blocks gives
+   its message and changes nothing; Copy, Delete and "Material list" switch purposes keeping the corners; a box over
+   the block cap draws red; and the radial menu checks pass with seven buttons and their hover texts. Shots of the
+   radial menu (with GUI scale 4) and of a Delete box being drawn.
+5. **Page Up and Page Down freed from Litematica** ("Keys" and "Settings Building Planner changes once"): the
+   `layer-keys-applied` group. Done when unit tests cover the group's rules (each hotkey cleared only while it's
+   "PAGE_UP" or "PAGE_DOWN", the record written only with Litematica loaded), and new `step10.sh` checks pass: after
+   the first start both hotkeys have no key in `config/litematica.json`, a hotkey the player moved stays, and a Page
+   Up press reaches a `KeyMapping` bound to it. The step changes nothing players see, so it goes to `main` once its
+   checks pass.
+6. **Where the copy sits, and snapping** ("Copy and paste": "Where the copy sits", "Snapping" and the wheel): the copy
+   against the aimed face with its middle under the crosshair, turning and mirroring around its middle, a notch up
+   turning it clockwise, flush to the player's 16 most recent pastes (`PasteBoxes`), and in line with the latest while
+   the sprint key is held. Done when unit tests cover the placement as a pure function (each of the six faces, odd and
+   even sides, each turn and mirror) and snapping (flush to a paste's box on each side, the guide line along a row and
+   a column), and `step9.sh`'s copy checks, rewritten for the new placement, pass: the copy rests on the aimed top,
+   side and bottom faces; a notch up turns it clockwise in place; aimed at a recent paste it sits flush beside it;
+   with Left Ctrl held it stays in line with the latest paste. Shots of the copy on a floor and against a wall.
+7. **Locking and nudging** ("Copy and paste": the controls, and "Keys"): the seven keys "Lock or unlock the copy" and
+   the six "Nudge the copy" keys under the "Building Planner" heading, acting only while the copy is at the aim. Needs
+   steps 5 and 6. Done when unit tests cover the nudge's direction from the view's facing and a held key's repeat
+   (after 0.2 seconds, then every 4 ticks), and new `step9.sh` checks pass: H locks the copy and walking away leaves
+   it; each arrow key and Page Up and Page Down move it one block the right way; a held key moves it about 5 blocks a
+   second; H unlocks it; a paste keeps it locked; with Freecam's camera on, Up moves it away from the camera. Shots of
+   the locked copy and of Controls' "Building Planner" heading (with GUI scale 4).
+8. **Zoop and Vertical** ("Build modes and zoop"): the eighth key, "Change copy mode" (R), the row's placements, and
+   the row pasted as one edit. Done when unit tests cover the row as a pure function (its direction from the aim, up
+   to 10 copies, each the turned copy's length apart, up or down for Vertical), and new `step9.sh` checks pass: R
+   cycles Single, Zoop and Vertical; a Zoop row of 4 pastes as one edit, which one undo takes back; a right click after
+   the first click drops the row and leaves the copy; the wheel turns every copy in the row; the mode stays across
+   copies until the game restarts. Shots of a Zoop row and a Vertical row before the second click.
+9. **The copy's colours** ("Colours"): the copy's box drawn by Building Planner in blue, yellow and red, hook L6
+   leaving the copy and its row out of Litematica's boxes, and a red copy's click pasting nothing. Needs step 8. Done
+   when unit tests cover the colour as a pure function (clear, over ghost blocks, outside the build height or the
+   border, a row over the block cap), and new `step9.sh` checks pass for each colour, with a red click sending no
+   edit. Shots of the copy in each colour.
+10. **The controls lines** ("Building Planner's mouse modes"): the Delete box's line and the copy's lines for each
+    mode, locked, after the first paste ("Hold Ctrl to line up") and red, with the keys as the player has them bound.
+    Done when unit tests cover the line for each state as a pure function, and `step9.sh` checks each line exactly.
+    Shots of each line (with GUI scale 4).
+11. **Texts for Geo**: every text steps 4 to 10 add (the Delete button's name, its controls line and its two messages,
+    the eight keys' names, the copy's controls lines and the red reasons), with the Barrier icon, goes to Geo as
+    editable text with its step's screenshots, and Geo's version is built in, with `step9.sh` checking each text
+    exactly. The same step sets the version 0.6.0.
+12. **The release**: after Geo's approval, released as 0.5.0 was: the GitHub release, then the server and the pack in
+    one sitting, since protocol version 5 turns Building Planner off for a game and a server on different versions. On
+    the server: a backup of the world named for 0.6.0, the jar in `mods/` in place of 0.5.0's (or 0.5.1's), and a
+    restart; the log shows Building Planner start with no error, and a player beside a part of a plan that's already
+    built sees no ghost blocks over it. Then the pack's push to `main`. "Current setup" in this plan is updated to
+    0.6.0, protocol version 5 and the new backup, and the README and the guide are checked against what 0.6.0 changes.
 
 ## Design work: Building Planner
 
