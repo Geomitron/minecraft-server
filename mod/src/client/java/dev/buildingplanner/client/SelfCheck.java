@@ -48,6 +48,8 @@ final class SelfCheck {
 	private final Long2ObjectOpenHashMap<Change> changing = new Long2ObjectOpenHashMap<>();
 	private final Long2ObjectOpenHashMap<Pending> pending = new Long2ObjectOpenHashMap<>();
 	private final ColumnCheck.Limit limit = new ColumnCheck.Limit();
+	/** Set once a step of the self-check fails with an error, which turns it off until the player joins again. */
+	private boolean failed;
 
 	SelfCheck(Tiles tiles) {
 		this.tiles = tiles;
@@ -55,12 +57,16 @@ final class SelfCheck {
 
 	/** Before an edit ({@code positions} its positions in the column) or a snapshot ({@code positions} null). */
 	void changing(int chunkX, int chunkZ, LayerColumn column, List<BlockPos> positions) {
-		changing.put(Layer.key(chunkX, chunkZ), new Change(positions == null ? null
-			: ColumnCheck.before(column, positions), blocks(column), tiles.describe(chunkX, chunkZ)));
+		guarded(() -> changing.put(Layer.key(chunkX, chunkZ), new Change(positions == null ? null
+			: ColumnCheck.before(column, positions), blocks(column), tiles.describe(chunkX, chunkZ))));
 	}
 
 	/** Once the copy of the layer and the tiles took the change; a column dropped has no change under way. */
 	void changed(Identifier dimension, int chunkX, int chunkZ, LayerColumn column, List<BlockPos> positions) {
+		guarded(() -> compareLayer(dimension, chunkX, chunkZ, column, positions));
+	}
+
+	private void compareLayer(Identifier dimension, int chunkX, int chunkZ, LayerColumn column, List<BlockPos> positions) {
 		long key = Layer.key(chunkX, chunkZ);
 		Change change = changing.remove(key);
 		if (change == null) {
@@ -91,9 +97,12 @@ final class SelfCheck {
 	 * own check around the camera (PlacementManagerTaskFixer) loads it once it comes into view.
 	 */
 	void tick(LayerReplica replica) {
-		if (pending.isEmpty()) {
-			return;
+		if (!pending.isEmpty()) {
+			guarded(() -> compareLitematica(replica));
 		}
+	}
+
+	private void compareLitematica(LayerReplica replica) {
 		WorldSchematic world = SchematicWorldHandler.getSchematicWorld();
 		if (!tiles.shown() || !Configs.Visuals.ENABLE_RENDERING.getBooleanValue() || world == null) {
 			pending.clear();
@@ -135,6 +144,20 @@ final class SelfCheck {
 	void clear() {
 		changing.clear();
 		pending.clear();
+	}
+
+	/** Runs a step of the self-check, which only reads, so that an error in it turns the check off, never the game. */
+	private void guarded(Runnable step) {
+		if (failed) {
+			return;
+		}
+		try {
+			step.run();
+		} catch (RuntimeException e) {
+			failed = true;
+			clear();
+			BuildingPlanner.LOGGER.warn("Self-check: turned off until the player joins again, after an error", e);
+		}
 	}
 
 	private void warn(Identifier dimension, int chunkX, int chunkZ, String cause, String what) {

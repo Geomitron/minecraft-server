@@ -326,7 +326,8 @@ copy's, a player's own), which Litematica draws over the tile. Nothing is compar
 Litematica's rendering is off, for a column whose chunk the game no longer has, or for one Litematica holds no chunk
 for: a rebuild that can't handle the column yet leaves it out, and Litematica's own check around the camera
 (`PlacementManagerTaskFixer`) loads it once it comes into view, so the check waits for a rebuild that leaves a chunk.
-An edit of 20 blocks in a column of one section costs a copy and a comparison of 4096 positions, and one more read of
+If the self-check fails with an error, it logs one warning with the error and stays off until the player joins again,
+so it never stops the game. An edit of 20 blocks in a column of one section costs a copy and a comparison of 4096 positions, and one more read of
 4096 once Litematica has rebuilt the column. A warning, one line in the log, reads for example:
 
 ```
