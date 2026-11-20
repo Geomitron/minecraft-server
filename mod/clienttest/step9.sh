@@ -2,7 +2,9 @@
 # hidden, the choice kept across a restart, where the radial menu's buttons sit, with screenshots, the menu's corner
 # text, the key headings in Controls, the box with its
 # list under the crosshair, copy and paste with the copy at the aim worked by the mouse, the material list, the counted
-# list kept on the server across restarts, and N on a server without Building Planner. Sourced by inside.sh, which provides drv, val,
+# list kept on the server across restarts, the list screen's buttons, saving, opening and deleting lists, the lists
+# across restarts and on another computer, a damaged lists file, the server's limits, Refresh far from the box, and N on
+# a server without Building Planner. Sourced by inside.sh, which provides drv, val,
 # check, keys, xdo, click, use_click, attack_click, client_said, start_server, stop_server, start_client, stop_client,
 # no_planner_message and $ADDON. Players stand on the flat world's grass, whose top is at y -61.
 
@@ -1056,12 +1058,280 @@ check "after the server and Planner1's game restart, the game has the list it co
 echo "  the current list after the restart: $(val 1 currentlist)" >> /out/checks.log
 drv 1 "fly false" > /dev/null
 
+# The material list's screen and the saved lists. Client 2 lost the server at the restart above, so it stops until it's
+# needed.
+stop_client 2
+lists_log=server-lists
+uuid=$(val 1 "uuid Planner1")
+server_lists_file=run/server/world/building-planner/material-lists/$uuid.dat
+
+# mat_labels: the labels of the buttons on Litematica's open material list screen, separated by ",".
+mat_labels() {
+	val 1 malilibbuttons | sed -E 's/: [0-9]+ [0-9]+ [0-9]+ [0-9]+//g; s/ \| /,/g'
+}
+# mat_click <label>: a real click on the button of the open material list screen whose label starts with the text.
+mat_click() {
+	local pos
+	pos=$(val 1 "malilibbutton $1")
+	[[ $pos != none ]] && click 1 $pos
+}
+# widget_click <n> <text>: a real click on the nth shown widget (from 0) of the open screen whose text starts with the
+# text.
+widget_click() {
+	local pos
+	pos=$(val 1 "widget $1 $2")
+	[[ $pos != none ]] && click 1 $pos
+}
+# type_name <text>: empties the focused text field and types the text with real key presses.
+type_name() {
+	keys 1 key ctrl+a BackSpace
+	[[ -z $1 ]] || keys 1 type --delay 20 -- "$1"
+	drv 1 "wait 5" > /dev/null
+}
+# save_as <name>: "Save list" on the open material list screen, the name typed over the date, and "Save", which
+# returns to the list's screen.
+save_as() {
+	mat_click "Save list"
+	drv 1 "await screen Save list" > /dev/null
+	type_name "$1"
+	widget_click 0 Save
+	drv 1 "await screen Material list for the blocks in the box" "wait 20" > /dev/null
+}
+# wait_saved <names>: waits, up to 35 seconds, until the server's file of Planner1's lists holds exactly those saved
+# lists, newest first; returns whether it did.
+wait_saved() {
+	local i
+	for i in $(seq 35); do
+		[[ $(val 1 "listfilesaved $lists_file") == "$1" ]] && return 0
+		drv 1 "wait 20" > /dev/null
+	done
+	return 1
+}
+# both_sizes_shot <name>: shoots the open screen at 854 by 480 and at 1920 by 1080, GUI scale 2, as <name>-854x480-gui2
+# and <name>-1920x1080-gui2, logging the boxes of its widgets, or of a MaLiLib screen's buttons, for outlining; it
+# ends at 854 by 480.
+both_sizes_shot() {
+	local size w h
+	for size in "854 480" "1920 1080"; do
+		read -r w h <<< "$size"
+		drv 1 "window $w $h 2" "wait 20" "notoasts" "wait 5" "shot $1-${w}x$h-gui2" > /dev/null
+		echo "  $1-${w}x$h-gui2 widgets: $(val 1 widgets); buttons: $(val 1 malilibbuttons)" >> /out/checks.log
+	done
+	drv 1 "window 854 480 2" "wait 20" > /dev/null
+}
+
+# The box around the row and the stone beside it opens the list's screen again: "Save list" and "Saved lists" take the
+# place of "Export" and "Write to file", and "Litematica menu" is gone; the rest of Litematica's buttons and the
+# multiplier stay. Shot at 854 by 480 and 1920 by 1080, GUI scale 2.
+drv 1 "cmd tp @s 24.5 -51 -4.5 180 30" "wait 40" "fly true" > /dev/null
+radial_open
+radial_point "Material list"
+radial_let_go
+material_box
+buttons_re='^Refresh,Hide available: (ON|OFF),Info HUD: (ON|OFF),Clear ignored,Clear cache,Save list,Saved lists$'
+for size in "854 480" "1920 1080"; do
+	read -r w h <<< "$size"
+	drv 1 "window $w $h 2" "wait 20" "notoasts" "wait 5" "shot material-list-buttons-${w}x$h-gui2" > /dev/null
+	echo "  material-list-buttons-${w}x$h-gui2 buttons: $(val 1 malilibbuttons)" >> /out/checks.log
+	check "at $w by $h, the list's screen shows Save list and Saved lists, and no Export, Write to file or Litematica menu" \
+		eval '[[ $(mat_labels) =~ $buttons_re ]] && [[ $(val 1 drawntexts) == *"Multiplier:"* ]]'
+done
+drv 1 "window 854 480 2" "wait 20" > /dev/null
+
+# "Save list": its name starts as the date and time; the field takes 64 characters, not 65; "Save" is greyed out while
+# the name is empty or only spaces. Shot with the date, and with the name empty.
+mat_click "Save list"
+check "Save list opens its screen, the name filled in with the date and time" eval \
+	'drv 1 "await screen Save list" > /dev/null &&
+	[[ $(val 1 widgets) =~ ^field=[A-Z][a-z]{2}\ [0-9]{1,2},\ [0-9]{1,2}:[0-9]{2}\ (AM|PM):\ [0-9\ ]+\|\ Save:\ [0-9\ ]+\|\ Cancel: ]]'
+both_sizes_shot save-list
+type_name ""
+check "with the name empty, Save is greyed out" eval '[[ $(val 1 widgets) == "field=: "*" | Save (greyed out): "* ]]'
+type_name "   "
+check "and with only spaces" eval '[[ $(val 1 widgets) == "field=   : "*" | Save (greyed out): "* ]]'
+both_sizes_shot save-list-empty
+type_name "$(printf 'N%.0s' {1..65})"
+check "a name of 65 characters can't be typed: the field holds 64" \
+	eval '[[ $(val 1 widgets) == "field=$(printf "N%.0s" {1..64}): "* ]]'
+widget_click 0 Cancel
+check "Cancel goes back to the list's screen and saves nothing" eval \
+	'drv 1 "await screen Material list for the blocks in the box" "wait 20" > /dev/null &&
+	[[ $(val 1 listindex) == "last counted 10x2x3" ]]'
+
+# "Planks", with spaces around the name, which are dropped.
+save_as "  Planks "
+check "Save list with the name Planks keeps the list" eval '[[ $(val 1 listindex) == "last counted 10x2x3 | Planks 10x2x3" ]]'
+
+# A box around the row alone (10 by 2 by 1) replaces "Last counted" and leaves "Planks"; it's kept as "Row".
+drv 1 "close" "wait 5" > /dev/null
+radial_open
+radial_point "Material list"
+radial_let_go
+list_box 20.5 -59 -9.5 -59 29 -10 -60
+check "a new box replaces Last counted and leaves Planks" eval \
+	'[[ $(val 1 listindex) == "last counted 10x2x1 | Planks 10x2x3" ]]'
+save_as Row
+row_saved=$SECONDS
+check "a second save, Row, comes first, as the newest" eval \
+	'[[ $(val 1 listindex) == "last counted 10x2x1 | Row 10x2x1 | Planks 10x2x3" ]]'
+check "Planner1's lists are in their file on the server within 30 seconds of the save" eval \
+	'wait_saved "Row, Planks" && ((SECONDS - row_saved <= 31))'
+echo "  seconds from the save to the file: $((SECONDS - row_saved))" >> /out/checks.log
+check "and no file in Planner1's game folder holds them" eval '! grep -rlF -e "Planks" -e "Row" \
+	--exclude=driver-in.txt --exclude=driver-out.txt --exclude-dir=logs --exclude-dir=screenshots run/client1'
+
+# "Saved lists": "Last counted" first, then the saved lists, newest first, each with when it was saved and its size.
+save_as "Old list"
+mat_click "Saved lists"
+rows_re='^Last counted / .+ · 10 × 2 × 1 \| Old list / .+ · 10 × 2 × 1 \| Row / .+ · 10 × 2 × 1 \| Planks / .+ · 10 × 2 × 3$'
+check "Saved lists shows Last counted first, then the saved lists, newest first, with their sizes" eval \
+	'drv 1 "await screen Saved lists" > /dev/null && [[ $(val 1 savedlists) =~ $rows_re ]]'
+echo "  saved lists: $(val 1 savedlists)" >> /out/checks.log
+check "every row has Open, and every row but Last counted has Delete" eval \
+	'[[ $(val 1 widgets | grep -o "Open: " | wc -l) == 4 && $(val 1 widgets | grep -o "Delete: " | wc -l) == 3 ]]'
+both_sizes_shot saved-lists
+
+# "Delete" asks again, then deletes; the screen follows the index the server sends back.
+widget_click 0 Delete
+check "Delete asks again" drv 1 "await screen Delete the list \"Old list\"?"
+both_sizes_shot saved-lists-delete
+check "and Old list is still kept while it asks" eval '[[ $(val 1 listindex) == *"| Old list "* ]]'
+# The question's own text starts with "Delete" too, so the button is the second widget that does.
+widget_click 1 Delete
+check "confirmed, it deletes the list and comes back to Saved lists without it" eval \
+	'drv 1 "await screen Saved lists" "wait 20" > /dev/null &&
+	[[ $(val 1 listindex) == "last counted 10x2x1 | Row 10x2x1 | Planks 10x2x3" ]] &&
+	[[ $(val 1 savedlists) != *"Old list"* ]]'
+
+# "Open" on Planks waits for the server's list, makes it current with its counts as kept and opens its screen;
+# "Last counted" stays the row's box.
+widget_click 2 Open
+check "Open on Planks opens its list" eval \
+	'drv 1 "await screen Material list for the blocks in the box" "wait 20" > /dev/null &&
+	planks_open=$(val 1 currentlist) && [[ $planks_open == "minecraft:overworld 20,-60,-11..29,-59,-9 "* &&
+	$planks_open == *" | minecraft:oak_planks 10/4/0"* && $planks_open == *" | minecraft:stone 20/0/0"* ]]'
+check "and leaves Last counted as it was" eval '[[ $(val 1 listindex) == "last counted 10x2x1 | Row 10x2x1 | Planks 10x2x3" ]]'
+check "and the server's file keeps the row's box as Last counted" eval \
+	'drv 1 "wait 100" > /dev/null && wait_saved "Row, Planks" &&
+	[[ $(val 1 "listfile $lists_file") == "minecraft:overworld 20,-60,-10..29,-59,-10 "* ]]'
+drv 1 "close" "wait 5" > /dev/null
+planks_list=$(val 1 currentlist)
+
+# saved_lists_again <client> <shot>: on that client, the current list's screen, then "Saved lists" over it, show the
+# same lists, and "Open" on Planks shows its counts as kept, with "Available" counted again (3 oak planks given first);
+# each screen is shot, without toasts and with the pointer off the rows.
+saved_lists_again() {
+	local n=$1
+	drv "$n" "await session" "await noscreen" "wait 20" "cmd clear @s" "cmd give @s minecraft:oak_planks 3" "wait 20" \
+		"openlist" "await screen Material list for the blocks in the box" "wait 10" > /dev/null || return 1
+	[[ $(val "$n" currentlist) == "$planks_list" ]] || return 1
+	click "$n" $(val "$n" "malilibbutton Saved lists")
+	drv "$n" "await screen Saved lists" "wait 10" "notoasts" "wait 5" "notoasts" "shot $2-saved-lists" > /dev/null ||
+		return 1
+	[[ $(val "$n" savedlists) =~ ^Last\ counted\ /\ .+\ ·\ 10\ ×\ 2\ ×\ 1\ \|\ Row\ /\ .+\ \|\ Planks\ /\ .+\ ·\ 10\ ×\ 2\ ×\ 3$ ]] ||
+		return 1
+	click "$n" $(val "$n" "widget 2 Open")
+	# The pointer leaves the rows, whose hover box would cover the counts.
+	drv "$n" "await screen Material list for the blocks in the box" > /dev/null || return 1
+	xdo "$n" mousemove --window %w 5 5
+	drv "$n" "wait 20" "notoasts" "wait 5" "notoasts" "shot $2-planks" > /dev/null || return 1
+	echo "  $2: $(val "$n" currentlist); available: $(val "$n" available)" >> /out/checks.log
+	[[ $(val "$n" currentlist) == "$planks_list" && $(val "$n" available) == *"minecraft:oak_planks 3"* ]]
+}
+stop_client 1
+start_client 1
+check "after Planner1's game restarts, Saved lists shows the same lists, and Open shows Planks as kept" \
+	saved_lists_again 1 lists-after-game-restart
+drv 1 "close" "wait 5" > /dev/null
+stop_client 1
+stop_server "$lists_log"
+lists_log=server-lists-again
+start_server "" "$lists_log"
+start_client 1
+check "and again after the server restarts" saved_lists_again 1 lists-after-server-restart
+drv 1 "close" "wait 5" > /dev/null
+
+# Planner1 playing from client 2's game folder sees the same lists; Planner2 sees none of them.
+stop_client 1
+start_client 2 "" Planner1
+check "Planner1 playing from client 2's game folder sees the same lists" saved_lists_again 2 lists-other-computer
+drv 2 "close" "wait 5" > /dev/null
+stop_client 2
+start_client 2
+start_client 1
+check "Planner2 sees none of Planner1's lists" eval 'drv 2 "await session" "await noscreen" "wait 20" > /dev/null &&
+	[[ $(val 2 listindex) == "last counted none" && $(val 2 currentlist) == none ]] &&
+	drv 2 "savedlistscreen" "await screen Saved lists" "wait 10" > /dev/null && [[ -z $(val 2 savedlists) ]]'
+# The game's chat toast comes once Planner1 joins after it; let it come, then clear it.
+drv 2 "wait 60" "notoasts" "wait 5" "notoasts" "shot saved-lists-none" "wait 10" "close" > /dev/null
+drv 1 "await session" "await noscreen" > /dev/null
+
+# A lists file cut short: the server, restarted, logs an error at Planner1's join, renames the file with .unreadable,
+# and Planner1 has no lists; a new save writes a new file.
+stop_client 1
+stop_server "$lists_log"
+truncate -s 20 "$server_lists_file"
+lists_log=server-lists-damaged
+start_server "" "$lists_log"
+start_client 1
+check "with Planner1's lists file cut short, Planner1's join logs an error" eval \
+	'drv 1 "await session" "await noscreen" "wait 20" > /dev/null && grep -qE "/ERROR\].*$uuid" "/out/$lists_log.log"'
+check "the file is renamed with .unreadable" eval '[[ -f $server_lists_file.unreadable && ! -f $server_lists_file ]]'
+check "and Planner1 has no lists" eval '[[ $(val 1 listindex) == "last counted none" && $(val 1 currentlist) == none ]]'
+drv 1 "cmd tp @s 24.5 -51 -4.5 180 30" "wait 40" "fly true" > /dev/null
+radial_open
+radial_point "Material list"
+radial_let_go
+material_box
+save_as "After damage"
+check "a new save writes a new file" wait_saved "After damage"
+
+# Messages past the server's limits, sent by the driver as the game never sends them, change nothing, each with a
+# warning, and Planner1 stays connected.
+before=$(wc -l < "/out/$lists_log.log")
+drv 1 "pastlimits longname" "wait 10" "pastlimits overtotal Over" "wait 10" > /dev/null
+check "a save_list with a name of 65 characters is dropped with a warning" eval \
+	'grep -qF "Building Planner dropped Planner1'"'"'s save_list: a name of 65 characters" "/out/$lists_log.log"'
+check "and one with a row whose Missing is over its Total" eval \
+	'grep -qF "Building Planner dropped Planner1'"'"'s save_list: a row for " "/out/$lists_log.log"'
+drv 1 "pastlimits burst Burst" "wait 20" > /dev/null
+check "and the 21st list message in 10 seconds" eval \
+	'grep -qF "Building Planner dropped Planner1'"'"'s save_list: more than 20 list messages in 10 seconds" "/out/$lists_log.log"'
+drv 1 "wait 220" > /dev/null
+check "none of them changed Planner1's lists" eval '[[ $(val 1 listindex) == "last counted 10x2x3 | After damage 10x2x3" ]] &&
+	wait_saved "After damage"'
+check "and Planner1 stayed connected" eval 'drv 1 "await session" > /dev/null &&
+	! tail -n +$((before + 1)) "/out/$lists_log.log" | grep -qE "Planner1 lost connection|Disconnecting Planner1"'
+
+# Refresh on a list whose box is in chunks the game doesn't hold keeps the counts, with its message; back at the box,
+# with 2 more planks built, it counts again and replaces Last counted.
+counts_before=$(val 1 currentlist)
+drv 1 "close" "cmd tp @s 324.5 -51 -4.5 180 30" "wait 200" "openlist" \
+	"await screen Material list for the blocks in the box" "wait 10" > /dev/null
+mat_click "Refresh"
+drv 1 "wait 10" > /dev/null
+check "Refresh 300 blocks from the box keeps the counts and says why" eval \
+	'[[ $(val 1 currentlist) == "$counts_before" && $(val 1 drawntexts) == *"Move closer to the box to count it again."* ]]'
+both_sizes_shot material-list-refresh-far
+# The server loads the box's chunk again after the teleport, before the fill can build in it; the box lies in that one
+# chunk, so the game holds it again once it shows the new planks.
+check "back at the box, the game shows 2 more planks built" drv 1 "close" "cmd tp @s 24.5 -51 -4.5 180 30" "wait 100" \
+	"cmd fill 26 -60 -10 27 -60 -10 minecraft:oak_planks" "await real 26 -60 -10 minecraft:oak_planks" \
+	"await real 27 -60 -10 minecraft:oak_planks" "wait 20"
+drv 1 "openlist" "await screen Material list for the blocks in the box" "wait 10" > /dev/null
+mat_click "Refresh"
+check "back at the box, Refresh counts again" eval 'drv 1 "wait 10" > /dev/null &&
+	[[ $(val 1 currentlist) == *" | minecraft:oak_planks 10/2/0"* ]]'
+echo "  the screen after Refresh at the box: $(val 1 drawntexts)" >> /out/checks.log
+check "and replaces Last counted" eval 'drv 1 "await listfile $lists_file" > /dev/null'
+drv 1 "close" "wait 5" "fly false" > /dev/null
+
 # On the same server with Building Planner left out, N does nothing.
 stop_client 1
 stop_client 2
 cp /out/client1.log /out/client1-with-addon.log
 cp /out/client2.log /out/client2-with-addon.log
-stop_server server-lists
+stop_server "$lists_log"
 check "the server starts without Building Planner" eval 'start_server "$ADDON" server-without-addon &&
 	! grep -qF "Building Planner loaded" /out/server-without-addon.log'
 start_client 1

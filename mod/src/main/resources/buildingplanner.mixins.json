@@ -17,6 +17,7 @@
 		"effortless.RadialMenuMixin",
 		"effortless.RandomizerSystemMixin",
 		"litematica.ChunkRendererSchematicVboMixin",
+		"litematica.GuiMaterialListMixin",
 		"litematica.OverlayRendererMixin",
 		"litematica.PlacementManagerDaemonHandlerMixin",
 		"litematica.PlacementManagerTaskMixin",

@@ -35,6 +35,15 @@ final class ListProbe {
 		return lists.lastCounted().map(ListProbe::describe).orElse("none");
 	}
 
+	/** The names of the saved lists in the lists file, newest first and separated by ", ", or "no file". */
+	static String saved(Path file) throws Exception {
+		if (!Files.exists(file)) {
+			return "no file";
+		}
+		PlayerLists lists = ListFiles.fromTag(NbtIo.readCompressed(file, NbtAccounter.unlimitedHeap()));
+		return lists.saved().stream().map(list -> list.name().orElse("")).collect(Collectors.joining(", "));
+	}
+
 	/** Whether the file's "Last counted" is the game's current list. */
 	static boolean fileHasCurrent(Path file) {
 		try {

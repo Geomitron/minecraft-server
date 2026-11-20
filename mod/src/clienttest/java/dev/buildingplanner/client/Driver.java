@@ -232,6 +232,55 @@ public final class Driver implements ClientModInitializer {
 				// reads a list.
 				return ListProbe.lastCounted(mc.gameDirectory.toPath().resolve(a[1]));
 			}
+			case "malilibbuttons" -> {
+				// malilibbuttons: each MaLiLib button on the open screen (Litematica's material list's, say) as its label and
+				// window box (x y width height), separated by " | ".
+				return ListScreenProbe.malilibButtons(mc);
+			}
+			case "malilibbutton" -> {
+				// malilibbutton <text>: the window position of the middle of the MaLiLib button whose label starts with
+				// <text>, or none.
+				return ListScreenProbe.malilibButton(mc, line.substring(a[0].length() + 1));
+			}
+			case "widgets" -> {
+				// widgets: each shown widget on the open screen as its text (a text field's value as field=<value>),
+				// "(greyed out)" when it isn't active, and its window box, separated by " | ".
+				return ListScreenProbe.widgets(mc);
+			}
+			case "savedlists" -> {
+				// savedlists: the rows the open "Saved lists" screen shows, each as its name / its second line.
+				return ListScreenProbe.savedLists(mc);
+			}
+			case "listindex" -> {
+				// listindex: the index of the player's lists the game keeps, with each list's size.
+				return ListScreenProbe.index();
+			}
+			case "openlist" -> {
+				// openlist: opens the current material list's screen.
+				GuiBase.openGui(new GuiMaterialList(DataManager.getMaterialList()));
+				return "ok";
+			}
+			case "savedlistscreen" -> {
+				// savedlistscreen: opens the "Saved lists" screen with no screen under it.
+				SavedListsScreen.open(null);
+				return "ok";
+			}
+			case "available" -> {
+				// available: each entry of the current material list as its item and its "Available" count.
+				return DataManager.getMaterialList().getMaterialsAll().stream()
+					.map(entry -> BuiltInRegistries.ITEM.getKey(entry.getStack().getItem()) + " "
+						+ entry.getCountAvailable())
+					.collect(Collectors.joining(" | "));
+			}
+			case "listfilesaved" -> {
+				// listfilesaved <path>: the names of the saved lists in the lists file at that path from the game folder,
+				// newest first, or "no file".
+				return ListProbe.saved(mc.gameDirectory.toPath().resolve(a[1]));
+			}
+			case "pastlimits" -> {
+				// pastlimits <longname | overtotal <name> | burst <name>>: list messages past the server's limits.
+				return ListScreenProbe.sendPastLimits(a);
+			}
 			case "placements" -> {
 				List<String> names = new ArrayList<>();
 				for (SchematicPlacement p : DataManager.getSchematicPlacementManager().getAllSchematicsPlacements()) {

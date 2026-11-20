@@ -19,10 +19,12 @@ stayed_since() {
 }
 
 # rejoin_2 [left-out]: stops client 2 and starts it again with the classpath entries matching the argument left out;
-# sets joined to the server log's line count from before it rejoins, after the server logged this leaving.
+# sets joined to the server log's line count from before it rejoins, after the server logged this leaving, and
+# debug_joined to the debug log's from before it left.
 rejoin_2() {
 	local before
 	before=$(wc -l < /out/server.log)
+	debug_joined=$(wc -l < "$debug_log")
 	stop_client 2
 	said_since "$before" "Planner2 left the game"
 	joined=$(wc -l < /out/server.log)
@@ -32,6 +34,15 @@ rejoin_2() {
 # On a server with the add-on, both clients start a session.
 check "client 1 starts a session on hello" drv 1 "await session" "await noscreen"
 check "client 2 starts a session on hello" drv 2 "await session" "await noscreen"
+# The server notes each list message it sends in its debug log (the dev server's logs/debug.log), so a list message to
+# a game without the add-on would show there; here, both games with the add-on got theirs at join.
+# lists_sent_since <line> <player>: the debug log, after that line, notes a list message sent to the player.
+debug_log=run/server/logs/debug.log
+lists_sent_since() {
+	tail -n +$(($1 + 1)) "$debug_log" | grep -qF "Building Planner sent $2 the list message buildingplanner:"
+}
+check "the server's debug log notes the list messages it sent each game at join" eval \
+	'lists_sent_since 0 Planner1 && lists_sent_since 0 Planner2'
 cp /out/client2.log /out/client2-with-addon.log
 
 # A client without the add-on (its classes and the driver's left off the classpath) joins the server with it and
@@ -47,11 +58,8 @@ drv 1 "cmd tp @s 5 -60 -3 0 10" "wait 200" "cmd clear Planner2" \
 xdo 2 mousedown 3 sleep 0.3 mouseup 3
 check "and places a real block" drv 1 "await real 20 -60 20 minecraft:gold_block"
 check "and stays connected" stayed_since "$joined"
-# The game logs each custom payload it can't read ("Unknown custom packet payload: <id>"), so a list message the server
-# sent it would show there.
 check "and the server sends it no list message and logs no error" eval \
-	'! grep -qF "Unknown custom packet payload: buildingplanner:" /out/client2.log &&
-	! tail -n +$((joined + 1)) /out/server.log | grep -qE "/ERROR\]|Exception"'
+	'! lists_sent_since "$debug_joined" Planner2 && ! tail -n +$((joined + 1)) /out/server.log | grep -qE "/ERROR\]|Exception"'
 cp /out/client2.log /out/client2-without-addon.log
 
 # A client with the add-on and Effortless Building but without Litematica and MaLiLib (and the driver, which uses

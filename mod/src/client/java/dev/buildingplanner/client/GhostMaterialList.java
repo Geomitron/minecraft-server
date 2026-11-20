@@ -4,10 +4,13 @@ import dev.buildingplanner.layer.MaterialCount;
 import dev.buildingplanner.sync.ListData;
 import dev.buildingplanner.sync.ListSort;
 import fi.dy.masa.litematica.config.Configs;
+import fi.dy.masa.litematica.gui.GuiMaterialList;
 import fi.dy.masa.litematica.materials.MaterialListBase;
 import fi.dy.masa.litematica.materials.MaterialListEntry;
 import fi.dy.masa.litematica.materials.MaterialListUtils;
 import fi.dy.masa.litematica.util.BlockUtils;
+import fi.dy.masa.malilib.gui.Message.MessageType;
+import fi.dy.masa.malilib.util.GuiUtils;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -16,12 +19,15 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientChunkCache;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.status.ChunkStatus;
 
 /**
  * Litematica's material list for the blocks in a box the player drew: each block's total, ghost and real blocks alike,
@@ -31,7 +37,8 @@ import net.minecraft.world.level.block.state.BlockState;
  * are hidden, it lists the real blocks only. Litematica's Refresh button counts again.
  *
  * <p>A list the server kept ({@link #kept}) shows its counts as kept, with "Available" counted from the inventory,
- * until Refresh counts its box again.
+ * until Refresh counts its box again. Refresh counts only while the game holds the whole box (see {@link #count}), and
+ * otherwise says so on the screen, since a chunk the game doesn't hold would count as air.
  */
 final class GhostMaterialList extends MaterialListBase {
 	private final Identifier dimension;
@@ -47,7 +54,7 @@ final class GhostMaterialList extends MaterialListBase {
 	/** The list for the box from {@code min} to {@code max} in {@code dimension}, counted at once. */
 	GhostMaterialList(Identifier dimension, BlockPos min, BlockPos max) {
 		this(dimension, min, max, Optional.empty(), OptionalLong.empty());
-		reCreateMaterialList();
+		count();
 	}
 
 	private GhostMaterialList(Identifier dimension, BlockPos min, BlockPos max, Optional<String> name,
@@ -89,13 +96,26 @@ final class GhostMaterialList extends MaterialListBase {
 		return Component.translatable("buildingplanner.ui.material_list.title").getString();
 	}
 
-	/** Counts again, while the player is still in the box's dimension with a session; otherwise keeps the counts. */
+	/**
+	 * Litematica's Refresh button: counts the box again when the game can (see {@link #count}), and otherwise keeps the
+	 * counts and says so on the list's screen.
+	 */
 	@Override
 	public void reCreateMaterialList() {
+		if (!count() && GuiUtils.getCurrentScreen() instanceof GuiMaterialList gui && gui.getMaterialList() == this) {
+			gui.addMessage(MessageType.WARNING, "buildingplanner.ui.material_list.move_closer");
+		}
+	}
+
+	/**
+	 * Counts the box again while Building Planner has a session, the player is in the box's dimension, and the game
+	 * holds every chunk the box touches, as a box needs when it's drawn; returns whether it counted.
+	 */
+	boolean count() {
 		ClientSession session = BuildingPlannerClient.session();
 		Minecraft mc = Minecraft.getInstance();
-		if (session == null || mc.level == null || !dimension.equals(session.replica().dimension())) {
-			return;
+		if (session == null || mc.level == null || !dimension.equals(session.replica().dimension()) || !held(mc.level)) {
+			return false;
 		}
 		MaterialCount count = MaterialCount.of(session.replica().layer(), min, max, BoxList.realSections(mc.level),
 			GhostMaterialList::built, session.ghostsShown());
@@ -103,6 +123,20 @@ final class GhostMaterialList extends MaterialListBase {
 			new Object2IntOpenHashMap<>(), new Object2IntOpenHashMap<>(), new Object2IntOpenHashMap<>(), mc.player));
 		time = OptionalLong.of(System.currentTimeMillis());
 		counted = true;
+		return true;
+	}
+
+	/** Whether the game holds every chunk the box touches. {@code ClientLevel.hasChunk} is always true. */
+	private boolean held(ClientLevel level) {
+		ClientChunkCache chunks = level.getChunkSource();
+		for (int x = min.getX() >> 4; x <= max.getX() >> 4; x++) {
+			for (int z = min.getZ() >> 4; z <= max.getZ() >> 4; z++) {
+				if (chunks.getChunk(x, z, ChunkStatus.FULL, false) == null) {
+					return false;
+				}
+			}
+		}
+		return true;
 	}
 
 	/** Whether the list counted its box since the last call, which makes it "Last counted". */

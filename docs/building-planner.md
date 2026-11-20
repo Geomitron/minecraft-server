@@ -216,7 +216,7 @@ Litematica, under `src/main/java/fi/dy/masa/litematica/`:
 | L7 | `render/schematic/ChunkRendererSchematicVbo.java`, `getOverlayType(BlockState, BlockState)` | `@ModifyReturnValue` | While Building Planner has a session, turn `EXTRA` into `NONE`. Litematica marks a real block as extra wherever a placement's box holds air there (`schematicOverlayTypeExtra`, on by default), and a tile's box is a whole chunk column's sections, so every real block in it would be marked. The layer holds only blocks to place, so no real block is extra. Missing and wrong blocks keep their colours. |
 | L8 | `schematic/placement/PlacementManagerTaskRebuild.java`, `run()`; `PlacementManagerTask.java`'s constructors | `@WrapMethod`; a number for each task, in the order they're made (`RebuildOrder`) | Run the rebuilds of one chunk column one at a time. Litematica's background threads (at least two) rebuild a column from its placements' blocks as they are when the rebuild runs, so two rebuilds of one column at once could end with the older one's result, read before an edit's blocks were written. |
 | L9 | `schematic/placement/PlacementManagerDaemonHandler.java`, `removeRebuildTasksFor` and `removeDeferredTasksFor` | `@WrapMethod` | A running rebuild drops from the queue only the rebuilds of its column made before it began, whose edits it reads. Litematica's rebuild drops every queued rebuild of its column as it ends, and as it unloads a column with no placements, including one queued for an edit written after it read the column, which would leave that edit undrawn. Elsewhere (a new rebuild replacing the queued ones, an unload) every queued rebuild of the column still goes. |
-| L10 | `gui/GuiMaterialList.java`, private `createButtons()` | `@WrapOperation` on its `createButton(int, int, ButtonListener.Type)` calls for `EXPORT` and `EXPORT_TYPE`, returning 0; `@WrapWithCondition` on `addButton` with the `ButtonListenerChangeMenu`; `@Inject` at tail | For Building Planner's list only (`GhostMaterialList`): no "Export" button, no export type button ("Write to file", which cycles), and no "Litematica menu" button, which `createButtons` adds at the bottom right; "Save list" and "Saved lists" go where "Export" and the export type were, in the same row, which the method moves to the bottom left when the screen is narrow (`isNarrow`). Other material lists keep their buttons. |
+| L10 | `gui/GuiMaterialList.java`, private `createButtons()` and `createButton(int, int, ButtonListener.Type)` | `@WrapOperation` on `addButton` in `createButton`, which adds "Save list" or "Saved lists" in place of the `EXPORT` or `EXPORT_TYPE` button, telling them by the listener's `type` (read by reflection, since `ButtonListener.Type` is private); `@WrapOperation` on `addButton` in `createButtons`, the call that adds the `ButtonListenerChangeMenu` | For Building Planner's list only (`GhostMaterialList`): no "Export" button, no export type button ("Write to file", which cycles), and no "Litematica menu" button, which `createButtons` adds at the bottom right; "Save list" and "Saved lists" go where "Export" and the export type were, in the same row, which the method moves to the bottom left when the screen is narrow (`isNarrow`). Other material lists keep their buttons. |
 
 Public Litematica API the add-on calls: `LitematicaSchematic.createEmptySchematic`, `getSubRegionContainer`,
 `getAreaSize`; `LitematicaBlockStateContainer`'s `get` and `set`; `SchematicPlacement.createFor`,
@@ -824,14 +824,18 @@ each player's lists (786 Q1 B), as "The lists on the server" describes, so they'
 player joins from, on that server only, and whoever runs the server can read them. A player keeps as many lists as
 they save (786 Q2 A).
 
-"Save list" opens a small screen with a name field, filled in to start with the date and time ("Nov 19, 6:21 PM"),
-which the player may type over (786 Q3 A), and "Save" and "Cancel". The field accepts at most 64 characters, and "Save"
-is greyed out while the name is empty or only spaces; spaces at either end are dropped. Saving with the name of a kept
-list replaces it. "Saved lists" opens a screen listing the kept lists, newest first, with "Last counted" always at the
-top: each row shows its name, when it was saved and its box's size ("12 × 5 × 8"), with "Open" and "Delete"; "Delete"
-asks again before it deletes. The screen lists what the server last sent, which it sends again after each save and
-delete. "Open" asks the server for the list, and when it arrives makes it current, with its counts as kept, and opens
-its screen, where Refresh counts its box again when the game holds it. Changes to an opened list (Refresh, the
+"Save list" opens a small screen titled "Save list" with a name field labelled "Name", filled in to start with the date
+and time ("Nov 19, 6:21 PM", the pattern `MMM d, h:mm a` kept in the language file), which the player may type over
+(786 Q3 A), and "Save" and "Cancel". The field accepts at most 64 characters, and "Save" is greyed out while the name
+is empty or only spaces; spaces at either end are dropped. Saving with the name of a kept list replaces it. "Saved
+lists" opens a screen listing the kept lists, newest first, with "Last counted" at the top whenever the player has
+one: each row shows its name, then under it when it was saved and its box's size ("Nov 19, 6:21 PM · 12 × 5 × 8"), with
+"Open" and, except on "Last counted", "Delete". "Delete" asks again ("Delete the list "Planks"?", with "Delete" and
+"Cancel") before it deletes, and comes back to "Saved lists" either way. With no lists, the screen says "No saved lists
+yet." The mouse wheel scrolls the rows. Escape on either screen goes back to the screen it opened from. The screen
+lists what the server last sent, which it sends again after each save and delete. "Open" asks the server for the list,
+and when it arrives makes it current, with its counts as kept, and opens its screen, where Refresh counts its box
+again when the game holds it. Changes to an opened list (Refresh, the
 multiplier, the sort) aren't kept in that saved list until the player saves it again.
 
 "Last counted" holds the latest list counted from a box: each box drawn for the material list, and each Refresh or
@@ -1027,7 +1031,9 @@ on the dev server; [plan.md](plan.md) says which build step makes or rewrites ea
 add-on's classes off the classpath) and checks:
 
 - On a server with the add-on, both clients start a session.
-- A client without the add-on joins that server, stays connected and places a real block.
+- A client without the add-on joins that server, stays connected and places a real block, and the server sends it no
+  list message: the server notes each list message it sends in its debug log (`ServerSync`, at DEBUG, which the dev
+  server writes to `logs/debug.log`), and the log notes them for both clients with the add-on and none for this one.
 - A client with the add-on and Effortless Building but without Litematica and MaLiLib loads with Building Planner off,
   joins that server and stays connected.
 - On the same server with Building Planner left out, both clients start no session and show no Building Planner
@@ -1100,7 +1106,7 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   at 1920 by 1080, GUI scales 2 and 4. A box with no blocks opens an empty list.
 - The material list's screen shows "Refresh", "Hide available", "Info HUD", "Clear ignored", "Clear cache", "Save
   list", "Saved lists" and "Multiplier", and no "Export", "Write to file" or "Litematica menu" (the driver's
-  `ScreenProbe` reads the buttons' labels), at 854 by 480 and 1920 by 1080, GUI scale 2, each shot.
+  `ListScreenProbe` reads the buttons' labels), at 854 by 480 and 1920 by 1080, GUI scale 2, each shot.
 - "Info HUD" shows the panel once the screen closes, with the list's rows in the screen's order and their counts, and
   the label reads "Info HUD: ON"; with the multiplier at 4 the heading and every count change as the screen's do;
   sorting by "Missing" on the screen reorders the panel; "Hide available" leaves out the rows it hides on the screen;

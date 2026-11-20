@@ -73,7 +73,7 @@ public final class ServerSync {
 			layer = new LayerSync(limits.maxEditBlocks(), layers, (player, payload) -> send(server, player, payload),
 				world(server));
 			listFiles = new ListFiles(worldDir.resolve("building-planner").resolve("material-lists"));
-			lists = new MaterialLists(listFiles, (player, payload) -> send(server, player, payload),
+			lists = new MaterialLists(listFiles, (player, payload) -> sendList(server, player, payload),
 				dimension -> server.getLevel(ResourceKey.create(Registries.DIMENSION, dimension)) != null,
 				System.currentTimeMillis());
 		});
@@ -107,7 +107,10 @@ public final class ServerSync {
 				sender.sendPacket(new Payloads.Hello(Payloads.PROTOCOL_VERSION, limits.maxEditBlocks()));
 				if (lists != null && ServerPlayNetworking.canSend(handler, Payloads.Lists.TYPE)
 					&& ServerPlayNetworking.canSend(handler, Payloads.Current.TYPE)) {
-					lists.join(handler.getPlayer().getUUID()).forEach(sender::sendPacket);
+					lists.join(handler.getPlayer().getUUID()).forEach(payload -> {
+						logListSent(handler.getPlayer(), payload);
+						sender.sendPacket(payload);
+					});
 				}
 			}
 		});
@@ -179,6 +182,24 @@ public final class ServerSync {
 		if (player != null && ServerPlayNetworking.canSend(player, payload.type())) {
 			ServerPlayNetworking.send(player, payload);
 		}
+	}
+
+	/** Sends a list message, as {@link #send} does. */
+	private static void sendList(MinecraftServer server, UUID playerId, CustomPacketPayload payload) {
+		ServerPlayer player = server.getPlayerList().getPlayer(playerId);
+		if (player != null && ServerPlayNetworking.canSend(player, payload.type())) {
+			logListSent(player, payload);
+			ServerPlayNetworking.send(player, payload);
+		}
+	}
+
+	/**
+	 * Notes each list message sent, at debug level, so a game without the add-on can be checked to get none (the dev
+	 * server's {@code logs/debug.log} holds debug lines; a real server's log doesn't).
+	 */
+	private static void logListSent(ServerPlayer player, CustomPacketPayload payload) {
+		BuildingPlanner.LOGGER.debug("Building Planner sent {} the list message {}", playerName(player),
+			payload.type().id());
 	}
 
 	private static LayerSync.World world(MinecraftServer server) {

@@ -5,6 +5,8 @@ import dev.buildingplanner.sync.ListData;
 import dev.buildingplanner.sync.ListLimits;
 import dev.buildingplanner.sync.Payloads;
 import fi.dy.masa.litematica.data.DataManager;
+import fi.dy.masa.litematica.gui.GuiMaterialList;
+import fi.dy.masa.malilib.gui.GuiBase;
 import java.util.List;
 import java.util.Optional;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
@@ -32,6 +34,8 @@ final class ListSync {
 	private GhostMaterialList seen;
 	private boolean counted;
 	private long lastSendMillis = Long.MIN_VALUE / 2;
+	/** The name of the list "Open" asked the server for ("" for "Last counted"), until its answer arrives, or null. */
+	private String opening;
 
 	/** The server's index of the player's lists, with "Last counted" kept up to date as the game counts. */
 	Payloads.Lists index() {
@@ -42,8 +46,16 @@ final class ListSync {
 		return panel;
 	}
 
+	/**
+	 * The server's index of the player's lists. The server sends it instead of the list "Open" asked for when that list
+	 * is no longer kept, which ends the wait for it.
+	 */
 	void receive(Payloads.Lists lists) {
 		index = lists;
+		if (opening != null && (opening.isEmpty() ? lists.lastCounted().isEmpty()
+			: lists.saved().stream().noneMatch(saved -> saved.name().equals(opening)))) {
+			opening = null;
+		}
 	}
 
 	/**
@@ -63,9 +75,16 @@ final class ListSync {
 		started = true;
 	}
 
-	/** The server's answer to {@code open_list}: makes the list current, with its counts as kept. */
+	/**
+	 * The server's answer to {@code open_list}: makes the list current, with its counts as kept, and opens its screen
+	 * when "Open" asked for it.
+	 */
 	void receive(Payloads.OpenedList opened) {
 		makeCurrent(opened.list());
+		if (opening != null) {
+			opening = null;
+			GuiBase.openGui(new GuiMaterialList(currentList()));
+		}
 	}
 
 	/** Keeps the list under the name on the server, replacing a kept list of that name. */
@@ -81,10 +100,14 @@ final class ListSync {
 		}
 	}
 
-	/** Asks the server for the kept list of that name, or for "Last counted" with an empty name. */
+	/**
+	 * "Open": asks the server for the kept list of that name, or for "Last counted" with an empty name, and opens its
+	 * screen when it arrives.
+	 */
 	void open(String name) {
 		if (name.isEmpty() || ListLimits.nameProblem(name).isEmpty()) {
 			ClientPlayNetworking.send(new Payloads.OpenList(name));
+			opening = name;
 		}
 	}
 

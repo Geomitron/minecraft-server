@@ -91,15 +91,16 @@ stop_server() {
 	wait "$pid" || true
 }
 
-# start_client <n> [left-out]: starts dev client n, playing as Planner<n>; the optional second argument leaves the
-# classpath entries matching it out (effortless-building, say, or several globs separated by spaces).
+# start_client <n> [left-out] [player]: starts dev client n, playing as Planner<n> unless a player name is given (so
+# client 2's game folder can play as Planner1); the optional second argument leaves the classpath entries matching it
+# out (effortless-building, say, or several globs separated by spaces; "" for none).
 start_client() {
-	local n=$1
+	local n=$1 player=${3:-Planner$1}
 	mkdir -p "run/client$n"
 	: > "run/client$n/driver-in.txt"
 	: > "run/client$n/driver-out.txt"
 	LEAVE_OUT=${2:-} DISPLAY=:$n start "runClient$([[ $n == 1 ]] || echo "$n")" "client$n" "client$n" \
-		--username "Planner$n" --quickPlayMultiplayer localhost:25565
+		--username "$player" --quickPlayMultiplayer localhost:25565
 }
 
 stop_client() {
