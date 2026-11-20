@@ -912,8 +912,11 @@ Protocol version 3 stays, and the list messages are optional: a 0.4.0 game on th
 has, and a 0.5.0 game on the 0.4.0 server keeps the ghost blocks and the material list without saved lists, "Last
 counted" or the panel's return, which then need a state of their own and checks. B matches Geo's reading of 786 Q1 B
 ("a player whose game doesn't match the server's version of Building Planner sees no lists"); A turns the ghost blocks
-off too. Recommended: A, since the pack updates every player at launch, so only a player who rejoins after the release
-without restarting the game, or whose update failed, meets it, and A has one state to build and check.
+off too. C) A, and the server's join handler, which already checks which payloads the game takes, sends a game
+that takes the hello but not the list payloads a chat message telling the player to restart Minecraft from "Server
+Pack". Recommended: C, since the pack updates every player at launch, so only a player who rejoins after the release
+without restarting the game, or whose update failed, meets it; A and C have one state to build and check, and C tells
+that player why the ghost blocks are gone (asked in 788).
 
 #### The Material lists button
 
