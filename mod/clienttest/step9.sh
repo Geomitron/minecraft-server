@@ -1162,7 +1162,7 @@ multiplier() {
 reopen() {
 	drv 1 "openlist" "await screen Material list for the blocks in the box" "wait 10" > /dev/null
 }
-panel_head="Material list | Total Available Missing"
+panel_head="Material list | All Hold Need"
 drv 1 "cmd clear @s minecraft:oak_planks" "wait 10" > /dev/null
 check "the panel is off at first, and the button reads Info HUD: OFF" eval \
 	'[[ $(val 1 matpanel) == hidden && $(mat_labels) == *"Info HUD: OFF"* ]]'
@@ -1183,7 +1183,7 @@ check "with the multiplier at 4, the screen's counts change" eval \
 	'[[ $(val 1 drawntexts) == *"80"* && $(val 1 drawntexts) == *"40"* ]]'
 drv 1 "close" > /dev/null
 check "and the panel's heading and every count change as the screen's do" panel_is 1 \
-	"Material list ×4 | Total Available Missing | minecraft:stone 80 0 80 red | minecraft:oak_planks 40 0 40 red"
+	"Material list ×4 | All Hold Need | minecraft:stone 80 0 80 red | minecraft:oak_planks 40 0 40 red"
 reopen
 multiplier 1
 # A click on the screen's "Missing" heading sorts by it, most first.
@@ -1202,7 +1202,7 @@ mat_click "Hide available"
 drv 1 "wait 10" "close" > /dev/null
 check "and with it off, they're back" panel_is 1 "$panel_head | minecraft:stone 20 0 0 green | minecraft:oak_planks 10 0 4 red"
 drv 1 "cmd give @s minecraft:oak_planks 3" > /dev/null
-check "picking up 3 oak planks raises Available within 2 seconds" \
+check "picking up 3 oak planks raises Hold within 2 seconds" \
 	panel_is 1 "$panel_head | minecraft:stone 20 0 0 green | minecraft:oak_planks 10 3 4 red" 45
 # A second box, the row alone, keeps the panel on with the new list.
 radial_open
@@ -1249,11 +1249,34 @@ drv 1 "close" "setmix minecraft:stone_bricks:80,minecraft:mossy_stone_bricks:20"
 long_rows="minecraft:stone 13 0 0 green | minecraft:cobblestone 12 64 12 gold | minecraft:oak_planks 11 0 11 red | \
 minecraft:spruce_planks 10 0 10 red | minecraft:birch_planks 9 0 9 red | minecraft:bricks 8 0 8 red | \
 minecraft:sandstone 7 0 7 red | minecraft:glass 6 0 6 red | minecraft:white_wool 5 0 5 red | minecraft:red_wool 4 0 4 red"
-check "a list of 13 kinds shows 10 rows, then +3 more" panel_is 1 "$panel_head | $long_rows | +3 more"
+# At 854 by 480 the 10th row and the "+N more" line after it would cover the hotbar, so the panel shows 9 rows and "+4
+# more", the 10th row and the 3 past it; at 1920 by 1080 it shows all 10, then "+3 more".
+long_rows9=${long_rows% | minecraft:red_wool 4 0 4 red}
 check "the mix panel shows too" eval '[[ $(val 1 panel) == "Block mix | 80% | 20% | B: Edit mix" ]]'
+# panel_above_hotbar: the panel's box ends above the hotbar's top. The game draws the hotbar 22 GUI pixels above the
+# screen's bottom, and its selection frame 23, so the box's bottom (the box's y and height, in the window's pixels) is
+# compared with the window's height less 23 GUI pixels. $win_h and $gui are the window's height and GUI scale.
+panel_above_hotbar() {
+	local x y w h
+	read -r x y w h <<< "$(val 1 matpanelbox)"
+	echo "  the panel's bottom: $((y + h)); the hotbar's top: $((win_h - 23 * gui))" >> /out/checks.log
+	((y + h <= win_h - 23 * gui))
+}
 for size in "854 480 2" "1920 1080 2" "1920 1080 4"; do
 	read -r w h s <<< "$size"
-	drv 1 "window $w $h $s" "wait 20" > /dev/null
+	dims=$(val 1 "window $w $h $s")
+	drv 1 "wait 20" > /dev/null
+	win_h=${dims#*x}
+	win_h=${win_h%% *}
+	gui=${dims##* }
+	if [[ $size == "854 480 2" ]]; then
+		check "at $w by $h, GUI scale $s, a list of 13 kinds shows the 9 rows that fit above the hotbar, then +4 more" \
+			panel_is 1 "$panel_head | $long_rows9 | +4 more"
+	else
+		check "at $w by $h, GUI scale $s, a list of 13 kinds shows all 10 rows, then +3 more" \
+			panel_is 1 "$panel_head | $long_rows | +3 more"
+	fi
+	check "at $w by $h, GUI scale $s, the panel's bottom is above the hotbar's top" panel_above_hotbar
 	shot 1 "material-panel-${w}x$h-gui$s"
 	echo "  material-panel-${w}x$h-gui$s panel box: $(val 1 matpanelbox)" >> /out/checks.log
 done
@@ -1268,7 +1291,7 @@ minecraft:spruce_planks 20 0 20 red | minecraft:birch_planks 18 0 18 red | minec
 minecraft:sandstone 14 0 14 red | minecraft:glass 12 0 12 red | minecraft:white_wool 10 0 10 red | \
 minecraft:red_wool 8 0 8 red"
 check "with the multiplier at 2, the heading reads Material list ×2" \
-	panel_is 1 "Material list ×2 | Total Available Missing | $long_rows_2 | +3 more"
+	panel_is 1 "Material list ×2 | All Hold Need | ${long_rows_2% | minecraft:red_wool 8 0 8 red} | +4 more"
 shot 1 material-panel-multiplier-854x480-gui2
 echo "  material-panel-multiplier-854x480-gui2 panel box: $(val 1 matpanelbox)" >> /out/checks.log
 # A box with no blocks: "No blocks to list." under the heading.
@@ -1385,26 +1408,82 @@ mat_click "Info HUD"
 drv 1 "close" "wait 60" > /dev/null
 planks_panel="$panel_head | minecraft:stone 20 0 0 green | minecraft:oak_planks 10 3 4 red"
 
-# saved_lists_again <client> <shot>: on that client, the panel shows Planks, with "Available" counted again (3 oak
-# planks given first), and its recount makes Planks "Last counted"; the current list's screen, then "Saved lists" over
+# With the panel on, its recount every 2 seconds updates only the panel and the screen: it never makes the list "Last
+# counted", which only drawing a box and Refresh do. Here the panel is on with Planks current, and "Last counted" is the
+# row's box (10 by 2 by 1), in the game's index and in the server's file.
+# panel_matches <regex> [ticks]: the panel's text matches the regular expression, within the ticks (60 unless given).
+panel_matches() {
+	local i
+	for i in $(seq $((${2:-60} / 5))); do
+		[[ $(val 1 matpanel) =~ $1 ]] && return 0
+		drv 1 "wait 5" > /dev/null
+	done
+	[[ $(val 1 matpanel) =~ $1 ]]
+}
+# open_planks: from the open list's screen, "Saved lists" and "Open" on Planks, the third row after "Last counted" and
+# Row, which waits for the server's list and opens its screen.
+open_planks() {
+	mat_click "Saved lists"
+	drv 1 "await screen Saved lists" "wait 10" > /dev/null
+	widget_click 2 Open
+	drv 1 "await screen Material list for the blocks in the box" "wait 20" > /dev/null
+}
+index_row_box="last counted 10x2x1 | Row 10x2x1 | Planks 10x2x3"
+last_before=$(val 1 "listfile $lists_file")
+echo "  Last counted in the server's file before: $last_before" >> /out/checks.log
+check "with the panel on, Last counted is the row's box" eval \
+	'[[ $last_before == "minecraft:overworld 20,-60,-10..29,-59,-10 "* && $(val 1 listindex) == "$index_row_box" ]]'
+reopen
+open_planks
+drv 1 "close" "wait 130" > /dev/null
+check "opening a saved list and waiting 6 seconds, three recounts, leaves Last counted as it was in the game" eval \
+	'[[ $(val 1 listindex) == "$index_row_box" && $(val 1 currentlist) == "$planks_list" && $(val 1 matpanel) != hidden ]]'
+check "and in the server's file, after the 30 seconds it takes to write" eval \
+	'drv 1 "wait 560" > /dev/null && [[ $(val 1 "listfile $lists_file") == "$last_before" ]]'
+# The recount follows the world: 2 of the missing planks built show as "Need 2" within 2 seconds, and "Last counted"
+# is still as it was; Refresh then replaces it.
+drv 1 "cmd fill 26 -60 -10 27 -60 -10 minecraft:oak_planks" "await real 27 -60 -10 minecraft:oak_planks" > /dev/null
+check "2 of the missing planks built show on the panel as Need 2 within 2 seconds" \
+	panel_matches '^Material list \| All Hold Need \| minecraft:stone 20 0 0 green \| minecraft:oak_planks 10 [0-9]+ 2 (red|gold)$' 45
+check "while Last counted stays as it was" eval '[[ $(val 1 listindex) == "$index_row_box" ]]'
+reopen
+mat_click "Refresh"
+check "Refresh replaces Last counted, with the panel on: the game's index and the server's file have this list" eval \
+	'drv 1 "wait 10" "await listfile $lists_file" > /dev/null &&
+	[[ $(val 1 listindex) == "last counted 10x2x3 | Row 10x2x1 | Planks 10x2x3" ]]'
+drv 1 "close" "cmd fill 26 -60 -10 27 -60 -10 minecraft:air" "await real 27 -60 -10 minecraft:air" "wait 5" > /dev/null
+# A new box, around the row alone, replaces it again, and Planks is opened again for the restarts below.
+radial_open
+radial_point "Material list"
+radial_let_go
+list_box 20.5 -59 -9.5 -59 29 -10 -60
+check "drawing a box replaces Last counted, with the panel on: the row's box again" eval \
+	'drv 1 "await listfile $lists_file" > /dev/null && [[ $(val 1 listindex) == "$index_row_box" ]]'
+open_planks
+check "Open on Planks makes it the current list again and keeps the panel on" eval \
+	'[[ $(val 1 currentlist) == "$planks_list" && $(val 1 listindex) == "$index_row_box" ]]'
+drv 1 "close" "wait 60" > /dev/null
+
+# saved_lists_again <client> <shot>: on that client, the panel shows Planks, with "Hold" counted again (3 oak planks
+# given first), and its recount leaves "Last counted" the row's box; the current list's screen, then "Saved lists" over
 # it, show the same lists, and "Open" on Planks shows its counts as kept; the panel and each screen are shot, without
 # toasts and with the pointer off the rows.
 saved_lists_again() {
 	local n=$1
 	drv "$n" "await session" "await noscreen" "wait 20" "cmd clear @s" "cmd give @s minecraft:oak_planks 3" "wait 20" \
 		> /dev/null || return 1
-	# The panel shows Planks, and once its box's chunks load, its recount every 2 seconds makes it "Last counted".
+	# The panel shows Planks, and once its box's chunks load, its recount every 2 seconds brings its counts up to date.
 	panel_is "$n" "$planks_panel" 200 || return 1
 	drv "$n" "notoasts" "wait 5" "notoasts" "shot $2-panel" > /dev/null || return 1
 	echo "  $2 panel box: $(val "$n" matpanelbox)" >> /out/checks.log
 	drv "$n" "wait 40" > /dev/null
-	[[ $(val "$n" listindex) == "last counted 10x2x3 | "* ]] || return 1
+	[[ $(val "$n" listindex) == "last counted 10x2x1 | "* ]] || return 1
 	drv "$n" "openlist" "await screen Material list for the blocks in the box" "wait 10" > /dev/null || return 1
 	[[ $(val "$n" currentlist) == "$planks_list" ]] || return 1
 	click "$n" $(val "$n" "malilibbutton Saved lists")
 	drv "$n" "await screen Saved lists" "wait 10" "notoasts" "wait 5" "notoasts" "shot $2-saved-lists" > /dev/null ||
 		return 1
-	[[ $(val "$n" savedlists) =~ ^Last\ counted\ /\ .+\ ·\ 10\ ×\ 2\ ×\ 3\ \|\ Row\ /\ .+\ \|\ Planks\ /\ .+\ ·\ 10\ ×\ 2\ ×\ 3$ ]] ||
+	[[ $(val "$n" savedlists) =~ ^Last\ counted\ /\ .+\ ·\ 10\ ×\ 2\ ×\ 1\ \|\ Row\ /\ .+\ \|\ Planks\ /\ .+\ ·\ 10\ ×\ 2\ ×\ 3$ ]] ||
 		return 1
 	click "$n" $(val "$n" "widget 2 Open")
 	# The pointer leaves the rows, whose hover box would cover the counts.
@@ -1545,6 +1624,6 @@ stop_server server-without-addon
 start_server "" server-addon-back
 start_client 1
 check "with Building Planner back, the panel shows again with the same list" eval \
-	'[[ $before_panel == "Material list | Total Available Missing | "* ]] && drv 1 "await session" "await noscreen" > /dev/null &&
+	'[[ $before_panel == "Material list | All Hold Need | "* ]] && drv 1 "await session" "await noscreen" > /dev/null &&
 	panel_is 1 "$before_panel" 200'
 shot 1 material-panel-addon-back

@@ -1,5 +1,6 @@
 package dev.buildingplanner.client;
 
+import com.mojang.blaze3d.platform.Window;
 import dev.buildingplanner.look.MaterialPanelRows;
 import dev.buildingplanner.look.SmallText;
 import fi.dy.masa.litematica.data.DataManager;
@@ -10,6 +11,7 @@ import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.contextualbar.ContextualBar;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
@@ -19,8 +21,9 @@ import net.minecraft.world.item.ItemStack;
  * list to the screen as the mix panel pins the mix, on a dark see-through box at {@link SmallText}'s size. It shows the
  * heading "Material list", with the multiplier after it when it isn't 1, the column headings "Total", "Available" and
  * "Missing", then a row for each of the list's rows the screen shows ({@link MaterialPanelRows}): the block's icon and
- * its three counts, with no name, "Missing" in the screen's colours. After 10 rows, "+N more" counts the rest; a list
- * with no rows to show has "No blocks to list." under the heading. It hides while a screen is open, while the HUD is
+ * its three counts, with no name, "Missing" in the screen's colours. It shows at most 10 rows and only the rows that fit
+ * above the hotbar ({@link #rows}), and "+N more", which fits above it too, counts the rest; a list with no rows to
+ * show has "No blocks to list." under the heading. It hides while a screen is open, while the HUD is
  * hidden (F1), without a session, and while the current list isn't Building Planner's.
  */
 final class MaterialPanel implements HudElement {
@@ -59,6 +62,27 @@ final class MaterialPanel implements HudElement {
 	}
 
 	/**
+	 * The list's rows the panel shows: at most {@link MaterialPanelRows#MAX_ROWS}, and only the ones that fit above the
+	 * hotbar, with "+N more" counting the rest. The game keeps the bottom {@link ContextualBar#MARGIN_BOTTOM} GUI pixels
+	 * of the screen for the hotbar (the bars above it, like the experience bar, are laid out from there), so the panel's
+	 * bottom, with its "+N more" line, stays above that at every GUI scale and window size.
+	 */
+	private static MaterialPanelRows<ItemStack> rows(Font font, GhostMaterialList list) {
+		Window window = Minecraft.getInstance().getWindow();
+		// The panel is drawn at SmallText's scale from EDGE down, so its room in its own units is the GUI pixels above
+		// the hotbar's strip, less EDGE, over that scale.
+		int room = (int) ((window.getGuiScaledHeight() - ContextualBar.MARGIN_BOTTOM - EDGE)
+			/ SmallText.scale(window.getGuiScale()));
+		int fixed = 2 * PAD + font.lineHeight + 2 + font.lineHeight + 2;
+		return list.panelRows().within(room - fixed, ROW, 2 + font.lineHeight);
+	}
+
+	/** Whether the list has no rows to show at all ("No blocks to list."), as opposed to none that fit. */
+	private static boolean nothing(MaterialPanelRows<ItemStack> panel) {
+		return panel.rows().isEmpty() && panel.more() == 0;
+	}
+
+	/**
 	 * The panel's lines as the player reads them, separated by " | ", or {@code hidden}; for the in-game checks. A row
 	 * reads as its block's item id, then its "Total", "Available" and "Missing", with "Missing"'s colour.
 	 */
@@ -67,10 +91,10 @@ final class MaterialPanel implements HudElement {
 		if (list == null) {
 			return "hidden";
 		}
-		MaterialPanelRows<ItemStack> panel = list.panelRows();
+		MaterialPanelRows<ItemStack> panel = rows(Minecraft.getInstance().font, list);
 		List<String> lines = new ArrayList<>();
 		lines.add(title(list.getMultiplier()).getString());
-		if (panel.rows().isEmpty()) {
+		if (nothing(panel)) {
 			lines.add(empty().getString());
 			return String.join(" | ", lines);
 		}
@@ -110,7 +134,7 @@ final class MaterialPanel implements HudElement {
 	private record Layout(MaterialPanelRows<ItemStack> panel, Component title, Component[] headings, int[] columns,
 		int width, int height) {
 		static Layout of(Font font, GhostMaterialList list) {
-			MaterialPanelRows<ItemStack> panel = list.panelRows();
+			MaterialPanelRows<ItemStack> panel = rows(font, list);
 			Component title = MaterialPanel.title(list.getMultiplier());
 			Component[] headings = new Component[COLUMNS.length];
 			int[] columns = new int[COLUMNS.length];
@@ -125,7 +149,7 @@ final class MaterialPanel implements HudElement {
 			}
 			int width = font.width(title);
 			int height = font.lineHeight;
-			if (panel.rows().isEmpty()) {
+			if (nothing(panel)) {
 				width = Math.max(width, font.width(empty()));
 				height += 2 + font.lineHeight;
 			} else {
@@ -157,7 +181,7 @@ final class MaterialPanel implements HudElement {
 		int y = PAD;
 		graphics.text(font, layout.title(), x, y, TEXT);
 		y += font.lineHeight + 2;
-		if (layout.panel().rows().isEmpty()) {
+		if (nothing(layout.panel())) {
 			graphics.text(font, empty(), x, y, TEXT);
 			graphics.pose().popMatrix();
 			return;

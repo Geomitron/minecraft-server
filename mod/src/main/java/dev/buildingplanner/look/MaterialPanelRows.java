@@ -11,7 +11,7 @@ import java.util.List;
  * and each count with the multiplier, as {@code WidgetMaterialListEntry} shows it: "Total" times the multiplier,
  * "Missing" the same whenever the multiplier isn't 1, and "Available" as it is. "Missing" has the screen's colours:
  * green at 0, gold when "Available" covers it, red otherwise. The panel shows at most {@link #MAX_ROWS} rows, Litematica's
- * own Info HUD limit, and counts the rest for "+N more".
+ * own Info HUD limit, and counts the rest for "+N more"; {@link #within} cuts them further to the room the panel has.
  *
  * @param rows the rows to show, in order; empty for a list with no rows to show ("No blocks to list.")
  * @param more how many rows were left out after the last shown, for "+N more", or 0
@@ -65,6 +65,20 @@ public record MaterialPanelRows<T>(List<Row<T>> rows, int more) {
 			rows.add(new Row<>(entry.item(), (long) entry.total() * multiplier, entry.available(), missing, colour));
 		}
 		return new MaterialPanelRows<>(rows, shown.size() - rows.size());
+	}
+
+	/**
+	 * These rows cut to the ones that fit in {@code height}, for a panel that has only so much room: {@code rowHeight} for
+	 * each row, and, when any row is left out, {@code moreHeight} for the "+N more" line after the last, which must fit
+	 * too. The rows that don't fit join {@code more}, so it counts every row the panel leaves out.
+	 */
+	public MaterialPanelRows<T> within(int height, int rowHeight, int moreHeight) {
+		int total = rows.size() + more;
+		int fit = Math.min(rows.size(), Math.max(0, height) / rowHeight);
+		while (fit > 0 && fit < total && fit * rowHeight + moreHeight > height) {
+			fit--;
+		}
+		return new MaterialPanelRows<>(rows.subList(0, fit), total - fit);
 	}
 
 	/** "Missing" as the screen shows it: as counted at a multiplier of 1, and "Total" times the multiplier otherwise. */

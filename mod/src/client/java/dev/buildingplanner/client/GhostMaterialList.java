@@ -131,6 +131,19 @@ final class GhostMaterialList extends MaterialListBase {
 	 * counted.
 	 */
 	boolean count() {
+		if (!update()) {
+			return false;
+		}
+		time = OptionalLong.of(System.currentTimeMillis());
+		counted = true;
+		return true;
+	}
+
+	/**
+	 * Counts the box again as {@link #count} does, but only into the list: it doesn't make the list "Last counted", which
+	 * only drawing a box and Refresh do, and leaves the list's time as it was; returns whether it counted.
+	 */
+	private boolean update() {
 		ClientSession session = BuildingPlannerClient.session();
 		Minecraft mc = Minecraft.getInstance();
 		if (session == null || mc.level == null || !dimension.equals(session.replica().dimension()) || !held(mc.level, session.replica())) {
@@ -147,19 +160,17 @@ final class GhostMaterialList extends MaterialListBase {
 		} else {
 			setMaterialListEntries(entries);
 		}
-		time = OptionalLong.of(System.currentTimeMillis());
-		counted = true;
 		return true;
 	}
 
 	/**
-	 * The panel's recount, every 2 seconds while it's on: counts the box again as {@link #count} does, but only for a box
-	 * of at most {@link #MAX_RECOUNT_BLOCKS} blocks, and otherwise counts only "Available" again; returns whether it
-	 * counted the box.
+	 * The panel's recount, every 2 seconds while it's on: counts the box again as {@link #update} does, so the panel and
+	 * the screen follow the world, but only for a box of at most {@link #MAX_RECOUNT_BLOCKS} blocks, and otherwise
+	 * counts only "Available" again; returns whether it counted the box. It never makes the list "Last counted".
 	 */
 	boolean recount() {
 		long blocks = (long) (max.getX() - min.getX() + 1) * (max.getY() - min.getY() + 1) * (max.getZ() - min.getZ() + 1);
-		if (blocks <= MAX_RECOUNT_BLOCKS && count()) {
+		if (blocks <= MAX_RECOUNT_BLOCKS && update()) {
 			return true;
 		}
 		updateAvailable();

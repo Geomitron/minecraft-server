@@ -82,7 +82,7 @@ Planner 0.5.0").
   material list screen opens for the blocks inside, ghost blocks and real blocks alike, with how many of each block the
   ghost blocks still need. While ghost blocks are hidden, it lists only the real blocks and leaves the ghost blocks
   hidden. A box with no blocks opens an empty list. The screen's "Info HUD" button pins the list to the screen as a
-  panel like the block mix's, with each block's "Total", "Available" and "Missing", in the screen's order and with its
+  panel like the block mix's, with each block's "All", "Hold" and "Need", in the screen's order and with its
   multiplier. "Save list" keeps the list under a name, and "Saved lists" opens a kept list again. The latest list
   counted from a box is always kept too, as "Last counted". The server keeps each player's lists, so they're the same
   from any computer, on that server only. The panel stays on across restarts, with the same list, until the player
@@ -795,14 +795,20 @@ the old list's Info HUD off when another list becomes current, so Building Plann
 The panel draws as the mix panel does: a dark see-through box, at `SmallText`'s size, hidden while a screen is open and
 while the HUD is hidden (F1). It sits in the top-left corner, 4 from each edge (786 Q6 A), where the game draws nothing
 outside the debug screen (F3). It shows the heading "Material list", with the multiplier after it when it isn't 1
-("Material list ×4"), then the column headings "Total", "Available" and "Missing", then a row for each of the list's
+("Material list ×4"), then the column headings "All", "Hold" and "Need" (Geo's words, for the screen's "Total",
+"Available" and "Missing"; Litematica's own list screen keeps its headings), then a row for each of the list's
 rows in the screen's order, leaving out what the screen leaves out ("Hide available" and the rows the player ignored).
 Each row is the block's icon and its three counts, with no name, so the panel is as narrow as the counts allow (786 Q7
-A). The panel shows at most 10 rows, Litematica's own Info HUD limit (`materialListHudMaxLines`), then "+N more". Each
-count reads as the screen shows it, with the multiplier, and "Missing" in the screen's colours: green at 0, gold when
-"Available" covers it, red otherwise; the other counts are white. "Available" counts the player's inventory again every
-2 seconds, as Litematica's own Info HUD does (`MaterialListUtils.updateAvailableCounts`). A list with no rows to show
-has "No blocks to list." under the heading, with no column headings.
+A). The panel shows at most 10 rows, Litematica's own Info HUD limit (`materialListHudMaxLines`), then "+N more", and
+only the rows that fit above the hotbar: "+N more" counts every row left out, those past the 10 and those that don't
+fit, and its line fits above the hotbar too (a list that fits whole has no such line). The panel's bottom stays above
+the strip the game keeps for the hotbar, `ContextualBar.MARGIN_BOTTOM` GUI pixels (the bars above the hotbar are laid
+out from it), so it holds at every GUI scale and window size, and `MaterialPanelRows.within` takes the rows that fit
+the room. At 854 by 480 and GUI scale 2, a list of 13 kinds of block shows 9 rows and "+4 more"; at 1920 by 1080 it
+shows 10 and "+3 more". Each count reads as the screen shows it, with the multiplier, and "Need" in the screen's
+colours: green at 0, gold when "Hold" covers it, red otherwise; the other counts are white. "Hold" counts the player's
+inventory again every 2 seconds, as Litematica's own Info HUD does (`MaterialListUtils.updateAvailableCounts`). A list
+with no rows to show has "No blocks to list." under the heading, with no column headings.
 
 The rows come from a pure function (`MaterialPanelRows`) of the list's rows without the ignored ones (Litematica's
 `materialListPreFiltered`), its sort, reverse, "Hide available" and multiplier, which follows Litematica's code: its
@@ -812,10 +818,11 @@ A, or A to Z reversed), its filter (`recreateFilteredList`: "Hide available" hid
 count right-aligned under its heading; each row is 18 high, as the mix panel's are.
 
 While the panel is on and the current list is Building Planner's, Building Planner counts its box again every 2
-seconds, as Refresh does when it can, so "Missing" drops as the group builds, on the panel and the screen alike, and
-"Last counted" follows (786 Q8 A): each recount makes the current list "Last counted", so a saved list opened with the
-panel on becomes "Last counted" at its next recount. Where the box can't be counted (the player is too far from it, or
-in another dimension), only "Available" is counted again. A recount that leaves every count as it was doesn't build the
+seconds, as Refresh does when it can, so "Need" ("Missing" on the screen) drops as the group builds, on the panel and the
+screen alike. The recount updates only the panel and the screen: only drawing a box and pressing Refresh replace "Last
+counted" (Geo, replacing 786 Q8 A), so the recount never sends "Last counted" to the server, and a saved list opened
+with the panel on leaves "Last counted" as it was. Where the box can't be counted (the player is too far from it, or
+in another dimension), only "Hold" is counted again. A recount that leaves every count as it was doesn't build the
 screen again, which would take the focus from its "Multiplier" field every 2 seconds. Counting reads whole sections
 (`BoxCount`), so a house-sized box should take about a millisecond; a box of 256 a side full of ghost blocks could take
 about half a second, a pause the player would see every 2 seconds, so a box of more than 1,000,000 blocks counts again
@@ -851,8 +858,8 @@ and when it arrives makes it current, with its counts as kept, and opens its scr
 again when the game holds it. Changes to an opened list (Refresh, the
 multiplier, the sort) aren't kept in that saved list until the player saves it again.
 
-"Last counted" holds the latest list counted from a box: each box drawn for the material list, and each Refresh or
-recount, replaces it. Opening a saved list doesn't. It can't be deleted, and "Save list" keeps a copy of it under a name.
+"Last counted" holds the latest list counted from a box: each box drawn for the material list, and each Refresh,
+replaces it. Neither opening a saved list nor the panel's recount does. It can't be deleted, and "Save list" keeps a copy of it under a name.
 
 #### The lists on the server
 
@@ -890,7 +897,7 @@ and time when it has them. The game sends:
 - `delete_list(name)`: delete the kept list of that name.
 - `open_list(name)`: send the kept list of that name, or "Last counted" when the name is empty.
 - `current_list(list, counted, panel)`: the current list, or none; whether it was just counted from a box (a new box,
-  Refresh or a recount), which makes it "Last counted" too; and whether the panel is on. The game sends it when any of
+  or Refresh, not the panel's recount), which makes it "Last counted" too; and whether the panel is on. The game sends it when any of
   these changes, at most once every 2 seconds, with the latest state, so a change in the last 2 seconds before the
   player leaves isn't kept.
 
@@ -1123,15 +1130,16 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
 - "Info HUD" shows the panel once the screen closes, with the list's rows in the screen's order and their counts, and
   the label reads "Info HUD: ON"; with the multiplier at 4 the heading and every count change as the screen's do;
   sorting by "Missing" on the screen reorders the panel; "Hide available" leaves out the rows it hides on the screen,
-  and turned off brings them back; picking up 3 oak planks raises "Available" within 2 seconds. A second box keeps the
+  and turned off brings them back; picking up 3 oak planks raises "Hold" within 2 seconds. A second box keeps the
   panel on with the new list. F1 hides it and shows it again. "Info HUD" turns it off.
 - The panel sits 4 from the screen's top and left edges, and each row shows the block's icon and its three counts.
-  With the panel on and its box loaded, placing 2 of the missing oak planks as real blocks lowers "Missing" by 2
-  within 2 seconds, on the panel and the screen, and taking them away raises it again.
-- A list of 13 kinds of block, one all built, one covered by what Planner1 carries and the rest missing, shows 10 rows
-  in green, gold and red, then "+3 more". With the mix panel on too, it's shot at 854 by 480 and at 1920 by 1080, GUI
-  scales 2 and 4, and at 854 by 480 with the multiplier at 2 ("Material list ×2"); a box with no blocks shows "No
-  blocks to list.", which is shot too.
+  With the panel on and its box loaded, placing 2 of the missing oak planks as real blocks lowers "Need" ("Missing" on
+  the screen) by 2 within 2 seconds, on the panel and the screen, and taking them away raises it again.
+- The panel's headings read "All", "Hold" and "Need". A list of 13 kinds of block, one all built, one covered by what
+  Planner1 carries and the rest missing, shows its first rows in green, gold and red. With the mix panel on too, at 1920
+  by 1080 (GUI scales 2 and 4) it shows 10 rows, then "+3 more". At 854 by 480 and GUI scale 2 it shows 9 rows, then
+  "+4 more", with the panel's bottom above the hotbar's top. It's shot at those three sizes, and at 854 by 480 with the
+  multiplier at 2 ("Material list ×2"); a box with no blocks shows "No blocks to list.", which is shot too.
 - "Save list" with the name "Planks" keeps the list; "Saved lists" shows "Last counted" first, then "Planks", with
   their sizes. A new box replaces "Last counted" and leaves "Planks"; opening "Planks" doesn't change "Last counted".
   "Delete" asks again, then removes it. A name of 65 characters can't be typed, and "Save" is greyed out with an empty
@@ -1141,9 +1149,11 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   current list (read by a driver probe).
 - Planner1's lists are in `run/server/world/building-planner/material-lists/<Planner1's UUID>.dat` within 30 seconds
   of a save, and no file in Planner1's game folder contains them. After Planner1's game restarts, and again after the
-  server restarts, the panel, on with "Planks" before, shows the same list with the same multiplier, with "Available"
-  counted again, and its recount makes "Planks" "Last counted"; "Saved lists" shows the same lists, and "Open" on
-  "Planks" shows its counts as kept; each is shot.
+  server restarts, the panel, on with "Planks" before, shows the same list with the same multiplier, with "Hold"
+  counted again; "Saved lists" shows the same lists, with "Last counted" still the row's box, and "Open" on "Planks"
+  shows its counts as kept; each is shot.
+- With the panel on, opening a saved list and waiting 6 seconds, which is three recounts, leaves `last_counted` in the
+  player's file as it was; drawing a box and pressing Refresh still replace it.
 - Planner1 playing from client 2's game folder sees the same lists and the panel; Planner2 sees none of Planner1's
   lists, and no panel.
 - With Planner1's lists file cut short and the server restarted, Planner1's join logs an error, the file is renamed
