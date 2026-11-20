@@ -306,7 +306,19 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
   - **M:** "M should be default bound to freecam's menu, not litematica. We shouldn't need to be able to access
     Litematica's menu" (c3). Litematica's "Tool Mode" button is at the bottom of its menu (F11).
 
-  The spec marks with OPEN the choices c3 leaves, for Geo to answer.
+  Geo's answers on the material lists (786) settle what c3 left:
+  - **Where lists are kept:** on the server, for each player (Q1 B), as Geo read the option: "the lists are a file on
+    the server, which the server sends only to the player who saved them, and whoever runs the server can read. They
+    follow the player to another computer, on this server only. That needs new messages between the game and the
+    server, a server update with the release, and a player whose game doesn't match the server's version of Building
+    Planner sees no lists."
+  - **Saved lists:** as many as the player saves (Q2 A), each under a name the player types, with the date and time
+    filled in to start (Q3 A).
+  - **Reopening a list:** a sixth radial menu button, "Material lists" (Q4 A), showing Minecraft's own Book and Quill
+    (Q5 A).
+  - **The panel:** in the top-left corner (Q6 A), each row the block's icon and its three counts (Q7 A), counting the
+    box again every 2 seconds while it shows its list (Q8 A), and staying on with the same list after a restart, until
+    the player turns it off (Q9 A).
 - The shared layer replaces the decisions above that concern separate plans: named plans that move and turn as a whole
   (411 Q1), plan growth (411 Q2), who deletes a plan (411 Q3, 420 Q9), starting a plan with N (420 Q1, 469 Q1), hiding
   a plan with Litematica or Syncmatica (420 Q2, 469 Q2), the paste's target plan (485 Q3), Litematica's Edit Schematic
@@ -314,13 +326,13 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
 
 ## Agent-ready work
 
-**Building Planner 0.5.0** (784, in "Decisions" above). [building-planner.md](building-planner.md) is the design; its
-OPEN marks wait on Geo's answers, and the steps below assume the answers it recommends. Steps 1 and 2 depend on no
-answer; each later step waits for the answers its own text names. The steps come in this order, each small enough for
-one child. A step that changes nothing players see beyond what Geo already decided goes to `main` once its checks pass
-(inbox request 429). A step that changes what players see is committed without pushing, and goes to `main` once Geo
-has seen its in-game screenshots, with the changes outlined in red; steps 2 to 5 go to Geo together. Nothing goes to
-the server or the pack before the last step.
+**Building Planner 0.5.0** (784 and 786, in "Decisions" above). [building-planner.md](building-planner.md) is the
+design. Its one OPEN mark, on what a game on the other version of Building Planner sees ("The lists on the server"),
+waits on Geo; steps 3 and 8 assume the answer it recommends (protocol version 4), and every other step depends on no
+answer. The steps come in this order, each small enough for one child. A step that changes nothing players see beyond
+what Geo already decided goes to `main` once its checks pass (inbox request 429). A step that changes what players see
+is committed without pushing, and goes to `main` once Geo has seen its in-game screenshots, with the changes outlined
+in red; steps 2 and 4 to 6 go to Geo together. Nothing goes to the server or the pack before the last step.
 
 1. **A record for each setting changed once** ("Settings Building Planner changes once" and "Litematica's area
    selection"): `LookDefaults` and `LitematicaLook` with one record for each group, and the drawing of area selections
@@ -333,28 +345,49 @@ the server or the pack before the last step.
    hotkey cleared only while it's "M", the record written only with both mods loaded), and `step10.sh`'s key checks
    pass: M opens Freecam's screen and no Litematica screen, M then L opens none of Litematica's, and a player's own
    Freecam key stays.
-3. **The list screen's buttons and saved lists** ("The screen's buttons" and "Saved lists"; waits for the answers on
-   where lists are kept, how many and how they're named): hook L10, the lists file with "Last counted", the "Save list"
-   and "Saved lists" screens, and Refresh counting only a box the game holds. Done when unit tests cover the file (a
-   save and a read back, a name saved twice replacing the first, an unknown item dropped, a damaged file renamed, and
-   "Last counted" replaced by a count and not by an opening), and `step9.sh`'s screen, saved list and Refresh checks
-   pass, with shots of the screen at 854 by 480 and 1920 by 1080, GUI scale 2, and of both new screens.
-4. **The material list panel** ("The material list panel"; waits for the answers on where it sits, its rows, when
-   "Missing" changes and the panel after a restart): `MaterialPanel`, the "Info HUD" switch through `getHudRenderer`,
-   the panel kept on across lists, the recount every 2 seconds, and the panel's state in the client config. Done when
-   unit tests cover the panel's rows as a pure function (the screen's order and filters, the multiplier, the colours
-   of "Missing", "+N more" and an empty list), and `step9.sh`'s panel checks pass, with shots at 854 by 480 and 1920 by
-   1080, GUI scales 2 and 4, with the mix panel on too.
-5. **The "Material lists" button** ("The Material lists button"; waits for the answers on how a list is reopened and
-   the button's icon): the sixth `RadialButton`, in the slot over redo, with its icon. Done when `step9.sh`'s radial
-   menu checks pass at all three sizes with six buttons, its "Material lists" check passes, and `step8.sh` and
-   `step10.sh` still pass.
-6. **Texts for Geo**: every text steps 3 to 5 add (the buttons' labels, the two screens' titles, fields and buttons,
+3. **The lists on the server** ("The lists on the server"; assumes the recommended answer to its OPEN): protocol
+   version 4, the seven payloads, the server's store of each player's lists with its files, its limits and its sends
+   at join, and the game's side of the messages, which keeps the index, sends `current_list` when it counts a box, and
+   makes the `current` it receives at join the current list, with no new screens. Done when unit tests cover the
+   payloads' codecs (each of the seven, a list at 64 KiB taken and one over it refused), the file (a write and a read
+   back, an unknown item dropped, a damaged file renamed with `.unreadable`), the store's rules (a name saved twice
+   replacing the first, a delete, `open_list` for a kept name, for "Last counted" and for a name no longer kept, a
+   counted `current_list` replacing "Last counted" and an uncounted one leaving it, and a write at most every 30
+   seconds while changed) and each limit (a name of 0 and of 65 characters, a control character, a second row for one
+   item, "Missing" over "Total", a box of 257 a side, an unknown dimension, a multiplier of 0, and the 21st message in
+   10 seconds); `step8.sh` passes with its protocol version 3 `hello` check and its check of a client without the
+   add-on; and a new `step9.sh` check passes: a box Planner1 counts is in
+   `run/server/world/building-planner/material-lists/<Planner1's UUID>.dat` as `last_counted` within 30 seconds, and
+   after the server and Planner1's game restart, Planner1's game has it as the current list (read by a driver
+   probe). The step changes nothing players see, so it goes to `main` once its checks pass.
+4. **The list screen's buttons and saved lists** ("The screen's buttons" and "Saved lists"): hook L10, the "Save list"
+   screen with its name field (the date and time to start, 64 characters at most, "Save" greyed out while empty) and
+   the "Saved lists" screen over step 3's messages, "Open" waiting for the server's `list`, and Refresh counting only a
+   box the game holds. `start_client` gains an optional player name, so client 2 can play as Planner1. Done when
+   `step9.sh`'s screen, saved lists, file, restart, other computer, damaged file, limits and Refresh checks pass, with
+   shots of the material list screen at 854 by 480 and 1920 by 1080, GUI scale 2, and of both new screens.
+5. **The material list panel** ("The material list panel"): `MaterialPanel` in the top-left corner, each row the
+   block's icon and its three counts, the "Info HUD" switch through `getHudRenderer`, the panel kept on across lists,
+   the recount every 2 seconds, and the panel's switch sent in `current_list` and taken from `current` at join. Done
+   when unit tests cover the panel's rows as a pure function (the screen's order and filters, the multiplier, the
+   colours of "Missing", "+N more" and an empty list), and `step9.sh`'s panel checks pass, including the panel after
+   Planner1's game and the server restart, on client 2 as Planner1, and on the server without Building Planner, with
+   shots at 854 by 480 and 1920 by 1080, GUI scales 2 and 4, with the mix panel on too.
+6. **The "Material lists" button** ("The Material lists button"): the sixth `RadialButton`, in the slot over redo,
+   with the Book and Quill. Done when `step9.sh`'s radial menu checks pass at all three sizes with six buttons, its
+   "Material lists" check passes, and `step8.sh` and `step10.sh` still pass.
+7. **Texts for Geo**: every text steps 4 to 6 add (the buttons' labels, the two screens' titles, fields and buttons,
    "Last counted", the date and time a name starts with, the Refresh message, the panel's heading, column headings,
    "+N more" and "No blocks to list.", and the button's name) goes to Geo as editable text, and Geo's version is built
    in, with `step9.sh` checking each text exactly.
-7. **The release**: version 0.5.0, after Geo's approval: the GitHub release, on the server after a backup, and in the
-   pack, as 0.4.0 was released, with the README and the guide's setup steps checked against what 0.5.0 changes.
+8. **The release**: version 0.5.0, after Geo's approval, released as 0.4.0 was: the GitHub release, then the server
+   and the pack in one sitting, since protocol version 4 turns Building Planner off for a game and a server on
+   different versions. On the server: a backup of the world named for 0.5.0, the jar in `mods/` in place of 0.4.0's,
+   and a restart; the log shows Building Planner start with no error, and after a player saves a list,
+   `world/building-planner/material-lists/` contains their file. Then the pack's push to `main`. "Current setup" in this
+   plan is updated to 0.5.0, protocol version 4, the new backup and the lists' folder, and the README and the guide's setup
+   steps are checked against what 0.5.0 changes, including that a player who was in the game during the release
+   relaunches it to get 0.5.0.
 
 ## Design work: Building Planner
 

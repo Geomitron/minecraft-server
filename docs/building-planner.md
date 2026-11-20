@@ -13,8 +13,9 @@ except the next version's changes from Geo's walkthrough of 0.4.0 (inbox request
   for players who ran 0.3.0 (see "Settings Building Planner changes once");
 - M opens Freecam's menu, and nothing opens Litematica's (see "Keys");
 - the material list's screen without "Export", its export type and "Litematica menu", with "Save list" and "Saved
-  lists" in their place, the saved lists and the list kept as "Last counted", the material list panel, Refresh counting
-  only a box the game holds, and the radial menu's "Material lists" button (see "The material list").
+  lists" in their place, the saved lists and the list kept as "Last counted", kept on the server for each player with
+  protocol version 4, the material list panel, Refresh counting only a box the game holds, and the radial menu's
+  "Material lists" button (see "The material list", and Geo's answers in inbox request 786).
 
 0.4.0 turns the drawing of area selections off under the record 0.3.0 had already written, so on a computer that ran
 0.3.0 it never does. Places marked OPEN wait on Geo's answer. The build steps are in [plan.md](plan.md) ("Building
@@ -82,9 +83,10 @@ Planner 0.5.0").
   ghost blocks still need. While ghost blocks are hidden, it lists only the real blocks and leaves the ghost blocks
   hidden. A box with no blocks opens an empty list. The screen's "Info HUD" button pins the list to the screen as a
   panel like the block mix's, with each block's "Total", "Available" and "Missing", in the screen's order and with its
-  multiplier. "Save list" keeps the list under a name, across game restarts and on every server, and "Saved lists"
-  opens a kept list again. The latest list counted from a box is always kept too, as "Last counted". The radial menu's
-  "Material lists" button opens the current list (see "The material list").
+  multiplier. "Save list" keeps the list under a name, and "Saved lists" opens a kept list again. The latest list
+  counted from a box is always kept too, as "Last counted". The server keeps each player's lists, so they're the same
+  from any computer, on that server only. The panel stays on across restarts, with the same list, until the player
+  turns it off. The radial menu's "Material lists" button opens the current list (see "The material list").
 - **Building Planner's name.** Where players see Effortless Building's name in the game, the corner of the radial
   menu, it reads "Building Planner". Effortless Building's four keys in Controls show under the "Building Planner"
   heading, with Building Planner's own.
@@ -120,10 +122,10 @@ Planner 0.5.0").
 One jar, mod id `buildingplanner`, installed on the server and in the player pack. It registers no blocks, items or
 menus, so it adds nothing to the registries Fabric API syncs at login, and players without mods can still join.
 
-- **Common:** the layer's column storage and its file format, the network payloads, the hold-to-repeat timer and the
-  look defaults' rules.
-- **Server:** the layer store and its files, column watching, edits and their order, per-player undo, and the one-time
-  import of the plans Syncmatica shared. They run only on a dedicated server, which is how the group plays.
+- **Common:** the layer's column storage and its file format, the network payloads, the material lists' format and
+  limits, the hold-to-repeat timer and the look defaults' rules.
+- **Server:** the layer store and its files, column watching, edits and their order, per-player undo, each player's
+  material lists and their files, and the one-time import of the plans Syncmatica shared. They run only on a dedicated server, which is how the group plays.
 - **Client:** the player's copy of the layer and its column watching, the tiles that hand it to Litematica and the
   hooks that hide them, the show or hide switch, the Effortless Building capture, hold to repeat, the radial menu's
   buttons and sliders, the block mix and its panel, copy and paste, the material list with its panel and saved lists,
@@ -293,15 +295,16 @@ their order, so nothing falls between a snapshot and the edits after it.
 
 ### Payloads and order
 
-Payloads (namespace `buildingplanner`, protocol version 3):
+Payloads (namespace `buildingplanner`, protocol version 4):
 
 - Client to server: `watch(dimension, columns)`, `unwatch(dimension, columns)`, `edit(dimension, clientSeq, kind,
   changes)` where `kind` is shape or erase and `changes` is a list of world position and block state (air for an
-  erase), `undo` and `redo`.
+  erase), `undo` and `redo`; and for material lists `save_list`, `delete_list`, `open_list` and `current_list` (see
+  "The lists on the server").
 - Server to client: `hello(protocolVersion, limits)` at join, where `limits` is the block cap for an edit;
   `columns(dimension, columns)`, each column its position and its sections, each section its height, palette and
   packed blocks; `applied(dimension, author, clientSeq, changes)`; `rejected(clientSeq, reason)`; `notice(message)`
-  for messages players see.
+  for messages players see; and for material lists `lists`, `list` and `current`.
 
 Order and conflicts:
 
@@ -609,8 +612,7 @@ OpenRouter model, then edited by hand in Paint.NET: `ghost_blocks_shown` and `gh
 the slash over it, was then redrawn at 12 by 10 pixels, the size Geo picked (inbox request 768). The "Block mix" button
 shows Effortless Building's own Randomizer Bag item texture (`effortlessbuilding:textures/item/randomizerbag.png`),
 drawn from Effortless Building's jar, which copies none of it. The "Material lists" button shows Minecraft's Book and
-Quill item texture (`minecraft:textures/item/writable_book.png`), drawn from the game's own (see the OPEN on its icon
-in "The Material lists button").
+Quill item texture (`minecraft:textures/item/writable_book.png`), drawn from the game's own (786 Q5 A).
 
 ### Keys
 
@@ -742,7 +744,7 @@ Litematica's Refresh button counts the list's box again, and keeps the new count
 Planner has a session, the player is in the box's dimension, and the game holds every chunk the box touches, as a box
 needs when it's drawn. Otherwise the counts stay as they were, and the screen says "Move closer to the box to count it
 again." (`GuiBase.addMessage`), since a chunk the game doesn't hold would count as air and every ghost block in it as
-missing. On another server, Refresh counts that server's blocks in the same box.
+missing. A list never reaches another server: each server keeps its own (see "The lists on the server").
 
 Litematica's list has four columns (`gui/widgets/WidgetMaterialListEntry.java`): "Item"; "Total", the count for the
 plan; "Missing", how many are still to place, in green at 0, in gold when "Available" covers it, and in red otherwise;
@@ -787,37 +789,26 @@ state. `DataManager.setMaterialList` turns the old list's Info HUD off when anot
 Planner turns the panel back on after it, when it was on.
 
 The panel draws as the mix panel does: a dark see-through box, at `SmallText`'s size, hidden while a screen is open and
-while the HUD is hidden (F1). It shows the heading "Material list", with the multiplier after it when it isn't 1
+while the HUD is hidden (F1). It sits in the top-left corner, 4 from each edge (786 Q6 A), where the game draws nothing
+outside the debug screen (F3). It shows the heading "Material list", with the multiplier after it when it isn't 1
 ("Material list ×4"), then the column headings "Total", "Available" and "Missing", then a row for each of the list's
 rows in the screen's order, leaving out what the screen leaves out ("Hide available" and the rows the player ignored).
-Each count reads as the screen shows it, with the multiplier, and "Missing" in the screen's colours: green at 0, gold
-when "Available" covers it, red otherwise. "Available" counts the player's inventory again every 2 seconds, as
-Litematica's own Info HUD does (`MaterialListUtils.updateAvailableCounts`). A list with no rows to show has "No blocks
-to list." under the heading.
+Each row is the block's icon and its three counts, with no name, so the panel is as narrow as the counts allow (786 Q7
+A). The panel shows at most 10 rows, Litematica's own Info HUD limit (`materialListHudMaxLines`), then "+N more". Each
+count reads as the screen shows it, with the multiplier, and "Missing" in the screen's colours: green at 0, gold when
+"Available" covers it, red otherwise. "Available" counts the player's inventory again every 2 seconds, as Litematica's
+own Info HUD does (`MaterialListUtils.updateAvailableCounts`). A list with no rows to show has "No blocks to list."
+under the heading.
 
-OPEN: where the panel sits. A) In the top-left corner, 4 from each edge. B) At the left edge, centred top to bottom,
-as the mix panel is at the right. C) At the right edge, above the mix panel. Recommended: A, since the game draws
-nothing in that corner outside the debug screen (F3), while chat runs up the left edge from the bottom and the mix
-panel takes the right edge's middle.
+While the panel shows a list whose box it can count (as for Refresh), Building Planner counts the box again every 2
+seconds, so "Missing" drops as the group builds, on the panel and the screen alike, and "Last counted" follows (786 Q8
+A). Counting reads whole sections (`BoxCount`), so a house-sized box should take about a millisecond; a box of 256 a
+side full of ghost blocks could take about half a second, a pause the player would see every 2 seconds, so a box of
+more than 1,000,000 blocks counts again only on Refresh.
 
-OPEN: what each row shows. A) The block's icon and its three counts, so the panel is as narrow as the counts allow.
-B) The block's icon, its name and its three counts, which makes the panel about twice as wide (a name such as
-"Polished Blackstone Brick Stairs" takes about 160 of the 427 across a screen of 854 by 480 at GUI scale 2). Either
-shows at most 10 rows, Litematica's own Info HUD limit (`materialListHudMaxLines`), then "+N more". Recommended: A,
-since Geo wanted the mix panel small ("significantly vertically narrower", scaled to about 70%, 709 Q1) and each
-block's icon tells it apart.
-
-OPEN: when "Missing" changes. A) Building Planner counts the box again every 2 seconds while the panel shows a list
-whose box it can count (as for Refresh), so "Missing" drops as the group builds, on the panel and the screen alike, and
-"Last counted" follows. B) Only Refresh counts again, as for Litematica's own lists, so the panel's "Missing" stays as
-counted until the player presses Refresh. Recommended: A, since a pinned list is for building from. Counting reads
-whole sections (`BoxCount`), so a house-sized box should take about a millisecond; a box of 256 a side full of ghost blocks
-could take about half a second, a pause the player would see every 2 seconds, so a box of more than 1,000,000 blocks
-counts again only on Refresh.
-
-OPEN: whether the panel stays on after the game restarts. A) It does, with the same list, until the player turns it
-off. B) It starts off at each launch, as the block mix does (477 Q3). Recommended: A, since a list pinned for a build
-is still wanted the next evening.
+The panel stays on across game restarts, with the same list, until the player turns it off (786 Q9 A). The server
+keeps the current list and the panel's switch with the player's lists, and sends them back when the player joins (see
+"The lists on the server"), so the panel also returns on another computer.
 
 #### Saved lists
 
@@ -826,52 +817,112 @@ also an autosave material list for the last one collected (not necessarily the l
 
 A saved list keeps its name, when it was saved, its box (dimension and two corners), its counts (each row's item, its
 "Total", its "Missing" and how many of those are the wrong block), and the screen's multiplier, sort and "Hide
-available". "Available" isn't kept: it is counted from the player's inventory whenever the list shows. The lists are
-kept in one file on the player's computer, `config/buildingplanner-material-lists.json`, written whole on each change
-and read when the game starts, so they're the same on every server with Building Planner; a file that can't be read is
-renamed with `.unreadable` at its end and the player starts with no lists. An item the game doesn't know drops from
-the list it's in.
+available". "Available" isn't kept: it is counted from the player's inventory whenever the list shows. The server keeps
+each player's lists (786 Q1 B), as "The lists on the server" describes, so they're the same from any computer the
+player joins from, on that server only, and whoever runs the server can read them. A player keeps as many lists as
+they save (786 Q2 A).
 
 "Save list" opens a small screen with a name field, filled in to start with the date and time ("Nov 19, 6:21 PM"),
-and "Save" and "Cancel". Saving with the name of a kept list replaces it. "Saved lists" opens a screen listing the
-kept lists, newest first, with "Last counted" always at the top: each row shows its name, when it was saved and its
-box's size ("12 × 5 × 8"), with "Open" and "Delete"; "Delete" asks again before it deletes. "Open" makes the list
-current, with its counts as kept, and opens its screen, where Refresh counts its box again when the game holds it.
-Changes to an opened list (Refresh, the multiplier, the sort) aren't kept until the player saves it again.
+which the player may type over (786 Q3 A), and "Save" and "Cancel". The field accepts at most 64 characters, and "Save"
+is greyed out while the name is empty or only spaces; spaces at either end are dropped. Saving with the name of a kept
+list replaces it. "Saved lists" opens a screen listing the kept lists, newest first, with "Last counted" always at the
+top: each row shows its name, when it was saved and its box's size ("12 × 5 × 8"), with "Open" and "Delete"; "Delete"
+asks again before it deletes. The screen lists what the server last sent, which it sends again after each save and
+delete. "Open" asks the server for the list, and when it arrives makes it current, with its counts as kept, and opens
+its screen, where Refresh counts its box again when the game holds it. Changes to an opened list (Refresh, the
+multiplier, the sort) aren't kept in that saved list until the player saves it again.
 
 "Last counted" holds the latest list counted from a box: each box drawn for the material list, and each Refresh or
 recount, replaces it. Opening a saved list doesn't. It can't be deleted, and "Save list" keeps a copy of it under a name.
 
-OPEN: where the lists are kept. A) On each player's computer, in one file, shared by every server with Building Planner they play
-on. B) On the server, for each player, so they follow the player to another computer, on this server only; that needs
-new messages between the game and the server (protocol version 4), a server update with the release, and a player
-whose game is on another protocol version gets no lists. Recommended: A, since it needs nothing from the server and
-each player plays from one computer.
+#### The lists on the server
 
-OPEN: how many lists are kept. A) As many as the player saves, each a few kilobytes. B) The 50 newest, the oldest
-deleted when a new one is saved. Recommended: A, since nothing grows without the player saving.
+The server keeps each player's lists in a file of their own, `<world>/building-planner/material-lists/<UUID>.dat`,
+named by the player's UUID so that a change of player name keeps them. The file is gzip-compressed NBT, as the layer's
+files are:
 
-OPEN: how lists are named. A) The player types a name when saving, with the date and time filled in to start. B)
-Each list is named by its date and time and box size, with no field to type in. Recommended: A, since a name like
-"North tower" finds a list faster than a date.
+- `version`: the format's version, 1.
+- `data_version`: the game's data version when the file was written.
+- `saved`: each saved list, with its `name` and `time` (when it was saved, in milliseconds since 1970).
+- `last_counted`: "Last counted", when there is one, with its `time` (when it was counted).
+- `current`: the list the screen and the panel show, when there is one, with its `name` when it was opened from a saved
+  list; and `panel`, 1 while the panel is on and 0 otherwise.
+
+Each list has `dimension` (its id), `min` and `max` (the box's lowest and highest corners, each x, y and z),
+`multiplier`, `sort` (the name of Litematica's `MaterialListBase.SortCriteria`: `NAME`, `COUNT_TOTAL`, `COUNT_MISSING`
+or `COUNT_AVAILABLE`), `reverse` and `hide_available` (1 or 0), and `rows`, each with `item` (its id, such as
+`minecraft:oak_planks`), `total`, `missing` and `wrong`.
+
+The server reads a player's file on the server thread when they first join after it starts, and keeps their lists in
+memory until it stops, so a read never meets a write still under way. It writes a player's file whole: it builds the
+contents on the server thread, and one background thread writes them through a temporary file and a rename
+(`LitematicFormat.writeFile`), at most every 30 seconds while that player's lists have changed, and when the server
+stops, as for the layer's files. A crash loses at most the last 30 seconds of changes, as it does for ghost blocks. A
+file that can't be read (cut short, not compressed NBT, another version, or a missing entry) is logged as an error and
+renamed with `.unreadable` at its end, replacing an older one, and the player starts with no lists. An item the game
+doesn't know drops from the list it's in.
+
+A list travels as its dimension, its corners, its multiplier, sort, reverse and "Hide available", and its rows, each
+with its item as an id in the item registry (both sides run the same vanilla items) and its three counts, with its name
+and time when it has them. The game sends:
+
+- `save_list(name, list)`: keep the list under the name, replacing a kept list of that name.
+- `delete_list(name)`: delete the kept list of that name.
+- `open_list(name)`: send the kept list of that name, or "Last counted" when the name is empty.
+- `current_list(list, counted, panel)`: the current list, or none; whether it was just counted from a box (a new box,
+  Refresh or a recount), which makes it "Last counted" too; and whether the panel is on. The game sends it when any of
+  these changes, at most once every 2 seconds, with the latest state, so a change in the last 2 seconds before the
+  player leaves isn't kept.
+
+The server sends:
+
+- `lists(lastCounted, saved)`: the index of the player's lists: "Last counted", when there is one, and the saved lists,
+  newest first, each with its name, its time and its box's size. It goes at join and after each save and delete. The
+  game keeps the "Last counted" entry up to date itself as it counts.
+- `list(list)`: the answer to `open_list`. For a name no longer kept, the server sends `lists` again instead.
+- `current(list, panel)`: at join, the current list as the player left it, or none, and the panel's switch.
+
+At join, after `hello`, the server reads the player's file if it hasn't yet, and sends `lists` and `current` to a game
+that can receive them. The game makes the `current` list current, with its counts as kept, and turns the panel on when
+it was on; once the box's chunks load, the recount every 2 seconds brings the counts up to date. So the panel shows
+the same list after a restart (786 Q9 A), and on another computer.
+
+The server protects itself with these limits:
+
+- A name is 1 to 64 characters, with no line breaks or other control characters.
+- A list is at most 64 KiB as sent (`registerLarge` for `save_list` and `current_list`), with at most one row for each
+  item. In each row, "Missing" is at most "Total" and the wrong blocks are at most "Missing". The box is at most 256
+  blocks a side, as a drawn box is, in a dimension the server has, and the multiplier is at least 1.
+- The server accepts at most 20 of a player's list messages in any 10 seconds, of all four kinds.
+- The number of lists has no limit (786 Q2 A). Each list is a few kilobytes, and only the player's own saves add to
+  their file.
+
+The server drops a message that breaks a limit, changes nothing, and logs a warning with the player's name. The game
+keeps to the same limits itself, so a player never meets them, and they have no text.
+
+Each server with Building Planner keeps its own lists, so a player starts with none on another such server, and their
+lists and panel come back when they return. On a server without Building Planner, or with another protocol version,
+Building Planner stays off (see "When the server lacks the mod"): the panel doesn't show, and the radial menu's
+buttons do nothing. A singleplayer world runs no server side, so it has no lists either.
+
+OPEN: what a game on the other version of Building Planner sees, from the release until the player's next launch. A)
+Protocol version 4, as above: a 0.4.0 game on the 0.5.0 server, and a 0.5.0 game on the 0.4.0 server, have Building
+Planner off, as on a server without it: no ghost blocks, no lists, and Effortless Building's shapes draw nothing. B)
+Protocol version 3 stays, and the list messages are optional: a 0.4.0 game on the 0.5.0 server keeps everything 0.4.0
+has, and a 0.5.0 game on the 0.4.0 server keeps the ghost blocks and the material list without saved lists, "Last
+counted" or the panel's return, which then need a state of their own and checks. B matches Geo's reading of 786 Q1 B
+("a player whose game doesn't match the server's version of Building Planner sees no lists"); A turns the ghost blocks
+off too. Recommended: A, since the pack updates every player at launch, so only a player who rejoins after the release
+without restarting the game, or whose update failed, meets it, and A has one state to build and check.
 
 #### The Material lists button
 
-Litematica's material list hotkey (M,L) reopens the current list, but M opens Freecam's menu (see "Keys"), so a player
-needs another way to reopen a list.
-
-OPEN: how a player reopens the current list or a saved one. A) A sixth radial menu button, "Material lists", in the
-free slot over the redo button, 65 above the menu's middle beside Copy and Paste, which opens the current list's
-screen, or the "Saved lists" screen when there's no current list; like the other buttons, it acts when the menu's key
-is let go over it or on a click. B) A key in Controls under "Building Planner", with no key at first, which does the
-same. C) The "Material list" button opens the current list when there is one, with a "New box" button on its screen to
-draw a box, which changes how "Material list" works from 752's decision. Recommended: A, since every other planning
-action is a radial menu button and the slot is free.
-
-OPEN: the "Material lists" button's icon (with A above). A) Minecraft's own Book and Quill item, drawn from the game's
-textures, as "Block mix" shows Effortless Building's Randomizer Bag. B) Generated icons in the other buttons' style
-for Geo to pick from and edit by hand, as in 738. Recommended: A, since it fits the menu's pixel style without a round
-of generating and picking icons.
+Litematica's material list hotkey (M,L) reopens the current list, but M opens Freecam's menu (see "Keys"), so the
+radial menu has a sixth button, "Material lists" (786 Q4 A), in the free slot over the redo button, 65 above the menu's
+middle beside Copy and Paste. It opens the current list's screen, or the "Saved lists" screen when there's no current
+list; like the other buttons, it acts when the menu's key is let go over it or on a click. It shows Minecraft's own
+Book and Quill (786 Q5 A; see "The radial menu's buttons and sliders"). The server sends the current list at join, so
+after a restart the button opens the list the player left.
 
 ### Litematica's area selection
 
@@ -902,13 +953,14 @@ and in singleplayer, then stops drawing. The selections stay in Litematica's fil
 
 ### When the server lacks the mod
 
-On joining, the client checks with `ClientPlayNetworking.canSend` that the server takes all five of its payloads. When
+On joining, the client checks with `ClientPlayNetworking.canSend` that the server takes all nine of its payloads. When
 it doesn't, Building Planner stays off for that server, silently: the player sees no message, and its keys, its radial
 menu buttons and its sliders do nothing, and neither the mix panel nor the material list panel shows. While it's off, Effortless Building's shapes
 place nothing: its place and break packets (hooks E1 and E2) and its undo and redo packets (E4) aren't sent, so a
 server that runs Effortless Building without Building Planner never changes real blocks for them. The same holds from
 joining until the server's `hello` arrives. A `hello` with another protocol version leaves it off the same way, so a
-player whose pack still has Building Planner 0.2.1 sees no ghost blocks until their next launch updates it. A
+player whose game still has Building Planner 0.4.0 (protocol version 3) sees no ghost blocks and no lists on a server
+with 0.5.0 until their next launch updates it (see the OPEN in "The lists on the server"). A
 singleplayer world, or a LAN host's own world, runs no server side, and Effortless Building works there as it does
 without Building Planner. The server sends nothing to a player who can't receive it (`ServerPlayNetworking.canSend`),
 so players without the add-on, or without any mods, join and play as before. It sends `hello` only to a game that also
@@ -983,8 +1035,9 @@ add-on's classes off the classpath) and checks:
   player staying connected; and, by the driver's counter of the custom payloads leaving the client (a mixin in the
   `clienttest` source set), no place, break, undo or redo packet of Effortless Building is sent after a shape, Ctrl+Z,
   Ctrl+Y and the break click.
-- A `hello` with another protocol version, which the driver hands to the client, starts no session and shows no
-  message.
+- A `hello` with protocol version 3, as Building Planner 0.4.0 sends, which the driver hands to the client, starts no
+  session and shows no message.
+- A client without the add-on joins the server with it, and the server sends it no list message and logs no error.
 
 `step9.sh`, show or hide, the radial menu's buttons, the mouse modes, boxes, copy and paste and the material list.
 Boxes are drawn with three real left clicks, aimed with the driver's `lookat`, while the players fly so they stay where
@@ -1053,25 +1106,37 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   sorting by "Missing" on the screen reorders the panel; "Hide available" leaves out the rows it hides on the screen;
   picking up 3 oak planks raises "Available" within 2 seconds. A second box keeps the panel on with the new list. F1
   hides it. The panel is shot at 854 by 480 and at 1920 by 1080, GUI scales 2 and 4, with the mix panel on too.
-- With the panel on and its box loaded, placing 2 of the missing oak planks as real blocks lowers "Missing" by 2
-  within 2 seconds (OPEN: when "Missing" changes, answer A).
+- The panel sits 4 from the screen's top and left edges, and each row shows the block's icon and its three counts.
+  With the panel on and its box loaded, placing 2 of the missing oak planks as real blocks lowers "Missing" by 2
+  within 2 seconds, on the panel and the screen.
 - "Save list" with the name "Planks" keeps the list; "Saved lists" shows "Last counted" first, then "Planks", with
   their sizes. A new box replaces "Last counted" and leaves "Planks"; opening "Planks" doesn't change "Last counted".
-  After a restart both are still there, and "Open" on "Planks" shows its counts as kept, with "Available" counted
-  again. "Delete" asks again, then removes it. A lists file cut short is renamed with `.unreadable`, and the game
-  starts with no lists.
+  "Delete" asks again, then removes it. A name of 65 characters can't be typed, and "Save" is greyed out with an empty
+  name.
+- Planner1's lists are in `run/server/world/building-planner/material-lists/<Planner1's UUID>.dat` within 30 seconds
+  of a save, and no file in Planner1's game folder contains them. After Planner1's game restarts, and again after the
+  server restarts, "Saved lists" shows the same lists, the panel shows the same list with the same multiplier, and
+  "Open" on "Planks" shows its counts as kept, with "Available" counted again; each is shot.
+- Planner1 playing from client 2's game folder sees the same lists and the panel; Planner2 sees none of Planner1's
+  lists.
+- With Planner1's lists file cut short and the server restarted, Planner1's join logs an error, the file is renamed
+  with `.unreadable`, Planner1 has no lists, and a new save writes a new file.
+- A `save_list` with a name of 65 characters, one with a row whose "Missing" is over its "Total", and the 21st list
+  message in 10 seconds, each sent by the driver, change nothing on the server and log a warning, and Planner1 stays
+  connected.
 - Refresh on a list whose box is in chunks the game doesn't hold (Planner1 teleported 300 blocks away) keeps the counts
   and shows its message; back at the box, Refresh counts again and replaces "Last counted".
-- The radial menu's "Material lists" button opens the current list's screen, and with no list since the game started
-  and no lists kept, the "Saved lists" screen.
+- The radial menu's "Material lists" button opens the current list's screen, also after Planner1's game restarts, and
+  for Planner2, with no current list on the server, the "Saved lists" screen.
 - A simple area selection with an origin, which Litematica saved for the server before the session, with its drawing
   of selections on and Building Planner's client config holding `look-defaults-applied=true` without
   `area-selection-off-applied`, as 0.3.0 and 0.4.0 leave it on a computer that ran 0.3.0, shows as a large box and an
   orange one-block box in the view, which is shot. After the next start, the option is off,
   `area-selection-off-applied=true` is written, the selection and its origin are still in Litematica's data, and
   neither shows in the same view.
-- On the same server with Building Planner left out, N makes no message and leaves ghost blocks shown, and the mouse
-  works as without the add-on.
+- On the same server with Building Planner left out, N makes no message and leaves ghost blocks shown, the mouse
+  works as without the add-on, and the material list panel doesn't show; with Building Planner back, the panel shows
+  again with the same list.
 
 `step10.sh`, hold to repeat and the settings Building Planner changes once, with Freecam 1.5.1 (Modrinth version
 `lwrkvqym`, the pack's) on both clients. The driver counts the ticks each mouse button was down and
@@ -1147,3 +1212,8 @@ other in the game's own copy of the layer, again after a restart, which doesn't 
   block limit on it is expected, not measured.
 - That Freecam's settings screen opens on M's press before MaLiLib reads a second key, so Litematica's M hotkeys can't
   be typed; `step10.sh` checks M then L.
+- That 64 KiB fits a list with a row for every item in Minecraft 26.3: a row is at most 15 bytes as sent, so 64 KiB
+  fits about 4,300 rows, and the item count is expected, not counted, to be well under that.
+- How long the server takes to read a player's lists file at join, on the server thread: expected to be a few
+  milliseconds for a few hundred lists, not measured.
+- A real 0.4.0 game on a 0.5.0 server: `step8.sh` hands the client a made-up `hello` of protocol version 3.
