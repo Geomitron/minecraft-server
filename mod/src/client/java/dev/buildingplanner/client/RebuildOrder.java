@@ -1,5 +1,7 @@
 package dev.buildingplanner.client;
 
+import dev.buildingplanner.layer.Layer;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -20,6 +22,11 @@ public final class RebuildOrder {
 	private static final Object[] LOCKS = new Object[64];
 	/** On a thread that runs a rebuild, the number of the newest task made before it began. */
 	private static final ThreadLocal<Long> RUNNING = new ThreadLocal<>();
+	/**
+	 * For each column, by {@code Layer.key}, the newest number a finished rebuild of it began after: what the self-check
+	 * waits for before it reads what Litematica holds.
+	 */
+	private static final ConcurrentHashMap<Long, Long> REBUILT = new ConcurrentHashMap<>();
 
 	static {
 		for (int i = 0; i < LOCKS.length; i++) {
@@ -47,13 +54,30 @@ public final class RebuildOrder {
 	/** Runs a rebuild of the column after any other rebuild of it that's running has ended. */
 	public static void run(int chunkX, int chunkZ, Runnable rebuild) {
 		synchronized (LOCKS[Math.floorMod(31 * chunkX + chunkZ, LOCKS.length)]) {
-			RUNNING.set(MADE.get());
+			long began = MADE.get();
+			RUNNING.set(began);
 			try {
 				rebuild.run();
+				REBUILT.merge(Layer.key(chunkX, chunkZ), began, Math::max);
 			} finally {
 				RUNNING.remove();
 			}
 		}
+	}
+
+	/**
+	 * The number of the newest task made, read once a change to a tile has queued its rebuild, for
+	 * {@link #rebuiltSince}: a rebuild that begins at or past it began after that rebuild was queued, so it reads the
+	 * changed tile, even when a thread takes it up before this is read.
+	 */
+	public static long mark() {
+		return MADE.get();
+	}
+
+	/** Whether a rebuild of the column that began at or past {@code mark}, from {@link #mark}, has finished. */
+	public static boolean rebuiltSince(int chunkX, int chunkZ, long mark) {
+		Long began = REBUILT.get(Layer.key(chunkX, chunkZ));
+		return began != null && began >= mark;
 	}
 
 	/** Whether this thread runs a rebuild. */

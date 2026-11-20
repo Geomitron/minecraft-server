@@ -1,20 +1,24 @@
 package dev.buildingplanner.client;
 
+import fi.dy.masa.litematica.data.DataManager;
 import fi.dy.masa.litematica.render.LitematicaRenderer;
 import fi.dy.masa.litematica.render.schematic.ChunkMeshDataSchematic;
 import fi.dy.masa.litematica.render.schematic.ChunkRenderDataSchematic;
+import fi.dy.masa.litematica.schematic.placement.SchematicPlacement;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
+import net.minecraft.core.BlockPos;
 import net.minecraft.util.profiling.InactiveProfiler;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.block.Blocks;
 
 /**
  * What Litematica draws of chunk columns, read from its renderer's fields: the schematic world can hold a ghost block
  * that the renderer's last build of its column left out, or a column the renderer leaves out of what it draws, which
- * only the renderer's own state shows.
+ * only the renderer's own state shows. Also takes a block out of what Litematica holds alone, for the self-check.
  */
 final class RenderProbe {
 	private RenderProbe() {
@@ -61,6 +65,31 @@ final class RenderProbe {
 		Object renderer = LitematicaRenderer.getInstance().getWorldRenderer();
 		renderer.getClass().getMethod("loadRenderers", net.minecraft.util.profiling.ProfilerFiller.class)
 			.invoke(renderer, InactiveProfiler.INSTANCE);
+	}
+
+	/**
+	 * Takes the block at the position out of the container of the tile whose box holds it, as structure void, and has
+	 * Litematica rebuild the column: Litematica then holds less than the game's copy of the layer, which the self-check
+	 * finds at the column's next change. Returns {@code ok}, or {@code no tile}.
+	 */
+	static String unhold(BlockPos pos) {
+		for (SchematicPlacement p : DataManager.getSchematicPlacementManager().getAllSchematicsPlacements()) {
+			if (!BuildingPlannerClient.isTile(p)) {
+				continue;
+			}
+			BlockPos origin = p.getOrigin();
+			var container = p.getSchematic().getSubRegionContainer(Tiles.NAME);
+			var size = container.getSize();
+			int x = pos.getX() - origin.getX();
+			int y = pos.getY() - origin.getY();
+			int z = pos.getZ() - origin.getZ();
+			if (x >= 0 && y >= 0 && z >= 0 && x < size.getX() && y < size.getY() && z < size.getZ()) {
+				container.set(x, y, z, Blocks.STRUCTURE_VOID.defaultBlockState());
+				DataManager.getSchematicPlacementManager().markChunkForRebuild(pos.getX() >> 4, pos.getZ() >> 4);
+				return "ok";
+			}
+		}
+		return "no tile";
 	}
 
 	private static Object field(Object owner, String name) throws ReflectiveOperationException {

@@ -29,6 +29,13 @@ public final class LayerReplica {
 	@FunctionalInterface
 	public interface Listener {
 		/**
+		 * A column is about to change by an edit or a snapshot: {@code column} is what it holds now (null for none), and
+		 * {@code changing} the edit's positions in it, or null for a snapshot. A column dropped hears of no change to come.
+		 */
+		default void columnChanging(int chunkX, int chunkZ, LayerColumn column, List<BlockPos> changing) {
+		}
+
+		/**
 		 * A column changed: {@code column} is what it holds now (null for no ghost block or no longer held), and
 		 * {@code changed} the positions of its blocks that changed, or null when the whole column was replaced.
 		 */
@@ -140,6 +147,7 @@ public final class LayerReplica {
 			int z = column.pos().z();
 			long key = Layer.key(x, z);
 			if (watched.contains(key)) {
+				listener.columnChanging(x, z, layer.column(x, z), null);
 				layer.replaceColumn(x, z, column.sections());
 				held.add(key);
 				listener.columnChanged(x, z, layer.column(x, z), null);
@@ -158,10 +166,15 @@ public final class LayerReplica {
 			BlockPos pos = change.pos();
 			long key = Layer.key(pos.getX() >> LayerSection.SHIFT, pos.getZ() >> LayerSection.SHIFT);
 			if (held.contains(key)) {
-				layer.set(pos, change.state());
 				byColumn.computeIfAbsent(key, k -> new ArrayList<>()).add(pos);
 				done.add(change);
 			}
+		}
+		byColumn.forEach((key, positions) ->
+			listener.columnChanging(Layer.keyX(key), Layer.keyZ(key), layer.column(Layer.keyX(key), Layer.keyZ(key)),
+				positions));
+		for (LayerChange change : done) {
+			layer.set(change.pos(), change.state());
 		}
 		byColumn.forEach((key, positions) -> {
 			int x = Layer.keyX(key);

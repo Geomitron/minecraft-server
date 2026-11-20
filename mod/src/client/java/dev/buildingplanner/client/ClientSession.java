@@ -5,6 +5,7 @@ import dev.buildingplanner.ClientConfig;
 import dev.buildingplanner.input.MouseMode;
 import dev.buildingplanner.layer.BoxCount;
 import dev.buildingplanner.layer.Layer;
+import dev.buildingplanner.layer.LayerColumn;
 import dev.buildingplanner.look.GhostsShown;
 import dev.buildingplanner.sync.CopyRules;
 import dev.buildingplanner.sync.EditKind;
@@ -40,6 +41,7 @@ final class ClientSession {
 	private final int maxEditBlocks;
 	private final EditGlow glow;
 	private final Tiles tiles;
+	private final SelfCheck check;
 	private final LayerReplica replica;
 	private final Clipboard clipboard = new Clipboard();
 	private final BoxDraw box = new BoxDraw();
@@ -70,7 +72,19 @@ final class ClientSession {
 		this.config = config;
 		this.showHideKey = showHideKey;
 		this.tiles = new Tiles(GhostsShown.get(config));
-		this.replica = new LayerReplica(dimension, tiles);
+		this.check = new SelfCheck(tiles);
+		this.replica = new LayerReplica(dimension, new LayerReplica.Listener() {
+			@Override
+			public void columnChanging(int chunkX, int chunkZ, LayerColumn column, List<BlockPos> changing) {
+				check.changing(chunkX, chunkZ, column, changing);
+			}
+
+			@Override
+			public void columnChanged(int chunkX, int chunkZ, LayerColumn column, List<BlockPos> changed) {
+				tiles.columnChanged(chunkX, chunkZ, column, changed);
+				check.changed(ClientSession.this.replica.dimension(), chunkX, chunkZ, column, changed);
+			}
+		});
 		for (long key : loadedChunks) {
 			replica.chunkLoaded(Layer.keyX(key), Layer.keyZ(key));
 		}
@@ -105,6 +119,7 @@ final class ClientSession {
 	void levelChanged(Identifier dimension) {
 		removeOldPlans = true;
 		replica.levelChanged(dimension);
+		check.clear();
 		box.end();
 		clipboard.clear();
 		glow.clear();
@@ -112,8 +127,8 @@ final class ClientSession {
 
 	/**
 	 * Once a client tick: removes old plans' placements when due, asks for the columns that loaded and lets go of those
-	 * that unloaded, moves the box being drawn and the copy at the aim to where the player aims, and sends the current
-	 * material list when it changed.
+	 * that unloaded, runs the self-check's comparisons that are due, moves the box being drawn and the copy at the aim
+	 * to where the player aims, and sends the current material list when it changed.
 	 */
 	void tick() {
 		if (removeOldPlans && Minecraft.getInstance().level != null) {
@@ -121,6 +136,7 @@ final class ClientSession {
 			OldPlans.remove();
 		}
 		sendWatches();
+		check.tick(replica);
 		clipboard.tick();
 		if (box.on()) {
 			box.update(replica.layer(), tiles.shown());
@@ -212,6 +228,7 @@ final class ClientSession {
 		box.end();
 		clipboard.clear();
 		tiles.clear();
+		check.clear();
 		glow.clear();
 	}
 

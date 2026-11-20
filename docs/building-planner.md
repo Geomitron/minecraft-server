@@ -229,7 +229,7 @@ Litematica, under `src/main/java/fi/dy/masa/litematica/`:
 | L5 | `gui/widgets/WidgetListSchematicPlacements.java`, `getAllEntries()` | `@ModifyReturnValue` | Leave tiles and the copy out of Litematica's placement list. |
 | L6 | `render/OverlayRenderer.java`, `updatePlacementCache()` | `@WrapOperation` on `SchematicPlacementManager.getAllSchematicsPlacements()` | Leave tiles, the copy and its zoop row out of the boxes and origin markers `renderBoxes` draws; Building Planner draws the copy's box itself, in its colours (see "Copy and paste"). This leaves Litematica's own switch for those boxes (`enablePlacementBoxesRendering`) as the player set it. |
 | L7 | `render/schematic/ChunkRendererSchematicVbo.java`, `getOverlayType(BlockState, BlockState)` | `@ModifyReturnValue` | While Building Planner has a session, turn `EXTRA` into `NONE`. Litematica marks a real block as extra wherever a placement's box holds air there (`schematicOverlayTypeExtra`, on by default), and a tile's box is a whole chunk column's sections, so every real block in it would be marked. The layer holds only blocks to place, so no real block is extra. Missing and wrong blocks keep their colours. |
-| L8 | `schematic/placement/PlacementManagerTaskRebuild.java`, `run()`; `PlacementManagerTask.java`'s constructors | `@WrapMethod`; a number for each task, in the order they're made (`RebuildOrder`) | Run the rebuilds of one chunk column one at a time. Litematica's background threads (at least two) rebuild a column from its placements' blocks as they are when the rebuild runs, so two rebuilds of one column at once could end with the older one's result, read before an edit's blocks were written. |
+| L8 | `schematic/placement/PlacementManagerTaskRebuild.java`, `run()`; `PlacementManagerTask.java`'s constructors | `@WrapMethod`; a number for each task, in the order they're made (`RebuildOrder`) | Run the rebuilds of one chunk column one at a time. Litematica's background threads (at least two) rebuild a column from its placements' blocks as they are when the rebuild runs, so two rebuilds of one column at once could end with the older one's result, read before an edit's blocks were written. It also notes each finished rebuild, for the self-check ("Overlapping shapes"). |
 | L9 | `schematic/placement/PlacementManagerDaemonHandler.java`, `removeRebuildTasksFor` and `removeDeferredTasksFor` | `@WrapMethod` | A running rebuild drops from the queue only the rebuilds of its column made before it began, whose edits it reads. Litematica's rebuild drops every queued rebuild of its column as it ends, and as it unloads a column with no placements, including one queued for an edit written after it read the column, which would leave that edit undrawn. Elsewhere (a new rebuild replacing the queued ones, an unload) every queued rebuild of the column still goes. |
 | L10 | `gui/GuiMaterialList.java`, private `createButtons()` and `createButton(int, int, ButtonListener.Type)` | `@WrapOperation` on `addButton` in `createButton`, which adds "Save list" or "Saved lists" in place of the `EXPORT` or `EXPORT_TYPE` button, telling them by the listener's `type` (read by reflection, since `ButtonListener.Type` is private); `@WrapOperation` on `addButton` in `createButtons`, the call that adds the `ButtonListenerChangeMenu` | For Building Planner's list only (`GhostMaterialList`): no "Export" button, no export type button ("Write to file", which cycles), and no "Litematica menu" button, which `createButtons` adds at the bottom right; "Save list" and "Saved lists" go where "Export" and the export type were, in the same row, which the method moves to the bottom left when the screen is narrow (`isNarrow`). Other material lists keep their buttons. |
 
@@ -315,6 +315,25 @@ touched column's ghost blocks outside the edit's own positions with what they we
 holds for the column with its own copy of the layer. On a difference it writes a warning to the game's log
 (`latest.log`), at most once a minute for each column: the dimension, the column, what changed it, and the counts
 before and after, with no player names. The next time it happens, Geo's log shows where and after what.
+
+The self-check (`SelfCheck`, with the comparisons in `ColumnCheck`) reads only the columns a change touches. Before an
+edit it copies the sections the edit's positions fall in, and after it compares those sections outside the edit's
+positions and checks that the column's other sections are the same ones, holding as many blocks. Litematica fills its
+schematic world from the tiles on its own threads, so the second comparison waits until a rebuild of the column that
+began after the change queued its own rebuild has finished (hook L8 notes each one, `RebuildOrder`), or 30 seconds; it
+then reads Litematica's schematic world over the tile's sections, leaving out the boxes of other placements (the
+copy's, a player's own), which Litematica draws over the tile. Nothing is compared while ghost blocks are hidden or
+Litematica's rendering is off, for a column whose chunk the game no longer has, or for one Litematica holds no chunk
+for: a rebuild that can't handle the column yet leaves it out, and Litematica's own check around the camera
+(`PlacementManagerTaskFixer`) loads it once it comes into view, so the check waits for a rebuild that leaves a chunk.
+An edit of 20 blocks in a column of one section costs a copy and a comparison of 4096 positions, and one more read of
+4096 once Litematica has rebuilt the column. A warning, one line in the log, reads for example:
+
+```
+Self-check: chunk column 0 0 (x 0 to 15, z 0 to 15) in minecraft:overworld, after an edit of 1 block in it: the game's
+copy of the layer holds 256 ghost blocks (the column held 256 before), Litematica holds 255, and they differ at 1
+position
+```
 
 ### The layer and its column watching
 
@@ -1514,6 +1533,32 @@ real buttons with xdotool while Planner1 is teleported one block every two ticks
 - In the game, M opens Freecam's settings screen (the driver's `screenclass` reads the open screen's class, Cloth
   Config's) and no Litematica screen; M held with L pressed opens no Litematica screen either. Escape closes Freecam's
   screen. Both screens are shot.
+
+`overlap.sh`, overlapping shapes and the self-check ("Overlapping shapes"). "Drawn" means Litematica's schematic world
+holds the block (the driver's `countbox`), and some checks also compare what Litematica's renderer last built of each
+column with a fresh render (`rendered` and `rerender`):
+
+- A wall from a floor into the section above, a second floor crossing the first and a wall in the floor's section,
+  each sent as an edit, leave the floor's other ghost blocks in both clients' copies and drawn, at once, a second later
+  and five seconds later; the wall's columns get taller tiles. The floor is all there after moving away and back, and
+  after a rejoin.
+- Effortless Building's Floor and Wall modes, with real clicks, draw a floor and a wall across it, and the floor's other
+  ghost blocks stay.
+- A floor over 64 columns stays drawn through five rounds of a second floor in the section above and its erasing,
+  each of which replaces every column's tile.
+- Floors of 20 blocks, as Geo drew them: a floor across, a floor on top, a line and a wall, each drawn across floor A
+  with real clicks, leave A's other blocks at once and five seconds later, Litematica draws each column as a fresh
+  render does, and Ctrl+Z brings all of A back; a floor erased with the break click and lines of 18 kinds of block
+  written into the tiles in place leave A's other blocks too.
+- Neither client's log has a self-check warning, checked before client 1 restarts and at the end.
+- With one block taken out of client 1's tile alone (the driver's `unhold`) and a block put elsewhere in the column,
+  client 1's log has the warning, with the column, the edit and the counts (256 ghost blocks, Litematica 255, 1
+  position), and client 2's has none.
+
+The self-check's unit tests (`ColumnCheckTest`) cover the comparisons as pure functions: an edit's own positions, set
+or erased, are ignored; a block lost or changed outside them, in the edit's section or another, is reported; Litematica
+missing a block or holding nothing is reported, and other placements' boxes are left out; and a column gets at most one
+warning a minute, with each of 300 columns keeping its own minute.
 
 The import's unit tests (`PlanImportTest`) build the layer from files the writers' own code makes: a `placements.json`
 from Syncmatica's `ServerPlacement.toJson`, with turned, mirrored and overlapping plans and one with a moved and turned

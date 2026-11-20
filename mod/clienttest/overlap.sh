@@ -6,7 +6,8 @@
 # Effortless Building's own modes and real clicks, then undone or erased with the break click. "Drawn" means
 # Litematica's schematic world holds the block, which a column's unload would clear; the last cases also check that
 # what Litematica's renderer draws of each column is what a fresh render draws. The first floor lies at y -55, in the
-# 16-block section from -64 to -49, over the four columns from 0 0 to 1 1.
+# 16-block section from -64 to -49, over the four columns from 0 0 to 1 1. Through all of it, the game's self-check
+# writes no warning to either client's log; at the end, a block taken out of Litematica's copy alone makes it warn.
 
 check "client 1 starts a session on hello" drv 1 "await session" "await noscreen"
 check "client 2 starts a session on hello" drv 2 "await session" "await noscreen"
@@ -18,6 +19,18 @@ view() {
 	drv 1 "cmd tp @s -10 -40 -10 -45 30" "cmd tp Planner2 42 -40 42 135 30" "wait 5" "fly true" > /dev/null
 	drv 2 "fly true" > /dev/null
 	drv 1 "cmd tp @s -10 -40 -10 -45 30" "cmd tp Planner2 42 -40 42 135 30" "wait 40" > /dev/null
+}
+
+# no_self_check_warning <client>...: the clients' logs have no warning from the game's self-check; any found goes to
+# checks.log.
+no_self_check_warning() {
+	local n found=0
+	for n in "$@"; do
+		if grep -F "Self-check:" "/out/client$n.log" >> /out/checks.log; then
+			found=1
+		fi
+	done
+	((found == 0))
 }
 
 # shots <name>: both clients' views.
@@ -74,7 +87,8 @@ drv 1 "wait 60" > /dev/null
 shots back
 check "after moving away and back, the floor is all there" eval 'floor_ok 1 992 && floor_ok 2 992'
 
-# Rejoining.
+# Rejoining. Client 1's log starts again when it restarts, so it's checked first.
+check "before client 1 restarts, its log has no self-check warning" no_self_check_warning 1
 stop_client 1
 start_client 1
 check "client 1 rejoins" drv 1 "await session" "await noscreen" "wait 100"
@@ -293,3 +307,19 @@ drv 1 "wait 40" > /dev/null
 check "palette: after 18 kinds of block in place, A's other blocks stay" eval 'a_ok 40'
 check "palette: Litematica draws each column as a fresh render does" drawn_as_fresh
 shots palette
+
+check "neither client's log has a self-check warning" no_self_check_warning 1 2
+
+# The game's self-check warns when Litematica's copy alone loses a block: one of floor A's oak planks taken out of
+# client 1's tile, then a block of stone put elsewhere in the column, in place. Every position of column 0 0 at y -60
+# holds a ghost block.
+drv 1 "unhold 0 -60 0" "wait 20" > /dev/null
+drv 1 "edit 5 -60 1 5 -60 1 minecraft:stone" "await block 5 -60 1 minecraft:stone" > /dev/null
+drv 2 "await block 5 -60 1 minecraft:stone" "wait 40" > /dev/null
+warning="Self-check: chunk column 0 0 (x 0 to 15, z 0 to 15) in minecraft:overworld, after an edit of 1 block in it:"
+warning+=" the game's copy of the layer holds 256 ghost blocks (the column held 256 before), Litematica holds 255,"
+warning+=" and they differ at 1 position"
+check "a block taken out of Litematica's copy alone makes client 1's self-check warn, with the column, the change and \
+the counts" wait_for /out/client1.log "$warning" 60
+grep -F "Self-check:" /out/client1.log >> /out/checks.log || true
+check "client 2, whose Litematica still holds the block, doesn't warn" no_self_check_warning 2

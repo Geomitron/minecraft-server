@@ -466,6 +466,11 @@ public final class Driver implements ClientModInitializer {
 				RenderProbe.rerender();
 				return "ok";
 			}
+			case "unhold" -> {
+				// unhold x y z: takes the block there out of the tile Litematica holds, leaving the game's copy of the
+				// layer, and has Litematica rebuild the column, so Litematica's copy alone loses it.
+				return RenderProbe.unhold(pos(a, 1));
+			}
 			case "look" -> {
 				// look: Litematica's renderBlocksAsTranslucent and ghostBlockAlpha now.
 				return "translucent=" + Configs.Visuals.RENDER_BLOCKS_AS_TRANSLUCENT.getBooleanValue()

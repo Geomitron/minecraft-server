@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.buildingplanner.layer.Layer;
+import dev.buildingplanner.layer.LayerColumn;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -94,6 +95,31 @@ class LayerReplicaTest {
 		assertEquals(stone, replica.layer().get(A));
 		assertEquals(Blocks.AIR.defaultBlockState(), replica.layer().get(B));
 		assertEquals(List.of("0,0 whole", "0,0 1 +"), heard);
+	}
+
+	@Test
+	void theListenerHearsOfEachEditAndSnapshotBeforeItAppliesButNotOfADrop() {
+		List<String> told = new ArrayList<>();
+		replica = new LayerReplica(OVERWORLD, new LayerReplica.Listener() {
+			@Override
+			public void columnChanging(int x, int z, LayerColumn column, List<BlockPos> changing) {
+				told.add("before " + x + "," + z + " " + (changing == null ? "whole" : changing.size()) + " "
+					+ replica.layer().get(A).getBlock());
+			}
+
+			@Override
+			public void columnChanged(int x, int z, LayerColumn column, List<BlockPos> changed) {
+				told.add("after " + x + "," + z + " " + replica.layer().get(A).getBlock());
+			}
+		});
+		replica.chunkLoaded(0, 0);
+		replica.takeMessages();
+		replica.receive(snapshot(OVERWORLD, new ChunkPos(0, 0)));
+		replica.receive(applied(OVERWORLD, A, B));
+		replica.chunkUnloaded(0, 0);
+		assertEquals(List.of("before 0,0 whole Block{minecraft:air}", "after 0,0 Block{minecraft:air}",
+			"before 0,0 1 Block{minecraft:air}", "after 0,0 Block{minecraft:stone}", "after 0,0 Block{minecraft:air}"),
+			told);
 	}
 
 	@Test
