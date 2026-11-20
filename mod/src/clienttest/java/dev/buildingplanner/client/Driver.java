@@ -394,6 +394,19 @@ public final class Driver implements ClientModInitializer {
 				// selinfo: Litematica's selection mode and the boxes of its simple area selection, or none.
 				return AreaProbe.selection();
 			}
+			case "menukeys" -> {
+				// menukeys: Freecam's "Config GUI" key and Litematica's menu hotkey now.
+				return KeyProbe.menuKeys();
+			}
+			case "setmenukeys" -> {
+				// setmenukeys <K or M>: the player's own change: Freecam's key to that letter and Litematica's menu
+				// hotkey back to M, saved as their screens save them.
+				return KeyProbe.setMenuKeys(a[1]);
+			}
+			case "screenclass" -> {
+				// screenclass: the class of the screen open now, or none.
+				return screenClass();
+			}
 			case "shotdiff" -> {
 				// shotdiff <shot> <shot>: how many pixels of the two screenshots' upper 6 tenths (the view, not the chat
 				// and the lines of text below it) differ by more than a little.
@@ -651,6 +664,12 @@ public final class Driver implements ClientModInitializer {
 		}
 	}
 
+	/** The class of the screen open now, or {@code none}. */
+	private static String screenClass() {
+		Screen screen = Minecraft.getInstance().gui.screen();
+		return screen == null ? "none" : screen.getClass().getName();
+	}
+
 	/** The conditions {@code await} takes. */
 	private static boolean holds(String what) throws Exception {
 		String[] a = what.split(" ");
@@ -661,6 +680,7 @@ public final class Driver implements ClientModInitializer {
 			case "screen" -> mc.gui.screen() != null
 				&& mc.gui.screen().getTitle().getString().equals(what.substring(7));
 			case "noscreen" -> mc.gui.screen() == null;
+			case "screenclass" -> screenClass().equals(what.substring(12));
 			case "placement" -> placement(a[1]) != null;
 			case "noplacement" -> placement(a[1]) == null;
 			case "block" -> List.of(a[4].split("\\|")).contains(blockId(pos(a, 1)));
@@ -690,6 +710,7 @@ public final class Driver implements ClientModInitializer {
 				case "copy" -> copy();
 				case "layer" -> LayerProbe.compare(Minecraft.getInstance().gameDirectory.toPath().resolve(a[2]));
 				case "screen", "noscreen" -> String.valueOf(Minecraft.getInstance().gui.screen());
+				case "screenclass" -> screenClass();
 				case "held" -> "screen " + Minecraft.getInstance().gui.screen() + ", use down "
 					+ Minecraft.getInstance().options.keyUse.isDown() + ", attack down "
 					+ Minecraft.getInstance().options.keyAttack.isDown() + ", mouse grabbed "

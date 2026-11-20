@@ -25,7 +25,31 @@ for n in 1 2; do
 	check "client $n's first start turns Litematica's tool item off" eval '[[ $(val '$n' toolitem) == false ]]'
 	check "and saves that to Litematica's config" eval \
 		'tr -d " \n\r" < run/client'$n'/config/litematica.json | grep -Eq "\"toolItemEnabled\":(false|\{\"enabled\":false)"'
+	check "client $n's first start gives Freecam's menu key to M and Litematica's menu hotkey none" eval \
+		'[[ $(val '$n' menukeys) == "freecam=key.keyboard.m litematica=none" ]]'
+	check "and saves Freecam's key to Minecraft's options" eval \
+		'grep -q "^key_key.freecam.config.open:key.keyboard.m$" run/client'$n'/options.txt'
+	check "and Litematica's hotkey to its config, where it is no longer M" eval \
+		'tr -d " \n\r" < run/client'$n'/config/litematica.json | grep -o "\"openGuiMainMenu\":[^}]*}\?" |
+		 tee -a /out/checks.log | grep -vq "\"M\""'
+	check "client $n recorded the menu key group in Building Planner's own config" eval \
+		'grep -q "^menu-key-applied=true" run/client'$n'/'$marker
 done
+
+# M opens Freecam's screen, and no screen of Litematica's. Litematica's M,L hotkey for its material list (M held, then
+# L) can't be typed either: Freecam's screen is open before L goes down. Escape closes the screen.
+keys 1 key m
+check "M opens Freecam's screen" eval 'drv 1 "wait 20" > /dev/null && cls=$(val 1 screenclass) &&
+	echo "  Freecam'"'"'s screen: $cls" >> /out/checks.log && [[ $cls == *freecam* || $cls == *shedaniel* ]]'
+drv 1 "notoasts" "wait 5" "shot freecam-menu" "wait 5" > /dev/null
+keys 1 key Escape
+check "Escape closes it" drv 1 "await noscreen"
+keys 1 keydown m sleep 0.3 keydown l sleep 0.3 keyup l keyup m
+check "M then L opens none of Litematica's screens, only Freecam's" eval 'drv 1 "wait 20" > /dev/null &&
+	cls=$(val 1 screenclass) && [[ $cls == *freecam* || $cls == *shedaniel* ]] && [[ $cls != fi.dy.masa.* ]]'
+drv 1 "notoasts" "wait 5" "shot freecam-menu-after-m-l" "wait 5" > /dev/null
+keys 1 key Escape
+check "and Escape closes it" drv 1 "await noscreen"
 
 # walk <from> <to>: the commands that move Planner1 one block east every two ticks, 2.5 -55 5.5 and on, looking
 # straight down, so each held click lands on a new block of the row z 5 at y -60 (-61 is the grass below).
@@ -285,9 +309,24 @@ check "with only the area selection group's record left, the look is set" \
 check "and the drawing of area selections the player turned on stays on" eval '[[ $(val 2 areaoption) == true ]]'
 check "and the look group's record is written" eval 'grep -q "^look-defaults-applied=true" run/client2/'$marker
 
-# With both records left, nothing is set again.
-drv 2 "setlook false 0.5" > /dev/null
+# With the records of the other groups left and the menu key group's gone, a Freecam key the player bound to K stays,
+# and Litematica's hotkey, which is "M" again, still goes.
+drv 2 "setlook false 0.5" "setmenukeys K" > /dev/null
+check "the player's own Freecam key, with Litematica's menu hotkey M, as set" eval \
+	'[[ $(val 2 menukeys) == "freecam=key.keyboard.k litematica=M" ]]'
+stop_client 2
+sed -i '/^menu-key-applied=/d' "run/client2/$marker"
+start_client 2
+check "with only the menu key group's record gone, the player's Freecam key stays at K, and Litematica's hotkey goes" \
+	eval 'drv 2 "wait 60" > /dev/null && [[ $(val 2 menukeys) == "freecam=key.keyboard.k litematica=none" ]]'
+check "and the group's record is written" eval 'grep -q "^menu-key-applied=true" run/client2/'$marker
+check "and the other groups left the player's look alone" \
+	eval '[[ $(val 2 look) == "translucent=false alpha=0.5" ]] && [[ $(val 2 areaoption) == true ]]'
+
+# With all records left, nothing is set again: Freecam's key goes back to M and Litematica's hotkey to M, as a player
+# might set them, and a restart leaves both.
+drv 2 "setmenukeys M" > /dev/null
 stop_client 2
 start_client 2
-check "with both records left, the player's look stays" \
-	eval 'drv 2 "wait 60" > /dev/null && [[ $(val 2 look) == "translucent=false alpha=0.5" ]] && [[ $(val 2 areaoption) == true ]]'
+check "with every record left, the player's own keys stay" \
+	eval 'drv 2 "wait 60" > /dev/null && [[ $(val 2 menukeys) == "freecam=key.keyboard.m litematica=M" ]]'

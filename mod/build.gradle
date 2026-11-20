@@ -80,6 +80,9 @@ dependencies {
 	clientImplementation "maven.modrinth:litematica:${litematica_version}"
 	clientImplementation "maven.modrinth:malilib:${malilib_version}"
 	clientImplementation "maven.modrinth:effortless-building:${effortless_building_version}"
+	// Freecam, which the add-on reads by its key's name and never compiles against, on the dev clients only: on the
+	// unit tests' classpath its service file fails to load under the test launcher.
+	clienttestRuntimeOnly "maven.modrinth:freecam:${freecam_version}"
 
 	// Tests run under Fabric Loader, with Minecraft's classes as in the game.
 	testImplementation "net.fabricmc:fabric-loader-junit:${loader_version}"

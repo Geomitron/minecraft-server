@@ -233,7 +233,9 @@ constructor; `PositionUtils.getTransformedBlockPos`, `getMinCorner`, `getMaxCorn
 `Configs.Visuals.RENDER_BLOCKS_AS_TRANSLUCENT`, `GHOST_BLOCK_ALPHA`, `ENABLE_AREA_SELECTION_RENDERING`,
 `Configs.Generic.TOOL_ITEM_ENABLED`, `Hotkeys.OPEN_GUI_MAIN_MENU` and `Configs.saveToFile`. From MaLiLib:
 `RenderEventHandler.registerWorldLastRenderer` and `RenderUtils`' batched box and text-plate drawing. From Minecraft:
-`KeyMapping.setKey`, `KeyMapping.resetMapping` and `Options.save`, for Freecam's key.
+`KeyMapping.get` (Freecam's key by its name), `KeyMapping.isUnbound`, `KeyMapping.setKey`, `KeyMapping.resetMapping`,
+`Options.save` and `InputConstants.KEY_M`, for Freecam's key and the code MaLiLib stores for Litematica's hotkey (in
+Minecraft 26.3 it is 16, not GLFW's 77, which is `KEY_END`).
 
 Fabric API: `PayloadTypeRegistry` (`registerLarge` for column snapshots), `ServerPlayNetworking`,
 `ClientPlayNetworking` (`canSend`), `ServerPlayConnectionEvents`, `ClientPlayConnectionEvents`, `ClientTickEvents`,
@@ -1159,11 +1161,13 @@ real buttons with xdotool while Planner1 is teleported one block every two ticks
 - A player's own change (off and 0.3) survives a restart. With the records gone and the server stopped, so the client
   joins nothing, a start sets only the option still at its default (on) and keeps the 0.3. With only
   `area-selection-off-applied` gone and the drawing of area selections turned back on, a start turns it off and
-  changes nothing else.
-- With Freecam's key bound to K by the player and the `menu-key-applied` record gone, a start leaves it at K and
-  still takes M from Litematica's menu.
-- In the game, M opens Freecam's settings screen (the driver's `ScreenProbe` reads its class) and no Litematica screen;
-  M then L opens no Litematica screen either. Escape closes Freecam's screen.
+  changes nothing else. With only `look-defaults-applied` gone and the look at Litematica's defaults, a start sets the
+  look and leaves the drawing of area selections the player turned on; with every record left, nothing changes.
+- With Freecam's key bound to K by the player, Litematica's hotkey "M" and the `menu-key-applied` record gone, a start
+  leaves it at K and still takes M from Litematica's menu, and writes the record.
+- In the game, M opens Freecam's settings screen (the driver's `screenclass` reads the open screen's class, Cloth
+  Config's) and no Litematica screen; M held with L pressed opens no Litematica screen either. Escape closes Freecam's
+  screen. Both screens are shot.
 
 The import's unit tests (`PlanImportTest`) build the layer from files the writers' own code makes: a `placements.json`
 from Syncmatica's `ServerPlacement.toJson`, with turned, mirrored and overlapping plans and one with a moved and turned
