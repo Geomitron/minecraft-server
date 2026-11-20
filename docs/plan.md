@@ -3,23 +3,25 @@
 ## Current setup
 
 **Server.** Minecraft 26.3 on Fabric (loader 0.20.1, server launcher 1.1.2) with Fabric API 0.166.2+26.3 and
-Building Planner 0.4.0 from the release `building-planner-0.4.0` (`/home/minecraft/mods/`), on Geo's VPS, with
+Building Planner 0.5.0 from the release `building-planner-0.5.0` (`/home/minecraft/mods/`), on Geo's VPS, with
 `max-edit-blocks=200000` in `config/buildingplanner.properties`. The systemd unit `minecraft.service` runs it as root
 from `/home/minecraft`:
 `/usr/lib/jvm/java-25-openjdk-amd64/bin/java -Xmx6G -Xms1G -jar fabric-server-mc.26.3-loader.0.20.1-launcher.1.1.2.jar nogui`,
 port 25565. Survival, hard, whitelist enforced (11 players), online mode. None of the mods adds blocks or items, so players without
 mods can join: an unmodded 26.3 client joined a dev server with the same mods (`def7603`). The world (`world/`) is 1.9 GB.
-Building Planner keeps the shared ghost blocks in `world/building-planner/layer/`. Its one-time import of Syncmatica's shared
+Building Planner keeps the shared ghost blocks in `world/building-planner/layer/`, and each player's material lists
+in `world/building-planner/material-lists/`, a folder it creates once a player counts a box. Its one-time import of Syncmatica's shared
 plans found none (Syncmatica's list in `world/syncmatica/placements.json` was empty), so the ghost blocks started
 empty; Syncmatica's files, `world/syncmatica/` and `syncmatics/`, stay as they were.
-Archives sit beside it: `minecraft-backup-2026-11-18-pre-building-planner-0.4.0.tar.gz` (the world and `syncmatics/`
+Archives sit beside it: `minecraft-backup-2026-11-20-pre-building-planner-0.5.0.tar.gz` (the world and `syncmatics/`
+just before Building Planner 0.5.0 was installed, 1.5 GB), `minecraft-backup-2026-11-18-pre-building-planner-0.4.0.tar.gz` (the world and `syncmatics/`
 just before Building Planner 0.4.0 was installed, 1.5 GB), `minecraft-backup-2026-11-17-pre-building-planner-0.3.0.tar.gz`
 (the world and `syncmatics/` just before Building Planner 0.3.0 was installed, 1.5 GB), `minecraft-backup-2026-11-16-pre-building-planner-0.2.0.tar.gz`
 (the world just before Building Planner 0.2.0 was installed, 1.5 GB), `minecraft-backup-2026-11-15-pre-building-planner.tar.gz` (the world just before
 Building Planner 0.1.0 was installed, 1.5 GB), `minecraft-backup-2026-11-14-pre-fabric.tar.gz` (the world just before
 the switch to Fabric, 1.5 GB), `minecraft-archive-2026-10-29-1.21.11.tar.gz` and `minecraft-backup-2025-12-12.tar.gz`.
 To take Building Planner off the server, remove
-`mods/building-planner-0.4.0.jar` and run
+`mods/building-planner-0.5.0.jar` and run
 `systemctl restart minecraft.service`.
 The vanilla `server.jar` stays in place: to switch back, change the jar in `ExecStart` to `server.jar`, then run
 `systemctl daemon-reload` and `systemctl restart minecraft.service`. The VPS has 30 GB of RAM (about 16 GB available) and
@@ -36,11 +38,10 @@ an inbox notice, carrying only the error's id, kind and source.
 
 **Player pack.** This repository is public at https://github.com/Geomitron/minecraft-server. `pack/` is the packwiz
 pack "Server Pack": Minecraft 26.3 and Fabric loader 0.20.1 with Litematica, MaLiLib, Freecam, Fabric API, Building
-Planner 0.4.1 (downloaded from its release `building-planner-0.4.1`), and Effortless Building 4.3, served from `main`
+Planner 0.5.0 (downloaded from its release `building-planner-0.5.0`), and Effortless Building 4.3, served from `main`
 at https://raw.githubusercontent.com/Geomitron/minecraft-server/main/pack/pack.toml, so a push to `main` changes what
-players get at their next launch. The pack runs Building Planner 0.4.1 and the server 0.4.0, both protocol 3, since
-0.4.1 changes only the players' game (790); a game with an
-older pack still joins, and Building Planner does nothing in it. `instance/` is the Prism Launcher instance "Server
+players get at their next launch. The pack and the server both run Building Planner 0.5.0, protocol version 4; a game
+with an older pack still joins, and Building Planner does nothing in it. `instance/` is the Prism Launcher instance "Server
 Pack", which runs `packwiz-installer-bootstrap.jar` against that URL before each launch. Players import it from
 https://github.com/Geomitron/minecraft-server/releases/latest/download/prism-instance.zip, a zip of `instance/` in the
 release `v1.0.0`; the instance needs a new release only when `instance/` changes. The guide sent to players is
@@ -323,9 +324,7 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
   - **A game on another version:** Geo left it to the agent ("Doesn't matter; no users will have that old version
     installed, as it has not been distributed yet", 788), so the simplest stands: protocol version 4, and a game on
     another version than the server's has Building Planner off, with no message.
-  - **0.4.1 first:** the box fix and the M key (steps 1 and 2 below) go to players as Building Planner 0.4.1 before
-    the rest of 0.5.0, with M opening Freecam's menu as its screenshot showed (790 Q1 A). The server keeps 0.4.0, since
-    both change only the players' game.
+  - **The M key:** M opens Freecam's menu, as its screenshot showed (790 Q1 A).
   - **The save and load screens:** as their screenshots showed, with their texts as written (804 Q1 A).
   - **The panel and its button:** as their screenshots showed (807 Q3 A), with the panel's column headings "All",
     "Hold" and "Need" (807 PR1, Geo's wording). The panel shows only the rows that fit above the hotbar and counts the
@@ -357,70 +356,6 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
   (411 Q1), plan growth (411 Q2), who deletes a plan (411 Q3, 420 Q9), starting a plan with N (420 Q1, 469 Q1), hiding
   a plan with Litematica or Syncmatica (420 Q2, 469 Q2), the paste's target plan (485 Q3), Litematica's Edit Schematic
   actions syncing live (411 Q5), and Syncmatica on the server and in the pack (408 Q2).
-
-## Agent-ready work
-
-**Building Planner 0.5.0** (784, 786, 788, 790, 804 and 807, in "Decisions" above). [building-planner.md](building-planner.md) is
-the design, and Geo's answers settle every choice in it. The steps come in this order, each small enough for one child. A step that changes nothing players see beyond
-what Geo already decided goes to `main` once its checks pass (inbox request 429). A step that changes what players see
-is committed without pushing, and goes to `main` once Geo has seen its in-game screenshots, with the changes outlined
-in red, and with step 7's texts for that step. Apart from 0.4.1, nothing goes to the server or the pack before the
-last step.
-
-1. **A record for each setting changed once** ("Settings Building Planner changes once" and "Litematica's area
-   selection"): `LookDefaults` and `LitematicaLook` with one record for each group, and the drawing of area selections
-   under `area-selection-off-applied`. Done when unit tests cover each group's rules, including a config that holds
-   only `look-defaults-applied=true` getting the area selection group and not the look group again, and `step9.sh`'s
-   selection check passes with its shots: a selection with an origin, saved with the record 0.3.0 and 0.4.0 leave,
-   drawn before the start and gone after it. `step10.sh`'s look checks pass with a record for each group.
-2. **M opens Freecam's menu** ("Keys"): the `menu-key-applied` group, and Freecam 1.5.1 (`lwrkvqym`) on the dev
-   clients. Done when unit tests cover the group's rules (Freecam's key set only while it has no key, Litematica's
-   hotkey cleared only while it's "M", the record written only with both mods loaded), and `step10.sh`'s key checks
-   pass: M opens Freecam's screen and no Litematica screen, M then L opens none of Litematica's, and a player's own
-   Freecam key stays.
-3. **The lists on the server** ("The lists on the server"): protocol
-   version 4, the seven payloads, the server's store of each player's lists with its files, its limits and its sends
-   at join, and the game's side of the messages, which keeps the index, sends `current_list` when it counts a box, and
-   makes the `current` it receives at join the current list, with no new screens. Done when unit tests cover the
-   payloads' codecs (each of the seven, a list at 64 KiB taken and one over it refused), the file (a write and a read
-   back, an unknown item dropped, a damaged file renamed with `.unreadable`), the store's rules (a name saved twice
-   replacing the first, a delete, `open_list` for a kept name, for "Last counted" and for a name no longer kept, a
-   counted `current_list` replacing "Last counted" and an uncounted one leaving it, and a write at most every 30
-   seconds while changed) and each limit (a name of 0 and of 65 characters, a control character, a second row for one
-   item, "Missing" over "Total", a box of 257 a side, an unknown dimension, a multiplier of 0, and the 21st message in
-   10 seconds); `step8.sh` passes with its protocol version 3 `hello` check and its check of a client without the
-   add-on; and a new `step9.sh` check passes: a box Planner1 counts is in
-   `run/server/world/building-planner/material-lists/<Planner1's UUID>.dat` as `last_counted` within 30 seconds, and
-   after the server and Planner1's game restart, Planner1's game has it as the current list (read by a driver
-   probe). The step changes nothing players see, so it goes to `main` once its checks pass.
-4. **The list screen's buttons and saved lists** ("The screen's buttons" and "Saved lists"): hook L10, the "Save list"
-   screen with its name field (the date and time to start, 64 characters at most, "Save" greyed out while empty) and
-   the "Saved lists" screen over step 3's messages, "Open" waiting for the server's `list`, and Refresh counting only a
-   box the game holds. `start_client` gains an optional player name, so client 2 can play as Planner1. Done when
-   `step9.sh`'s screen, saved lists, file, restart, other computer, damaged file, limits and Refresh checks pass, with
-   shots of the material list screen at 854 by 480 and 1920 by 1080, GUI scale 2, and of both new screens.
-5. **The material list panel** ("The material list panel"): `MaterialPanel` in the top-left corner, each row the
-   block's icon and its three counts, the "Info HUD" switch through `getHudRenderer`, the panel kept on across lists,
-   the recount every 2 seconds, and the panel's switch sent in `current_list` and taken from `current` at join. Done
-   when unit tests cover the panel's rows as a pure function (the screen's order and filters, the multiplier, the
-   colours of "Missing", "+N more" and an empty list), and `step9.sh`'s panel checks pass, including the panel after
-   Planner1's game and the server restart, on client 2 as Planner1, and on the server without Building Planner, with
-   shots at 854 by 480 and 1920 by 1080, GUI scales 2 and 4, with the mix panel on too.
-6. **The "Material lists" button** ("The Material lists button"): the sixth `RadialButton`, in the slot over redo,
-   with the Book and Quill. Done when `step9.sh`'s radial menu checks pass at all three sizes with six buttons, its
-   "Material lists" check passes, and `step8.sh` and `step10.sh` still pass.
-7. **Texts for Geo**: every text steps 4 to 6 add (the buttons' labels, the two screens' titles, fields and buttons,
-   "Last counted", the date and time a name starts with, the Refresh message, the panel's heading, column headings,
-   "+N more" and "No blocks to list.", and the button's name) goes to Geo as editable text with its step's
-   screenshots, and Geo's version is built in, with `step9.sh` checking each text exactly. The same step builds in the
-   panel's rows above the hotbar and "Last counted" as 807 decided, and the version 0.5.0.
-8. **The release**: after Geo's approval, released as 0.4.0 was: the GitHub release, then the server
-   and the pack in one sitting, since protocol version 4 turns Building Planner off for a game and a server on
-   different versions. On the server: a backup of the world named for 0.5.0, the jar in `mods/` in place of 0.4.0's,
-   and a restart; the log shows Building Planner start with no error, and after a player saves a list,
-   `world/building-planner/material-lists/` contains their file. Then the pack's push to `main`. "Current setup" in this
-   plan is updated to 0.5.0, protocol version 4, the new backup and the lists' folder, and the README and the guide's setup
-   steps are checked against what 0.5.0 changes.
 
 ## Design work: Building Planner
 
