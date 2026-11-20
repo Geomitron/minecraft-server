@@ -1,15 +1,26 @@
 package dev.buildingplanner.client;
 
 import dev.buildingplanner.layer.MaterialCount;
+import dev.buildingplanner.sync.ListData;
+import dev.buildingplanner.sync.ListSort;
 import fi.dy.masa.litematica.config.Configs;
 import fi.dy.masa.litematica.materials.MaterialListBase;
+import fi.dy.masa.litematica.materials.MaterialListEntry;
 import fi.dy.masa.litematica.materials.MaterialListUtils;
 import fi.dy.masa.litematica.util.BlockUtils;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.OptionalLong;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
@@ -18,18 +29,54 @@ import net.minecraft.world.level.block.state.BlockState;
  * the player's copy of the layer, which holds the columns the game has loaded, against the player's world, by the rule
  * Litematica's own list uses, so the copy, which Litematica also draws, never counts. While the player's ghost blocks
  * are hidden, it lists the real blocks only. Litematica's Refresh button counts again.
+ *
+ * <p>A list the server kept ({@link #kept}) shows its counts as kept, with "Available" counted from the inventory,
+ * until Refresh counts its box again.
  */
 final class GhostMaterialList extends MaterialListBase {
 	private final Identifier dimension;
 	private final BlockPos min;
 	private final BlockPos max;
+	/** The saved list's name, for a list opened from one. */
+	private final Optional<String> name;
+	/** When the list was saved, or last counted. */
+	private OptionalLong time;
+	/** Whether the list counted its box since {@link #takeCounted} last asked. */
+	private boolean counted;
 
 	/** The list for the box from {@code min} to {@code max} in {@code dimension}, counted at once. */
 	GhostMaterialList(Identifier dimension, BlockPos min, BlockPos max) {
+		this(dimension, min, max, Optional.empty(), OptionalLong.empty());
+		reCreateMaterialList();
+	}
+
+	private GhostMaterialList(Identifier dimension, BlockPos min, BlockPos max, Optional<String> name,
+		OptionalLong time) {
 		this.dimension = dimension;
 		this.min = min.immutable();
 		this.max = max.immutable();
-		reCreateMaterialList();
+		this.name = name;
+		this.time = time;
+	}
+
+	/** A list the server kept, with its counts and the screen's settings as kept, and "Available" counted now. */
+	static GhostMaterialList kept(ListData data) {
+		GhostMaterialList list = new GhostMaterialList(data.dimension(), data.min(), data.max(), data.name(), data.time());
+		list.multiplier = Math.max(1, data.multiplier());
+		list.sortCriteria = SortCriteria.valueOf(data.sort().name());
+		list.reverse = data.reverse();
+		list.hideAvailable = data.hideAvailable();
+		List<MaterialListEntry> entries = new ArrayList<>();
+		for (ListData.Row row : data.rows()) {
+			entries.add(new MaterialListEntry(new ItemStack(row.item()), row.total(), row.missing(), row.wrong(), 0));
+		}
+		Minecraft mc = Minecraft.getInstance();
+		if (mc.player != null) {
+			MaterialListUtils.updateAvailableCounts(entries, mc.player);
+		}
+		list.setMaterialListEntries(entries);
+		list.recreateFilteredList();
+		return list;
 	}
 
 	@Override
@@ -54,6 +101,33 @@ final class GhostMaterialList extends MaterialListBase {
 			GhostMaterialList::built, session.ghostsShown());
 		setMaterialListEntries(MaterialListUtils.getMaterialList(count.total(), count.missing(), count.wrong(),
 			new Object2IntOpenHashMap<>(), new Object2IntOpenHashMap<>(), new Object2IntOpenHashMap<>(), mc.player));
+		time = OptionalLong.of(System.currentTimeMillis());
+		counted = true;
+	}
+
+	/** Whether the list counted its box since the last call, which makes it "Last counted". */
+	boolean takeCounted() {
+		boolean was = counted;
+		counted = false;
+		return was;
+	}
+
+	/**
+	 * The list as the server keeps it: its box, the screen's multiplier, sort, reverse and "Hide available", and one row
+	 * for each item, with its name and time when it has them.
+	 */
+	ListData data() {
+		Map<Item, int[]> rows = new LinkedHashMap<>();
+		for (MaterialListEntry entry : getMaterialsAll()) {
+			int[] counts = rows.computeIfAbsent(entry.getStack().getItem(), item -> new int[3]);
+			counts[0] += entry.getCountTotal();
+			counts[1] += entry.getCountMissing();
+			counts[2] += entry.getCountMismatched();
+		}
+		List<ListData.Row> list = new ArrayList<>(rows.size());
+		rows.forEach((item, counts) -> list.add(new ListData.Row(item, counts[0], counts[1], counts[2])));
+		return new ListData(name, time, dimension, min, max, getMultiplier(), ListSort.valueOf(getSortCriteria().name()),
+			getSortInReverse(), getHideAvailable(), list);
 	}
 
 	/**

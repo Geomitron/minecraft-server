@@ -1,6 +1,6 @@
 # Step 8's in-game checks: clients without the add-on, or without Litematica and MaLiLib, on a server with it; clients
-# with the add-on on the same server with Building Planner left out; and a hello with another protocol version. Sourced
-# by inside.sh, which provides drv, val, check, xdo, keys, use_click, attack_click, wait_for, start_server, stop_server,
+# with the add-on on the same server with Building Planner left out; and a hello with protocol version 3, as Building
+# Planner 0.4.0 sends. Sourced by inside.sh, which provides drv, val, check, xdo, keys, use_click, attack_click, wait_for, start_server, stop_server,
 # start_client, stop_client, no_planner_message, $ADDON and $DRIVER.
 
 # said_since <line> <text>: returns when the server log, after that line, has a line containing the text.
@@ -47,6 +47,11 @@ drv 1 "cmd tp @s 5 -60 -3 0 10" "wait 200" "cmd clear Planner2" \
 xdo 2 mousedown 3 sleep 0.3 mouseup 3
 check "and places a real block" drv 1 "await real 20 -60 20 minecraft:gold_block"
 check "and stays connected" stayed_since "$joined"
+# The game logs each custom payload it can't read ("Unknown custom packet payload: <id>"), so a list message the server
+# sent it would show there.
+check "and the server sends it no list message and logs no error" eval \
+	'! grep -qF "Unknown custom packet payload: buildingplanner:" /out/client2.log &&
+	! tail -n +$((joined + 1)) /out/server.log | grep -qE "/ERROR\]|Exception"'
 cp /out/client2.log /out/client2-without-addon.log
 
 # A client with the add-on and Effortless Building but without Litematica and MaLiLib (and the driver, which uses
@@ -99,9 +104,9 @@ check "no place, break, undo or redo packet of Effortless Building leaves the cl
 	eval '! val 1 "ebsent" | grep -qE "place_build_mode|break_build_mode|undo|redo"'
 drv 1 "ebarray 0" > /dev/null
 
-# A hello from a server with another protocol version starts no session.
-drv 1 "cmd tp @s 5 -60 -3 0 10" "wait 20" "hello 99" > /dev/null
-check "a hello with another protocol version starts no session" drv 1 "wait 20" "await nosession"
+# A hello with protocol version 3, as the server with Building Planner 0.4.0 sends, starts no session.
+drv 1 "cmd tp @s 5 -60 -3 0 10" "wait 20" "hello 3" > /dev/null
+check "a hello with protocol version 3 starts no session" drv 1 "wait 20" "await nosession"
 # The screenshot is written after the command returns; wait for it before inside.sh copies it.
 drv 1 "notoasts" "wait 5" "shot off-other-version" "wait 20" > /dev/null
 

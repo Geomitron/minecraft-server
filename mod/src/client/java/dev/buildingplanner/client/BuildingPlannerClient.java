@@ -56,7 +56,8 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 
 	/** The payloads a session sends; a server that can't receive them all doesn't run Building Planner. */
 	private static final List<CustomPacketPayload.Type<?>> SERVERBOUND = List.of(Payloads.Watch.TYPE,
-		Payloads.Unwatch.TYPE, Payloads.Edit.TYPE, Payloads.Undo.TYPE, Payloads.Redo.TYPE);
+		Payloads.Unwatch.TYPE, Payloads.Edit.TYPE, Payloads.Undo.TYPE, Payloads.Redo.TYPE, Payloads.SaveList.TYPE,
+		Payloads.DeleteList.TYPE, Payloads.OpenList.TYPE, Payloads.CurrentList.TYPE);
 
 	/**
 	 * Null while not connected to a server with Building Planner: on any other server, Building Planner is off, so
@@ -144,6 +145,21 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		ClientPlayNetworking.registerGlobalReceiver(Payloads.Notice.TYPE, (payload, context) -> {
 			if (session != null) {
 				ClientSession.show(payload.message());
+			}
+		});
+		ClientPlayNetworking.registerGlobalReceiver(Payloads.Lists.TYPE, (payload, context) -> {
+			if (session != null) {
+				session.lists().receive(payload);
+			}
+		});
+		ClientPlayNetworking.registerGlobalReceiver(Payloads.OpenedList.TYPE, (payload, context) -> {
+			if (session != null) {
+				session.lists().receive(payload);
+			}
+		});
+		ClientPlayNetworking.registerGlobalReceiver(Payloads.Current.TYPE, (payload, context) -> {
+			if (session != null) {
+				session.lists().receive(payload);
 			}
 		});
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> endSession());

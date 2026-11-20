@@ -848,7 +848,8 @@ files are:
 - `saved`: each saved list, with its `name` and `time` (when it was saved, in milliseconds since 1970).
 - `last_counted`: "Last counted", when there is one, with its `time` (when it was counted).
 - `current`: the list the screen and the panel show, when there is one, with its `name` when it was opened from a saved
-  list; and `panel`, 1 while the panel is on and 0 otherwise.
+  list.
+- `panel`: 1 while the panel is on and 0 otherwise.
 
 Each list has `dimension` (its id), `min` and `max` (the box's lowest and highest corners, each x, y and z),
 `multiplier`, `sort` (the name of Litematica's `MaterialListBase.SortCriteria`: `NAME`, `COUNT_TOTAL`, `COUNT_MISSING`
@@ -876,6 +877,8 @@ and time when it has them. The game sends:
   these changes, at most once every 2 seconds, with the latest state, so a change in the last 2 seconds before the
   player leaves isn't kept.
 
+The server gives a saved list, and "Last counted", the time by its own clock when the message arrives.
+
 The server sends:
 
 - `lists(lastCounted, saved)`: the index of the player's lists: "Last counted", when there is one, and the saved lists,
@@ -893,8 +896,8 @@ The server protects itself with these limits:
 
 - A name is 1 to 64 characters, with no line breaks or other control characters.
 - A list is at most 64 KiB as sent (`registerLarge` for `save_list` and `current_list`), with at most one row for each
-  item. In each row, "Missing" is at most "Total" and the wrong blocks are at most "Missing". The box is at most 256
-  blocks a side, as a drawn box is, in a dimension the server has, and the multiplier is at least 1.
+  item. In each row, no count is below 0, "Missing" is at most "Total" and the wrong blocks are at most "Missing". The
+  box is at most 256 blocks a side, as a drawn box is, in a dimension the server has, and the multiplier is at least 1.
 - The server accepts at most 20 of a player's list messages in any 10 seconds, of all four kinds.
 - The number of lists has no limit (786 Q2 A). Each list is a few kilobytes, and only the player's own saves add to
   their file.
@@ -1110,6 +1113,9 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   their sizes. A new box replaces "Last counted" and leaves "Planks"; opening "Planks" doesn't change "Last counted".
   "Delete" asks again, then removes it. A name of 65 characters can't be typed, and "Save" is greyed out with an empty
   name.
+- A box Planner1 counts is in `run/server/world/building-planner/material-lists/<Planner1's UUID>.dat` as
+  `last_counted` within 30 seconds, and after the server and Planner1's game restart, Planner1's game has it as the
+  current list (read by a driver probe).
 - Planner1's lists are in `run/server/world/building-planner/material-lists/<Planner1's UUID>.dat` within 30 seconds
   of a save, and no file in Planner1's game folder contains them. After Planner1's game restarts, and again after the
   server restarts, "Saved lists" shows the same lists, the panel shows the same list with the same multiplier, and

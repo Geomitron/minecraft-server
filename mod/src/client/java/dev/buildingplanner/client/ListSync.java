@@ -1,0 +1,136 @@
+package dev.buildingplanner.client;
+
+import dev.buildingplanner.BuildingPlanner;
+import dev.buildingplanner.sync.ListData;
+import dev.buildingplanner.sync.ListLimits;
+import dev.buildingplanner.sync.Payloads;
+import fi.dy.masa.litematica.data.DataManager;
+import java.util.List;
+import java.util.Optional;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+
+/**
+ * The game's side of the material list messages on one connection: it keeps the server's index of the player's lists,
+ * makes the {@code current} list the server sends at join the current list, and sends {@code current_list} when the
+ * current list, its counts or the panel's switch change, at most every {@link #SEND_INTERVAL_MILLIS}, with the latest
+ * state. It keeps to the server's limits ({@link ListLimits}), so the player never meets them. Runs on the client's
+ * main thread.
+ */
+final class ListSync {
+	/** {@code current_list} goes at most this often. */
+	static final long SEND_INTERVAL_MILLIS = 2_000;
+
+	private Payloads.Lists index = new Payloads.Lists(Optional.empty(), List.of());
+	/** Whether the server's {@code current} has arrived; until then the game sends no {@code current_list}. */
+	private boolean started;
+	/** The panel's switch. */
+	private boolean panel;
+	/** The current list and the panel's switch as the server last had them. */
+	private Optional<ListData> sentList = Optional.empty();
+	private boolean sentPanel;
+	/** The list that was current at the last tick, and whether it counted its box since the last send. */
+	private GhostMaterialList seen;
+	private boolean counted;
+	private long lastSendMillis = Long.MIN_VALUE / 2;
+
+	/** The server's index of the player's lists, with "Last counted" kept up to date as the game counts. */
+	Payloads.Lists index() {
+		return index;
+	}
+
+	boolean panel() {
+		return panel;
+	}
+
+	void receive(Payloads.Lists lists) {
+		index = lists;
+	}
+
+	/**
+	 * The server's {@code current} at join: makes its list the current list, with its counts as kept, or, with none,
+	 * takes away a list of Building Planner's that was current, which belongs to another connection.
+	 */
+	void receive(Payloads.Current current) {
+		panel = current.panel();
+		if (current.list().isPresent()) {
+			makeCurrent(current.list().get());
+		} else if (DataManager.getMaterialList() instanceof GhostMaterialList) {
+			DataManager.setMaterialList(null);
+		}
+		seen = currentList();
+		sentList = seen == null ? Optional.empty() : Optional.of(seen.data());
+		sentPanel = panel;
+		started = true;
+	}
+
+	/** The server's answer to {@code open_list}: makes the list current, with its counts as kept. */
+	void receive(Payloads.OpenedList opened) {
+		makeCurrent(opened.list());
+	}
+
+	/** Keeps the list under the name on the server, replacing a kept list of that name. */
+	void save(String name, ListData list) {
+		if (ListLimits.nameProblem(name).isEmpty() && fits(list)) {
+			ClientPlayNetworking.send(new Payloads.SaveList(name, list));
+		}
+	}
+
+	void delete(String name) {
+		if (ListLimits.nameProblem(name).isEmpty()) {
+			ClientPlayNetworking.send(new Payloads.DeleteList(name));
+		}
+	}
+
+	/** Asks the server for the kept list of that name, or for "Last counted" with an empty name. */
+	void open(String name) {
+		if (name.isEmpty() || ListLimits.nameProblem(name).isEmpty()) {
+			ClientPlayNetworking.send(new Payloads.OpenList(name));
+		}
+	}
+
+	/** Once a client tick: notes a count of the current list, and sends {@code current_list} when it's due. */
+	void tick(long nowMillis) {
+		if (!started) {
+			return;
+		}
+		GhostMaterialList list = currentList();
+		if (list != seen) {
+			seen = list;
+			counted = false;
+		}
+		if (list != null && list.takeCounted()) {
+			counted = true;
+			ListData data = list.data();
+			index = new Payloads.Lists(Optional.of(new Payloads.ListSummary("", nowMillis, data.size())), index.saved());
+		}
+		if (nowMillis - lastSendMillis < SEND_INTERVAL_MILLIS) {
+			return;
+		}
+		Optional<ListData> data = list == null ? Optional.empty() : Optional.of(list.data());
+		if (!counted && data.equals(sentList) && panel == sentPanel) {
+			return;
+		}
+		if (data.isPresent() && !fits(data.get())) {
+			BuildingPlanner.LOGGER.warn("Building Planner's current material list is over {} bytes, so the server "
+				+ "doesn't keep it", ListLimits.MAX_LIST_BYTES);
+			data = Optional.empty();
+		}
+		ClientPlayNetworking.send(new Payloads.CurrentList(data, counted && data.isPresent(), panel));
+		lastSendMillis = nowMillis;
+		sentList = list == null ? Optional.empty() : Optional.of(list.data());
+		sentPanel = panel;
+		counted = false;
+	}
+
+	private static void makeCurrent(ListData data) {
+		DataManager.setMaterialList(GhostMaterialList.kept(data));
+	}
+
+	private static GhostMaterialList currentList() {
+		return DataManager.getMaterialList() instanceof GhostMaterialList list ? list : null;
+	}
+
+	private static boolean fits(ListData list) {
+		return Payloads.listBytes(list) <= ListLimits.MAX_LIST_BYTES;
+	}
+}

@@ -1,8 +1,8 @@
 # Step 9's in-game checks: showing and hiding ghost blocks with N and the radial menu's button, drawing while they're
 # hidden, the choice kept across a restart, where the radial menu's buttons sit, with screenshots, the menu's corner
 # text, the key headings in Controls, the box with its
-# list under the crosshair, copy and paste with the copy at the aim worked by the mouse, the material list, and N on a
-# server without Building Planner. Sourced by inside.sh, which provides drv, val,
+# list under the crosshair, copy and paste with the copy at the aim worked by the mouse, the material list, the counted
+# list kept on the server across restarts, and N on a server without Building Planner. Sourced by inside.sh, which provides drv, val,
 # check, keys, xdo, click, use_click, attack_click, client_said, start_server, stop_server, start_client, stop_client,
 # no_planner_message and $ADDON. Players stand on the flat world's grass, whose top is at y -61.
 
@@ -1025,15 +1025,43 @@ check "the Copy button during a box for the material list switches it to Copy" e
 radial_click "Copy"
 check "and pressed again, ends it" box_is "none SINGLE"
 radial_let_go
+
+# The lists on the server. The material list box around the row, counted again, is Planner1's "Last counted" in their
+# file on the dev server within 30 seconds of the count (the driver reads the file, which shares the container), and
+# after the server and Planner1's game restart, the game has it as its current list.
+lists_file=../server/world/building-planner/material-lists/$(val 1 "uuid Planner1").dat
+drv 1 "cmd tp @s 24.5 -51 -4.5 180 30" "wait 40" "fly true" > /dev/null
+radial_open
+radial_point "Material list"
+radial_let_go
+material_box
+list_counted=$SECONDS
+counted_list=$(val 1 currentlist)
+echo "  the counted list: $counted_list" >> /out/checks.log
+drv 1 "close" "wait 5" > /dev/null
+check "a box Planner1 counts is Last counted in their file on the server within 30 seconds" eval \
+	'[[ $counted_list == "minecraft:overworld "*" | minecraft:oak_planks 10/4/0"* ]] &&
+	drv 1 "await listfile $lists_file" > /dev/null &&
+	((SECONDS - list_counted <= 31))'
+echo "  seconds from the count to the file: $((SECONDS - list_counted)); the file's Last counted: $(val 1 "listfile $lists_file")" \
+	>> /out/checks.log
+cp /out/client1.log /out/client1-before-lists-restart.log
+cp /out/server.log /out/server-before-lists-restart.log
+stop_client 1
+stop_server
+start_server "" server-lists
+start_client 1
+check "after the server and Planner1's game restart, the game has the list it counted as its current list" eval \
+	'drv 1 "await session" "await noscreen" "wait 20" > /dev/null && [[ $(val 1 currentlist) == "$counted_list" ]]'
+echo "  the current list after the restart: $(val 1 currentlist)" >> /out/checks.log
 drv 1 "fly false" > /dev/null
-drv 2 "fly false" > /dev/null
 
 # On the same server with Building Planner left out, N does nothing.
 stop_client 1
 stop_client 2
 cp /out/client1.log /out/client1-with-addon.log
 cp /out/client2.log /out/client2-with-addon.log
-stop_server
+stop_server server-lists
 check "the server starts without Building Planner" eval 'start_server "$ADDON" server-without-addon &&
 	! grep -qF "Building Planner loaded" /out/server-without-addon.log'
 start_client 1

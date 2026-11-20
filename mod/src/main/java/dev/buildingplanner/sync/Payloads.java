@@ -3,26 +3,32 @@ package dev.buildingplanner.sync;
 import dev.buildingplanner.BuildingPlanner;
 import dev.buildingplanner.layer.PackedSection;
 import java.util.ArrayList;
+import io.netty.buffer.Unpooled;
 import java.util.List;
+import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.UUID;
 import java.util.function.Function;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
+import net.minecraft.core.Vec3i;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * Building Planner's network payloads for the shared layer, namespace {@code buildingplanner}, protocol version 3.
- * Dimensions travel as their ids; block states as ids in the block-state registry, since both sides run the same
- * vanilla blocks.
+ * Building Planner's network payloads for the shared layer and the material lists, namespace {@code buildingplanner},
+ * protocol version 4. Dimensions travel as their ids; block states as ids in the block-state registry and items as ids
+ * in the item registry, since both sides run the same vanilla blocks and items.
  */
 public final class Payloads {
 	/** Raised whenever a payload's layout changes; a client that sees another version turns Building Planner off. */
-	public static final int PROTOCOL_VERSION = 3;
+	public static final int PROTOCOL_VERSION = 4;
 	/** Marks an {@code applied} that answers no edit of the player's: an undo or a redo. */
 	public static final int NO_CLIENT_SEQ = -1;
 	/** Room for {@link SyncLimits#WIRE_MAX_EDIT_BLOCKS} changes at their largest (a long and a three-byte id each). */
@@ -32,6 +38,13 @@ public final class Payloads {
 	/** Column snapshots and applied edits go to players; their size follows the layer's. */
 	private static final int MAX_CLIENTBOUND_BYTES = Integer.MAX_VALUE;
 	private static final int MAX_NAME_LENGTH = 256;
+	/**
+	 * The most characters a list's name may have on the wire, past {@link ListLimits#MAX_NAME_LENGTH}, so that a longer
+	 * name reaches the server's check, which drops it with a warning, rather than ending the connection.
+	 */
+	private static final int MAX_WIRE_LIST_NAME = 1024;
+	/** Room for a list of {@link ListLimits#MAX_LIST_BYTES} and the rest of its message. */
+	static final int MAX_LIST_MESSAGE_BYTES = ListLimits.MAX_LIST_BYTES + 8 * 1024;
 
 	private Payloads() {
 	}
@@ -117,6 +130,88 @@ public final class Payloads {
 
 		@Override
 		public Type<Redo> type() {
+			return TYPE;
+		}
+	}
+
+	/**
+	 * Keep the list under the name, replacing a kept list of that name. {@code tooLarge} is set on reading a list over
+	 * {@link ListLimits#MAX_LIST_BYTES} as sent, whose contents are then skipped, and {@code list} is then null.
+	 */
+	public record SaveList(String name, ListData list, boolean tooLarge) implements CustomPacketPayload {
+		public static final Type<SaveList> TYPE = payloadType("save_list");
+		static final StreamCodec<FriendlyByteBuf, SaveList> CODEC = StreamCodec.of(
+			(buf, p) -> {
+				buf.writeUtf(p.name, MAX_WIRE_LIST_NAME);
+				writeSizedList(buf, p.list);
+			},
+			buf -> {
+				String name = buf.readUtf(MAX_WIRE_LIST_NAME);
+				ListData list = readSizedList(buf);
+				return new SaveList(name, list, list == null);
+			});
+
+		public SaveList(String name, ListData list) {
+			this(name, list, false);
+		}
+
+		@Override
+		public Type<SaveList> type() {
+			return TYPE;
+		}
+	}
+
+	/** Delete the kept list of that name. */
+	public record DeleteList(String name) implements CustomPacketPayload {
+		public static final Type<DeleteList> TYPE = payloadType("delete_list");
+		static final StreamCodec<FriendlyByteBuf, DeleteList> CODEC = StreamCodec.of(
+			(buf, p) -> buf.writeUtf(p.name, MAX_WIRE_LIST_NAME), buf -> new DeleteList(buf.readUtf(MAX_WIRE_LIST_NAME)));
+
+		@Override
+		public Type<DeleteList> type() {
+			return TYPE;
+		}
+	}
+
+	/** Send the kept list of that name, or "Last counted" when the name is empty. */
+	public record OpenList(String name) implements CustomPacketPayload {
+		public static final Type<OpenList> TYPE = payloadType("open_list");
+		static final StreamCodec<FriendlyByteBuf, OpenList> CODEC = StreamCodec.of(
+			(buf, p) -> buf.writeUtf(p.name, MAX_WIRE_LIST_NAME), buf -> new OpenList(buf.readUtf(MAX_WIRE_LIST_NAME)));
+
+		@Override
+		public Type<OpenList> type() {
+			return TYPE;
+		}
+	}
+
+	/**
+	 * The current list, or none; whether it was just counted from a box, which makes it "Last counted" too; and whether
+	 * the panel is on. {@code tooLarge} is as for {@link SaveList}, with {@code list} then empty.
+	 */
+	public record CurrentList(Optional<ListData> list, boolean counted, boolean panel, boolean tooLarge)
+		implements CustomPacketPayload {
+		public static final Type<CurrentList> TYPE = payloadType("current_list");
+		static final StreamCodec<FriendlyByteBuf, CurrentList> CODEC = StreamCodec.of(
+			(buf, p) -> {
+				buf.writeBoolean(p.list.isPresent());
+				p.list.ifPresent(list -> writeSizedList(buf, list));
+				buf.writeBoolean(p.counted);
+				buf.writeBoolean(p.panel);
+			},
+			buf -> {
+				boolean present = buf.readBoolean();
+				ListData list = present ? readSizedList(buf) : null;
+				return new CurrentList(Optional.ofNullable(list), buf.readBoolean(), buf.readBoolean(),
+					present && list == null);
+			});
+
+		public CurrentList(Optional<ListData> list, boolean counted, boolean panel) {
+			this(list, counted, panel, false);
+		}
+
+		@Override
+		public Type<CurrentList> type() {
 			return TYPE;
 		}
 	}
@@ -230,6 +325,68 @@ public final class Payloads {
 		}
 	}
 
+	/**
+	 * The index of the player's lists: "Last counted", when there is one, and the saved lists, newest first. It goes at
+	 * join and after each save and delete.
+	 */
+	public record Lists(Optional<ListSummary> lastCounted, List<ListSummary> saved) implements CustomPacketPayload {
+		public static final Type<Lists> TYPE = payloadType("lists");
+		static final StreamCodec<FriendlyByteBuf, Lists> CODEC = StreamCodec.of(
+			(buf, p) -> {
+				buf.writeBoolean(p.lastCounted.isPresent());
+				p.lastCounted.ifPresent(summary -> writeSummary(buf, summary));
+				writeList(buf, p.saved, Payloads::writeSummary);
+			},
+			buf -> new Lists(buf.readBoolean() ? Optional.of(readSummary(buf)) : Optional.empty(),
+				readList(buf, Payloads::readSummary)));
+
+		public Lists {
+			saved = List.copyOf(saved);
+		}
+
+		@Override
+		public Type<Lists> type() {
+			return TYPE;
+		}
+	}
+
+	/** One list in a {@link Lists}: its name (empty for "Last counted"), its time and its box's size. */
+	public record ListSummary(String name, long time, Vec3i size) {
+		public static ListSummary of(ListData list) {
+			return new ListSummary(list.name().orElse(""), list.time().orElse(0), list.size());
+		}
+	}
+
+	/** The answer to {@code open_list}. */
+	public record OpenedList(ListData list) implements CustomPacketPayload {
+		public static final Type<OpenedList> TYPE = payloadType("list");
+		static final StreamCodec<FriendlyByteBuf, OpenedList> CODEC = StreamCodec.of(
+			(buf, p) -> writeSizedList(buf, p.list), buf -> new OpenedList(requireList(readSizedList(buf))));
+
+		@Override
+		public Type<OpenedList> type() {
+			return TYPE;
+		}
+	}
+
+	/** At join: the current list as the player left it, or none, and the panel's switch. */
+	public record Current(Optional<ListData> list, boolean panel) implements CustomPacketPayload {
+		public static final Type<Current> TYPE = payloadType("current");
+		static final StreamCodec<FriendlyByteBuf, Current> CODEC = StreamCodec.of(
+			(buf, p) -> {
+				buf.writeBoolean(p.list.isPresent());
+				p.list.ifPresent(list -> writeSizedList(buf, list));
+				buf.writeBoolean(p.panel);
+			},
+			buf -> new Current(buf.readBoolean() ? Optional.of(requireList(readSizedList(buf))) : Optional.empty(),
+				buf.readBoolean()));
+
+		@Override
+		public Type<Current> type() {
+			return TYPE;
+		}
+	}
+
 	/** Registers every payload type; both sides call this at start. */
 	public static void register() {
 		PayloadTypeRegistry<?> serverbound = PayloadTypeRegistry.serverboundPlay();
@@ -238,12 +395,111 @@ public final class Payloads {
 		serverbound.registerLarge(Edit.TYPE, Edit.CODEC, MAX_EDIT_BYTES);
 		serverbound.register(Undo.TYPE, Undo.CODEC);
 		serverbound.register(Redo.TYPE, Redo.CODEC);
+		serverbound.registerLarge(SaveList.TYPE, SaveList.CODEC, MAX_LIST_MESSAGE_BYTES);
+		serverbound.register(DeleteList.TYPE, DeleteList.CODEC);
+		serverbound.register(OpenList.TYPE, OpenList.CODEC);
+		serverbound.registerLarge(CurrentList.TYPE, CurrentList.CODEC, MAX_LIST_MESSAGE_BYTES);
 		PayloadTypeRegistry<?> clientbound = PayloadTypeRegistry.clientboundPlay();
 		clientbound.register(Hello.TYPE, Hello.CODEC);
 		clientbound.registerLarge(Columns.TYPE, Columns.CODEC, MAX_CLIENTBOUND_BYTES);
 		clientbound.registerLarge(Applied.TYPE, Applied.CODEC, MAX_CLIENTBOUND_BYTES);
 		clientbound.register(Rejected.TYPE, Rejected.CODEC);
 		clientbound.register(Notice.TYPE, Notice.CODEC);
+		// The index grows with the player's lists, which have no limit; a single list is far below the 1 MiB a
+		// clientbound payload may carry.
+		clientbound.registerLarge(Lists.TYPE, Lists.CODEC, MAX_CLIENTBOUND_BYTES);
+		clientbound.register(OpenedList.TYPE, OpenedList.CODEC);
+		clientbound.register(Current.TYPE, Current.CODEC);
+	}
+
+	/** How many bytes a list takes as sent, which {@link ListLimits#MAX_LIST_BYTES} limits. */
+	public static int listBytes(ListData list) {
+		FriendlyByteBuf body = new FriendlyByteBuf(Unpooled.buffer());
+		writeListBody(body, list);
+		return body.readableBytes();
+	}
+
+	/** A list as its size in bytes, then its contents, so that a reader can skip one over the limit. */
+	static void writeSizedList(FriendlyByteBuf buf, ListData list) {
+		FriendlyByteBuf body = new FriendlyByteBuf(Unpooled.buffer());
+		writeListBody(body, list);
+		buf.writeVarInt(body.readableBytes());
+		buf.writeBytes(body);
+	}
+
+	/** The list {@link #writeSizedList} wrote, or null, with its contents skipped, when it's over the limit. */
+	static ListData readSizedList(FriendlyByteBuf buf) {
+		int bytes = buf.readVarInt();
+		if (bytes < 0) {
+			throw new IllegalArgumentException("A list of " + bytes + " bytes");
+		}
+		if (bytes > ListLimits.MAX_LIST_BYTES) {
+			buf.skipBytes(bytes);
+			return null;
+		}
+		FriendlyByteBuf body = new FriendlyByteBuf(buf.readSlice(bytes));
+		ListData list = readListBody(body);
+		if (body.isReadable()) {
+			throw new IllegalArgumentException("A list's contents are shorter than its size");
+		}
+		return list;
+	}
+
+	private static ListData requireList(ListData list) {
+		if (list == null) {
+			throw new IllegalArgumentException("A list over " + ListLimits.MAX_LIST_BYTES + " bytes");
+		}
+		return list;
+	}
+
+	private static void writeListBody(FriendlyByteBuf buf, ListData list) {
+		buf.writeBoolean(list.name().isPresent());
+		list.name().ifPresent(name -> buf.writeUtf(name, MAX_WIRE_LIST_NAME));
+		buf.writeBoolean(list.time().isPresent());
+		list.time().ifPresent(buf::writeLong);
+		buf.writeIdentifier(list.dimension());
+		buf.writeBlockPos(list.min());
+		buf.writeBlockPos(list.max());
+		buf.writeVarInt(list.multiplier());
+		buf.writeEnum(list.sort());
+		buf.writeBoolean(list.reverse());
+		buf.writeBoolean(list.hideAvailable());
+		writeList(buf, list.rows(), (b, row) -> {
+			b.writeVarInt(BuiltInRegistries.ITEM.getId(row.item()));
+			b.writeVarInt(row.total());
+			b.writeVarInt(row.missing());
+			b.writeVarInt(row.wrong());
+		});
+	}
+
+	private static ListData readListBody(FriendlyByteBuf buf) {
+		Optional<String> name = buf.readBoolean() ? Optional.of(buf.readUtf(MAX_WIRE_LIST_NAME)) : Optional.empty();
+		OptionalLong time = buf.readBoolean() ? OptionalLong.of(buf.readLong()) : OptionalLong.empty();
+		return new ListData(name, time, buf.readIdentifier(), buf.readBlockPos(), buf.readBlockPos(), buf.readVarInt(),
+			buf.readEnum(ListSort.class), buf.readBoolean(), buf.readBoolean(),
+			readList(buf, b -> new ListData.Row(readItem(b), b.readVarInt(), b.readVarInt(), b.readVarInt())));
+	}
+
+	private static Item readItem(FriendlyByteBuf buf) {
+		int id = buf.readVarInt();
+		Item item = BuiltInRegistries.ITEM.byId(id);
+		if (item == null || BuiltInRegistries.ITEM.getId(item) != id) {
+			throw new IllegalArgumentException("Unknown item id " + id);
+		}
+		return item;
+	}
+
+	private static void writeSummary(FriendlyByteBuf buf, ListSummary summary) {
+		buf.writeUtf(summary.name(), MAX_WIRE_LIST_NAME);
+		buf.writeLong(summary.time());
+		buf.writeVarInt(summary.size().getX());
+		buf.writeVarInt(summary.size().getY());
+		buf.writeVarInt(summary.size().getZ());
+	}
+
+	private static ListSummary readSummary(FriendlyByteBuf buf) {
+		return new ListSummary(buf.readUtf(MAX_WIRE_LIST_NAME), buf.readLong(),
+			new Vec3i(buf.readVarInt(), buf.readVarInt(), buf.readVarInt()));
 	}
 
 	private static <T extends CustomPacketPayload> CustomPacketPayload.Type<T> payloadType(String path) {

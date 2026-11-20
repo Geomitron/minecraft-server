@@ -222,6 +222,16 @@ public final class Driver implements ClientModInitializer {
 				}
 				return out.toString();
 			}
+			case "currentlist" -> {
+				// currentlist: the current material list when it's Building Planner's, as its box, the screen's
+				// settings and its rows (item total/missing/wrong), or none.
+				return ListProbe.current();
+			}
+			case "listfile" -> {
+				// listfile <path>: "Last counted" in the lists file at that path from the game folder, as currentlist
+				// reads a list.
+				return ListProbe.lastCounted(mc.gameDirectory.toPath().resolve(a[1]));
+			}
 			case "placements" -> {
 				List<String> names = new ArrayList<>();
 				for (SchematicPlacement p : DataManager.getSchematicPlacementManager().getAllSchematicsPlacements()) {
@@ -692,6 +702,7 @@ public final class Driver implements ClientModInitializer {
 			case "held" -> SentPackets.held(a[1].equals("use"));
 			case "pressedafter" -> SentPackets.presses() > Integer.parseInt(a[1]);
 			case "layer" -> LayerProbe.matches(mc.gameDirectory.toPath().resolve(a[1]));
+			case "listfile" -> ListProbe.fileHasCurrent(mc.gameDirectory.toPath().resolve(a[1]));
 			default -> throw new IllegalArgumentException(what);
 		};
 	}
@@ -709,6 +720,8 @@ public final class Driver implements ClientModInitializer {
 				case "glow" -> glows();
 				case "copy" -> copy();
 				case "layer" -> LayerProbe.compare(Minecraft.getInstance().gameDirectory.toPath().resolve(a[2]));
+				case "listfile" -> "file " + ListProbe.lastCounted(Minecraft.getInstance().gameDirectory.toPath()
+					.resolve(a[2])) + ", game " + ListProbe.current();
 				case "screen", "noscreen" -> String.valueOf(Minecraft.getInstance().gui.screen());
 				case "screenclass" -> screenClass();
 				case "held" -> "screen " + Minecraft.getInstance().gui.screen() + ", use down "

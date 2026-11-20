@@ -45,6 +45,7 @@ final class ClientSession {
 	private final Clipboard clipboard = new Clipboard();
 	private final BoxDraw box = new BoxDraw();
 	private final BoxList list = new BoxList();
+	private final ListSync lists = new ListSync();
 	private int clientSeq;
 	/**
 	 * Whether to remove old plans' placements at the next tick: at the session's start, and after each change of level,
@@ -88,6 +89,11 @@ final class ClientSession {
 		return clipboard;
 	}
 
+	/** The material lists the server keeps for the player. */
+	ListSync lists() {
+		return lists;
+	}
+
 	void chunkLoaded(int chunkX, int chunkZ) {
 		replica.chunkLoaded(chunkX, chunkZ);
 	}
@@ -107,7 +113,8 @@ final class ClientSession {
 
 	/**
 	 * Once a client tick: removes old plans' placements when due, asks for the columns that loaded and lets go of those
-	 * that unloaded, and moves the box being drawn and the copy at the aim to where the player aims.
+	 * that unloaded, moves the box being drawn and the copy at the aim to where the player aims, and sends the current
+	 * material list when it changed.
 	 */
 	void tick() {
 		if (removeOldPlans && Minecraft.getInstance().level != null) {
@@ -121,6 +128,7 @@ final class ClientSession {
 		}
 		list.update(box.shown(), replica.layer(), tiles.shown());
 		followAim();
+		lists.tick(System.currentTimeMillis());
 	}
 
 	/** Moves the copy at the aim to the block beside the face the player aims at; aiming at nothing leaves it. */
@@ -329,8 +337,9 @@ final class ClientSession {
 
 	/**
 	 * Opens Litematica's material list for the blocks in the box from {@code min} to {@code max}, ghost blocks and real
-	 * blocks alike, leaving hidden ghost blocks hidden, and makes it the list Litematica's own material list key opens.
-	 * A box with no blocks, or while ghost blocks are hidden with no real block, opens an empty list.
+	 * blocks alike, leaving hidden ghost blocks hidden, and makes it the current list, the one Litematica's own material
+	 * list key opens, which the server keeps as "Last counted". A box with no blocks, or while ghost blocks are hidden
+	 * with no real block, opens an empty list.
 	 */
 	void materialList(BlockPos min, BlockPos max) {
 		if (replica.dimension() == null) {
