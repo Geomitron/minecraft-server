@@ -322,6 +322,9 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
   - **A game on another version:** Geo left it to the agent ("Doesn't matter; no users will have that old version
     installed, as it has not been distributed yet", 788), so the simplest stands: protocol version 4, and a game on
     another version than the server's has Building Planner off, with no message.
+  - **0.4.1 first:** the box fix and the M key (steps 1 and 2 below) go to players as Building Planner 0.4.1 before
+    the rest of 0.5.0, with M opening Freecam's menu as its screenshot showed (790 Q1 A). The server keeps 0.4.0, since
+    both change only the players' game.
 - The shared layer replaces the decisions above that concern separate plans: named plans that move and turn as a whole
   (411 Q1), plan growth (411 Q2), who deletes a plan (411 Q3, 420 Q9), starting a plan with N (420 Q1, 469 Q1), hiding
   a plan with Litematica or Syncmatica (420 Q2, 469 Q2), the paste's target plan (485 Q3), Litematica's Edit Schematic
@@ -329,11 +332,12 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
 
 ## Agent-ready work
 
-**Building Planner 0.5.0** (784, 786 and 788, in "Decisions" above). [building-planner.md](building-planner.md) is
+**Building Planner 0.5.0** (784, 786, 788 and 790, in "Decisions" above). [building-planner.md](building-planner.md) is
 the design, and Geo's answers settle every choice in it. The steps come in this order, each small enough for one child. A step that changes nothing players see beyond
 what Geo already decided goes to `main` once its checks pass (inbox request 429). A step that changes what players see
 is committed without pushing, and goes to `main` once Geo has seen its in-game screenshots, with the changes outlined
-in red; steps 2 and 4 to 6 go to Geo together. Nothing goes to the server or the pack before the last step.
+in red; steps 4 to 6 go to Geo together. Apart from 0.4.1, nothing goes to the server or the pack before the last
+step.
 
 1. **A record for each setting changed once** ("Settings Building Planner changes once" and "Litematica's area
    selection"): `LookDefaults` and `LitematicaLook` with one record for each group, and the drawing of area selections
