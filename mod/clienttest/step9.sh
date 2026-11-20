@@ -1138,6 +1138,162 @@ for size in "854 480" "1920 1080"; do
 done
 drv 1 "window 854 480 2" "wait 20" > /dev/null
 
+# The material list panel. "Info HUD" on the list's screen turns it on, and it shows once the screen closes, in the
+# top-left corner, with the list's rows in the screen's order. The list here is the row and the stone beside it: 20 stone
+# blocks, all built, and 10 oak planks, 4 of them missing; Planner1 carries none of either.
+# panel_is <client> <text> [ticks]: the panel reads the text, within the ticks (60 unless given).
+panel_is() {
+	local i
+	for i in $(seq $((${3:-60} / 5))); do
+		[[ $(val "$1" matpanel) == "$2" ]] && return 0
+		drv "$1" "wait 5" > /dev/null
+	done
+	[[ $(val "$1" matpanel) == "$2" ]]
+}
+# multiplier <n>: types n into the open material list screen's "Multiplier" field, with real clicks and key presses.
+multiplier() {
+	click 1 $(val 1 matmultiplier)
+	keys 1 key ctrl+a BackSpace
+	keys 1 type -- "$1"
+	drv 1 "wait 10" > /dev/null
+}
+# reopen: the current list's screen, opened again.
+reopen() {
+	drv 1 "openlist" "await screen Material list for the blocks in the box" "wait 10" > /dev/null
+}
+panel_head="Material list | Total Available Missing"
+drv 1 "cmd clear @s minecraft:oak_planks" "wait 10" > /dev/null
+check "the panel is off at first, and the button reads Info HUD: OFF" eval \
+	'[[ $(val 1 matpanel) == hidden && $(mat_labels) == *"Info HUD: OFF"* ]]'
+mat_click "Info HUD"
+check "Info HUD turns the panel on, and the button reads Info HUD: ON" eval \
+	'drv 1 "wait 5" > /dev/null && [[ $(mat_labels) == *"Info HUD: ON"* && $(val 1 infohud) == true ]]'
+check "the panel hides while the screen is open" eval '[[ $(val 1 matpanel) == hidden ]]'
+drv 1 "close" > /dev/null
+check "once the screen closes, the panel shows the list's rows in the screen's order, with their counts" \
+	panel_is 1 "$panel_head | minecraft:stone 20 0 0 green | minecraft:oak_planks 10 0 4 red"
+echo "  the panel's box: $(val 1 matpanelbox)" >> /out/checks.log
+check "it sits 4 from the screen's top and left edges" eval '[[ $(val 1 matpanelbox) == "8 8 "* ]]'
+shot 1 material-panel-row
+# The multiplier at 4: "Total" times 4, and "Missing" the same, on the screen and the panel.
+reopen
+multiplier 4
+check "with the multiplier at 4, the screen's counts change" eval \
+	'[[ $(val 1 drawntexts) == *"80"* && $(val 1 drawntexts) == *"40"* ]]'
+drv 1 "close" > /dev/null
+check "and the panel's heading and every count change as the screen's do" panel_is 1 \
+	"Material list ×4 | Total Available Missing | minecraft:stone 80 0 80 red | minecraft:oak_planks 40 0 40 red"
+reopen
+multiplier 1
+# A click on the screen's "Missing" heading sorts by it, most first.
+click 1 $(val 1 "matheader 2")
+drv 1 "wait 10" "close" > /dev/null
+check "sorting by Missing on the screen reorders the panel" \
+	panel_is 1 "$panel_head | minecraft:oak_planks 10 0 4 red | minecraft:stone 20 0 0 green"
+reopen
+click 1 $(val 1 "matheader 1")
+mat_click "Hide available"
+drv 1 "wait 10" "close" > /dev/null
+check "Hide available leaves out the rows it hides on the screen: the stone, all built" \
+	panel_is 1 "$panel_head | minecraft:oak_planks 10 0 4 red"
+reopen
+mat_click "Hide available"
+drv 1 "wait 10" "close" > /dev/null
+check "and with it off, they're back" panel_is 1 "$panel_head | minecraft:stone 20 0 0 green | minecraft:oak_planks 10 0 4 red"
+drv 1 "cmd give @s minecraft:oak_planks 3" > /dev/null
+check "picking up 3 oak planks raises Available within 2 seconds" \
+	panel_is 1 "$panel_head | minecraft:stone 20 0 0 green | minecraft:oak_planks 10 3 4 red" 45
+# A second box, the row alone, keeps the panel on with the new list.
+radial_open
+radial_point "Material list"
+radial_let_go
+list_box 20.5 -59 -9.5 -59 29 -10 -60
+drv 1 "close" > /dev/null
+check "a second box keeps the panel on, with the new list" panel_is 1 "$panel_head | minecraft:oak_planks 10 3 4 red"
+press 1 F1
+check "F1 hides the panel" eval '[[ $(val 1 matpanel) == hidden ]]'
+press 1 F1
+check "and shows it again" panel_is 1 "$panel_head | minecraft:oak_planks 10 3 4 red"
+# The recount: 2 of the missing planks built for real lower "Missing" by 2 within 2 seconds, on the panel and the
+# screen; taking them away again brings it back.
+drv 1 "cmd fill 26 -60 -10 27 -60 -10 minecraft:oak_planks" "await real 27 -60 -10 minecraft:oak_planks" > /dev/null
+check "with its box loaded, 2 of the missing planks built lower Missing by 2 within 2 seconds" \
+	panel_is 1 "$panel_head | minecraft:oak_planks 10 3 2 gold" 45
+reopen
+check "on the screen too" eval '[[ $(val 1 matlist) == *" | minecraft:oak_planks 10/2" ]]'
+drv 1 "close" "cmd fill 26 -60 -10 27 -60 -10 minecraft:air" "await real 27 -60 -10 minecraft:air" > /dev/null
+check "and taken away, they're missing again" panel_is 1 "$panel_head | minecraft:oak_planks 10 3 4 red" 45
+drv 1 "cmd clear @s minecraft:oak_planks" > /dev/null
+
+# Shots of the panel, with the mix panel on too (a mix of stone bricks, held), for a list of 13 kinds of block: 10 rows, then "+3 more". Each kind
+# is a row of ghost blocks one shorter than the last, from 13 stone blocks to 1 diorite: the stone is all built for real
+# ("Missing" green), the cobblestone covered by the 64 Planner1 carries (gold), the rest missing (red).
+kinds=(stone cobblestone oak_planks spruce_planks birch_planks bricks sandstone glass white_wool red_wool terracotta
+	granite diorite)
+for k in "${!kinds[@]}"; do
+	drv 1 "edit 0 -60 $((-20 - k)) $((12 - k)) -60 $((-20 - k)) minecraft:${kinds[k]}" > /dev/null
+done
+# Stone bricks in the main hand and Effortless Building's mode Single, which the mix panel needs to show; the stone
+# bricks go before the cobblestone, which goes elsewhere.
+mode_before_panel=$(val 1 ebmode)
+drv 1 "ebmode SINGLE" "cmd fill 0 -60 -20 12 -60 -20 minecraft:stone" \
+	"cmd item replace entity @s weapon.mainhand with minecraft:stone_bricks" "cmd give @s minecraft:cobblestone 64" \
+	"cmd tp @s 6.5 -52 -10.5 180 50" "await block 0 -60 -32 minecraft:diorite" "wait 40" > /dev/null
+radial_open
+radial_point "Material list"
+radial_let_go
+list_box 0.5 -59 -31.5 -59 12 -20 -60
+# The commands' chat lines fade after 10 seconds, before the shots.
+drv 1 "close" "setmix minecraft:stone_bricks:80,minecraft:mossy_stone_bricks:20" "wait 220" > /dev/null
+long_rows="minecraft:stone 13 0 0 green | minecraft:cobblestone 12 64 12 gold | minecraft:oak_planks 11 0 11 red | \
+minecraft:spruce_planks 10 0 10 red | minecraft:birch_planks 9 0 9 red | minecraft:bricks 8 0 8 red | \
+minecraft:sandstone 7 0 7 red | minecraft:glass 6 0 6 red | minecraft:white_wool 5 0 5 red | minecraft:red_wool 4 0 4 red"
+check "a list of 13 kinds shows 10 rows, then +3 more" panel_is 1 "$panel_head | $long_rows | +3 more"
+check "the mix panel shows too" eval '[[ $(val 1 panel) == "Block mix | 80% | 20% | B: Edit mix" ]]'
+for size in "854 480 2" "1920 1080 2" "1920 1080 4"; do
+	read -r w h s <<< "$size"
+	drv 1 "window $w $h $s" "wait 20" > /dev/null
+	shot 1 "material-panel-${w}x$h-gui$s"
+	echo "  material-panel-${w}x$h-gui$s panel box: $(val 1 matpanelbox)" >> /out/checks.log
+done
+check "at GUI scale 4 the panel sits 4 from the top and left edges too" eval '[[ $(val 1 matpanelbox) == "16 16 "* ]]'
+drv 1 "window 854 480 2" "wait 20" > /dev/null
+# With the multiplier at 2, the heading shows it; shot at 854 by 480.
+reopen
+multiplier 2
+drv 1 "close" > /dev/null
+long_rows_2="minecraft:stone 26 0 26 red | minecraft:cobblestone 24 64 24 gold | minecraft:oak_planks 22 0 22 red | \
+minecraft:spruce_planks 20 0 20 red | minecraft:birch_planks 18 0 18 red | minecraft:bricks 16 0 16 red | \
+minecraft:sandstone 14 0 14 red | minecraft:glass 12 0 12 red | minecraft:white_wool 10 0 10 red | \
+minecraft:red_wool 8 0 8 red"
+check "with the multiplier at 2, the heading reads Material list ×2" \
+	panel_is 1 "Material list ×2 | Total Available Missing | $long_rows_2 | +3 more"
+shot 1 material-panel-multiplier-854x480-gui2
+echo "  material-panel-multiplier-854x480-gui2 panel box: $(val 1 matpanelbox)" >> /out/checks.log
+# A box with no blocks: "No blocks to list." under the heading.
+drv 1 "cmd tp @s 45.5 -57 45.5 0 30" "wait 40" > /dev/null
+radial_open
+radial_point "Material list"
+radial_let_go
+list_box 42.5 -60 42.5 -60 40 40 -60
+drv 1 "close" > /dev/null
+check "a list with no rows shows No blocks to list. under the heading" panel_is 1 "Material list | No blocks to list."
+shot 1 material-panel-empty-854x480-gui2
+echo "  material-panel-empty-854x480-gui2 panel box: $(val 1 matpanelbox)" >> /out/checks.log
+drv 1 "setmix" "cmd clear @s minecraft:cobblestone" "cmd clear @s minecraft:stone_bricks" "ebmode $mode_before_panel" \
+	> /dev/null
+
+# Back to the box around the row and the stone beside it, with the panel off, for the saved lists' checks.
+drv 1 "cmd tp @s 24.5 -51 -4.5 180 30" "wait 40" > /dev/null
+radial_open
+radial_point "Material list"
+radial_let_go
+material_box
+mat_click "Info HUD"
+check "Info HUD turns the panel off" eval 'drv 1 "wait 5" > /dev/null && [[ $(mat_labels) == *"Info HUD: OFF"* ]] &&
+	drv 1 "close" "wait 5" > /dev/null && [[ $(val 1 matpanel) == hidden ]]'
+reopen
+
 # "Save list": its name starts as the date and time; the field takes 64 characters, not 65; "Save" is greyed out while
 # the name is empty or only spaces. Shot with the date, and with the name empty.
 mat_click "Save list"
@@ -1216,19 +1372,32 @@ check "and the server's file keeps the row's box as Last counted" eval \
 	[[ $(val 1 "listfile $lists_file") == "minecraft:overworld 20,-60,-10..29,-59,-10 "* ]]'
 drv 1 "close" "wait 5" > /dev/null
 planks_list=$(val 1 currentlist)
+# The panel on, with Planks, for the restarts below: Planner1 carries 3 oak planks then.
+reopen
+mat_click "Info HUD"
+drv 1 "close" "wait 60" > /dev/null
+planks_panel="$panel_head | minecraft:stone 20 0 0 green | minecraft:oak_planks 10 3 4 red"
 
-# saved_lists_again <client> <shot>: on that client, the current list's screen, then "Saved lists" over it, show the
-# same lists, and "Open" on Planks shows its counts as kept, with "Available" counted again (3 oak planks given first);
-# each screen is shot, without toasts and with the pointer off the rows.
+# saved_lists_again <client> <shot>: on that client, the panel shows Planks, with "Available" counted again (3 oak
+# planks given first), and its recount makes Planks "Last counted"; the current list's screen, then "Saved lists" over
+# it, show the same lists, and "Open" on Planks shows its counts as kept; the panel and each screen are shot, without
+# toasts and with the pointer off the rows.
 saved_lists_again() {
 	local n=$1
 	drv "$n" "await session" "await noscreen" "wait 20" "cmd clear @s" "cmd give @s minecraft:oak_planks 3" "wait 20" \
-		"openlist" "await screen Material list for the blocks in the box" "wait 10" > /dev/null || return 1
+		> /dev/null || return 1
+	# The panel shows Planks, and once its box's chunks load, its recount every 2 seconds makes it "Last counted".
+	panel_is "$n" "$planks_panel" 200 || return 1
+	drv "$n" "notoasts" "wait 5" "notoasts" "shot $2-panel" > /dev/null || return 1
+	echo "  $2 panel box: $(val "$n" matpanelbox)" >> /out/checks.log
+	drv "$n" "wait 40" > /dev/null
+	[[ $(val "$n" listindex) == "last counted 10x2x3 | "* ]] || return 1
+	drv "$n" "openlist" "await screen Material list for the blocks in the box" "wait 10" > /dev/null || return 1
 	[[ $(val "$n" currentlist) == "$planks_list" ]] || return 1
 	click "$n" $(val "$n" "malilibbutton Saved lists")
 	drv "$n" "await screen Saved lists" "wait 10" "notoasts" "wait 5" "notoasts" "shot $2-saved-lists" > /dev/null ||
 		return 1
-	[[ $(val "$n" savedlists) =~ ^Last\ counted\ /\ .+\ ·\ 10\ ×\ 2\ ×\ 1\ \|\ Row\ /\ .+\ \|\ Planks\ /\ .+\ ·\ 10\ ×\ 2\ ×\ 3$ ]] ||
+	[[ $(val "$n" savedlists) =~ ^Last\ counted\ /\ .+\ ·\ 10\ ×\ 2\ ×\ 3\ \|\ Row\ /\ .+\ \|\ Planks\ /\ .+\ ·\ 10\ ×\ 2\ ×\ 3$ ]] ||
 		return 1
 	click "$n" $(val "$n" "widget 2 Open")
 	# The pointer leaves the rows, whose hover box would cover the counts.
@@ -1240,7 +1409,7 @@ saved_lists_again() {
 }
 stop_client 1
 start_client 1
-check "after Planner1's game restarts, Saved lists shows the same lists, and Open shows Planks as kept" \
+check "after Planner1's game restarts, the panel shows the same list, Saved lists the same lists, and Open shows Planks as kept" \
 	saved_lists_again 1 lists-after-game-restart
 drv 1 "close" "wait 5" > /dev/null
 stop_client 1
@@ -1259,8 +1428,8 @@ drv 2 "close" "wait 5" > /dev/null
 stop_client 2
 start_client 2
 start_client 1
-check "Planner2 sees none of Planner1's lists" eval 'drv 2 "await session" "await noscreen" "wait 20" > /dev/null &&
-	[[ $(val 2 listindex) == "last counted none" && $(val 2 currentlist) == none ]] &&
+check "Planner2 sees none of Planner1's lists, and no panel" eval 'drv 2 "await session" "await noscreen" "wait 20" > /dev/null &&
+	[[ $(val 2 listindex) == "last counted none" && $(val 2 currentlist) == none && $(val 2 matpanel) == hidden ]] &&
 	drv 2 "savedlistscreen" "await screen Saved lists" "wait 10" > /dev/null && [[ -z $(val 2 savedlists) ]]'
 # The game's chat toast comes once Planner1 joins after it; let it come, then clear it.
 drv 2 "wait 60" "notoasts" "wait 5" "notoasts" "shot saved-lists-none" "wait 10" "close" > /dev/null
@@ -1326,7 +1495,15 @@ echo "  the screen after Refresh at the box: $(val 1 drawntexts)" >> /out/checks
 check "and replaces Last counted" eval 'drv 1 "await listfile $lists_file" > /dev/null'
 drv 1 "close" "wait 5" "fly false" > /dev/null
 
-# On the same server with Building Planner left out, N does nothing.
+# The panel on, with that list, for the server without Building Planner.
+drv 1 "openlist" "await screen Material list for the blocks in the box" "wait 10" > /dev/null
+mat_click "Info HUD"
+drv 1 "close" "wait 100" > /dev/null
+before_panel=$(val 1 matpanel)
+echo "  the panel before the server without Building Planner: $before_panel" >> /out/checks.log
+
+# On the same server with Building Planner left out, N does nothing, and the material list panel doesn't show; with
+# Building Planner back, the panel shows again with the same list.
 stop_client 1
 stop_client 2
 cp /out/client1.log /out/client1-with-addon.log
@@ -1343,3 +1520,12 @@ check "N opens nothing and leaves ghost blocks shown" eval 'drv 1 "wait 20" "awa
 	grep -q "^ghost-blocks-shown=true" "$config"'
 check "and shows no Building Planner message" no_planner_message 1
 shot 1 keys-not-on-server
+check "and the material list panel doesn't show" eval '[[ $(val 1 matpanel) == hidden ]]'
+stop_client 1
+stop_server server-without-addon
+start_server "" server-addon-back
+start_client 1
+check "with Building Planner back, the panel shows again with the same list" eval \
+	'[[ $before_panel == "Material list | Total Available Missing | "* ]] && drv 1 "await session" "await noscreen" > /dev/null &&
+	panel_is 1 "$before_panel" 200'
+shot 1 material-panel-addon-back

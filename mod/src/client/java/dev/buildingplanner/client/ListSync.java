@@ -6,6 +6,7 @@ import dev.buildingplanner.sync.ListLimits;
 import dev.buildingplanner.sync.Payloads;
 import fi.dy.masa.litematica.data.DataManager;
 import fi.dy.masa.litematica.gui.GuiMaterialList;
+import fi.dy.masa.litematica.materials.MaterialListBase;
 import fi.dy.masa.malilib.gui.GuiBase;
 import java.util.List;
 import java.util.Optional;
@@ -17,10 +18,16 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
  * current list, its counts or the panel's switch change, at most every {@link #SEND_INTERVAL_MILLIS}, with the latest
  * state. It keeps to the server's limits ({@link ListLimits}), so the player never meets them. Runs on the client's
  * main thread.
+ *
+ * <p>It also keeps the material list panel's switch, which stays as it is when another list becomes current, and,
+ * while the panel is on, counts the current list's box again every {@link #RECOUNT_INTERVAL_MILLIS}, so "Missing" drops
+ * as the group builds, or, where the box can't be counted, its "Available".
  */
 final class ListSync {
 	/** {@code current_list} goes at most this often. */
 	static final long SEND_INTERVAL_MILLIS = 2_000;
+	/** While the panel is on, the current list is counted again this often, as Litematica's own Info HUD counts. */
+	static final long RECOUNT_INTERVAL_MILLIS = 2_000;
 
 	private Payloads.Lists index = new Payloads.Lists(Optional.empty(), List.of());
 	/** Whether the server's {@code current} has arrived; until then the game sends no {@code current_list}. */
@@ -34,6 +41,7 @@ final class ListSync {
 	private GhostMaterialList seen;
 	private boolean counted;
 	private long lastSendMillis = Long.MIN_VALUE / 2;
+	private long lastRecountMillis = Long.MIN_VALUE / 2;
 	/** The name of the list "Open" asked the server for ("" for "Last counted"), until its answer arrives, or null. */
 	private String opening;
 
@@ -42,8 +50,14 @@ final class ListSync {
 		return index;
 	}
 
+	/** Whether the material list panel is on. */
 	boolean panel() {
 		return panel;
+	}
+
+	/** Turns the panel on or off: the screen's "Info HUD" button, through {@link PanelSwitch}. */
+	void setPanel(boolean on) {
+		panel = on;
 	}
 
 	/**
@@ -67,7 +81,7 @@ final class ListSync {
 		if (current.list().isPresent()) {
 			makeCurrent(current.list().get());
 		} else if (DataManager.getMaterialList() instanceof GhostMaterialList) {
-			DataManager.setMaterialList(null);
+			makeCurrent((MaterialListBase) null);
 		}
 		seen = currentList();
 		sentList = seen == null ? Optional.empty() : Optional.of(seen.data());
@@ -121,6 +135,10 @@ final class ListSync {
 			seen = list;
 			counted = false;
 		}
+		if (panel && list != null && nowMillis - lastRecountMillis >= RECOUNT_INTERVAL_MILLIS) {
+			lastRecountMillis = nowMillis;
+			list.recount();
+		}
 		if (list != null && list.takeCounted()) {
 			counted = true;
 			ListData data = list.data();
@@ -145,8 +163,19 @@ final class ListSync {
 		counted = false;
 	}
 
-	private static void makeCurrent(ListData data) {
-		DataManager.setMaterialList(GhostMaterialList.kept(data));
+	private void makeCurrent(ListData data) {
+		makeCurrent(GhostMaterialList.kept(data));
+	}
+
+	/**
+	 * Makes the list current, the one the screen, the panel and Litematica's own material list key show, or none. The
+	 * panel stays on or off: {@code DataManager.setMaterialList} turns the old list's Info HUD off, which is the panel's
+	 * switch, so it's put back after.
+	 */
+	void makeCurrent(MaterialListBase list) {
+		boolean on = panel;
+		DataManager.setMaterialList(list);
+		panel = on;
 	}
 
 	private static GhostMaterialList currentList() {

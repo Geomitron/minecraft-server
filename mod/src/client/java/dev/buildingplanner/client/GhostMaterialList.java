@@ -1,18 +1,22 @@
 package dev.buildingplanner.client;
 
 import dev.buildingplanner.layer.MaterialCount;
+import dev.buildingplanner.look.MaterialPanelRows;
+import dev.buildingplanner.sync.LayerReplica;
 import dev.buildingplanner.sync.ListData;
 import dev.buildingplanner.sync.ListSort;
 import fi.dy.masa.litematica.config.Configs;
 import fi.dy.masa.litematica.gui.GuiMaterialList;
 import fi.dy.masa.litematica.materials.MaterialListBase;
 import fi.dy.masa.litematica.materials.MaterialListEntry;
+import fi.dy.masa.litematica.materials.MaterialListHudRenderer;
 import fi.dy.masa.litematica.materials.MaterialListUtils;
 import fi.dy.masa.litematica.util.BlockUtils;
 import fi.dy.masa.malilib.gui.Message.MessageType;
 import fi.dy.masa.malilib.util.GuiUtils;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,8 +43,16 @@ import net.minecraft.world.level.chunk.status.ChunkStatus;
  * <p>A list the server kept ({@link #kept}) shows its counts as kept, with "Available" counted from the inventory,
  * until Refresh counts its box again. Refresh counts only while the game holds the whole box (see {@link #count}), and
  * otherwise says so on the screen, since a chunk the game doesn't hold would count as air.
+ *
+ * <p>Its Info HUD is the material list panel ({@link MaterialPanel}): {@link #getHudRenderer} gives Litematica a
+ * renderer whose switch is the panel's and which draws nothing, so the screen's "Info HUD" button turns the panel on and
+ * off and its label shows the panel's state.
  */
 final class GhostMaterialList extends MaterialListBase {
+	/** The panel counts its list's box again only up to this many blocks, as a bigger box makes a pause the player sees. */
+	static final long MAX_RECOUNT_BLOCKS = 1_000_000;
+
+	private final PanelSwitch panelSwitch = new PanelSwitch(this);
 	private final Identifier dimension;
 	private final BlockPos min;
 	private final BlockPos max;
@@ -86,6 +98,12 @@ final class GhostMaterialList extends MaterialListBase {
 		return list;
 	}
 
+	/** The panel's switch, for the screen's "Info HUD" button and {@code DataManager.setMaterialList}. */
+	@Override
+	public MaterialListHudRenderer getHudRenderer() {
+		return panelSwitch;
+	}
+
 	@Override
 	public String getName() {
 		return getTitle();
@@ -109,29 +127,88 @@ final class GhostMaterialList extends MaterialListBase {
 
 	/**
 	 * Counts the box again while Building Planner has a session, the player is in the box's dimension, and the game
-	 * holds every chunk the box touches, as a box needs when it's drawn; returns whether it counted.
+	 * holds every chunk the box touches with its ghost blocks, as a box needs when it's drawn; returns whether it
+	 * counted.
 	 */
 	boolean count() {
 		ClientSession session = BuildingPlannerClient.session();
 		Minecraft mc = Minecraft.getInstance();
-		if (session == null || mc.level == null || !dimension.equals(session.replica().dimension()) || !held(mc.level)) {
+		if (session == null || mc.level == null || !dimension.equals(session.replica().dimension()) || !held(mc.level, session.replica())) {
 			return false;
 		}
 		MaterialCount count = MaterialCount.of(session.replica().layer(), min, max, BoxList.realSections(mc.level),
 			GhostMaterialList::built, session.ghostsShown());
-		setMaterialListEntries(MaterialListUtils.getMaterialList(count.total(), count.missing(), count.wrong(),
-			new Object2IntOpenHashMap<>(), new Object2IntOpenHashMap<>(), new Object2IntOpenHashMap<>(), mc.player));
+		List<MaterialListEntry> entries = MaterialListUtils.getMaterialList(count.total(), count.missing(), count.wrong(),
+			new Object2IntOpenHashMap<>(), new Object2IntOpenHashMap<>(), new Object2IntOpenHashMap<>(), mc.player);
+		if (counts(entries).equals(counts(getMaterialsAll()))) {
+			// The same counts: only "Available" may have changed, which the screen reads from the entries as it draws, so
+			// the screen isn't built again, which would take the focus from its multiplier field every recount.
+			updateAvailable();
+		} else {
+			setMaterialListEntries(entries);
+		}
 		time = OptionalLong.of(System.currentTimeMillis());
 		counted = true;
 		return true;
 	}
 
-	/** Whether the game holds every chunk the box touches. {@code ClientLevel.hasChunk} is always true. */
-	private boolean held(ClientLevel level) {
+	/**
+	 * The panel's recount, every 2 seconds while it's on: counts the box again as {@link #count} does, but only for a box
+	 * of at most {@link #MAX_RECOUNT_BLOCKS} blocks, and otherwise counts only "Available" again; returns whether it
+	 * counted the box.
+	 */
+	boolean recount() {
+		long blocks = (long) (max.getX() - min.getX() + 1) * (max.getY() - min.getY() + 1) * (max.getZ() - min.getZ() + 1);
+		if (blocks <= MAX_RECOUNT_BLOCKS && count()) {
+			return true;
+		}
+		updateAvailable();
+		return false;
+	}
+
+	/** Counts "Available" again from the player's inventory, as Litematica's own Info HUD does. */
+	private void updateAvailable() {
+		Minecraft mc = Minecraft.getInstance();
+		if (mc.player != null) {
+			MaterialListUtils.updateAvailableCounts(getMaterialsAll(), mc.player);
+		}
+	}
+
+	/**
+	 * The panel's rows: the list's rows the screen shows (without the rows the player ignored, and without those "Hide
+	 * available" hides), in the screen's order, with the multiplier.
+	 */
+	MaterialPanelRows<ItemStack> panelRows() {
+		List<MaterialPanelRows.Entry<ItemStack>> entries = new ArrayList<>(materialListPreFiltered.size());
+		for (MaterialListEntry entry : materialListPreFiltered) {
+			ItemStack stack = entry.getStack();
+			entries.add(new MaterialPanelRows.Entry<>(stack, stack.getHoverName().getString(), entry.getCountTotal(),
+				entry.getCountMissing(), entry.getCountAvailable()));
+		}
+		return MaterialPanelRows.of(entries, ListSort.valueOf(getSortCriteria().name()), getSortInReverse(),
+			getHideAvailable(), getMultiplier());
+	}
+
+	/** Each item's total, missing and wrong counts, to tell whether a count changed anything. */
+	private static Map<Item, List<Integer>> counts(List<MaterialListEntry> entries) {
+		Map<Item, List<Integer>> counts = new HashMap<>();
+		for (MaterialListEntry entry : entries) {
+			counts.merge(entry.getStack().getItem(),
+				List.of(entry.getCountTotal(), entry.getCountMissing(), entry.getCountMismatched()),
+				(a, b) -> List.of(a.get(0) + b.get(0), a.get(1) + b.get(1), a.get(2) + b.get(2)));
+		}
+		return counts;
+	}
+
+	/**
+	 * Whether the game holds every chunk the box touches, with its column's ghost blocks: a chunk loads before the
+	 * server's snapshot of its column arrives. {@code ClientLevel.hasChunk} is always true.
+	 */
+	private boolean held(ClientLevel level, LayerReplica replica) {
 		ClientChunkCache chunks = level.getChunkSource();
 		for (int x = min.getX() >> 4; x <= max.getX() >> 4; x++) {
 			for (int z = min.getZ() >> 4; z <= max.getZ() >> 4; z++) {
-				if (chunks.getChunk(x, z, ChunkStatus.FULL, false) == null) {
+				if (chunks.getChunk(x, z, ChunkStatus.FULL, false) == null || !replica.holds(x, z)) {
 					return false;
 				}
 			}

@@ -3,9 +3,14 @@ package dev.buildingplanner.client;
 import dev.buildingplanner.sync.ListData;
 import dev.buildingplanner.sync.Payloads;
 import fi.dy.masa.litematica.data.DataManager;
+import fi.dy.masa.litematica.gui.GuiMaterialList;
+import fi.dy.masa.litematica.gui.widgets.WidgetMaterialListEntry;
 import fi.dy.masa.malilib.gui.GuiBase;
+import fi.dy.masa.malilib.gui.GuiListBase;
 import fi.dy.masa.malilib.gui.button.ButtonBase;
+import fi.dy.masa.malilib.gui.widgets.WidgetListBase;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -117,6 +122,35 @@ final class ListScreenProbe {
 		Field f = GuiBase.class.getDeclaredField("buttons");
 		f.setAccessible(true);
 		return (List<ButtonBase>) f.get(screen);
+	}
+
+	/**
+	 * The window position of a point in the heading of the material list screen's column (0 the item, 1 "Total", 2
+	 * "Missing", 3 "Available"), where a click sorts by it, or none.
+	 */
+	static String header(Minecraft mc, int column) throws Exception {
+		if (!(mc.gui.screen() instanceof GuiMaterialList gui)) {
+			return "none";
+		}
+		Field f = WidgetListBase.class.getDeclaredField("listWidgets");
+		f.setAccessible(true);
+		Method listWidget = GuiListBase.class.getDeclaredMethod("getListWidget");
+		listWidget.setAccessible(true);
+		List<?> widgets = (List<?>) f.get(listWidget.invoke(gui));
+		if (widgets.isEmpty() || !(widgets.getFirst() instanceof WidgetMaterialListEntry header)) {
+			return "none";
+		}
+		Method x = WidgetMaterialListEntry.class.getDeclaredMethod("getColumnPosX", int.class);
+		x.setAccessible(true);
+		double scale = mc.getWindow().getGuiScale();
+		return (int) (((int) x.invoke(header, column) + 5) * scale) + " "
+			+ (int) ((header.getY() + header.getHeight() / 2.0) * scale);
+	}
+
+	/** The window position of the middle of the material list screen's "Multiplier" field (Litematica's place for it). */
+	static String multiplierField(Minecraft mc) {
+		double scale = mc.getWindow().getGuiScale();
+		return (int) ((mc.gui.screen().width - 52 + 20) * scale) + " " + (int) ((24 + 2 + 8) * scale);
 	}
 
 	private static String label(ButtonBase button) throws Exception {

@@ -272,6 +272,28 @@ public final class Driver implements ClientModInitializer {
 						+ entry.getCountAvailable())
 					.collect(Collectors.joining(" | "));
 			}
+			case "matpanel" -> {
+				// matpanel: the material list panel's lines, separated by " | ", each row as its item, its total, available
+				// and missing, and missing's colour; or hidden.
+				return MaterialPanel.text();
+			}
+			case "matpanelbox" -> {
+				// matpanelbox: the material list panel's box in the window (x y width height), or hidden.
+				return MaterialPanel.box();
+			}
+			case "infohud" -> {
+				// infohud: whether the current material list's Info HUD, the panel's switch, is on.
+				return String.valueOf(DataManager.getMaterialList().getHudRenderer().getShouldRenderCustom());
+			}
+			case "matheader" -> {
+				// matheader <column>: the window position in the open material list screen's heading of that column (1
+				// "Total", 2 "Missing", 3 "Available"), where a click sorts by it, or none.
+				return ListScreenProbe.header(mc, Integer.parseInt(a[1]));
+			}
+			case "matmultiplier" -> {
+				// matmultiplier: the window position of the open material list screen's "Multiplier" field.
+				return ListScreenProbe.multiplierField(mc);
+			}
 			case "listfilesaved" -> {
 				// listfilesaved <path>: the names of the saved lists in the lists file at that path from the game folder,
 				// newest first, or "no file".
@@ -486,6 +508,20 @@ public final class Driver implements ClientModInitializer {
 					parts.add(BuiltInRegistries.BLOCK.getKey(part.block()) + ":" + part.weight());
 				}
 				return (mix.isOn() ? "on " : "off ") + String.join(",", parts);
+			}
+			case "setmix" -> {
+				// setmix [block:weight,...]: turns the player's mix on with those blocks, or off with none, as "Use mix" and
+				// "Clear Mix" do, for shots of the mix panel beside other things.
+				List<BlockMix.Part> parts = new ArrayList<>();
+				if (a.length > 1) {
+					for (String part : a[1].split(",")) {
+						int colon = part.lastIndexOf(':');
+						parts.add(new BlockMix.Part(state(part.substring(0, colon)).getBlock(),
+							Integer.parseInt(part.substring(colon + 1))));
+					}
+				}
+				mix().use(parts);
+				return "ok";
 			}
 			case "mixat" -> {
 				return BuiltInRegistries.BLOCK.getKey(mix().blockAt(pos(a, 1))).toString();

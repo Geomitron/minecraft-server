@@ -120,6 +120,8 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 			() -> session == null ? List.of() : session.boxList());
 		HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(BuildingPlanner.MOD_ID, "mode_controls"),
 			modeHud);
+		HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(BuildingPlanner.MOD_ID, "material_panel"),
+			new MaterialPanel());
 		ClientPlayNetworking.registerGlobalReceiver(Payloads.Hello.TYPE, (hello, context) -> hello(hello));
 		// A singleplayer or LAN host's own world runs no server side.
 		ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {

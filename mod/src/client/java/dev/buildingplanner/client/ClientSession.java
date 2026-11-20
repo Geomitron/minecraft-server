@@ -12,7 +12,6 @@ import dev.buildingplanner.sync.LayerChange;
 import dev.buildingplanner.sync.LayerReplica;
 import dev.buildingplanner.sync.Payloads;
 import dev.buildingplanner.sync.PlayerMessage;
-import fi.dy.masa.litematica.data.DataManager;
 import fi.dy.masa.litematica.gui.GuiMaterialList;
 import fi.dy.masa.malilib.gui.GuiBase;
 import it.unimi.dsi.fastutil.longs.LongSet;
@@ -346,7 +345,7 @@ final class ClientSession {
 			return;
 		}
 		GhostMaterialList list = new GhostMaterialList(replica.dimension(), min, max);
-		DataManager.setMaterialList(list);
+		lists.makeCurrent(list);
 		GuiBase.openGui(new GuiMaterialList(list));
 	}
 

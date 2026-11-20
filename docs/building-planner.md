@@ -744,9 +744,11 @@ with nothing in it.
 
 Litematica's Refresh button counts the list's box again, and keeps the new counts as "Last counted", while Building
 Planner has a session, the player is in the box's dimension, and the game holds every chunk the box touches, as a box
-needs when it's drawn. Otherwise the counts stay as they were, and the screen says "Move closer to the box to count it
-again." (`GuiBase.addMessage`), since a chunk the game doesn't hold would count as air and every ghost block in it as
-missing. A list never reaches another server: each server keeps its own (see "The lists on the server").
+needs when it's drawn, with the server's snapshot of its column (see "The layer and its column watching"). Otherwise the
+counts stay as they were, and the screen says "Move closer to the box to count it again." (`GuiBase.addMessage`), since
+a chunk the game doesn't hold would count as air and every ghost block in it as missing, and a column whose snapshot
+hasn't arrived, as a chunk just loaded may not have, would count none of its ghost blocks. A list never reaches another
+server: each server keeps its own (see "The lists on the server").
 
 Litematica's list has four columns (`gui/widgets/WidgetMaterialListEntry.java`): "Item"; "Total", the count for the
 plan; "Missing", how many are still to place, in green at 0, in gold when "Available" covers it, and in red otherwise;
@@ -785,10 +787,10 @@ with total, available, and missing, sorted just like the full view is, with the 
 note c3). The screen's "Info HUD" button turns the panel on and off (`MaterialPanel`, drawn through
 `HudElementRegistry`, as the mix panel is), for whichever list is current: counting a new box or opening a saved list
 keeps the panel on, showing that list. Litematica's own Info HUD for the list draws nothing: `GhostMaterialList`
-overrides `getHudRenderer()` with a `MaterialListHudRenderer` whose switch is the panel's and whose `render` draws
-nothing, so the button's label ("Info HUD: ON" or "OFF"), which reads `getShouldRenderCustom()`, shows the panel's
-state. `DataManager.setMaterialList` turns the old list's Info HUD off when another list becomes current, so Building
-Planner turns the panel back on after it, when it was on.
+overrides `getHudRenderer()` with a `MaterialListHudRenderer` (`PanelSwitch`) whose switch is the panel's and whose
+`render` draws nothing, so the button's label ("Info HUD: ON" or "OFF"), which reads `getShouldRenderCustom()`, shows
+the panel's state. The switch belongs to the session (`ListSync`), not to a list. `DataManager.setMaterialList` turns
+the old list's Info HUD off when another list becomes current, so Building Planner puts the switch back after it.
 
 The panel draws as the mix panel does: a dark see-through box, at `SmallText`'s size, hidden while a screen is open and
 while the HUD is hidden (F1). It sits in the top-left corner, 4 from each edge (786 Q6 A), where the game draws nothing
@@ -798,15 +800,26 @@ rows in the screen's order, leaving out what the screen leaves out ("Hide availa
 Each row is the block's icon and its three counts, with no name, so the panel is as narrow as the counts allow (786 Q7
 A). The panel shows at most 10 rows, Litematica's own Info HUD limit (`materialListHudMaxLines`), then "+N more". Each
 count reads as the screen shows it, with the multiplier, and "Missing" in the screen's colours: green at 0, gold when
-"Available" covers it, red otherwise. "Available" counts the player's inventory again every 2 seconds, as Litematica's
-own Info HUD does (`MaterialListUtils.updateAvailableCounts`). A list with no rows to show has "No blocks to list."
-under the heading.
+"Available" covers it, red otherwise; the other counts are white. "Available" counts the player's inventory again every
+2 seconds, as Litematica's own Info HUD does (`MaterialListUtils.updateAvailableCounts`). A list with no rows to show
+has "No blocks to list." under the heading, with no column headings.
 
-While the panel shows a list whose box it can count (as for Refresh), Building Planner counts the box again every 2
-seconds, so "Missing" drops as the group builds, on the panel and the screen alike, and "Last counted" follows (786 Q8
-A). Counting reads whole sections (`BoxCount`), so a house-sized box should take about a millisecond; a box of 256 a
-side full of ghost blocks could take about half a second, a pause the player would see every 2 seconds, so a box of
-more than 1,000,000 blocks counts again only on Refresh.
+The rows come from a pure function (`MaterialPanelRows`) of the list's rows without the ignored ones (Litematica's
+`materialListPreFiltered`), its sort, reverse, "Hide available" and multiplier, which follows Litematica's code: its
+sort (`MaterialListSorter`: by the column's count without the multiplier, most first, equal counts by name; by name Z to
+A, or A to Z reversed), its filter (`recreateFilteredList`: "Hide available" hides a row whose "Available" covers its
+"Missing" with the multiplier) and its counts (`WidgetMaterialListEntry`). The column headings draw in grey, each
+count right-aligned under its heading; each row is 18 high, as the mix panel's are.
+
+While the panel is on and the current list is Building Planner's, Building Planner counts its box again every 2
+seconds, as Refresh does when it can, so "Missing" drops as the group builds, on the panel and the screen alike, and
+"Last counted" follows (786 Q8 A): each recount makes the current list "Last counted", so a saved list opened with the
+panel on becomes "Last counted" at its next recount. Where the box can't be counted (the player is too far from it, or
+in another dimension), only "Available" is counted again. A recount that leaves every count as it was doesn't build the
+screen again, which would take the focus from its "Multiplier" field every 2 seconds. Counting reads whole sections
+(`BoxCount`), so a house-sized box should take about a millisecond; a box of 256 a side full of ghost blocks could take
+about half a second, a pause the player would see every 2 seconds, so a box of more than 1,000,000 blocks counts again
+only on Refresh.
 
 The panel stays on across game restarts, with the same list, until the player turns it off (786 Q9 A). The server
 keeps the current list and the panel's switch with the player's lists, and sends them back when the player joins (see
@@ -1109,12 +1122,16 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   `ListScreenProbe` reads the buttons' labels), at 854 by 480 and 1920 by 1080, GUI scale 2, each shot.
 - "Info HUD" shows the panel once the screen closes, with the list's rows in the screen's order and their counts, and
   the label reads "Info HUD: ON"; with the multiplier at 4 the heading and every count change as the screen's do;
-  sorting by "Missing" on the screen reorders the panel; "Hide available" leaves out the rows it hides on the screen;
-  picking up 3 oak planks raises "Available" within 2 seconds. A second box keeps the panel on with the new list. F1
-  hides it. The panel is shot at 854 by 480 and at 1920 by 1080, GUI scales 2 and 4, with the mix panel on too.
+  sorting by "Missing" on the screen reorders the panel; "Hide available" leaves out the rows it hides on the screen,
+  and turned off brings them back; picking up 3 oak planks raises "Available" within 2 seconds. A second box keeps the
+  panel on with the new list. F1 hides it and shows it again. "Info HUD" turns it off.
 - The panel sits 4 from the screen's top and left edges, and each row shows the block's icon and its three counts.
   With the panel on and its box loaded, placing 2 of the missing oak planks as real blocks lowers "Missing" by 2
-  within 2 seconds, on the panel and the screen.
+  within 2 seconds, on the panel and the screen, and taking them away raises it again.
+- A list of 13 kinds of block, one all built, one covered by what Planner1 carries and the rest missing, shows 10 rows
+  in green, gold and red, then "+3 more". With the mix panel on too, it's shot at 854 by 480 and at 1920 by 1080, GUI
+  scales 2 and 4, and at 854 by 480 with the multiplier at 2 ("Material list ×2"); a box with no blocks shows "No
+  blocks to list.", which is shot too.
 - "Save list" with the name "Planks" keeps the list; "Saved lists" shows "Last counted" first, then "Planks", with
   their sizes. A new box replaces "Last counted" and leaves "Planks"; opening "Planks" doesn't change "Last counted".
   "Delete" asks again, then removes it. A name of 65 characters can't be typed, and "Save" is greyed out with an empty
@@ -1124,10 +1141,11 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   current list (read by a driver probe).
 - Planner1's lists are in `run/server/world/building-planner/material-lists/<Planner1's UUID>.dat` within 30 seconds
   of a save, and no file in Planner1's game folder contains them. After Planner1's game restarts, and again after the
-  server restarts, "Saved lists" shows the same lists, the panel shows the same list with the same multiplier, and
-  "Open" on "Planks" shows its counts as kept, with "Available" counted again; each is shot.
+  server restarts, the panel, on with "Planks" before, shows the same list with the same multiplier, with "Available"
+  counted again, and its recount makes "Planks" "Last counted"; "Saved lists" shows the same lists, and "Open" on
+  "Planks" shows its counts as kept; each is shot.
 - Planner1 playing from client 2's game folder sees the same lists and the panel; Planner2 sees none of Planner1's
-  lists.
+  lists, and no panel.
 - With Planner1's lists file cut short and the server restarted, Planner1's join logs an error, the file is renamed
   with `.unreadable`, Planner1 has no lists, and a new save writes a new file.
 - A `save_list` with a name of 65 characters, one with a row whose "Missing" is over its "Total", and the 21st list
