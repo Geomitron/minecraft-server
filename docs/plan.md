@@ -461,6 +461,9 @@ and the pack update together.
     restart; the log shows Building Planner start with no error, and a player beside a part of a plan that's already
     built sees no ghost blocks over it. Then the pack's push to `main`. "Current setup" in this plan is updated to
     0.6.0, protocol version 5 and the new backup, and the README and the guide are checked against what 0.6.0 changes.
+    Then Geo gets one walkthrough of the released game, naming the version it walks through: 0.5.0's material lists
+    and every 0.6.0 change, as a revision of inbox request 815. A walkthrough waits until every change Geo asked for
+    in its version is approved and released (815 [c1]).
 
 ## Design work: Building Planner
 
