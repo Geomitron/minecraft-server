@@ -303,10 +303,18 @@ makes Litematica unload the column (`SchematicPlacementManager.removeTouchedChun
 drops every queued task for it), and its background check after a schematic changes (`PlacementManagerTaskFixer`)
 unloads a loaded column with no placements too.
 
-Building Planner 0.5.0 breaks this rule: Geo saw most or all of an older shape's ghost blocks disappear when a new
+Geo saw Building Planner 0.5.0 break this rule: most or all of an older shape's ghost blocks disappeared when a new
 shape was drawn across it (811 Q1 C), with both shapes drawn in the same session, often floors about 20 blocks long,
-and thinks the older shape came back once the new one was removed (811 revision 2). `mod/clienttest/overlap.sh`
-reproduces it, and passes once it's fixed.
+and Geo thinks the older shape came back once the new one was removed (811 revision 2). `mod/clienttest/overlap.sh`
+hasn't reproduced it: its 64 checks draw those cases with Effortless Building's own clicks, undo them, and compare
+what Litematica's renderer draws with a fresh render, and they pass on 0.5.0. The layer, tile and replica code is the
+same in 0.4.0, 0.4.1 and 0.5.0.
+
+So the game checks for it itself. After it applies an edit, a column's snapshot or a tile swap, it compares each
+touched column's ghost blocks outside the edit's own positions with what they were before, and the blocks Litematica
+holds for the column with its own copy of the layer. On a difference it writes a warning to the game's log
+(`latest.log`), at most once a minute for each column: the dimension, the column, what changed it, and the counts
+before and after, with no player names. The next time it happens, Geo's log shows where and after what.
 
 ### The layer and its column watching
 

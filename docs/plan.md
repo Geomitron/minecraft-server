@@ -348,8 +348,8 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
     the real block counts: placing by hand, commands such as /fill, pistons, flowing water and growing plants (Q2 A).
     A removed ghost block doesn't come back if the real block is broken later.
   - **Overlapping shapes (811):** where a new shape covers older ghost blocks, the new shape's blocks stay (Q4 A).
-    Geo saw most or all of the older shape disappear (Q1 C), which that rule doesn't explain: a bug in 0.5.0, whose
-    fix ships as 0.5.1 if it's ready before the rest of 0.6.0.
+    Geo saw most or all of the older shape disappear (Q1 C), which that rule doesn't explain: a bug in 0.5.0 that the
+    test game hasn't reproduced, so 0.6.0 logs a warning in the game when it happens again.
     Both shapes were drawn in the same session, often floors about 20 blocks long, and Geo thinks the older shape came
     back once the new one was removed (811 revision 2).
   - **Settled by the agent:** editing in Freecam aims from the camera whenever Freecam's camera is on, since Geo asked
@@ -369,18 +369,20 @@ answers settle every choice in it; the texts players see are proposed, for Geo t
 this order, each small enough for one child. A step that changes nothing players see goes to `main` once its checks
 pass (inbox request 429). A step that changes what players see is committed without pushing, and goes to `main` once
 Geo has seen its in-game screenshots, with the changes outlined in red, and its texts. Each step adds its checks to the
-spec's "In-game checks", and every step's checks include `step6.sh` to `step10.sh`, and `overlap.sh` once step 1 has
-it, still passing. Screenshots are at 854 by 480 and 1920 by 1080, GUI scale 2, plus GUI scale 4 where a step says so.
-Filled ghost blocks need protocol version 5, so apart from 0.5.1 nothing goes to the server or the pack before the last
-step, when the server and the pack update together.
+spec's "In-game checks", and every step's checks include `step6.sh` to `step10.sh` still passing. `overlap.sh` (about
+15 minutes) runs in the steps that change the layer, edits, tiles or what Litematica draws (1, 3, 4 and 8) and at the
+release. Screenshots are at 854 by 480 and 1920 by 1080, GUI scale 2, plus GUI scale 4 where a step says so. Filled
+ghost blocks need protocol version 5, so nothing goes to the server or the pack before the last step, when the server
+and the pack update together.
 
-1. **Older shapes stay drawn** ("Overlapping shapes"): the fix for an older shape's ghost blocks disappearing under a
-   new shape, with the cause and `mod/clienttest/overlap.sh` from the child that reproduces it as this step's input.
-   Done when `overlap.sh` passes: an older shape's ghost blocks outside a new shape stay in the layer and stay drawn,
-   for Planner1 and Planner2, with shots of both shapes before and after, and a unit test covers the fixed code where
-   it runs outside the game. The fix changes nothing beyond what Geo decided, so it goes to `main` once its checks pass.
-   If it's ready before the rest, it ships as Building Planner 0.5.1 with Geo's approval, released as 0.2.1 was: in
-   the pack, and on the server too only if the fix is on the server's side, with protocol version 4.
+1. **Older shapes stay drawn** ("Overlapping shapes"): the new tile added
+   before the old one is removed, and the game's self-check that logs a warning when a column loses ghost blocks an
+   edit didn't touch, or Litematica's blocks differ from the game's copy of the layer. `overlap.sh` hasn't reproduced
+   what Geo saw, so this step makes the next sighting leave evidence in Geo's game log. Done when unit tests cover the
+   self-check's comparison as a pure function (an edit's own positions ignored, a block lost outside them reported, at
+   most one warning a minute for a column), `overlap.sh` passes with no self-check warning in either client's log, and
+   a driver command that removes a block from Litematica's copy alone makes the warning appear. Players see nothing,
+   so it goes to `main` once its checks pass.
 2. **Editing from Freecam** ("Editing from Freecam"): `Aim` from the camera entity, read by `GhostAim`, `BoxDraw`, the
    copy's aim and E1's block states; hooks E24 to E26; and a priority for M1, M3 and M4 that runs them before Freecam's
    cancelling hooks. Done when unit tests cover `Aim` (the camera entity while Freecam's camera is on, the player with
@@ -452,7 +454,7 @@ step, when the server and the pack update together.
     exactly. The same step sets the version 0.6.0.
 12. **The release**: after Geo's approval, released as 0.5.0 was: the GitHub release, then the server and the pack in
     one sitting, since protocol version 5 turns Building Planner off for a game and a server on different versions. On
-    the server: a backup of the world named for 0.6.0, the jar in `mods/` in place of 0.5.0's (or 0.5.1's), and a
+    the server: a backup of the world named for 0.6.0, the jar in `mods/` in place of 0.5.0's, and a
     restart; the log shows Building Planner start with no error, and a player beside a part of a plan that's already
     built sees no ghost blocks over it. Then the pack's push to `main`. "Current setup" in this plan is updated to
     0.6.0, protocol version 5 and the new backup, and the README and the guide are checked against what 0.6.0 changes.
