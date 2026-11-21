@@ -27,7 +27,8 @@ import net.minecraft.util.FormattedCharSequence;
  * are worked out by {@link ControlsLine}. A box's line ends with its size, a
  * box past a limit has a red line above saying which, and the copy's line names in red why it can't be pasted. A
  * line too wide for the screen wraps onto lines above it, keeping the size whole. While a box is drawn, the blocks in it
- * show under the crosshair ({@link BoxList}, laid out by {@link BoxListLayout}), in rows that end above the controls.
+ * show under the crosshair ({@link BoxList}, laid out by {@link BoxListLayout}), in rows that end above the controls,
+ * and in Delete by aim, the marked ghost blocks.
  * They show while a mode is on, with no screen open and the HUD shown (not hidden with F1).
  */
 final class ModeHud implements HudElement {
@@ -65,9 +66,8 @@ final class ModeHud implements HudElement {
 
 	/** The lines to show now, from the top, or none. */
 	private List<Line> lines() {
-		Minecraft mc = Minecraft.getInstance();
 		MouseMode now = mode.get();
-		if (now == null || mc.gui.screen() != null || mc.gui.hud.isHidden()) {
+		if (!shown()) {
 			return List.of();
 		}
 		List<ControlsLine.Line> lines = switch (now) {
@@ -81,9 +81,22 @@ final class ModeHud implements HudElement {
 				ControlsLine.Line line = copy.get();
 				yield line == null ? List.of() : List.of(line);
 			}
+			case DELETE_AIM -> List.of();
 		};
 		return lines.stream().map(line -> new Line(component(line.text()).withStyle(ChatFormatting.WHITE),
 			line.size() == null ? null : component(line.size()).withStyle(ChatFormatting.WHITE))).toList();
+	}
+
+	/** Whether the mode's controls and its list show: while a mode is on, with no screen open and the HUD shown. */
+	private boolean shown() {
+		Minecraft mc = Minecraft.getInstance();
+		return mode.get() != null && mc.gui.screen() == null && !mc.gui.hud.isHidden();
+	}
+
+	/** Whether the list under the crosshair goes with the mode now: a box's, or Delete by aim's marks. */
+	private boolean listed() {
+		MouseMode now = mode.get();
+		return now == MouseMode.BOX || now == MouseMode.DELETE_AIM;
 	}
 
 	/** The game's component for a part of a line, in its look: an action in dark aqua and a warning in red. */
@@ -198,7 +211,7 @@ final class ModeHud implements HudElement {
 	String listText() {
 		List<Line> lines = lines();
 		List<BoxList.Entry> entries = list.get();
-		if (mode.get() != MouseMode.BOX || lines.isEmpty() || entries.isEmpty()) {
+		if (!listed() || !shown() || entries.isEmpty()) {
 			return "hidden";
 		}
 		Minecraft mc = Minecraft.getInstance();
@@ -226,15 +239,15 @@ final class ModeHud implements HudElement {
 		return right + " " + width + " " + bottom + " " + top + " | " + rows;
 	}
 
-	/** The top of the controls, {@code count} lines ending 58 above the screen's bottom. */
+	/** The top of the controls, {@code count} lines ending 58 above the screen's bottom; with none, of one line there. */
 	private static int top(int count, Font font, int height) {
-		return height - BOTTOM - (count - 1) * font.lineHeight;
+		return height - BOTTOM - (Math.max(count, 1) - 1) * font.lineHeight;
 	}
 
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor graphics, DeltaTracker delta) {
 		List<Line> lines = lines();
-		if (lines.isEmpty()) {
+		if (lines.isEmpty() && !(listed() && shown())) {
 			return;
 		}
 		Font font = Minecraft.getInstance().font;
@@ -252,7 +265,7 @@ final class ModeHud implements HudElement {
 			graphics.text(font, text, (graphics.guiWidth() - font.width(text)) / 2, y, WHITE, true);
 			y += font.lineHeight;
 		}
-		if (mode.get() == MouseMode.BOX) {
+		if (listed()) {
 			drawList(graphics, font, top);
 		}
 	}

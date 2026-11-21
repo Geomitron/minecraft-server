@@ -31,7 +31,8 @@ import net.minecraft.resources.Identifier;
  * columns (middles 157, 131 and 105 left of the menu's middle): "Show or hide ghost blocks", "Block mix" and "Material
  * list" 39 above the middle, Copy, Paste and "Material lists" 65 above it, and Delete 91 above it, over Copy. "Show or
  * hide ghost blocks" and "Block mix" do what their keys do; the others have no keys, and Copy, Delete, Paste and
- * "Material list" each show selected while its mouse mode is on, when no mode segment does (E19). Each icon is a
+ * "Material list" each show selected while its mouse mode is on (Delete in a Delete box and in Delete by aim), when no
+ * mode segment does (E19). Each icon is a
  * texture of its own ({@link RadialButton#icon}), "Block mix" shows Effortless Building's Randomizer Bag, "Material
  * lists" Minecraft's Book and Quill, and Delete Minecraft's Barrier.
  *
@@ -101,8 +102,7 @@ public final class RadialMenuWidgets {
 			() -> BuildingPlannerClient.mouseMode() == MouseMode.COPY_AT_AIM, BuildingPlannerClient::paste));
 		widgets.add(button(MATERIAL_LISTS_SLOT, "material_lists", BOOK_AND_QUILL, () -> false,
 			BuildingPlannerClient::materialLists));
-		widgets.add(button(DELETE_SLOT, "delete", BARRIER,
-			() -> BuildingPlannerClient.drawingBoxFor(BoxDraw.Purpose.DELETE), BuildingPlannerClient::delete));
+		widgets.add(button(DELETE_SLOT, "delete", BARRIER, BuildingPlannerClient::deleteOn, BuildingPlannerClient::delete));
 		return widgets;
 	}
 

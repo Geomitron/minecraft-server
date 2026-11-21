@@ -496,14 +496,13 @@ the last step, when the server and the pack update together.
     the shots of each line (with GUI scale 4) show Geo's wording. It doesn't set the version.
 12. **Delete by aim: marking** ("Delete by aim"): Delete's two modes (`DeleteMode`) and the mouse mode `DELETE_AIM`, R
     switching a Delete box and Aim, the sweep with the sprint key (`DeleteAim`, `DeleteMarks`), the marks' red outline
-    and sides (`MarksOutline`), their list under the crosshair, the cap, and marks dropping with their ghost blocks.
-    Done when `DeleteMarksTest` passes and the spec's "Delete by aim, marking (step 12)" checks in `step9.sh` pass, with
-    shots of a marked wall.
+    and sides (`MarksOutline`), their list under the crosshair, the cap, marks dropping with their ghost blocks, and the
+    right click that clears the marks or ends Aim. Done when `DeleteMarksTest` passes and the spec's "Delete by aim,
+    marking (step 12)" checks in `step9.sh` pass, with shots of a marked wall.
 13. **Delete by aim: erasing and its line** ("Delete by aim"): the one-second hold (M1 and the client tick), the erase
-    edit and its message, Aim staying on, the right click that clears the marks or ends Aim, the Delete box's "R for
-    Aim" and Aim's controls lines (`ControlsLine.deleteAim`). Needs step 12. Done when `EraseHoldTest` and
-    `ControlsLineTest` pass and the spec's "Delete by aim, erasing and its line (step 13)" checks pass, with shots of
-    each line (with GUI scale 4).
+    edit and its message, Aim staying on, the Delete box's "R for Aim" and Aim's controls lines
+    (`ControlsLine.deleteAim`). Needs step 12. Done when `EraseHoldTest` and `ControlsLineTest` pass and the spec's
+    "Delete by aim, erasing and its line (step 13)" checks pass, with shots of each line (with GUI scale 4).
 14. **One ghost block: locking and nudging** ("One ghost block"): `SingleBlock` and when its controls are active
     (`SingleRule`), H and the nudge keys acting for it in `CopyKeys`, hooks E14, M1 and M2 taking its clicks while
     it's locked (a left click erasing at the locked position), E27 drawing the locked block, and the eight keys'

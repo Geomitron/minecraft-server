@@ -911,6 +911,49 @@ public final class Driver implements ClientModInitializer {
 				return "place=" + RepeatSpeed.PLACING.ticks(BuildingPlannerClient.config())
 					+ " erase=" + RepeatSpeed.ERASING.ticks(BuildingPlannerClient.config());
 			}
+			case "mousemode" -> {
+				// mousemode: Building Planner's mouse mode now (BOX, COPY_AT_AIM, DELETE_AIM), or none.
+				return String.valueOf(session().mouseMode()).replace("null", "none");
+			}
+			case "deletemode" -> {
+				// deletemode: the mode Delete starts in, BOX or AIM.
+				return ClientSession.deleteMode().name();
+			}
+			case "marks" -> {
+				// marks: Delete by aim's marks: how many, how many positions erasing them takes, then each as x,y,z
+				// when there are no more than 40.
+				return MarksProbe.marks(session());
+			}
+			case "markall" -> {
+				// markall x1 y1 z1 x2 y2 z2: marks every ghost block in the box, as one sweep over each would.
+				return MarksProbe.markAll(session(), pos(a, 1), pos(a, 4));
+			}
+			case "turn" -> {
+				// turn x1 y1 z1 x2 y2 z2 <frames>: turns the view to look at the first point in the next frame, then on in
+				// even steps to the second in the <frames>th, as a quick mouse sweep would; await turned waits for it.
+				FrameProbe.turn(vec(a, 1), vec(a, 4), Integer.parseInt(a[7]));
+				return "ok";
+			}
+			case "frametimes" -> {
+				// frametimes <frames>: starts timing that many frames; await framestimed waits for it. frametimes: the
+				// timed frames' mean and longest.
+				if (a.length > 1) {
+					FrameProbe.time(Integer.parseInt(a[1]));
+					return "ok";
+				}
+				return FrameProbe.times();
+			}
+			case "timeaims" -> {
+				// timeaims x1 y1 z1 x2 y2 z2 <repeats>: times a frame's sweep from looking at the first point to looking
+				// at the second, aiming as Delete by aim does, that many times.
+				return MarksProbe.timeAims(session(), vec(a, 1), vec(a, 4), Integer.parseInt(a[7]));
+			}
+			case "timeoutline" -> {
+				// timeoutline: times building the shape of the marks now. timeoutline scattered <count>: of that many
+				// marks that touch no other.
+				return a.length > 2 ? MarksProbe.timeScatteredOutline(Integer.parseInt(a[2]))
+					: MarksProbe.timeOutline(session());
+			}
 			case "close" -> {
 				mc.setScreenAndShow(null);
 				return "ok";
@@ -973,6 +1016,8 @@ public final class Driver implements ClientModInitializer {
 			case "row" -> row().startsWith(what.substring(4));
 			case "copycolour" -> copyColour().equals(what.substring(11));
 			case "sprint" -> mc.options.keySprint.isDown() == Boolean.parseBoolean(a[1]);
+			case "turned" -> FrameProbe.turned();
+			case "framestimed" -> FrameProbe.timed();
 			case "noglow" -> glows().isEmpty();
 			case "held" -> SentPackets.held(a[1].equals("use"));
 			case "pressedafter" -> SentPackets.presses() > Integer.parseInt(a[1]);
@@ -1209,6 +1254,11 @@ public final class Driver implements ClientModInitializer {
 
 	private static BlockPos pos(String[] a, int i) {
 		return new BlockPos(Integer.parseInt(a[i]), Integer.parseInt(a[i + 1]), Integer.parseInt(a[i + 2]));
+	}
+
+	/** The point a[i], a[i + 1], a[i + 2], which may be fractional. */
+	private static Vec3 vec(String[] a, int i) {
+		return new Vec3(Double.parseDouble(a[i]), Double.parseDouble(a[i + 1]), Double.parseDouble(a[i + 2]));
 	}
 
 	private static BlockState state(String id) throws Exception {

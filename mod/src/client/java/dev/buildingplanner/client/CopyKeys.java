@@ -18,7 +18,8 @@ import net.minecraft.world.entity.Entity;
  * Up and Page Down) and "Change copy mode" (R), Satisfactory's keys for its hologram. They need no hook: the client
  * tick reads them, with no screen open, while the copy is at the aim and no zoop's row is fixed, and otherwise empties
  * their presses, so a press made before the copy came to the aim doesn't act once it does. A nudge key acts only while
- * the copy is locked, and held down it acts again ({@link KeyRepeat}).
+ * the copy is locked, and held down it acts again ({@link KeyRepeat}). R also acts while Delete is on, switching a
+ * Delete box and Delete by aim into each other.
  */
 final class CopyKeys {
 	static final KeyMapping LOCK =
@@ -85,6 +86,10 @@ final class CopyKeys {
 			}
 			for (int i = 0; i < modePresses; i++) {
 				session.cycleCopyMode();
+			}
+		} else if (session != null && session.deleteOn() && mc.gui.screen() == null) {
+			for (int i = 0; i < modePresses; i++) {
+				session.switchDeleteMode();
 			}
 		}
 		Entity view = Aim.entity();

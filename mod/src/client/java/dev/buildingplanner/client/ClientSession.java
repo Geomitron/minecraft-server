@@ -6,9 +6,11 @@ import dev.buildingplanner.input.CopyColour;
 import dev.buildingplanner.input.CopyMode;
 import dev.buildingplanner.input.CopyPlacement;
 import dev.buildingplanner.input.CopyRow;
+import dev.buildingplanner.input.DeleteMode;
 import dev.buildingplanner.input.MouseMode;
 import dev.buildingplanner.input.PasteBoxes;
 import dev.buildingplanner.layer.BoxCount;
+import dev.buildingplanner.layer.DeleteMarks;
 import dev.buildingplanner.layer.GhostErase;
 import dev.buildingplanner.layer.Layer;
 import dev.buildingplanner.layer.LayerColumn;
@@ -52,6 +54,11 @@ final class ClientSession {
 	 * the game runs, across copies, servers and dimensions, as Satisfactory keeps a build mode until R changes it.
 	 */
 	private static CopyMode copyMode = CopyMode.SINGLE;
+	/**
+	 * Delete's mode, which starts as Box each time the game starts and stays as the player last used it while the game
+	 * runs, as the copy's mode does.
+	 */
+	private static DeleteMode deleteMode = DeleteMode.BOX;
 	private final int maxEditBlocks;
 	private final EditGlow glow;
 	private final Tiles tiles;
@@ -68,6 +75,13 @@ final class ClientSession {
 	private long ghostsVersion;
 	private final BoxDraw box;
 	private final BoxList list = new BoxList();
+	/** Whether Delete by aim is on. */
+	private boolean aimOn;
+	/** Delete by aim's marks, kept while R switches Aim to a Delete box and back, and cleared when Delete ends. */
+	private final DeleteMarks marks;
+	/** The layer, and its version, the marks were last checked against. */
+	private Layer marksLayer;
+	private long marksVersion;
 	private final ListSync lists = new ListSync();
 	private int clientSeq;
 	/**
@@ -91,6 +105,7 @@ final class ClientSession {
 		Supplier<String> showHideKey) {
 		this.maxEditBlocks = maxEditBlocks;
 		this.box = new BoxDraw(maxEditBlocks);
+		this.marks = new DeleteMarks(maxEditBlocks);
 		this.glow = glow;
 		this.config = config;
 		this.showHideKey = showHideKey;
@@ -144,6 +159,7 @@ final class ClientSession {
 		replica.levelChanged(dimension);
 		check.clear();
 		box.end();
+		endAim();
 		clipboard.clear();
 		pastes.clear();
 		glow.clear();
@@ -165,7 +181,12 @@ final class ClientSession {
 		if (box.on()) {
 			box.update(replica.layer(), tiles.shown());
 		}
-		list.update(box.shown(), replica.layer(), tiles.shown());
+		keepMarks();
+		if (aimOn) {
+			list.update(marks, replica.layer());
+		} else {
+			list.update(box.shown(), replica.layer(), tiles.shown());
+		}
 		followAim();
 		lists.tick(System.currentTimeMillis());
 	}
@@ -239,7 +260,8 @@ final class ClientSession {
 
 	/** Building Planner's mode that takes over the mouse now, or null. */
 	MouseMode mouseMode() {
-		return box.on() ? MouseMode.BOX : clipboard.atAim() ? MouseMode.COPY_AT_AIM : null;
+		return box.on() ? MouseMode.BOX : clipboard.atAim() ? MouseMode.COPY_AT_AIM
+			: aimOn ? MouseMode.DELETE_AIM : null;
 	}
 
 	/**
@@ -252,8 +274,90 @@ final class ClientSession {
 			switch (mode) {
 				case BOX -> box.end();
 				case COPY_AT_AIM -> clipboard.putAway();
+				case DELETE_AIM -> endAim();
 			}
 		}
+	}
+
+	/** Delete's mode, which the Delete button starts in. */
+	static DeleteMode deleteMode() {
+		return deleteMode;
+	}
+
+	/** Whether Delete is on: Delete by aim, or a box drawn for Delete. */
+	boolean deleteOn() {
+		return aimOn || box.on() && box.purpose() == BoxDraw.Purpose.DELETE;
+	}
+
+	/** Whether Delete by aim is on. */
+	boolean aimOn() {
+		return aimOn;
+	}
+
+	/** Delete by aim's marks. */
+	DeleteMarks marks() {
+		return marks;
+	}
+
+	/**
+	 * The Delete button in Aim, with no other mouse mode on: starts Delete by aim with no marks, showing hidden ghost
+	 * blocks first, as a Delete box does.
+	 */
+	void startAim() {
+		showForDrawing();
+		marks.clear();
+		aimOn = true;
+		deleteMode = DeleteMode.AIM;
+	}
+
+	/**
+	 * R while Delete is on: a Delete box, at any of its clicks, switches to Aim, dropping its corners, and Aim switches
+	 * to a Delete box with no corners. The marks stay, and show again back in Aim.
+	 */
+	void switchDeleteMode() {
+		if (aimOn) {
+			aimOn = false;
+			marks.endSweep();
+			box.start(BoxDraw.Purpose.DELETE);
+			box.update(replica.layer(), tiles.shown());
+			deleteMode = DeleteMode.BOX;
+		} else if (box.on() && box.purpose() == BoxDraw.Purpose.DELETE) {
+			box.end();
+			showForDrawing();
+			aimOn = true;
+			deleteMode = DeleteMode.AIM;
+		}
+	}
+
+	/** The right click in Delete by aim: clears the marks; returns whether there were any, or false out of Aim. */
+	boolean clearMarks() {
+		if (!aimOn || marks.size() == 0) {
+			return false;
+		}
+		marks.clear();
+		return true;
+	}
+
+	private void endAim() {
+		aimOn = false;
+		marks.endSweep();
+		marks.clear();
+	}
+
+	/**
+	 * Once a tick: clears the marks once Delete has ended, and drops each mark whose ghost block has left the layer
+	 * since it last changed ({@link DeleteMarks#retain}).
+	 */
+	private void keepMarks() {
+		if (!deleteOn()) {
+			marks.clear();
+		}
+		Layer layer = replica.layer();
+		if (marks.size() > 0 && (layer != marksLayer || layer.version() != marksVersion)) {
+			marks.retain(layer);
+		}
+		marksLayer = layer;
+		marksVersion = layer.version();
 	}
 
 	/** The box being drawn now, as it shows, or null. */
@@ -284,6 +388,7 @@ final class ClientSession {
 		}
 		if (purpose == BoxDraw.Purpose.DELETE) {
 			showForDrawing();
+			deleteMode = DeleteMode.BOX;
 		}
 		if (started) {
 			box.start(purpose);
@@ -327,6 +432,7 @@ final class ClientSession {
 
 	void close() {
 		box.end();
+		endAim();
 		clipboard.clear();
 		tiles.clear();
 		check.clear();

@@ -799,7 +799,8 @@ crosshair passes over is marked (981 Q2 A, Q3 A). Each frame, Building Planner a
 blocks only, up to 256 blocks from the eyes, as a box's corner): a real block in front of a ghost block stops the aim,
 and only ghost blocks are marked. So that a quick sweep leaves no gap, it also aims along the look directions between
 the last frame's and this frame's, from eye positions between the two, in as many steps as keep the aimed points at
-most half a block apart, up to 64 steps a frame (`DeleteAim`). The sweep decides at its first ghost block whether it
+most half a block apart at the farther of the two frames' aims, up to 64 steps a frame (`DeleteMarks.swept`, run by
+`DeleteAim` once a frame, after the world is drawn). The sweep decides at its first ghost block whether it
 marks or unmarks: a sweep whose first ghost block is marked unmarks each ghost block it passes over, until the player
 lets go of the key (981 Q4 A), as Satisfactory's mass dismantle deselects. The sprint key still sprints, so a player
 who walks forward while marking also sprints, and in Freecam the camera flies faster, as when lining up the copy.
@@ -814,9 +815,11 @@ the server, changing dimension, and anything else that ends Delete clear the mar
 
 **Look.** Each marked ghost block has a red outline and see-through red sides (981 Q6 A), in the red of the copy's box
 (#FF7070, sides at 0.2 alpha), drawn through MaLiLib's renderer as the copy's box is (`MarksOutline`). Only the faces
-that don't touch another marked block are drawn, so a marked wall shows as one red shape, and the shape is built again
-only when the marks change. The marked ghost blocks show under the crosshair as the Delete box's do (`BoxList`): each
-kind of block with its count, most numerous first.
+that don't touch another marked block are drawn, and only the edges where the shape turns, so a marked wall shows as
+one red shape. The shape is built in sections of 16 blocks a side, as the game builds its terrain, and a section is
+built again only when a mark in or beside it changes (`DeleteMarks.takeChanged`), so a frame of a sweep builds only the
+few sections it touches; each frame draws each section where it is from the camera. The marked ghost blocks show
+under the crosshair as the Delete box's do (`BoxList`): each kind of block with its count, most numerous first.
 
 **Erasing.** Holding the left button for one second (20 ticks) erases the marked ghost blocks (981 Q2 A), as holding
 the left button for a second dismantles in Satisfactory: M1 starts the count when the button goes down, the client
@@ -2025,15 +2028,19 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
 - On the same server with Building Planner left out, N makes no message and leaves ghost blocks shown, the mouse
   works as without the add-on, and the material list panel doesn't show; with Building Planner back, the panel shows
   again with the same list.
-- Delete by aim, marking (step 12): R in a Delete box after its first click switches to Aim with no corners, and R
-  again to a box with no corners; after a Delete in Aim, the Delete button starts Aim, and after Planner1's game
-  restarts, a box. The Delete button with ghost blocks hidden, in Aim, shows them. Facing a ghost wall of 10 by 5
-  stone bricks 8 blocks away, with a real stone block in front of the middle row's fourth, holding Left Ctrl while the
-  driver turns the view across the middle row from end to end in 3 frames marks the row's other 9 blocks and no real
-  block (the driver's `marks`), with no gap; the list under the crosshair shows stone bricks and 9. A second hold that
-  starts on the third mark and sweeps west unmarks the first three. A ghost door marked by its lower half has one mark.
-  Planner2 erasing a marked block drops its mark. A right click clears the marks, a second ends Aim; the Copy button in
-  Aim starts a Copy box. The marked wall is shot at 854 by 480 and 1920 by 1080, GUI scale 2.
+- Delete by aim, marking (step 12): R in a Delete box after its first click switches to Aim with no corners, and R again
+  to a box with no corners (the driver's `mousemode`, `deletemode`); after a Delete in Aim, the Delete button starts
+  Aim, and after Planner1's game restarts, a box. The Delete button with ghost blocks hidden, in Aim, shows them. Facing
+  a ghost wall of 10 by 5 stone bricks 8 blocks away, with a real stone block in front of the middle row's fourth,
+  holding Left Ctrl while the driver turns the view across the middle row from end to end in 3 frames (`turn`) marks the
+  row's other 9 blocks and no real block (`marks`), with no gap; the list under the crosshair shows stone bricks and 9.
+  A second hold that starts on the third mark and sweeps west unmarks the first three. A ghost door marked by its lower
+  half has one mark and two positions to erase. Planner2 erasing a marked block drops its mark. A right click clears the
+  marks, a second ends Aim; the Copy button in Aim starts a Copy box. One hold over each row marks the wall's 49 blocks
+  the aim meets, and the marked wall is shot at 854 by 480 and 1920 by 1080, GUI scale 2, and with GUI scale 4, beside
+  the same view unmarked. What marks cost goes to the log: frames timed (`frametimes`) over 200,000 ghost bricks with
+  none marked and with all marked (`markall`), building the shape of those marks and of 200,000 that touch no other,
+  whole and after one mark changes (`timeoutline`), and a frame's sweep of 65 aims (`timeaims`).
 - Delete by aim, erasing and its line (step 13): with 9 marks and the ghost door marked, a left click held 10 ticks
   erases nothing; held 20 ticks it sends one edit, which takes the door's upper half too and which Planner2 sees glow
   with Planner1's name, and says "Erased 11 ghost blocks."; holding on erases nothing more. Aim stays on with no marks,
@@ -2269,9 +2276,12 @@ torch aimed at a wall), and the one ghost block's lines for each state
 above, with each turn phrase and title.
 
 Delete by aim's marks have unit tests as pure functions (step 12). `DeleteMarksTest` covers a sweep between two aims
-10 blocks apart marking all 10 ghost blocks between them and none past a real block; a sweep that starts on a mark
-unmarking until it ends; the cap, with the other halves counted; and marks dropping when their ghost blocks leave the
-layer. `EraseHoldTest` (step 13) covers the hold: 19 ticks erase nothing, the 20th erases once, a release starts the
+10 blocks apart marking all 10 ghost blocks between them, and none behind a real block; at most 65 aims for a frame's
+half turn; an aim at nothing or at a real block marking nothing; a sweep that starts on a mark unmarking until it
+ends; a door marked by its lower half as one mark and two positions to erase; the cap, with the other halves counted;
+marks dropping when their ghost blocks leave the layer, and staying as they were when none did; and the changes the
+outline rebuilds from, each mark, unmark and dropped mark, and all of them after a clear. `MouseModeTest` covers which
+actions end Delete by aim. `EraseHoldTest` (step 13) covers the hold: 19 ticks erase nothing, the 20th erases once, a release starts the
 count again, and the progress shown.
 
 The one ghost block's rules have unit tests as pure functions (steps 14 to 17). `SingleRuleTest` covers when its
@@ -2383,8 +2393,6 @@ other in the game's own copy of the layer, again after a restart, which doesn't 
 - Satisfactory's mass dismantle as Delete by aim follows it: marking by sweeping the aim with Ctrl held rests on one
   player's post from 2020, not the official wiki; whether holding the left button for a second also confirms a mass
   dismantle isn't stated; and the colour of Satisfactory's marks isn't given.
-- How long drawing 200,000 marks and Delete by aim's up to 64 aims a frame take; expected well under a frame, not
-  measured.
 - Turning real blocks in Disable (see "Turning real blocks in Disable"), read in the 26.3 jars' bytecode and Effortless
   Building's source, not run: that the client's prediction and the server's block match with no flicker; that
   `place_turn` reaches the server before the `ServerboundUseItemOnPacket` sent right after it (both go out on the one
@@ -2399,3 +2407,10 @@ other in the game's own copy of the layer, again after a restart, which doesn't 
 - That every orientation property `BlockTurn` stores is a separate property from the one a two-part block uses for its
   part: a door's and a tall plant's `half` (`DoubleBlockHalf`) shares its name with a stair's `half` (`Half`), so
   `BlockTurn` and `PlaceTurn` go by the property, not its name.
+- What Delete by aim's marks cost on a player's computer, with a graphics card. In the in-game checks' container (6
+  CPUs, Mesa's software OpenGL; `step9.sh`'s log), a frame's sweep of 65 aims took 0.65 ms on average, and 1.2 ms when
+  every aim reached the horizon. Building the whole shape of 200,000 marks, as when R brings Aim back with its marks,
+  took 59 ms for a solid block of them and 546 ms for 200,000 that touch no other; building it again after one mark
+  changed, as in a frame of a sweep, took 0.6 ms on average, and at most 14 ms for marks that touch no other. Frames
+  over 200,000 ghost blocks took 86 ms on average with none marked and 90 ms with all of them marked, times that
+  software drawing sets. With a graphics card, expected well under a frame; not measured.

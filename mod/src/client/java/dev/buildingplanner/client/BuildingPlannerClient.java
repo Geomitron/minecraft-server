@@ -4,6 +4,7 @@ import com.mojang.blaze3d.platform.InputConstants;
 import dev.buildingplanner.BuildingPlanner;
 import dev.buildingplanner.ClientConfig;
 import dev.buildingplanner.input.CopyColour;
+import dev.buildingplanner.input.DeleteMode;
 import dev.buildingplanner.input.MouseMode;
 import dev.buildingplanner.layer.Layer;
 import dev.buildingplanner.look.ControlsLine;
@@ -124,6 +125,9 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		glow = EditGlow.registered();
 		BoxOutline.registered(BuildingPlannerClient::boxShown);
 		CopyOutline.registered(BuildingPlannerClient::copyShown);
+		// The sweep runs before the marks' outline, which then draws the marks as they stand.
+		DeleteAim.registered(() -> session);
+		MarksOutline.registered(() -> session != null && session.aimOn() ? session.marks() : null);
 		modeHud = new ModeHud(BuildingPlannerClient::mouseMode, BuildingPlannerClient::boxShown,
 			BuildingPlannerClient::copyLine, () -> session == null ? List.of() : session.boxList());
 		HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(BuildingPlanner.MOD_ID, "mode_controls"),
@@ -298,8 +302,28 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		boxButton(BoxDraw.Purpose.COPY, MouseMode.Action.COPY_BUTTON);
 	}
 
-	/** The radial menu's Delete button: as {@link #copy()}, for a box whose ghost blocks are erased. */
+	/**
+	 * The radial menu's Delete button: in Delete by aim, ends it; otherwise as {@link #copy()}, for a box whose ghost
+	 * blocks are erased, except that with no box drawn and Aim the last Delete mode the player used, it starts Delete by
+	 * aim instead (see "Delete by aim").
+	 */
 	static void delete() {
+		if (session == null) {
+			return;
+		}
+		if (session.aimOn()) {
+			session.modeAction(MouseMode.Action.DELETE_BUTTON);
+			return;
+		}
+		if (!session.box().on() && ClientSession.deleteMode() == DeleteMode.AIM) {
+			session.modeAction(MouseMode.Action.DELETE_BUTTON);
+			if (effortless) {
+				ClickRule.cancelShape();
+			}
+			session.startAim();
+			modeStarted();
+			return;
+		}
 		boxButton(BoxDraw.Purpose.DELETE, MouseMode.Action.DELETE_BUTTON);
 	}
 
@@ -375,6 +399,11 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		return session != null && session.mouseMode() == MouseMode.BOX && session.box().purpose() == purpose;
 	}
 
+	/** Whether Delete is on, a Delete box or Delete by aim, so the radial menu's Delete button shows selected. */
+	static boolean deleteOn() {
+		return session != null && session.deleteOn();
+	}
+
 	/** Building Planner's mode that takes over the mouse now, or null. */
 	static MouseMode mouseMode() {
 		return session == null ? null : session.mouseMode();
@@ -430,21 +459,24 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 				}
 			}
 			case COPY_AT_AIM -> session.paste();
+			case DELETE_AIM -> {
+				// Delete by aim's left click attacks and breaks nothing.
+			}
 		}
 		return true;
 	}
 
 	/**
 	 * Hook M2: the right click puts the copy away, or during a zoop, after its first click, drops the row and leaves the
-	 * copy at the aim; returns whether the game's use is skipped, which it is too while the button stays down after a
-	 * mode started or ended.
+	 * copy at the aim; in Delete by aim it clears the marks, or with none ends the mode. Returns whether the game's use is
+	 * skipped, which it is too while the button stays down after a mode started or ended.
 	 */
 	public static boolean rightClick() {
 		if (session == null) {
 			return false;
 		}
 		if (session.mouseMode() != null && !useHeld) {
-			if (!session.dropRow()) {
+			if (!session.dropRow() && !session.clearMarks()) {
 				session.modeAction(MouseMode.Action.RIGHT_CLICK);
 			}
 			useHeld = true;

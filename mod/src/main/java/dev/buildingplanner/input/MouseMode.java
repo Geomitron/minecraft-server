@@ -16,7 +16,13 @@ public enum MouseMode {
 	 * The copy at the aim: a left click pastes it (in Zoop and Vertical, the first fixes a row and the second pastes the
 	 * row), the scroll wheel turns it, a middle click mirrors it, and a right click puts it away, or drops a fixed row.
 	 */
-	COPY_AT_AIM;
+	COPY_AT_AIM,
+	/**
+	 * Delete by aim: holding Minecraft's sprint key marks the ghost blocks the aim sweeps over, and a right click clears
+	 * the marks, or leaves the mode when there are none. The left click and the middle click do nothing, and the wheel
+	 * changes the hotbar slot.
+	 */
+	DELETE_AIM;
 
 	/** What the player does in Building Planner or Effortless Building while a mode is on. */
 	public enum Action {
@@ -44,12 +50,13 @@ public enum MouseMode {
 	 * list" start a box, Paste brings the copy back); undo and redo keep it, so a player can undo a paste and paste
 	 * again. A box's own buttons, Copy, Delete and "Material list", don't end it here: the same button ends the box and
 	 * another switches it to that purpose, keeping its corners. A box ends too at its third left click, which finishes
-	 * it.
+	 * it. Delete by aim ends at each of the three, and Delete then starts nothing; its right click ends it only once no
+	 * ghost block is marked, which the session decides before asking.
 	 */
 	public boolean endedBy(Action action) {
 		return switch (action) {
 			case RIGHT_CLICK, CHOOSE_BUILD_MODE, SHOW_OR_HIDE, PASTE_BUTTON, BLOCK_MIX, LEAVE -> true;
-			case COPY_BUTTON, DELETE_BUTTON, MATERIAL_LIST_BUTTON -> this == COPY_AT_AIM;
+			case COPY_BUTTON, DELETE_BUTTON, MATERIAL_LIST_BUTTON -> this != BOX;
 			case LEFT_CLICK, SCROLL, MIDDLE_CLICK, UNDO, REDO -> false;
 		};
 	}
