@@ -391,7 +391,7 @@ turn_mirror="Scroll to turn, Middle-click to mirror"
 controls="Left-click to paste, $turn_mirror, H to lock, R for Zoop, Right-click to close"
 line_up="Hold Left Control to line up"
 controls_ctrl="Left-click to paste, $turn_mirror, $line_up, H to lock, R for Zoop, Right-click to close"
-nudges="Arrow keys to nudge, Page Up/Page Down to raise or lower"
+nudges="Arrow keys + Page Up/Down to nudge"
 locked_line="Locked: Left-click to paste, $nudges, $turn_mirror, H to unlock, R for Zoop, Right-click to close"
 outside="Can't paste: part of the copy is outside the world"
 locked_red="Locked: $outside, $nudges, $turn_mirror, H to unlock, R for Zoop, Right-click to close"
@@ -788,7 +788,7 @@ check "with the keys rebound, the controls line names them as bound" eval '[[ $(
 line_shot line-rebound
 press 1 k
 check "K then locks the copy, and the locked line names the nudge keys one by one" eval \
-	'[[ $(val 1 copylock) == locked ]] && [[ $(val 1 modehud) == "Locked: Left-click to paste, I/Down Arrow/Left Arrow/Right Arrow to nudge, Page Up/Page Down to raise or lower, $turn_mirror, K to unlock, G for Zoop, Right-click to close" ]]'
+	'[[ $(val 1 copylock) == locked ]] && [[ $(val 1 modehud) == "Locked: Left-click to paste, I/Down Arrow/Left Arrow/Right Arrow + Page Up/Down to nudge, $turn_mirror, K to unlock, G for Zoop, Right-click to close" ]]'
 press 1 k
 rebind key.keyboard.h key.keyboard.r key.keyboard.up key.keyboard.left.control
 check "and with the keys back, K has unlocked it and the line names H and R again" eval \

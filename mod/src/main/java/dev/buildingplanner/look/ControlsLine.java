@@ -129,13 +129,9 @@ public final class ControlsLine {
 			parts.add(state.refusal() != null ? refusal(state.refusal()) : click(action(COPY + ".paste")));
 		}
 		if (state.locked()) {
-			Text along = along(keys);
-			if (along != null) {
-				parts.add(key(along, COPY + ".nudge"));
-			}
-			Text upDown = upDown(keys);
-			if (upDown != null) {
-				parts.add(key(upDown, COPY + ".raise_lower"));
+			Text nudge = nudge(keys);
+			if (nudge != null) {
+				parts.add(key(nudge, COPY + ".nudge"));
 			}
 		}
 		parts.add(Translated.of(COPY + ".scroll", Look.PLAIN, action(COPY + ".turn")));
@@ -163,10 +159,32 @@ public final class ControlsLine {
 		return bound.isEmpty() ? null : new Literal(String.join("/", bound));
 	}
 
-	/** The nudges up and down, by their keys' names, or the one of them with a key. */
+	/**
+	 * The keys of the one phrase "... to nudge": the keys along the ground and the keys up and down joined by " + ", or
+	 * whichever of the two has a key, or null while no nudge has one.
+	 */
+	private static Text nudge(Keys keys) {
+		Text along = along(keys);
+		Text upDown = upDown(keys);
+		if (along != null && upDown != null) {
+			return Translated.of(COPY + ".plus", Look.PLAIN, along, upDown);
+		}
+		return along != null ? along : upDown;
+	}
+
+	/**
+	 * The nudges up and down, by their keys' names, with the second name leaving out the first word the two names share
+	 * ("Page Up/Down", "Keypad 8/2"; "U/J" when they share none), or the one of them with a key.
+	 */
 	private static Text upDown(Keys keys) {
 		if (keys.up() != null && keys.down() != null) {
-			return Translated.of(COPY + ".up_down", Look.PLAIN, new Literal(keys.up()), new Literal(keys.down()));
+			String down = keys.down();
+			int upSpace = keys.up().indexOf(' ');
+			int downSpace = down.indexOf(' ');
+			if (upSpace > 0 && downSpace > 0 && keys.up().substring(0, upSpace).equals(down.substring(0, downSpace))) {
+				down = down.substring(downSpace + 1);
+			}
+			return Translated.of(COPY + ".up_down", Look.PLAIN, new Literal(keys.up()), new Literal(down));
 		}
 		String one = keys.up() != null ? keys.up() : keys.down();
 		return one == null ? null : new Literal(one);

@@ -35,7 +35,7 @@ class ControlsLineTest {
 		null);
 	private static final String SINGLE_END = "Scroll to turn, Middle-click to mirror, H to lock, R for Zoop, "
 		+ "Right-click to close";
-	private static final String NUDGES = "Arrow keys to nudge, Page Up/Page Down to raise or lower";
+	private static final String NUDGES = "Arrow keys + Page Up/Down to nudge";
 
 	private static JsonObject lang;
 
@@ -127,7 +127,7 @@ class ControlsLineTest {
 	void reboundKeysAreNamedAsBound() {
 		assertEquals("Left-click to paste, Scroll to turn, Middle-click to mirror, Hold Left Alt to line up, K to lock, "
 			+ "G for Zoop, Right-click to close", copy(state(CopyMode.SINGLE, false, 0, true, null), REBOUND));
-		assertEquals("Locked: Left-click to paste, I/J/U/O to nudge, Y/N to raise or lower, Scroll to turn, "
+		assertEquals("Locked: Left-click to paste, I/J/U/O + Y/N to nudge, Scroll to turn, "
 			+ "Middle-click to mirror, K to unlock, G for Zoop, Right-click to close",
 			copy(state(CopyMode.SINGLE, true, 0, true, null), REBOUND));
 	}
@@ -137,7 +137,7 @@ class ControlsLineTest {
 		Keys swapped = new Keys("H", "R", List.of("Down Arrow", "Up Arrow", "Left Arrow", "Right Arrow"), false,
 			"Page Up", "Page Down", "Left Control");
 		assertTrue(copy(state(CopyMode.SINGLE, true, 0, false, null), swapped)
-			.contains(", Down Arrow/Up Arrow/Left Arrow/Right Arrow to nudge, "));
+			.contains(", Down Arrow/Up Arrow/Left Arrow/Right Arrow + Page Up/Down to nudge, "));
 	}
 
 	@Test
@@ -149,7 +149,36 @@ class ControlsLineTest {
 		Keys some = new Keys("H", "R", Arrays.asList("Up Arrow", null, null, "Right Arrow"), false, null, "Page Down",
 			"Left Control");
 		assertTrue(copy(state(CopyMode.SINGLE, true, 0, false, null), some)
-			.contains(", Up Arrow/Right Arrow to nudge, Page Down to raise or lower, "));
+			.contains(", Up Arrow/Right Arrow + Page Down to nudge, "));
+		Keys onlyAlong = new Keys("H", "R", List.of("Up Arrow", "Down Arrow", "Left Arrow", "Right Arrow"), true, null,
+			null, "Left Control");
+		assertTrue(copy(state(CopyMode.SINGLE, true, 0, false, null), onlyAlong)
+			.contains(", Arrow keys to nudge, "));
+		Keys allUnbound = new Keys("H", "R", Arrays.asList(null, null, null, null), false, null, null, "Left Control");
+		assertFalse(copy(state(CopyMode.SINGLE, true, 0, false, null), allUnbound).contains("nudge"));
+	}
+
+	@Test
+	void theUpAndDownKeysShareTheirFirstWordOnlyOnce() {
+		Keys keypad = new Keys("H", "R", List.of("Up Arrow", "Down Arrow", "Left Arrow", "Right Arrow"), true,
+			"Keypad 8", "Keypad 2", "Left Control");
+		assertTrue(copy(state(CopyMode.SINGLE, true, 0, false, null), keypad)
+			.contains(", Arrow keys + Keypad 8/2 to nudge, "));
+		Keys letters = new Keys("H", "R", List.of("Up Arrow", "Down Arrow", "Left Arrow", "Right Arrow"), true, "U", "J",
+			"Left Control");
+		assertTrue(copy(state(CopyMode.SINGLE, true, 0, false, null), letters)
+			.contains(", Arrow keys + U/J to nudge, "));
+		Keys mixed = new Keys("H", "R", List.of("Up Arrow", "Down Arrow", "Left Arrow", "Right Arrow"), true,
+			"Page Up", "Left Shift", "Left Control");
+		assertTrue(copy(state(CopyMode.SINGLE, true, 0, false, null), mixed)
+			.contains(", Arrow keys + Page Up/Left Shift to nudge, "));
+	}
+
+	@Test
+	void reboundArrowKeysAreNamedOneByOneBesideTheUpAndDownKeys() {
+		Keys rebound = new Keys("H", "R", List.of("W", "S", "A", "D"), false, "Page Up", "Page Down", "Left Control");
+		assertTrue(copy(state(CopyMode.SINGLE, true, 0, false, null), rebound)
+			.contains(", W/S/A/D + Page Up/Down to nudge, "));
 	}
 
 	@Test

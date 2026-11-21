@@ -639,12 +639,14 @@ white, with each action in dark aqua. The texts, as Geo approved them:
 - a box for the material list: the same, starting "Material list:".
 
 A box for Delete has the same line as Copy's, starting "Delete:". The copy at the aim's line names its mode and its
-keys, as the player has them bound. These lines are proposed, and go to Geo with the build's screenshots:
+keys, as the player has them bound. Geo approved these lines as written (inbox request 972, revisions 1 and 2).
+
+The game's texts use the fewest words that stay clear, and one name for each action, as in Geo's edits: "Too many blocks", the panel's column headings "All", "Hold" and "Need", and "Arrow keys + Page Up/Down to nudge", where "nudge" names what all six keys do.
 
 - Single, following the aim: "Left-click to paste, Scroll to turn, Middle-click to mirror, H to lock, R for Zoop,
   Right-click to close";
-- locked: "Locked: Left-click to paste, Arrow keys to nudge, Page Up/Page Down to raise or lower, Scroll to turn,
-  Middle-click to mirror, H to unlock, R for Zoop, Right-click to close", since R still changes a locked copy's mode;
+- locked: "Locked: Left-click to paste, Arrow keys + Page Up/Down to nudge, Scroll to turn, Middle-click to mirror, H to
+  unlock, R for Zoop, Right-click to close", since R still changes a locked copy's mode;
 - Zoop before its first click: "Zoop: Left-click to set the start, Scroll to turn, Middle-click to mirror, H to lock,
   R for Vertical, Right-click to close", and Vertical the same, starting "Vertical:" and with "R for Single"; locked,
   it starts "Zoop, locked:" and goes on as the locked line, with "Left-click to set the start" and "R for Vertical";
@@ -658,10 +660,13 @@ keys, as the player has them bound. These lines are proposed, and go to Geo with
   since that click still fixes the row: "Zoop: Can't paste: too many blocks, Left-click to set the start, Scroll to
   turn, ...".
 
-Each key goes by its name as Controls shows it ("H", "Page Up", "Left Control"). The four nudges along the ground show
-as "Arrow keys" while they're on Up, Down, Left and Right in that order, and otherwise by their names one by one,
-forward, back, left and right ("I/Down Arrow/Left Arrow/Right Arrow"). A key with no key bound leaves its part out. The
-clicks and the wheel keep Effortless Building's words. The line is a pure function of the copy's state and the keys'
+Each key goes by its name as Controls shows it ("H", "Page Up", "Left Control"). The six nudge keys make one phrase,
+"<keys> to nudge": the four along the ground show as "Arrow keys" while they're on Up, Down, Left and Right in that
+order, and otherwise by their names one by one, forward, back, left and right ("I/Down Arrow/Left Arrow/Right Arrow");
+the two up and down show as one name and the second name, which drops the first word the two names share ("Page
+Up/Down", "Keypad 8/2"), or both names in full when they share none ("U/J"). The two parts are joined with " + "
+("Arrow keys + Page Up/Down to nudge", "I/J/U/O + Y/N to nudge"). A key with no key bound leaves its part out, and the
+phrase goes when all six are unbound. The clicks and the wheel keep Effortless Building's words. The line is a pure function of the copy's state and the keys'
 names (`ControlsLine`), as a box's lines are.
 
 A line too wide for the screen wraps onto a second line above it, breaking only at spaces outside the box's size, which
@@ -735,7 +740,7 @@ The third click sends one erase edit (`GhostErase.inBox`), air at each position 
 at the other half of each two-block ghost block among them, inside the box or not, so one undo brings them all back and
 other players see them glow as they go. The player sees "Erased 120 ghost blocks." ("Erased 1 ghost block." for one),
 counting the edit's positions, written with digit grouping from 1,000 ("Erased 16,001 ghost blocks."), or, for a box without ghost blocks, "There are no ghost blocks in that box to erase."
-and nothing changes. These texts, and the button's name and icon, go to Geo with the build's screenshots.
+and nothing changes. Geo approved these texts and the button's name (inbox request 972).
 
 Effortless Building's shapes drawn with the break click keep Effortless Building's own limits (in survival, reach 32,
 64 a side and 2,000 positions a shape, counted whether or not they hold ghost blocks), and erase only the ghost blocks
@@ -1552,7 +1557,7 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   locked; a fixed row of 1, 4, 10 and 5 copies; the red row over the cap, with "Can't paste: too many blocks"; and each
   box's line, Delete's among them. With the lock key bound to K, the mode key to G, the nudge forward to I and the
   sprint key to Right Control (the driver's `bindkey`), the line names K, G and Right Control, K locks the copy, and
-  the locked line names the four nudges one by one, K and G; with the keys back, it names H and R again. Each line is
+  the locked line names the four nudges one by one beside "Page Up/Down", K and G; with the keys back, it names H and R again. Each line is
   shot at 1920 by 1080, GUI scale 4, the longest (locked and red) at 854 by 480 and 1920 by 1080, GUI scale 2 too, and
   Single's over a floor of ghost white wool, birch planks and glowstone at GUI scales 2 and 4, with the lines as they
   wrap and their window box in the log (the driver's `modewrap` and `modebox`), the box being the text's, without the
@@ -1767,7 +1772,9 @@ The controls lines have unit tests as a pure function too. `ControlsLineTest` re
 and "R for"), Zoop, Vertical, Zoop locked and Vertical locked before the first click, a fixed row of 4 and of 1 (no "R
 for"), each red reason in place of the paste (and a red Zoop or Vertical, locked or not, giving its reason before "set
 the start"), the reason as a warning and the actions as actions, keys a player rebound, the nudge keys off the arrow
-keys named one by one, unbound keys left out, and each box's lines, Delete's among them. `PayloadsTest` covers the
+keys named one by one, the up and down keys named with their shared first word dropped ("Page Up/Down", "Keypad
+8/2") or in full ("U/J"), the nudge phrase with only one of its two parts, unbound keys left out and the phrase gone
+with all six unbound, and each box's lines, Delete's among them. `PayloadsTest` covers the
 Delete box's message writing 16,001 with digit grouping.
 
 The fill rule's unit tests (`FillRuleTest`) cover each property it compares or ignores: a stair facing another way or
