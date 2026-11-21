@@ -96,9 +96,10 @@ public final class ControlsLine {
 	/**
 	 * The copy at the aim's line. With a zoop's row fixed: the mode, the click that pastes the row (or why it can't),
 	 * and the right click that drops the row. Otherwise: the mode, or "Locked", the left click (paste, or why it can't,
-	 * in Single, and setting the row's start in Zoop and Vertical), the nudge keys while it's locked, the wheel, the
-	 * middle click, the sprint key once there's a paste to line up with, the lock key, the mode key while it's
-	 * unlocked, and the right click that closes it. A key with no key bound is left out.
+	 * in Single; in Zoop and Vertical the reason if there is one, then setting the row's start), the nudge keys while
+	 * it's locked, the wheel, the middle click, the sprint key while it's unlocked and there's a paste to line up with
+	 * (a locked copy doesn't line up), the lock key, the mode key, and the right click that closes it. A key with no key
+	 * bound is left out.
 	 */
 	public static Line copy(CopyState state, Keys keys) {
 		List<Text> parts = new ArrayList<>();
@@ -119,6 +120,10 @@ public final class ControlsLine {
 			title = state.mode() == CopyMode.SINGLE ? null : modeName(state.mode());
 		}
 		if (state.mode() != CopyMode.SINGLE) {
+			// A zoop's first click still fixes the row while the copy is red, so it stays, after the reason.
+			if (state.refusal() != null) {
+				parts.add(refusal(state.refusal()));
+			}
 			parts.add(click(action(COPY + ".start")));
 		} else {
 			parts.add(state.refusal() != null ? refusal(state.refusal()) : click(action(COPY + ".paste")));
@@ -135,13 +140,13 @@ public final class ControlsLine {
 		}
 		parts.add(Translated.of(COPY + ".scroll", Look.PLAIN, action(COPY + ".turn")));
 		parts.add(Translated.of(COPY + ".middle", Look.PLAIN, action(COPY + ".mirror")));
-		if (state.pasted() && keys.sprint() != null) {
+		if (!state.locked() && state.pasted() && keys.sprint() != null) {
 			parts.add(Translated.of(COPY + ".hold", Look.PLAIN, new Literal(keys.sprint()), action(COPY + ".line_up")));
 		}
 		if (keys.lock() != null) {
 			parts.add(key(new Literal(keys.lock()), state.locked() ? COPY + ".unlock" : COPY + ".lock"));
 		}
-		if (!state.locked() && keys.mode() != null) {
+		if (keys.mode() != null) {
 			parts.add(Translated.of(COPY + ".for", Look.PLAIN, new Literal(keys.mode()),
 				Translated.of(modeKey(state.mode().next()), Look.ACTION)));
 		}

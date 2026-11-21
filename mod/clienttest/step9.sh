@@ -384,18 +384,21 @@ drv 1 "cmd execute as Planner2 at @s run tp @s ~ ~10 ~" > /dev/null
 drv 2 "wait 5" "fly true" > /dev/null
 
 # The copy at the aim's controls lines, with the copy's keys as bound by default, and a box's controls for each click.
-# Before the player's first paste, the copy's line in Single; after it, with the sprint key, which lines the copy up.
+# Before the player's first paste, the copy's line in Single; after it, with the sprint key, which lines the copy up
+# while the copy follows the aim; a locked copy doesn't line up, so its lines leave the sprint key out. R changes the
+# copy's mode locked or not, so every line but a fixed row's has "R for".
 turn_mirror="Scroll to turn, Middle-click to mirror"
 controls="Left-click to paste, $turn_mirror, H to lock, R for Zoop, Right-click to close"
 line_up="Hold Left Control to line up"
 controls_ctrl="Left-click to paste, $turn_mirror, $line_up, H to lock, R for Zoop, Right-click to close"
 nudges="Arrow keys to nudge, Page Up/Page Down to raise or lower"
-locked_line="Locked: Left-click to paste, $nudges, $turn_mirror, $line_up, H to unlock, Right-click to close"
+locked_line="Locked: Left-click to paste, $nudges, $turn_mirror, H to unlock, R for Zoop, Right-click to close"
 outside="Can't paste: part of the copy is outside the world"
-locked_red="Locked: $outside, $nudges, $turn_mirror, $line_up, H to unlock, Right-click to close"
+locked_red="Locked: $outside, $nudges, $turn_mirror, H to unlock, R for Zoop, Right-click to close"
+zoop_locked_red="Zoop, locked: $outside, Left-click to set the start, $nudges, $turn_mirror, H to unlock, R for Vertical, Right-click to close"
 zoop_line="Zoop: Left-click to set the start, $turn_mirror, $line_up, H to lock, R for Vertical, Right-click to close"
 vertical_line="Vertical: Left-click to set the start, $turn_mirror, $line_up, H to lock, R for Single, Right-click to close"
-zoop_locked="Zoop, locked: Left-click to set the start, $nudges, $turn_mirror, $line_up, H to unlock, Right-click to close"
+zoop_locked="Zoop, locked: Left-click to set the start, $nudges, $turn_mirror, H to unlock, R for Vertical, Right-click to close"
 first_line="Left-click to set the first corner, Right-click to cancel"
 second_line="Left-click to set the opposite corner, Right-click to cancel"
 height_line="Left-click to set the height, Right-click to cancel"
@@ -757,6 +760,16 @@ shots copy-red-border
 line_shot line-locked-red
 line_shot line-locked-red-854x480-gui2 854 480 2
 line_shot line-locked-red-1920x1080-gui2 1920 1080 2
+# R changes a locked copy's mode, and a red Zoop copy before its first click says why in the reason's place, keeping
+# "Left-click to set the start", since that click still fixes the row; R twice more is back to Single.
+press 1 r
+check "R changes the locked red copy's mode to Zoop, its line giving the reason before setting the start" eval \
+	'[[ $(val 1 copymode) == ZOOP ]] && [[ $(val 1 copylock) == locked ]] && [[ $(val 1 modehud) == "$zoop_locked_red" ]]'
+line_shot line-locked-zoop-red-before-first-click
+press 1 r
+press 1 r
+check "R twice more is back to Single, the locked red line as before" eval \
+	'[[ $(val 1 copymode) == SINGLE ]] && [[ $(val 1 modehud) == "$locked_red" ]]'
 drv 1 "cmd worldborder center 0.0 0.0" "cmd worldborder set 59999968" > /dev/null
 check "with the border back, it's blue" drv 1 "await copycolour BLUE"
 press 1 h
@@ -775,7 +788,7 @@ check "with the keys rebound, the controls line names them as bound" eval '[[ $(
 line_shot line-rebound
 press 1 k
 check "K then locks the copy, and the locked line names the nudge keys one by one" eval \
-	'[[ $(val 1 copylock) == locked ]] && [[ $(val 1 modehud) == "Locked: Left-click to paste, I/Down Arrow/Left Arrow/Right Arrow to nudge, Page Up/Page Down to raise or lower, $turn_mirror, Hold Right Control to line up, K to unlock, Right-click to close" ]]'
+	'[[ $(val 1 copylock) == locked ]] && [[ $(val 1 modehud) == "Locked: Left-click to paste, I/Down Arrow/Left Arrow/Right Arrow to nudge, Page Up/Page Down to raise or lower, $turn_mirror, K to unlock, G for Zoop, Right-click to close" ]]'
 press 1 k
 rebind key.keyboard.h key.keyboard.r key.keyboard.up key.keyboard.left.control
 check "and with the keys back, K has unlocked it and the line names H and R again" eval \
@@ -1365,7 +1378,7 @@ echo "  box-delete-1920x1080 box: $(val 1 drawbox)" >> /out/checks.log
 drv 1 "window 854 480 2" "wait 20" > /dev/null
 line_shot line-delete
 attack_click 1
-check "the third click erases the ghost blocks, with a message" client_said 1 "Erased 16001 ghost blocks."
+check "the third click erases the ghost blocks, with a message" client_said 1 "Erased 16,001 ghost blocks."
 check "as one edit" eval '[[ $(val 1 holdlog) == *" edits=1 "* ]]'
 check "and ends the box, leaving the player's mode" box_is "none SINGLE"
 check "Planner2 sees them go, the door's upper half above the box with them" drv 2 \

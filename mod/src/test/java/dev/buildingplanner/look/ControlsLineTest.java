@@ -1,6 +1,7 @@
 package dev.buildingplanner.look;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -61,10 +62,14 @@ class ControlsLineTest {
 	@Test
 	void locked() {
 		assertEquals("Locked: Left-click to paste, " + NUDGES + ", Scroll to turn, Middle-click to mirror, H to unlock, "
-			+ "Right-click to close", copy(state(CopyMode.SINGLE, true, 0, false, null), DEFAULT));
-		assertEquals("Locked: Left-click to paste, " + NUDGES + ", Scroll to turn, Middle-click to mirror, Hold Left "
-			+ "Control to line up, H to unlock, Right-click to close",
-			copy(state(CopyMode.SINGLE, true, 0, true, null), DEFAULT));
+			+ "R for Zoop, Right-click to close", copy(state(CopyMode.SINGLE, true, 0, false, null), DEFAULT));
+	}
+
+	@Test
+	void lockedTheSprintKeyLinesNothingUpSoTheLineLeavesItOut() {
+		assertEquals("Locked: Left-click to paste, " + NUDGES + ", Scroll to turn, Middle-click to mirror, H to unlock, "
+			+ "R for Zoop, Right-click to close", copy(state(CopyMode.SINGLE, true, 0, true, null), DEFAULT));
+		assertFalse(copy(state(CopyMode.ZOOP, true, 0, true, null), DEFAULT).contains("line up"));
 	}
 
 	@Test
@@ -74,7 +79,11 @@ class ControlsLineTest {
 		assertEquals("Vertical: Left-click to set the start, Scroll to turn, Middle-click to mirror, H to lock, R for "
 			+ "Single, Right-click to close", copy(state(CopyMode.VERTICAL, false, 0, false, null), DEFAULT));
 		assertEquals("Zoop, locked: Left-click to set the start, " + NUDGES + ", Scroll to turn, Middle-click to "
-			+ "mirror, H to unlock, Right-click to close", copy(state(CopyMode.ZOOP, true, 0, false, null), DEFAULT));
+			+ "mirror, H to unlock, R for Vertical, Right-click to close",
+			copy(state(CopyMode.ZOOP, true, 0, false, null), DEFAULT));
+		assertEquals("Vertical, locked: Left-click to set the start, " + NUDGES + ", Scroll to turn, Middle-click to "
+			+ "mirror, H to unlock, R for Single, Right-click to close",
+			copy(state(CopyMode.VERTICAL, true, 0, false, null), DEFAULT));
 	}
 
 	@Test
@@ -90,14 +99,17 @@ class ControlsLineTest {
 		assertEquals("Can't paste: part of the copy is outside the world, " + SINGLE_END,
 			copy(state(CopyMode.SINGLE, false, 0, false, Refusal.BUILD_HEIGHT), DEFAULT));
 		assertEquals("Locked: Can't paste: part of the copy is outside the world, " + NUDGES + ", Scroll to turn, "
-			+ "Middle-click to mirror, H to unlock, Right-click to close",
+			+ "Middle-click to mirror, H to unlock, R for Zoop, Right-click to close",
 			copy(state(CopyMode.SINGLE, true, 0, false, Refusal.WORLD_BORDER), DEFAULT));
 		assertEquals("Zoop: Can't paste: too many blocks, Right-click to cancel",
 			copy(state(CopyMode.ZOOP, false, 10, false, Refusal.TOO_MANY_BLOCKS), DEFAULT));
-		// A zoop's first click still fixes the row while the copy is red, so it keeps its line.
-		assertEquals("Zoop: Left-click to set the start, Scroll to turn, Middle-click to mirror, H to lock, R for "
-			+ "Vertical, Right-click to close", copy(state(CopyMode.ZOOP, false, 0, false, Refusal.BUILD_HEIGHT),
-				DEFAULT));
+		// A zoop's first click still fixes the row while the copy is red, so it stays, after the reason.
+		assertEquals("Zoop: Can't paste: part of the copy is outside the world, Left-click to set the start, Scroll to "
+			+ "turn, Middle-click to mirror, H to lock, R for Vertical, Right-click to close",
+			copy(state(CopyMode.ZOOP, false, 0, false, Refusal.BUILD_HEIGHT), DEFAULT));
+		assertEquals("Vertical, locked: Can't paste: too many blocks, Left-click to set the start, " + NUDGES
+			+ ", Scroll to turn, Middle-click to mirror, H to unlock, R for Single, Right-click to close",
+			copy(state(CopyMode.VERTICAL, true, 0, false, Refusal.TOO_MANY_BLOCKS), DEFAULT));
 	}
 
 	@Test
@@ -116,7 +128,7 @@ class ControlsLineTest {
 		assertEquals("Left-click to paste, Scroll to turn, Middle-click to mirror, Hold Left Alt to line up, K to lock, "
 			+ "G for Zoop, Right-click to close", copy(state(CopyMode.SINGLE, false, 0, true, null), REBOUND));
 		assertEquals("Locked: Left-click to paste, I/J/U/O to nudge, Y/N to raise or lower, Scroll to turn, "
-			+ "Middle-click to mirror, Hold Left Alt to line up, K to unlock, Right-click to close",
+			+ "Middle-click to mirror, K to unlock, G for Zoop, Right-click to close",
 			copy(state(CopyMode.SINGLE, true, 0, true, null), REBOUND));
 	}
 

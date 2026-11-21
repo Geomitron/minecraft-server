@@ -231,6 +231,14 @@ class PayloadsTest {
 			PlayerMessage.blocksLeftAsTheyAre(2));
 	}
 
+	@Test
+	void theDeleteBoxsCountIsWrittenWithDigitGrouping() {
+		assertEquals(new PlayerMessage("buildingplanner.delete.done", List.of("999")), PlayerMessage.erased(999));
+		assertEquals(new PlayerMessage("buildingplanner.delete.done", List.of("16,001")), PlayerMessage.erased(16001));
+		assertEquals(new PlayerMessage("buildingplanner.delete.done", List.of("200,000")), PlayerMessage.erased(200000));
+		assertEquals(new PlayerMessage("buildingplanner.delete.done_one", List.of()), PlayerMessage.erased(1));
+	}
+
 	/**
 	 * Every message the add-on can send has its text in en_us.json, with one %s per argument, and every other text there
 	 * is a key binding's ({@code key.}) or a screen's ({@code buildingplanner.ui.}).
