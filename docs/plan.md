@@ -339,7 +339,8 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
     with the last paste (Q3 C); the middle click still mirrors it (Q4 A); H locks it, the arrow keys move it a block
     forward, back, left or right, and Page Up and Page Down move it up or down (Q5 A); R switches between Single, Zoop
     and Vertical (Q6 A); its box is blue when it can be pasted, yellow when it would replace ghost blocks, and red when
-    the server would refuse it (Q7 B).
+    the server would refuse it (Q7 B). While Left Ctrl is held, a copy narrower or wider than the paste sits flush
+    with the paste's nearer edge (890 Q1 A), and it follows the aim along the line, onto the paste too (890 Q2 A).
   - **Deleting (808):** a Delete button in the radial menu draws a box the way Copy does, then deletes every ghost
     block in it (Q1 A). Its icon is a Minecraft item, as "Material lists" uses the Book and Quill (Geo); the agent
     picked the Barrier, which Geo sees in the build's screenshots.
