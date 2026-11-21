@@ -644,14 +644,23 @@ keys, as the player has them bound. These lines are proposed, and go to Geo with
 - Single, following the aim: "Left-click to paste, Scroll to turn, Middle-click to mirror, H to lock, R for Zoop,
   Right-click to close";
 - locked: "Locked: Left-click to paste, Arrow keys to nudge, Page Up/Page Down to raise or lower, Scroll to turn,
-  Middle-click to mirror, H to unlock, Right-click to close";
+  Middle-click to mirror, H to unlock, Right-click to close", with no "R for" though R still changes the mode;
 - Zoop before its first click: "Zoop: Left-click to set the start, Scroll to turn, Middle-click to mirror, H to lock,
-  R for Vertical, Right-click to close", and Vertical the same, starting "Vertical:" and with "R for Single";
+  R for Vertical, Right-click to close", and Vertical the same, starting "Vertical:" and with "R for Single"; locked,
+  it starts "Zoop, locked:" and goes on as the locked line, with "Left-click to set the start";
 - Zoop or Vertical after its first click: "Zoop: Left-click to paste 4 copies, Right-click to cancel", with the row's
-  count ("1 copy" for one);
-- after the player's first paste in the dimension, "Hold Ctrl to line up" goes after "Middle-click to mirror";
-- while the box is red, "Left-click to paste" (or the row's paste) gives way to the reason: "Can't paste: part of the
-  copy is outside the world" or "Can't paste: too many blocks".
+  count ("1 copy" for one), locked or not;
+- after the player's first paste in the dimension, "Hold Left Control to line up" goes after "Middle-click to mirror",
+  in every line that has it, the locked ones too;
+- while the copy is red, "Left-click to paste" (or the row's paste) gives way to the reason, in red: "Can't paste: part
+  of the copy is outside the world" (the build height or the border) or "Can't paste: too many blocks". A zoop's
+  "Left-click to set the start" stays, since that click still fixes the row.
+
+Each key goes by its name as Controls shows it ("H", "Page Up", "Left Control"). The four nudges along the ground show
+as "Arrow keys" while they're on Up, Down, Left and Right in that order, and otherwise by their names one by one,
+forward, back, left and right ("I/Down Arrow/Left Arrow/Right Arrow"). A key with no key bound leaves its part out. The
+clicks and the wheel keep Effortless Building's words. The line is a pure function of the copy's state and the keys'
+names (`ControlsLine`), as a box's lines are.
 
 A line too wide for the screen wraps onto a second line above it, breaking only at spaces outside the box's size, which
 goes after the last word that leaves it room, or alone on the line below. Effortless Building's own line during its
@@ -1526,6 +1535,16 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   row of two of them, 204,800 blocks, is red; its click sends no edit and leaves the row, and aimed back to one copy
   the row is blue. The copy is shot blue on the grass, yellow over the ghost blocks, red at the border, and the red row
   over the cap, each at 854 by 480 and 1920 by 1080, GUI scale 2.
+- The controls lines, each checked word for word (the driver's `modehud`): Single before the first paste, and with
+  "Hold Left Control to line up" after it; locked, with the nudge keys; locked and red below the build height and at
+  the border, with the reason in place of the paste, and the paste back once it's blue; Zoop and Vertical before the
+  first click, and Zoop locked; a fixed row of 1, 4, 10 and 5 copies; the red row over the cap, with "Can't paste: too
+  many blocks"; and each box's line, Delete's among them. With the lock key bound to K, the mode key to G, the nudge
+  forward to I and the sprint key to Right Control (the driver's `bindkey`), the line names K, G and Right Control,
+  K locks the copy, and the locked line names the four nudges one by one; with the keys back, it names H and R again.
+  Each line is shot at 1920 by 1080, GUI scale 4, the longest (locked and red) at 854 by 480 and 1920 by 1080, GUI
+  scale 2 too, and Single's over a floor of ghost white wool, birch planks and glowstone at GUI scales 2 and 4, with
+  the lines as they wrap and their window box in the log (the driver's `modewrap` and `modebox`).
 - A right click puts the copy away, and the radial menu's Paste button brings it back to the aim, turned and mirrored
   as it was. Choosing a mode in the radial menu, or the Block mix button, puts it away too.
 - A box around a real house with no ghost blocks copies its real blocks. With a ghost gold block added inside the house
@@ -1730,6 +1749,12 @@ border, red, and one just inside each, blue; red over yellow; a row over the blo
 a row reaching past the build height while its first copy doesn't; the cap checked first, as on the server; and ghost
 blocks read only while no red check fails. `LayerTest` covers the layer's version, which changes with each change and
 only then.
+
+The controls lines have unit tests as a pure function too. `ControlsLineTest` reads each line in English from
+`en_us.json`: Single before and after the first paste, locked, Zoop, Vertical and Zoop locked before the first click, a
+fixed row of 4 and of 1, each red reason in place of the paste (and a red zoop keeping "set the start"), the reason as a
+warning and the actions as actions, keys a player rebound, the nudge keys off the arrow keys named one by one, unbound
+keys left out, and each box's lines, Delete's among them.
 
 The fill rule's unit tests (`FillRuleTest`) cover each property it compares or ignores: a stair facing another way or
 upside down, a log on another axis, a door with the other hinge or its other half, a bed's other part, a button on

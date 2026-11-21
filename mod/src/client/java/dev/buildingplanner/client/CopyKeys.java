@@ -3,7 +3,10 @@ package dev.buildingplanner.client;
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.buildingplanner.input.CopyNudge;
 import dev.buildingplanner.input.KeyRepeat;
+import dev.buildingplanner.look.ControlsLine;
+import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Map;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.minecraft.client.KeyMapping;
@@ -46,6 +49,28 @@ final class CopyKeys {
 		KeyMappingHelper.registerKeyMapping(LOCK);
 		NUDGES.values().forEach(KeyMappingHelper::registerKeyMapping);
 		KeyMappingHelper.registerKeyMapping(MODE);
+	}
+
+	/**
+	 * The copy's keys by their names as the game gives them (as Controls shows them), for its controls line, with
+	 * Minecraft's sprint key, which lines the copy up; a key with no key bound has no name.
+	 */
+	static ControlsLine.Keys names(Minecraft mc) {
+		List<CopyNudge> along = List.of(CopyNudge.FORWARD, CopyNudge.BACK, CopyNudge.LEFT, CopyNudge.RIGHT);
+		List<String> arrows = List.of("key.keyboard.up", "key.keyboard.down", "key.keyboard.left", "key.keyboard.right");
+		boolean onArrows = true;
+		List<String> nudges = new ArrayList<>(along.size());
+		for (int i = 0; i < along.size(); i++) {
+			KeyMapping key = NUDGES.get(along.get(i));
+			onArrows &= key.saveString().equals(arrows.get(i));
+			nudges.add(name(key));
+		}
+		return new ControlsLine.Keys(name(LOCK), name(MODE), nudges, onArrows, name(NUDGES.get(CopyNudge.UP)),
+			name(NUDGES.get(CopyNudge.DOWN)), name(mc.options.keySprint));
+	}
+
+	private static String name(KeyMapping key) {
+		return key.isUnbound() ? null : key.getTranslatedKeyMessage().getString();
 	}
 
 	/** Once a client tick, after the session's: acts on the keys for the copy at the aim, or empties their presses. */

@@ -3,6 +3,7 @@ package dev.buildingplanner.client;
 import dev.buildingplanner.input.BoxCorners;
 import dev.buildingplanner.input.MouseMode;
 import dev.buildingplanner.look.BoxListLayout;
+import dev.buildingplanner.look.ControlsLine;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
@@ -21,7 +22,8 @@ import net.minecraft.util.FormattedCharSequence;
 /**
  * The line of a mouse mode's controls, centred where Effortless Building draws its own line during a shape
  * ({@code RenderHandler.renderSubtitle}: 58 above the screen's bottom, with a shadow), in its colours: white, with each
- * action in dark aqua. A box's line ends with its size, and a box past a limit has a red line above saying which. A
+ * action in dark aqua; the lines themselves are worked out by {@link ControlsLine}. A box's line ends with its size, a
+ * box past a limit has a red line above saying which, and the copy's line names in red why it can't be pasted. A
  * line too wide for the screen wraps onto lines above it, keeping the size whole. While a box is drawn, the blocks in it
  * show under the crosshair ({@link BoxList}, laid out by {@link BoxListLayout}), in rows that end above the controls.
  * They show while a mode is on, with no screen open and the HUD shown (not hidden with F1).
@@ -30,15 +32,9 @@ final class ModeHud implements HudElement {
 	private static final int BOTTOM = 58;
 	private static final int MARGIN = 4;
 	private static final int WHITE = -1;
-	private static final String COPY = "buildingplanner.ui.mode.copy";
-	private static final String BOX = "buildingplanner.ui.mode.box";
 
 	/** A line of the controls, and the box's size at its end, which never breaks across lines, or null. */
 	private record Line(Component text, Component size) {
-		Line(Component text) {
-			this(text, null);
-		}
-
 		String read() {
 			return size == null ? text.getString() : text.getString() + " " + size.getString();
 		}
@@ -46,15 +42,18 @@ final class ModeHud implements HudElement {
 
 	private final Supplier<MouseMode> mode;
 	private final Supplier<BoxDraw.Shown> box;
+	private final Supplier<ControlsLine.Line> copy;
 	private final Supplier<List<BoxList.Entry>> list;
 
 	/**
-	 * {@code mode} is the mouse mode now, or null, {@code box} the box drawn now, or null, and {@code list} the kinds of
-	 * block in it.
+	 * {@code mode} is the mouse mode now, or null, {@code box} the box drawn now, or null, {@code copy} the copy at the
+	 * aim's line ({@link ControlsLine#copy}), or null, and {@code list} the kinds of block in the box.
 	 */
-	ModeHud(Supplier<MouseMode> mode, Supplier<BoxDraw.Shown> box, Supplier<List<BoxList.Entry>> list) {
+	ModeHud(Supplier<MouseMode> mode, Supplier<BoxDraw.Shown> box, Supplier<ControlsLine.Line> copy,
+		Supplier<List<BoxList.Entry>> list) {
 		this.mode = mode;
 		this.box = box;
+		this.copy = copy;
 		this.list = list;
 	}
 
@@ -65,45 +64,46 @@ final class ModeHud implements HudElement {
 		if (now == null || mc.gui.screen() != null || mc.gui.hud.isHidden()) {
 			return List.of();
 		}
-		return switch (now) {
-			case BOX -> boxLines(box.get());
-			case COPY_AT_AIM -> List.of(new Line(Component.translatable(COPY, action(COPY + ".paste"),
-				action(COPY + ".turn"), action(COPY + ".mirror"), action(COPY + ".put_away"))
-				.withStyle(ChatFormatting.WHITE)));
+		List<ControlsLine.Line> lines = switch (now) {
+			case BOX -> {
+				BoxDraw.Shown shown = box.get();
+				yield shown == null ? List.of() : ControlsLine.box(shown.purpose().name(), shown.corners(),
+					shown.corners() > 0 && shown.min() != null ? BoxCorners.size(shown.min(), shown.max()) : null,
+					shown.limit());
+			}
+			case COPY_AT_AIM -> {
+				ControlsLine.Line line = copy.get();
+				yield line == null ? List.of() : List.of(line);
+			}
 		};
+		return lines.stream().map(line -> new Line(component(line.text()).withStyle(ChatFormatting.WHITE),
+			line.size() == null ? null : component(line.size()).withStyle(ChatFormatting.WHITE))).toList();
 	}
 
-	private static List<Line> boxLines(BoxDraw.Shown shown) {
-		if (shown == null) {
-			return List.of();
-		}
-		String purpose = switch (shown.purpose()) {
-			case COPY -> BOX + ".copy";
-			case DELETE -> BOX + ".delete";
-			case MATERIAL_LIST -> BOX + ".material_list";
+	/** The game's component for a part of a line, in its look: an action in dark aqua and a warning in red. */
+	private static MutableComponent component(ControlsLine.Text text) {
+		return switch (text) {
+			case ControlsLine.Translated translated -> {
+				Object[] args = translated.args().stream().map(ModeHud::component).toArray();
+				MutableComponent made = Component.translatable(translated.key(), args);
+				yield switch (translated.look()) {
+					case PLAIN -> made;
+					case ACTION -> made.withStyle(ChatFormatting.DARK_AQUA);
+					case WARNING -> made.withStyle(ChatFormatting.RED);
+				};
+			}
+			case ControlsLine.Literal literal -> Component.literal(literal.text());
+			case ControlsLine.Joined joined -> {
+				MutableComponent made = Component.empty();
+				for (int i = 0; i < joined.parts().size(); i++) {
+					if (i > 0) {
+						made.append(", ");
+					}
+					made.append(component(joined.parts().get(i)));
+				}
+				yield made;
+			}
 		};
-		String next = switch (shown.corners()) {
-			case 0 -> BOX + ".first";
-			case 1 -> BOX + ".second";
-			default -> BOX + ".height";
-		};
-		MutableComponent controls = Component.translatable(BOX, Component.translatable(purpose), action(next),
-			action(BOX + ".cancel")).withStyle(ChatFormatting.WHITE);
-		Component size = null;
-		if (shown.corners() > 0 && shown.min() != null) {
-			int[] sides = BoxCorners.size(shown.min(), shown.max());
-			size = Component.translatable(BOX + ".size", sides[0], sides[1], sides[2]).withStyle(ChatFormatting.WHITE);
-		}
-		List<Line> lines = new ArrayList<>(2);
-		if (shown.limit() != null) {
-			MutableComponent limit = switch (shown.limit()) {
-				case SIDE, TOO_MANY_BLOCKS -> Component.translatable(BOX + ".too_large");
-				case NOT_LOADED -> Component.translatable(BOX + ".not_loaded");
-			};
-			lines.add(new Line(limit.withStyle(ChatFormatting.RED)));
-		}
-		lines.add(new Line(controls, size));
-		return lines;
 	}
 
 	/**
@@ -160,6 +160,31 @@ final class ModeHud implements HudElement {
 	}
 
 	/**
+	 * The window box of the lines as they're drawn now: left, top, right and bottom, in the window's pixels, or
+	 * {@code hidden}; for the outlines on the in-game checks' shots.
+	 */
+	String windowBox() {
+		List<Line> lines = lines();
+		if (lines.isEmpty()) {
+			return "hidden";
+		}
+		Minecraft mc = Minecraft.getInstance();
+		int width = mc.getWindow().getGuiScaledWidth();
+		List<FormattedCharSequence> wrapped = wrapped(lines, mc.font, width - 2 * MARGIN);
+		int top = top(wrapped.size(), mc.font, mc.getWindow().getGuiScaledHeight());
+		int left = width;
+		int right = 0;
+		for (FormattedCharSequence line : wrapped) {
+			int lineWidth = mc.font.width(line);
+			left = Math.min(left, (width - lineWidth) / 2);
+			right = Math.max(right, (width - lineWidth) / 2 + lineWidth);
+		}
+		int scale = (int) mc.getWindow().getGuiScale();
+		return left * scale + " " + top * scale + " " + right * scale + " "
+			+ (top + wrapped.size() * mc.font.lineHeight) * scale;
+	}
+
+	/**
 	 * The list under the crosshair as it shows now, for the in-game checks: the right edge of its cells and the screen's
 	 * width, the bottom of its rows and the top of the controls, all in GUI pixels, then its rows separated by " / ",
 	 * each cell an item's id and its count, or "+N"; or {@code hidden}.
@@ -193,10 +218,6 @@ final class ModeHud implements HudElement {
 			}
 		}
 		return right + " " + width + " " + bottom + " " + top + " | " + rows;
-	}
-
-	private static Component action(String key) {
-		return Component.translatable(key).withStyle(ChatFormatting.DARK_AQUA);
 	}
 
 	/** The top of the controls, {@code count} lines ending 58 above the screen's bottom. */

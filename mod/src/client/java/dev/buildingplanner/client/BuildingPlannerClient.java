@@ -6,6 +6,7 @@ import dev.buildingplanner.ClientConfig;
 import dev.buildingplanner.input.CopyColour;
 import dev.buildingplanner.input.MouseMode;
 import dev.buildingplanner.layer.Layer;
+import dev.buildingplanner.look.ControlsLine;
 import dev.buildingplanner.look.GhostsShown;
 import dev.buildingplanner.sync.EditKind;
 import dev.buildingplanner.sync.Payloads;
@@ -124,7 +125,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		BoxOutline.registered(BuildingPlannerClient::boxShown);
 		CopyOutline.registered(BuildingPlannerClient::copyShown);
 		modeHud = new ModeHud(BuildingPlannerClient::mouseMode, BuildingPlannerClient::boxShown,
-			() -> session == null ? List.of() : session.boxList());
+			BuildingPlannerClient::copyLine, () -> session == null ? List.of() : session.boxList());
 		HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(BuildingPlanner.MOD_ID, "mode_controls"),
 			modeHud);
 		HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(BuildingPlanner.MOD_ID, "material_panel"),
@@ -334,6 +335,12 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	/** The box being drawn now, as it shows, or null. */
 	private static BoxDraw.Shown boxShown() {
 		return session == null ? null : session.boxShown();
+	}
+
+	/** The copy at the aim's controls line, with its keys as the player has them bound, or null. */
+	private static ControlsLine.Line copyLine() {
+		ControlsLine.CopyState state = session == null ? null : session.copyState();
+		return state == null ? null : ControlsLine.copy(state, CopyKeys.names(Minecraft.getInstance()));
 	}
 
 	/** The copy at the aim as it's drawn, in its colour, with its row's boxes, or null. */

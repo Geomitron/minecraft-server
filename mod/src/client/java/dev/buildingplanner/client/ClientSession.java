@@ -12,6 +12,7 @@ import dev.buildingplanner.layer.BoxCount;
 import dev.buildingplanner.layer.GhostErase;
 import dev.buildingplanner.layer.Layer;
 import dev.buildingplanner.layer.LayerColumn;
+import dev.buildingplanner.look.ControlsLine;
 import dev.buildingplanner.look.GhostsShown;
 import dev.buildingplanner.sync.CopyRules;
 import dev.buildingplanner.sync.EditKind;
@@ -536,6 +537,20 @@ final class ClientSession {
 			}
 			return overGhosts;
 		});
+	}
+
+	/**
+	 * The copy at the aim as its controls line tells it ({@link ControlsLine#copy}): its mode, whether it's locked, the
+	 * copies in a fixed row, whether the player has pasted in this dimension, and why its paste would be refused. Null
+	 * while the copy isn't at the aim.
+	 */
+	ControlsLine.CopyState copyState() {
+		CopyColour.Shown shown = copyShown();
+		if (shown == null) {
+			return null;
+		}
+		return new ControlsLine.CopyState(copyMode, clipboard.locked(),
+			clipboard.rowFixed() ? clipboard.rowSpots().size() : 0, pastes.latest() != null, shown.refusal());
 	}
 
 	/**

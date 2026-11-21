@@ -1,5 +1,6 @@
 package dev.buildingplanner.client;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import dev.buildingplanner.input.CopyColour;
 import dev.buildingplanner.input.CopyNudge;
 import dev.buildingplanner.input.CopyPlacement;
@@ -810,6 +811,19 @@ public final class Driver implements ClientModInitializer {
 			case "modehud" -> {
 				// modehud: the line of the mouse mode's controls as the player reads it, or hidden.
 				return modeHud().text();
+			}
+			case "modebox" -> {
+				// modebox: the window box (left top right bottom, in the window's pixels) of the controls as drawn now, or
+				// hidden; for the shots' outlines.
+				return modeHud().windowBox();
+			}
+			case "bindkey" -> {
+				// bindkey <key mapping> <key>: binds the key mapping (key.buildingplanner.lock_copy, say) to the key
+				// (key.keyboard.k, say), as Controls does, and gives the key as Minecraft saves it.
+				KeyMapping mapping = KeyMapping.get(a[1]);
+				mapping.setKey(InputConstants.getKey(a[2]));
+				KeyMapping.resetMapping();
+				return mapping.saveString();
 			}
 			case "modewrap" -> {
 				// modewrap: the controls as they wrap on the screen now, lines separated by " / ", or hidden.
