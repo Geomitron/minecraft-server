@@ -155,10 +155,11 @@ final class ClientSession {
 
 	/**
 	 * Moves the copy at the aim against the face the player aims at, flush to a recent paste aimed at, and in line with
-	 * the most recent paste while the sprint key is held ({@link PasteBoxes#place}); aiming at nothing leaves it.
+	 * the most recent paste while the sprint key is held ({@link PasteBoxes#place}); aiming at nothing, or the copy locked,
+	 * leaves it.
 	 */
 	private void followAim() {
-		if (!clipboard.atAim()) {
+		if (!clipboard.atAim() || clipboard.locked()) {
 			return;
 		}
 		BlockHitResult hit = GhostAim.aim(replica.layer(), tiles.shown(), GhostAim.COPY_REACH);
@@ -426,7 +427,7 @@ final class ClientSession {
 
 	/**
 	 * Gives the copy at the aim a quarter turn around its middle, clockwise or counterclockwise seen from above, and sets
-	 * it against the aim again.
+	 * it against the aim again unless it's locked.
 	 */
 	void turnCopy(boolean clockwise) {
 		if (clipboard.atAim()) {
@@ -440,6 +441,19 @@ final class ClientSession {
 		if (clipboard.atAim()) {
 			clipboard.mirror(facing);
 			followAim();
+		}
+	}
+
+	/** "Lock or unlock the copy": the copy at the aim stops following the aim, or follows it again. */
+	void toggleCopyLock() {
+		clipboard.toggleLock();
+		followAim();
+	}
+
+	/** A "Nudge the copy" key: moves the locked copy one block that way. */
+	void nudgeCopy(Direction direction) {
+		if (clipboard.locked()) {
+			clipboard.nudge(direction);
 		}
 	}
 

@@ -121,6 +121,30 @@ public final class ScreenProbe {
 			+ " ; with its keys " + box(scale, left, list.getRowTop(first), right, list.getRowBottom(end - 1));
 	}
 
+	/**
+	 * The window boxes (left top right bottom) of the key binds list's visible area, then of each key's row under the
+	 * heading, as the list is scrolled now: "list l t r b ; Name: l t r b ; ...". A row out of view has a box outside
+	 * the list's.
+	 */
+	static String keyRows(Minecraft mc, String heading) throws Exception {
+		KeyBindsList list = list(mc);
+		double scale = mc.getWindow().getGuiScale();
+		List<String> rows = new ArrayList<>();
+		rows.add("list " + box(scale, list.getRowLeft(), list.getY(), list.getRowRight(), list.getBottom()));
+		boolean under = false;
+		List<KeyBindsList.Entry> entries = list.children();
+		for (int i = 0; i < entries.size(); i++) {
+			KeyBindsList.Entry entry = entries.get(i);
+			if (entry instanceof KeyBindsList.CategoryEntry) {
+				under = headingOf(entry).equals(heading);
+			} else if (under) {
+				rows.add(((Component) field(entry, "name")).getString() + ": "
+					+ box(scale, list.getRowLeft(), list.getRowTop(i), list.getRowRight(), list.getRowBottom(i)));
+			}
+		}
+		return String.join(" ; ", rows);
+	}
+
 	private static KeyBindsList list(Minecraft mc) throws Exception {
 		return (KeyBindsList) field(mc.gui.screen(), "keyBindsList");
 	}

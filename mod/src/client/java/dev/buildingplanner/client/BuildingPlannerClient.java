@@ -78,6 +78,8 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	private static MixPanel mixPanel;
 	/** The line of a mouse mode's controls; null while Building Planner is off for want of Litematica or MaLiLib. */
 	private static ModeHud modeHud;
+	/** The copy's own keys; null while Building Planner is off for want of Litematica or MaLiLib. */
+	private static CopyKeys copyKeys;
 	/** Whether Effortless Building is loaded, whose shape under way a box drops. */
 	private static boolean effortless;
 	/**
@@ -115,6 +117,8 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		}
 		KeyMappingHelper.registerKeyMapping(BLOCK_MIX);
 		KeyMappingHelper.registerKeyMapping(SHOW_HIDE);
+		CopyKeys.register();
+		copyKeys = new CopyKeys();
 		glow = EditGlow.registered();
 		BoxOutline.registered(BuildingPlannerClient::boxShown);
 		modeHud = new ModeHud(BuildingPlannerClient::mouseMode, BuildingPlannerClient::boxShown,
@@ -215,6 +219,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 					heldClicks.tick(client);
 				}
 			}
+			copyKeys.tick(client, session);
 		});
 		BuildingPlanner.LOGGER.info("Building Planner client loaded");
 	}

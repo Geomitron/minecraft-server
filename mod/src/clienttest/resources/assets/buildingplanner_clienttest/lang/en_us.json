@@ -1,3 +1,4 @@
 {
+	"key.category.buildingplanner_clienttest.driver": "Driver only",
 	"key.buildingplanner_clienttest.page_up": "Visible to the driver only: Page Up"
 }

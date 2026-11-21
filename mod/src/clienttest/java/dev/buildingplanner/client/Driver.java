@@ -1,5 +1,6 @@
 package dev.buildingplanner.client;
 
+import dev.buildingplanner.input.CopyNudge;
 import dev.buildingplanner.input.RepeatSpeed;
 import dev.buildingplanner.sync.EditKind;
 import dev.buildingplanner.sync.Payloads;
@@ -76,6 +77,9 @@ public final class Driver implements ClientModInitializer {
 	private int quickClickTicks;
 	/** The button to let go at the start of the next client tick. */
 	private KeyMapping release;
+	/** The key {@code keyticks} counts, and the client ticks it has been down, with no screen open, since. */
+	private KeyMapping countedKey;
+	private int countedKeyTicks;
 
 	@Override
 	public void onInitializeClient() {
@@ -93,6 +97,9 @@ public final class Driver implements ClientModInitializer {
 	private void tick(Minecraft mc) {
 		SentPackets.buttons(mc.options.keyUse.isDown() && mc.gui.screen() == null,
 			mc.options.keyAttack.isDown() && mc.gui.screen() == null);
+		if (countedKey != null && countedKey.isDown() && mc.gui.screen() == null) {
+			countedKeyTicks++;
+		}
 		if (quickClick != null) {
 			if (quickClick.isDown() && mc.gui.screen() == null) {
 				if (++quickClickTicks == QUICK_CLICK_TICKS) {
@@ -583,6 +590,28 @@ public final class Driver implements ClientModInitializer {
 				// pagepresses: how many Page Up presses reached the driver's key mapping bound to it since the last call.
 				return String.valueOf(PageProbe.take());
 			}
+			case "unbindprobe" -> {
+				// unbindprobe: the driver's Page Up key mapping gets no key, so Controls shows no clash with "Nudge the
+				// copy up".
+				PageProbe.unbind();
+				return "ok";
+			}
+			case "copylock" -> {
+				// copylock: whether the copy at the aim is locked: locked, unlocked, away or none.
+				Clipboard clipboard = clipboard();
+				return !clipboard.exists() ? "none" : !clipboard.atAim() ? "away"
+					: clipboard.locked() ? "locked" : "unlocked";
+			}
+			case "keyticks" -> {
+				// keyticks <nudge|lock> [reset]: the client ticks that key of the copy's (a CopyNudge name, or lock) has
+				// been down, with no screen open, since reset, which starts counting it.
+				KeyMapping key = a[1].equals("lock") ? CopyKeys.LOCK : CopyKeys.NUDGES.get(CopyNudge.valueOf(a[1]));
+				if (a.length > 2) {
+					countedKey = key;
+					countedKeyTicks = 0;
+				}
+				return String.valueOf(countedKey == key ? countedKeyTicks : 0);
+			}
 			case "screenclass" -> {
 				// screenclass: the class of the screen open now, or none.
 				return screenClass();
@@ -757,6 +786,11 @@ public final class Driver implements ClientModInitializer {
 				// keybindscroll <heading>: scrolls the key binds screen to that heading, then gives the window boxes
 				// (left top right bottom) of its row and of the heading with its keys.
 				return ScreenProbe.scrollKeyBinds(mc, line.substring("keybindscroll ".length()));
+			}
+			case "keybindrows" -> {
+				// keybindrows <heading>: the window boxes of the key binds list's visible area and of each key's row
+				// under that heading, as scrolled now.
+				return ScreenProbe.keyRows(mc, line.substring("keybindrows ".length()));
 			}
 			case "modehud" -> {
 				// modehud: the line of the mouse mode's controls as the player reads it, or hidden.

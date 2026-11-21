@@ -217,7 +217,7 @@ The hooks go by Minecraft's attack, use and pick block keys, so a player who mov
 the copy's controls there too. Effortless Building's own hooks into `startUseItem`, `startAttack` and
 `continueAttack` (`mixin/MixinMinecraft.java`) and its client tick ask `shouldInterceptPlacing` and
 `shouldInterceptBreaking` first, which hook E14 answers false in these modes. The copy's own keys (see "Keys") need no
-hook: Building Planner's client tick reads them, with no screen open, while the copy is at the aim, and empties their
+hook: Building Planner's client tick reads them (`CopyKeys`), with no screen open, while the copy is at the aim, and empties their
 clicks (`consumeClick`) otherwise, so a press made before the copy came to the aim doesn't act once it does.
 
 Litematica, under `src/main/java/fi/dy/masa/litematica/`:
@@ -914,7 +914,7 @@ For a side an even number of blocks across, the middle is the block before it in
 When the player aims at nothing, the copy stays where it was, and a copy made then starts over the blocks it was copied
 from. Each client tick Building Planner sets the placement's origin so that the copy, as it's turned and mirrored,
 sits there (`CopyPlacement`). A turn or a mirror keeps the copy's middle block where it was, and the copy then rests
-against the aimed face again.
+against the aimed face again, unless it's locked (below), when it spins in place.
 
 **Snapping.** Every position is on Minecraft's block grid, so the copy always lines up with blocks, as Satisfactory's
 buildings line up with the grid on a foundation. Beyond the grid, the copy snaps to the player's own pastes, as a
@@ -953,8 +953,11 @@ forgets the pastes.
   keys move it one block: Up away from the player's view, Down toward it, and Left and Right to the view's sides, along
   the compass direction nearest the way the view faces (the Freecam camera's while Freecam flies it); Page Up moves it
   one block up and Page Down one block down. A key held down moves the copy again after 0.2 seconds, then every 4 ticks
-  (5 blocks a second), the game's own pace for a held use button. Nudging has no distance limit. Pressing H again
-  unlocks the copy, and it follows the aim again. Satisfactory's half step (Ctrl with a nudge key) has no equivalent,
+  (5 blocks a second), the game's own pace for a held use button (`KeyRepeat`); the computer's own key repeat, which
+  the game counts as more presses, doesn't count while the key stays down. The direction is taken at each move
+  (`CopyNudge`), so turning while holding a key turns the way the copy moves. While the copy follows the aim, the
+  nudge keys do nothing. Nudging has no distance limit. Pressing H again unlocks the copy, and it follows the aim
+  again. Satisfactory's half step (Ctrl with a nudge key) has no equivalent,
   since the copy moves a whole block at a time.
 - R ("Change copy mode") switches the copy between Single, Zoop and Vertical, in that order, as R cycles
   Satisfactory's build modes (806 Q6 A; below).
@@ -1435,8 +1438,10 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   after the menu opens show the buttons nearer the middle and smaller than when it's open, as the menu's own are. With
   Effortless Building's mode Line, no mode segment shows selected while the copy is at the aim or a box is drawn, and
   Paste, Copy, "Material list" or Delete does; with the box ended, Line's segment does, and no button.
-- The menu's corner text reads "Building Planner", and Controls shows Building Planner's keys and Effortless Building's
-  under the "Building Planner" heading, with no raw key name; each is shot.
+- The menu's corner text reads "Building Planner", and Controls shows Building Planner's keys, the copy's seven among
+  them, and Effortless Building's under the "Building Planner" heading, in the order "Keys" gives, with no raw key name;
+  each is shot, Controls at 854 by 480 and 1920 by 1080, GUI scale 2, and at 1920 by 1080, GUI scale 4. The driver's
+  own Page Up key, under a heading of its own, is unbound first, so Controls shows no clash.
 - The Copy button starts a box: the controls line shows "Copy: Left-click to set the first corner, Right-click to
   cancel", a right click and a use of the place click places no block, and Effortless Building's preview and mode are
   as they were. Aiming at a block's top face, the box's first corner is the space above it; aiming at its side, the
@@ -1465,6 +1470,12 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
 - With Left Ctrl held, the copy stays on the paste's level and its row, moving along the row as the aim moves, and on
   its column when the aim is nearer that; it's shot on the row at both sizes. Let go, the copy rests on the aimed face
   again.
+- H locks the copy, and with Planner1 moved away and aiming elsewhere it stays where it was; it's shot at 854 by 480 and
+  1920 by 1080. Facing north, each arrow key, Page Up and Page Down moves it one block: Up north, Down south, Left west,
+  Right east, Page Up up and Page Down down. Up held down moves it 1 + (ticks down − 1) / 4 blocks, by the driver's
+  count of the ticks the key was down, about 5 a second. H unlocks it, and it rests on the aimed face again. Locked
+  again, a left click pastes it, for the other player too, and it stays locked where it was. With Freecam's camera on
+  and facing east while Planner1 faces north, Up moves it east, away from the camera.
 - A right click puts the copy away, and the radial menu's Paste button brings it back to the aim, turned and mirrored
   as it was. Choosing a mode in the radial menu, or the Block mix button, puts it away too.
 - A box around a real house with no ghost blocks copies its real blocks. With a ghost gold block added inside the house
@@ -1647,6 +1658,11 @@ faces, with sides of odd and even lengths, the origin for each turn and mirror f
 mirror keeping the middle block. `PasteBoxesTest` covers snapping: flush against each face of a paste's box at the
 corner nearest the aim, the most recent paste winning, only 16 kept, and the guide line along a row and a column on the
 latest paste's level.
+
+The copy's keys have unit tests too. `CopyNudgeTest` covers each nudge key's direction from the view's yaw: forward the
+nearest compass direction, back its opposite, left and right its sides, up and down whatever the facing. `KeyRepeatTest`
+covers a key's repeat: a press acts at once, a held key again after 4 ticks and then every 4 (5 a second), the
+computer's own key repeat not counting while the key stays down, and each new press acting at once.
 
 The fill rule's unit tests (`FillRuleTest`) cover each property it compares or ignores: a stair facing another way or
 upside down, a log on another axis, a door with the other hinge or its other half, a bed's other part, a button on

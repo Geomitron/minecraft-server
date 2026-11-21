@@ -1,7 +1,8 @@
 # Step 9's in-game checks: showing and hiding ghost blocks with N and the radial menu's button, drawing while they're
 # hidden, the choice kept across a restart, where the radial menu's buttons sit, with screenshots, the menu's corner
 # text, the key headings in Controls, the box with its
-# list under the crosshair, copy and paste with the copy at the aim worked by the mouse, the Delete box, the material
+# list under the crosshair, copy and paste with the copy at the aim worked by the mouse and its keys, the Delete box,
+# the material
 # list, the counted
 # list kept on the server across restarts, the list screen's buttons, saving, opening and deleting lists, the lists
 # across restarts and on another computer, a damaged lists file, the server's limits, Refresh far from the box, and N on
@@ -298,20 +299,34 @@ xdo 1 mousemove --window %w 5 5
 drv 1 "wait 5" > /dev/null
 check "letting the key go with the pointer moved off Block mix closes the menu and opens nothing" radial_let_go
 
-# Controls: Effortless Building's four keys show under the "Building Planner" heading, with Building Planner's own, in
-# the order Controls sorts them, and no raw key name. The list is scrolled to the heading and shot at 854 by 480, with
-# the heading's and the keys' window boxes (left top right bottom) in the log.
-drv 1 "keybinds" "wait 10" > /dev/null
+# Controls: Building Planner's keys, the copy's seven among them, and Effortless Building's four show under the
+# "Building Planner" heading, in the order Controls sorts them, and no raw key name. The driver's own Page Up key, under
+# a heading of its own, is unbound first, so Controls shows no clash with "Nudge the copy up". The list is scrolled to
+# the heading and shot at 854 by 480 and 1920 by 1080, GUI scale 2, and at 1920 by 1080, GUI scale 4, with the
+# heading's, the keys' and each key row's window boxes (left top right bottom) in the log.
+drv 1 "unbindprobe" "keybinds" "wait 10" > /dev/null
 echo "  controls: $(val 1 keybindlist)" >> /out/checks.log
-planner_keys="Block mix, Open Modifier Settings, Open Radial Menu, Redo, Show or hide ghost blocks, Undo"
-check "Controls shows Effortless Building's four keys under \"Building Planner\", with Building Planner's own" eval \
-	'[[ $(val 1 keybindlist) == *"Building Planner: $planner_keys"* ]]'
+planner_keys="Block mix, Lock or unlock the copy, Nudge the copy back, Nudge the copy down, Nudge the copy forward, \
+Nudge the copy left, Nudge the copy right, Nudge the copy up, Open Modifier Settings, Open Radial Menu, Redo, \
+Show or hide ghost blocks, Undo"
+check "Controls shows the copy's seven keys and Effortless Building's four under \"Building Planner\", with its own" \
+	eval '[[ $(val 1 keybindlist) == *"Building Planner: $planner_keys ; "* ]]'
 check "under one heading" eval '(($(val 1 keybindlist | grep -o "Building Planner: " | wc -l) == 1))'
 check "with no raw key name" eval '[[ $(val 1 keybindlist) != *"key."* ]]'
-echo "  controls boxes: $(val 1 "keybindscroll Building Planner")" >> /out/checks.log
-drv 1 "wait 5" "notoasts" > /dev/null
-shot 1 controls-854x480
 drv 1 "close" "wait 5" > /dev/null
+# controls_shot <width> <height> <gui scale> <name>: Controls scrolled to the heading, in a window of that size, shot.
+controls_shot() {
+	drv 1 "window $1 $2 $3" "wait 20" "keybinds" "wait 10" > /dev/null
+	echo "  controls boxes $4: $(val 1 "keybindscroll Building Planner")" >> /out/checks.log
+	echo "  controls rows $4: $(val 1 "keybindrows Building Planner")" >> /out/checks.log
+	drv 1 "wait 5" "notoasts" > /dev/null
+	shot 1 "$4"
+	drv 1 "close" "wait 5" > /dev/null
+}
+controls_shot 854 480 2 controls-854x480
+controls_shot 1920 1080 2 controls-1920x1080
+controls_shot 1920 1080 4 controls-1920x1080-gui4
+drv 1 "window 854 480 2" "wait 20" > /dev/null
 
 # The Paste button before any copy gives a message.
 nothing_lines=$(chat_count 1 "Nothing to paste. Use Copy first.")
@@ -604,6 +619,77 @@ check "and on the paste's column when the aim is nearer it" \
 xdo 1 keyup Control_L
 check "let go, the copy rests on the aimed face again" eval 'drv 1 "await sprint false" > /dev/null &&
 	drv 1 "await copy at 15,-60,13..16,-59,15 FRONT_BACK COUNTERCLOCKWISE_90" > /dev/null'
+
+# Locking and nudging, on the grass west of the rest. Aimed from the south at -30 -61 30's top, the copy, 2 by 2 by 3
+# blocks as it's turned, rests with the middle of its bottom on -30 -60 30: it fills -30..-29 east to west and 29..31
+# north to south.
+drv 1 "cmd tp @s -29.5 -55 36.5 180 30" "wait 40" > /dev/null
+aim 1 -30 -60 30
+check "the copy rests on the grass, unlocked" eval 'drv 1 \
+	"await copy at -30,-60,29..-29,-59,31 FRONT_BACK COUNTERCLOCKWISE_90" > /dev/null && [[ $(val 1 copylock) == unlocked ]]'
+press 1 h
+check "H locks the copy" eval '[[ $(val 1 copylock) == locked ]]'
+check "and leaves the controls line as it was" eval '[[ $(val 1 modehud) == "$controls" ]]'
+drv 1 "cmd tp @s -22.5 -56 39.5 150 25" "wait 40" > /dev/null
+aim 1 -24 -60 33
+check "walking away and aiming elsewhere leaves the locked copy where it was" eval 'drv 1 "wait 10" > /dev/null &&
+	copy_is 1 "^at -30,-60,29\.\.-29,-59,31 FRONT_BACK COUNTERCLOCKWISE_90 "'
+# Shot with the crosshair on the grass to its right, where an unlocked copy would be.
+drv 1 "lookat -24.5 -60.5 31.5" "wait 5" > /dev/null
+check "and stays there for the shot" copy_is 1 "^at -30,-60,29\.\.-29,-59,31 "
+shots copy-locked
+# Facing north, each key moves the locked copy one block: Up north, away from the view, Down south, Left west, Right
+# east, Page Up up and Page Down down.
+drv 1 "cmd tp @s -29.5 -55 40.5 180 30" "wait 40" > /dev/null
+# nudge <xdotool key> <what it does> <the copy's box after>: presses the key and checks the copy moved there.
+nudge() {
+	press 1 "$1"
+	check "$2" drv 1 "await copy at $3 FRONT_BACK COUNTERCLOCKWISE_90"
+}
+nudge Up "facing north, Up moves the locked copy one block north, away from the view" -30,-60,28..-29,-59,30
+nudge Down "Down one block south, toward the view" -30,-60,29..-29,-59,31
+nudge Left "Left one block west" -31,-60,29..-30,-59,31
+nudge Right "Right one block east" -30,-60,29..-29,-59,31
+nudge Prior "Page Up one block up" -30,-59,29..-29,-58,31
+nudge Next "Page Down one block down" -30,-60,29..-29,-59,31
+# Held down, Up moves it once at the press, again after 0.2 seconds, then every 4 ticks: 1 + (ticks down - 1) / 4
+# blocks, 5 a second.
+# copy_min_z: the north edge of the copy at the aim.
+copy_min_z() {
+	val 1 copy | sed -E 's/^at [^,]+,[^,]+,([-0-9]+)\.\..*/\1/'
+}
+start_z=$(copy_min_z)
+drv 1 "close" "wait 5" "keyticks FORWARD reset" > /dev/null
+xdo 1 keydown Up
+drv 1 "wait 40" > /dev/null
+xdo 1 keyup Up
+drv 1 "wait 5" > /dev/null
+held_ticks=$(val 1 "keyticks FORWARD")
+moved=$((start_z - $(copy_min_z)))
+echo "  Up held for $held_ticks ticks moved the copy $moved blocks north" >> /out/checks.log
+check "a held key moves it again after 0.2 seconds, then every 4 ticks, about 5 blocks a second" eval \
+	'((held_ticks >= 20 && moved == 1 + (held_ticks - 1) / 4))'
+# H unlocks it, and it rests on the aimed face again: aimed at -26 -61 34's top, it fills -26..-25 and 33..35.
+aim 1 -26 -60 34
+press 1 h
+check "H unlocks it" eval '[[ $(val 1 copylock) == unlocked ]]'
+check "and it follows the aim again" drv 1 "await copy at -26,-60,33..-25,-59,35 FRONT_BACK COUNTERCLOCKWISE_90"
+# Locked there, a left click pastes it, and it stays locked where it was.
+press 1 h
+attack_click 1
+check "a left click pastes the locked copy" drv 2 "await block -26 -59 33 minecraft:oak_stairs" \
+	"await block -25 -60 35 minecraft:stone_bricks"
+check "and it stays locked, where it was" eval '[[ $(val 1 copylock) == locked ]] &&
+	copy_is 1 "^at -26,-60,33\.\.-25,-59,35 FRONT_BACK COUNTERCLOCKWISE_90 "'
+# With Freecam's camera on, facing east while Planner1 faces north, Up moves the copy east, away from the camera.
+check "Freecam's camera comes on, facing east" eval '[[ $(val 1 "freecam true") == true ]] &&
+	drv 1 "wait 10" > /dev/null && [[ $(val 1 "camtp -34.5 -56.5 34.5 -90 30") == "FreeCamera -34.5,-56.5,34.5 east" ]]'
+press 1 Up
+check "with Freecam's camera on, Up moves the locked copy away from the camera" \
+	drv 1 "await copy at -25,-60,33..-24,-59,35 FRONT_BACK COUNTERCLOCKWISE_90"
+check "Freecam's camera goes off" eval '[[ $(val 1 "freecam false") == false ]] && drv 1 "wait 10" > /dev/null'
+press 1 h
+check "and H unlocks the copy again" eval '[[ $(val 1 copylock) == unlocked ]]'
 
 # A right click puts the copy away, keeping it, and its controls line goes; the click builds nothing. The scroll wheel
 # then changes the hotbar slot again.

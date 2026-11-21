@@ -33,6 +33,7 @@ import net.minecraft.world.level.block.state.BlockState;
  * list, as for tiles. At the aim, the placement is in Litematica, and its origin is set so that the copy, as it's
  * turned and mirrored, sits in the box {@link CopyPlacement} and {@code PasteBoxes} give for the player's aim. Put
  * away, it's out of Litematica, and the same placement, with its schematic, turn and mirror, comes back to the aim.
+ * Locked, it stays where it is instead of following the aim, and the nudge keys move it.
  */
 final class Clipboard {
 	private static final String REGION = "Copy";
@@ -40,6 +41,8 @@ final class Clipboard {
 	/** The most recent copy, at the aim or put away; null before the first copy. */
 	private SchematicPlacement placement;
 	private boolean atAim;
+	/** Whether the copy stays where it is, not following the aim; a paste keeps it locked. */
+	private boolean locked;
 
 	/** Whether there's a copy, at the aim or put away. */
 	boolean exists() {
@@ -49,6 +52,23 @@ final class Clipboard {
 	/** Whether the copy is at the aim. Cheap enough for the hooks, which ask several times a frame. */
 	boolean atAim() {
 		return atAim;
+	}
+
+	/** Whether the copy at the aim is locked where it is. */
+	boolean locked() {
+		return atAim && locked;
+	}
+
+	/** Locks the copy at the aim where it is, or unlocks it so it follows the aim again. */
+	void toggleLock() {
+		if (atAim) {
+			locked = !locked;
+		}
+	}
+
+	/** Moves the copy one block that way, as it's turned and mirrored. */
+	void nudge(Direction direction) {
+		moveTo(spot().min().relative(direction));
 	}
 
 	/** Once a tick: the copy counts as put away once Litematica no longer has its placement. */
@@ -105,6 +125,7 @@ final class Clipboard {
 		placement = SchematicPlacement.createFor(schematic, min, name, true, true);
 		manager().addSchematicPlacement(placement, false);
 		atAim = true;
+		locked = false;
 	}
 
 	/** Takes the copy out of Litematica, keeping it, as it's turned and mirrored, for {@link #bringBack}. */
@@ -116,14 +137,15 @@ final class Clipboard {
 	}
 
 	/**
-	 * Brings the copy back to the aim, as it was turned and mirrored, at its last origin until it follows the aim. Its
-	 * placement goes back into Litematica before anything about it changes, since changing a placement Litematica doesn't
-	 * have would still draw it.
+	 * Brings the copy back to the aim, unlocked, as it was turned and mirrored, at its last origin until it follows the
+	 * aim. Its placement goes back into Litematica before anything about it changes, since changing a placement
+	 * Litematica doesn't have would still draw it.
 	 */
 	void bringBack() {
 		if (placement != null && !atAim()) {
 			manager().addSchematicPlacement(placement, false);
 			atAim = true;
+			locked = false;
 		}
 	}
 
