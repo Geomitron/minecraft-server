@@ -668,6 +668,13 @@ A line too wide for the screen wraps onto a second line above it, breaking only 
 goes after the last word that leaves it room, or alone on the line below. Effortless Building's own line during its
 shapes stays as it is.
 
+Each wrapped line sits on a dark see-through background, black at 0.5 opacity, the game's chat background at its default
+opacity, as wide as that line's text plus 2 pixels at each side and one line high, so white words stay readable over
+light ghost blocks (white wool, glowstone, snow). `ModeHud` fills it with `GuiGraphicsExtractor.fill` before drawing the
+text. The game's "Text Background" accessibility setting ("Chat" or "Everywhere") doesn't change it: the setting works
+only through `Options.getBackgroundColor`, which the game's own text (the action bar, subtitles, the player list) calls
+and the controls line doesn't, so the background is always there at that opacity.
+
 ### Boxes for Copy and the material list
 
 The radial menu's Copy, Delete and "Material list" buttons start Building Planner's box (`BoxDraw`) for that purpose;
@@ -1548,7 +1555,8 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   the locked line names the four nudges one by one, K and G; with the keys back, it names H and R again. Each line is
   shot at 1920 by 1080, GUI scale 4, the longest (locked and red) at 854 by 480 and 1920 by 1080, GUI scale 2 too, and
   Single's over a floor of ghost white wool, birch planks and glowstone at GUI scales 2 and 4, with the lines as they
-  wrap and their window box in the log (the driver's `modewrap` and `modebox`).
+  wrap and their window box in the log (the driver's `modewrap` and `modebox`), the box being the text's, without the
+  background's 2 pixels at each side.
 - A right click puts the copy away, and the radial menu's Paste button brings it back to the aim, turned and mirrored
   as it was. Choosing a mode in the radial menu, or the Block mix button, puts it away too.
 - A box around a real house with no ghost blocks copies its real blocks. With a ghost gold block added inside the house

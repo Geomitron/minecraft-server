@@ -17,12 +17,14 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.util.ARGB;
 import net.minecraft.util.FormattedCharSequence;
 
 /**
  * The line of a mouse mode's controls, centred where Effortless Building draws its own line during a shape
  * ({@code RenderHandler.renderSubtitle}: 58 above the screen's bottom, with a shadow), in its colours: white, with each
- * action in dark aqua; the lines themselves are worked out by {@link ControlsLine}. A box's line ends with its size, a
+ * action in dark aqua, each wrapped line on a dark see-through background as wide as its text; the lines themselves
+ * are worked out by {@link ControlsLine}. A box's line ends with its size, a
  * box past a limit has a red line above saying which, and the copy's line names in red why it can't be pasted. A
  * line too wide for the screen wraps onto lines above it, keeping the size whole. While a box is drawn, the blocks in it
  * show under the crosshair ({@link BoxList}, laid out by {@link BoxListLayout}), in rows that end above the controls.
@@ -32,6 +34,10 @@ final class ModeHud implements HudElement {
 	private static final int BOTTOM = 58;
 	private static final int MARGIN = 4;
 	private static final int WHITE = -1;
+	/** The black behind each line of text: the opacity of the game's chat background by default (0.5). */
+	private static final int BACKGROUND = ARGB.black(0.5F);
+	/** How far the background reaches past the text at each side, as {@code GuiGraphicsExtractor.textWithBackdrop}'s. */
+	private static final int PADDING = 2;
 
 	/** A line of the controls, and the box's size at its end, which never breaks across lines, or null. */
 	private record Line(Component text, Component size) {
@@ -234,7 +240,14 @@ final class ModeHud implements HudElement {
 		Font font = Minecraft.getInstance().font;
 		List<FormattedCharSequence> wrapped = wrapped(lines, font, graphics.guiWidth() - 2 * MARGIN);
 		int top = top(wrapped.size(), font, graphics.guiHeight());
+		// The backgrounds first, each as wide as its line's text, so no box covers the line above's shadow.
 		int y = top;
+		for (FormattedCharSequence text : wrapped) {
+			int x = (graphics.guiWidth() - font.width(text)) / 2;
+			graphics.fill(x - PADDING, y, x + font.width(text) + PADDING, y + font.lineHeight, BACKGROUND);
+			y += font.lineHeight;
+		}
+		y = top;
 		for (FormattedCharSequence text : wrapped) {
 			graphics.text(font, text, (graphics.guiWidth() - font.width(text)) / 2, y, WHITE, true);
 			y += font.lineHeight;
