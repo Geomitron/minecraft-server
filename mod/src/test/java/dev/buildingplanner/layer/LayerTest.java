@@ -36,6 +36,19 @@ class LayerTest {
 	}
 
 	@Test
+	void theVersionChangesWithEachChangeAndOnlyThen() {
+		Layer layer = new Layer();
+		long before = layer.version();
+		layer.set(BlockPos.ZERO, dirt);
+		long afterSet = layer.version();
+		layer.set(BlockPos.ZERO, dirt);
+		layer.set(new BlockPos(1, 0, 0), air);
+		assertEquals(afterSet, layer.version());
+		layer.replaceColumn(5, 5, List.of());
+		assertTrue(afterSet != before && layer.version() != afterSet);
+	}
+
+	@Test
 	void forEachInVisitsTheGhostBlocksInsideABoxAcrossColumnsAndSections() {
 		Layer layer = new Layer();
 		List<BlockPos> inside = List.of(new BlockPos(-1, 15, 3), new BlockPos(-1, 16, 3), new BlockPos(16, 20, 5));

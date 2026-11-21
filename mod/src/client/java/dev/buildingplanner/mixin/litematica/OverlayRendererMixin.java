@@ -11,15 +11,16 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 
 /**
- * Hook L6: Litematica draws no box or origin marker for a tile. Its own switch for those boxes would hide the copy's
- * box too.
+ * Hook L6: Litematica draws no box or origin marker for a tile, the copy or its row; Building Planner draws the copy's
+ * box itself, in its colours ({@code CopyOutline}). This leaves Litematica's own switch for those boxes as the player
+ * set it.
  */
 @Mixin(value = OverlayRenderer.class, remap = false)
 abstract class OverlayRendererMixin {
 	@WrapOperation(method = "updatePlacementCache", at = @At(value = "INVOKE",
 		target = "Lfi/dy/masa/litematica/schematic/placement/SchematicPlacementManager;getAllSchematicsPlacements()Ljava/util/List;"))
-	private List<SchematicPlacement> buildingplanner$withoutTiles(SchematicPlacementManager manager,
+	private List<SchematicPlacement> buildingplanner$withoutOurs(SchematicPlacementManager manager,
 		Operation<List<SchematicPlacement>> original) {
-		return BuildingPlannerClient.withoutTiles(original.call(manager));
+		return BuildingPlannerClient.withoutOurs(original.call(manager));
 	}
 }

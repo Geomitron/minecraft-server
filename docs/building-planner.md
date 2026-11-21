@@ -989,19 +989,29 @@ three modes; its wheel, shown while R is held, has no equivalent here, since tap
   it follows the view up and down with no block to aim at (`CopyRow`).
 
 The row's other copies are placements of the same schematic, which Litematica draws as it draws the copy and Building
-Planner adds and removes as the row grows and shrinks (hooks L4 and L5 treat them as the copy). While the row is
+Planner adds and removes as the row grows and shrinks (hooks L4, L5 and L6 treat them as the copy). While the row is
 fixed, the wheel and the middle click turn and mirror every copy in it (the first in place, around its middle, and the
 others laid end to end again at the turned length), H, R and the nudge keys act on nothing, and a right click drops
 the row. A copy locked before the first click starts the row where it's locked. A row whose blocks together pass the
 block cap draws red (below), and its click pastes nothing.
 
 **Colours.** The copy's box is drawn by Building Planner through MaLiLib's renderer, as the box for Copy is
-(`RenderUtils.renderAreaOutline`), in Satisfactory's hologram colours (806 Q7 B): blue (#00D4FF) where a paste would go in as it
-shows; yellow (#FFE100) where some of its blocks would replace ghost blocks already there, which the paste still does,
-as Satisfactory's yellow "soft clearance" still builds; and red (#FF7070) where the server would refuse the paste: part
-of the copy outside the world's build height or its border, or a zoop row over the block cap. While it's red, the
-controls line says why and a left click pastes nothing. Hook L6 leaves the copy and its row out of Litematica's own
-placement boxes, as it does tiles. The copy's blocks draw as Litematica draws them.
+(`RenderUtils.renderAreaOutline`, an outline without sides, `CopyOutline`), in Satisfactory's hologram colours (806 Q7
+B): blue (#00D4FF) where a paste would go in as it shows; yellow (#FFE100) where some of its blocks would replace ghost
+blocks already there, which the paste still does, as Satisfactory's yellow "soft clearance" still builds; and red
+(#FF7070) where the server would refuse the paste: part of the copy outside the world's build height or its border, or
+a zoop row over the block cap. While it's red, the controls line says why and a left click pastes nothing and sends no
+edit. Hook L6 leaves the copy and its row out of Litematica's own placement boxes, as it does tiles. The copy's blocks
+draw as Litematica draws them.
+
+The colour is a pure function (`CopyColour`), worked out each frame and at each click. With a zoop's row fixed, each
+copy's box is drawn, and the whole row has one colour, since it pastes as one edit. Red follows the server's checks in
+its order: the row's blocks over the cap, then the build height, then the border. The copy's box is the smallest box
+around its blocks, so the row's two corners stand for its blocks in the height and border checks. Yellow reads the
+player's copy of the layer whether ghost blocks show or not, since a paste shows them again and replaces them. A ghost
+block the same as the copy's block there doesn't count, since the paste leaves it as it is. Whether the copy is over
+ghost blocks is kept until the row's boxes, the copy, its turn or the layer change. A zoop's first click, which pastes
+nothing, still fixes the row while the copy is red; the second click is the one that pastes nothing.
 
 Turning and mirroring set the placement's rotation and mirror, which Litematica applies mirror first, then rotation;
 the mirror combines its flip with the turn already set, and the origin then moves so the copy keeps its place (see
@@ -1501,6 +1511,15 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   bottom of the world.
 - With Zoop set, a new copy made with the Copy button keeps the mode, and its first click fixes a row. After Planner1's
   game restarts, the mode is Single again.
+- The copy's colours (the driver's `copycolour`): on the grass it's blue, and Litematica draws no box for it or for a
+  zoop row's copies (hook L6, the driver's `boxes`), which are blue too; over a ghost gold block its stone bricks would
+  replace, it's yellow, and its click still pastes. Locked and nudged down to the world's bottom it's blue, and one
+  block lower, partly below the build height, it's red; then, back on the grass, with a world border whose edge
+  crosses it, it's red again. Each red click pastes nothing, sends no edit and adds no chat line, and the copy stays
+  locked where it was; with the border back, it's blue. A copy of 102,400 ghost stone blocks is blue, and a Vertical
+  row of two of them, 204,800 blocks, is red; its click sends no edit and leaves the row, and aimed back to one copy
+  the row is blue. The copy is shot blue on the grass, yellow over the ghost blocks, red at the border, and the red row
+  over the cap, each at 854 by 480 and 1920 by 1080, GUI scale 2.
 - A right click puts the copy away, and the radial menu's Paste button brings it back to the aim, turned and mirrored
   as it was. Choosing a mode in the radial menu, or the Block mix button, puts it away too.
 - A box around a real house with no ghost blocks copies its real blocks. With a ghost gold block added inside the house
@@ -1698,6 +1717,14 @@ farthest along with a tie going east or west, the row ending with the copy that 
 turned copy its turned length apart; Vertical up and down its height apart, whatever the aim's distance to the side;
 the view's height for Vertical, looking up, down, away and straight up; and the box around the row.
 
+The copy's colour has unit tests as a pure function too. `CopyColourTest` covers a copy on clear ground and one beside
+ghost blocks, blue; a copy whose block would replace a ghost block, yellow, but not over a ghost block the same as its
+own; a row yellow when any of its copies is; a copy partly above or below the build height and one partly outside the
+border, red, and one just inside each, blue; red over yellow; a row over the block cap, red, and one at the cap, blue;
+a row reaching past the build height while its first copy doesn't; the cap checked first, as on the server; and ghost
+blocks read only while no red check fails. `LayerTest` covers the layer's version, which changes with each change and
+only then.
+
 The fill rule's unit tests (`FillRuleTest`) cover each property it compares or ignores: a stair facing another way or
 upside down, a log on another axis, a door with the other hinge or its other half, a bed's other part, a button on
 another face, a sign turned another way and a hopper, piston, dripstone tip and crafter facing another way stay; a
@@ -1769,3 +1796,6 @@ other in the game's own copy of the layer, again after a restart, which doesn't 
 - How long the server takes to read a player's lists file at join, on the server thread: expected to be a few
   milliseconds for a few hundred lists, not measured.
 - A real 0.5.0 game on a 0.6.0 server: `step8.sh` hands the client a made-up `hello` of protocol version 4.
+- How long the copy's yellow check takes for a large copy moving over ghost blocks: each time the copy moves over a
+  column of the layer, it reads the blocks of every copy in the row until one would replace a ghost block, up to the
+  block cap of 200,000; expected a few milliseconds, not measured.

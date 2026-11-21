@@ -25,6 +25,13 @@ public final class Layer {
 
 	private final Long2ObjectOpenHashMap<LayerColumn> columns = new Long2ObjectOpenHashMap<>();
 	private final LongOpenHashSet changedAreas = new LongOpenHashSet();
+	/** Counts every change to the layer's blocks, so a reader can tell whether what it worked out still holds. */
+	private long version;
+
+	/** A number that changes whenever a ghost block does, by {@link #set} or {@link #replaceColumn}. */
+	public long version() {
+		return version;
+	}
 
 	/** A key for a column's or an area's two coordinates. */
 	public static long key(int x, int z) {
@@ -62,6 +69,7 @@ public final class Layer {
 			columns.remove(columnKey);
 		}
 		if (replaced != state && !(replaced.isAir() && state.isAir())) {
+			version++;
 			changedAreas.add(key(chunkX >> AREA_SHIFT, chunkZ >> AREA_SHIFT));
 		}
 		return replaced;
@@ -117,6 +125,7 @@ public final class Layer {
 	}
 
 	void putColumn(int chunkX, int chunkZ, LayerColumn column) {
+		version++;
 		if (column.isEmpty()) {
 			columns.remove(key(chunkX, chunkZ));
 		} else {

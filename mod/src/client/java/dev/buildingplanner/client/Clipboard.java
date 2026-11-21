@@ -54,6 +54,10 @@ final class Clipboard {
 	private final List<SchematicPlacement> row = new ArrayList<>();
 	/** The boxes of the row's copies, the copy's own first, as {@link #showRow} last set them. */
 	private List<Spot> rowSpots = List.of();
+	/** {@link #blocksFromCorner} as last worked out, for this placement turned this way; null before. */
+	private Map<BlockPos, BlockState> fromCorner;
+	private SchematicPlacement fromCornerPlacement;
+	private Turn fromCornerTurn;
 
 	/** Whether there's a copy, at the aim or put away. */
 	boolean exists() {
@@ -292,6 +296,23 @@ final class Clipboard {
 			}
 		}
 		return blocks;
+	}
+
+	/**
+	 * The copy's blocks as {@link #worldBlocks} gives them, by their position from the copy's lowest corner, kept until
+	 * the copy is turned or mirrored, or replaced.
+	 */
+	Map<BlockPos, BlockState> blocksFromCorner() {
+		Turn turn = turnNow();
+		if (fromCorner == null || fromCornerPlacement != placement || !turn.equals(fromCornerTurn)) {
+			BlockPos corner = spot().min();
+			Map<BlockPos, BlockState> blocks = new LinkedHashMap<>();
+			worldBlocks().forEach((pos, state) -> blocks.put(pos.subtract(corner), state));
+			fromCorner = blocks;
+			fromCornerPlacement = placement;
+			fromCornerTurn = turn;
+		}
+		return fromCorner;
 	}
 
 	/** Gives the copy a quarter turn around its middle, clockwise or counterclockwise seen from above. */

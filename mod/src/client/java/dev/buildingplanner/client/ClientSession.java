@@ -2,6 +2,7 @@ package dev.buildingplanner.client;
 
 import dev.buildingplanner.BuildingPlanner;
 import dev.buildingplanner.ClientConfig;
+import dev.buildingplanner.input.CopyColour;
 import dev.buildingplanner.input.CopyMode;
 import dev.buildingplanner.input.CopyPlacement;
 import dev.buildingplanner.input.CopyRow;
@@ -58,6 +59,12 @@ final class ClientSession {
 	private final Clipboard clipboard = new Clipboard();
 	/** The player's recent pastes in this dimension, which the copy snaps to. */
 	private final PasteBoxes pastes = new PasteBoxes();
+	/** Whether the copy was over ghost blocks, for these row boxes, these blocks and this layer at this version. */
+	private boolean overGhosts;
+	private List<CopyPlacement.Spot> ghostsRow;
+	private Map<BlockPos, BlockState> ghostsBlocks;
+	private Layer ghostsLayer;
+	private long ghostsVersion;
 	private final BoxDraw box;
 	private final BoxList list = new BoxList();
 	private final ListSync lists = new ListSync();
@@ -466,26 +473,69 @@ final class ClientSession {
 	 * first click fixes the copy as the row's first, and the second pastes the whole row as one shape edit, which one
 	 * undo takes back, and the copy then follows the aim again (unless it's locked) for a new row. A paste names only
 	 * the copies' blocks, so their empty space leaves the layer's, and its box joins the recent pastes the copy snaps
-	 * to.
+	 * to. While the copy, or its row, is red ({@link #copyShown}), the click that would paste pastes nothing and sends
+	 * no edit; a zoop's first click, which pastes nothing anyway, still fixes the row.
 	 */
 	void paste() {
 		if (!clipboard.atAim()) {
 			return;
 		}
+		boolean red = copyShown().red();
 		if (copyMode == CopyMode.SINGLE) {
+			if (red) {
+				return;
+			}
 			if (sendShape(EditKind.SHAPE, clipboard.worldBlocks())) {
 				pastes.add(clipboard.spot());
 			}
 		} else if (!clipboard.rowFixed()) {
 			clipboard.fixRow();
 			followAim();
-		} else {
+		} else if (!red) {
 			CopyPlacement.Spot box = clipboard.rowBox();
 			if (sendShape(EditKind.SHAPE, clipboard.rowBlocks())) {
 				pastes.add(box);
 				dropRow();
 			}
 		}
+	}
+
+	/**
+	 * The colour of the copy at the aim and its row, if one is fixed ({@link CopyColour}), against the world's build
+	 * height and border and the server's block cap, and the player's copy of the layer whether or not ghost blocks show,
+	 * since a paste shows them again and replaces them. Asked each frame to draw it and at each paste, so whether the
+	 * copy is over ghost blocks, which reads each of its blocks, is kept until the row's boxes, the copy, its turn or
+	 * the layer change. Null while the copy isn't at the aim.
+	 */
+	CopyColour.Shown copyShown() {
+		ClientLevel level = Minecraft.getInstance().level;
+		if (!clipboard.atAim() || level == null) {
+			return null;
+		}
+		List<CopyPlacement.Spot> row = clipboard.rowSpots();
+		Map<BlockPos, BlockState> blocks = clipboard.blocksFromCorner();
+		Layer layer = replica.layer();
+		return CopyColour.of(row, blocks.size(), new CopyColour.World() {
+			@Override
+			public boolean inBuildHeight(int y) {
+				return !level.isOutsideBuildHeight(y);
+			}
+
+			@Override
+			public boolean insideBorder(BlockPos pos) {
+				return level.getWorldBorder().isWithinBounds(pos);
+			}
+		}, maxEditBlocks, () -> {
+			if (!row.equals(ghostsRow) || blocks != ghostsBlocks || layer != ghostsLayer
+				|| layer.version() != ghostsVersion) {
+				overGhosts = CopyColour.overGhosts(row, blocks, layer);
+				ghostsRow = row;
+				ghostsBlocks = blocks;
+				ghostsLayer = layer;
+				ghostsVersion = layer.version();
+			}
+			return overGhosts;
+		});
 	}
 
 	/**

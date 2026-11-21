@@ -1,7 +1,8 @@
 # Step 9's in-game checks: showing and hiding ghost blocks with N and the radial menu's button, drawing while they're
 # hidden, the choice kept across a restart, where the radial menu's buttons sit, with screenshots, the menu's corner
 # text, the key headings in Controls, the box with its
-# list under the crosshair, copy and paste with the copy at the aim worked by the mouse and its keys, the Delete box,
+# list under the crosshair, copy and paste with the copy at the aim worked by the mouse and its keys, the copy's
+# colours, the Delete box,
 # the material
 # list, the counted
 # list kept on the server across restarts, the list screen's buttons, saving, opening and deleting lists, the lists
@@ -486,6 +487,8 @@ check "and places no real block" eval '[[ $(val 1 "real 4 -59 20") == minecraft:
 check "and isn't shared" eval 'drv 2 "wait 20" > /dev/null && [[ $(val 2 "get 4 -59 20") == minecraft:air ]]'
 check "Litematica neither selects the copy nor lists it" eval '[[ $(val 1 selected) != "the copy" ]] &&
 	[[ $(val 1 placementlist) == *"others: none" ]]'
+check "on open ground, Building Planner draws the copy's box blue" drv 1 "await copycolour BLUE"
+check "and Litematica draws no box for it (hook L6)" eval '[[ $(val 1 boxes) == *"others: none" ]]'
 drv 1 "close" "await noscreen" > /dev/null
 shots copy-on-floor
 
@@ -560,6 +563,8 @@ echo "  where the copy overlaps ghost blocks: 15 -59 5 shows $(val 1 "get 15 -59
 check "the copy's blocks show where they overlap, and the glass in its empty space" eval '
 	[[ $(val 1 "get 15 -58 4") == minecraft:glass ]] && [[ $(val 1 "get 15 -59 5") == minecraft:stone_bricks ]]'
 shot 1 copy-over-ghosts
+check "over ghost blocks its stone bricks would replace, the copy is yellow" drv 1 "await copycolour YELLOW"
+shots copy-yellow
 
 # A left click pastes it where it shows: its 8 blocks, the stairs still facing west, and its empty space leaves the
 # glass. The aim runs on to the real grass at 15 -61 5, which the click leaves.
@@ -688,6 +693,44 @@ press 1 Up
 check "with Freecam's camera on, Up moves the locked copy away from the camera" \
 	drv 1 "await copy at -25,-60,33..-24,-59,35 FRONT_BACK COUNTERCLOCKWISE_90"
 check "Freecam's camera goes off" eval '[[ $(val 1 "freecam false") == false ]] && drv 1 "wait 10" > /dev/null'
+# The copy's colours as it's locked and nudged: blue on the grass; red with part of it below the build height (the
+# world's bottom is -64), where a left click pastes nothing and sends no edit; red again with part of it outside the
+# world border, shot there; blue once the border is back.
+check "on the grass, the locked copy is blue" drv 1 "await copycolour BLUE"
+press 1 Next
+press 1 Next
+press 1 Next
+press 1 Next
+check "nudged down to the world's bottom, it's still blue" eval \
+	'drv 1 "await copy at -25,-64,33..-24,-63,35 FRONT_BACK COUNTERCLOCKWISE_90" > /dev/null &&
+	[[ $(val 1 copycolour) == BLUE ]]'
+press 1 Next
+check "one block lower, part of it is below the build height, and it's red" eval \
+	'drv 1 "await copy at -25,-65,33..-24,-64,35 FRONT_BACK COUNTERCLOCKWISE_90" > /dev/null &&
+	drv 1 "await copycolour RED BUILD_HEIGHT" > /dev/null'
+lines=$(chat_lines 1)
+attack_click 1
+check "a left click on the red copy pastes nothing and sends no edit" eval 'drv 1 "wait 20" > /dev/null &&
+	[[ $(val 1 holdlog) == *" edits=0 "* ]] && (($(chat_lines 1) == lines))'
+check "and the copy stays locked where it was" eval '[[ $(val 1 copylock) == locked ]] &&
+	copy_is 1 "^at -25,-65,33\.\.-24,-64,35 "'
+for _ in 1 2 3 4 5; do press 1 Prior; done
+check "nudged back up onto the grass, it's blue again" eval \
+	'drv 1 "await copy at -25,-60,33..-24,-59,35 FRONT_BACK COUNTERCLOCKWISE_90" > /dev/null &&
+	drv 1 "await copycolour BLUE" > /dev/null'
+# A border 200 blocks across whose north edge is at z 34 (its centre has decimals, so the game doesn't move it to a
+# block's middle): the copy's north row, at z 33, is outside, and Planner1, at z 40.5, is inside.
+drv 1 "cmd worldborder center -25.0 134.0" "cmd worldborder set 200" > /dev/null
+check "with part of it outside the world border, it's red" drv 1 "await copycolour RED WORLD_BORDER"
+lines=$(chat_lines 1)
+attack_click 1
+check "and its left click pastes nothing and sends no edit" eval 'drv 1 "wait 20" > /dev/null &&
+	[[ $(val 1 holdlog) == *" edits=0 "* ]] && (($(chat_lines 1) == lines))'
+check "Litematica draws no box for the copy" eval '[[ $(val 1 boxes) == *"others: none" ]]'
+drv 1 "lookat -24.5 -60 33.5" > /dev/null
+shots copy-red-border
+drv 1 "cmd worldborder center 0.0 0.0" "cmd worldborder set 59999968" > /dev/null
+check "with the border back, it's blue" drv 1 "await copycolour BLUE"
 press 1 h
 check "and H unlocks the copy again" eval '[[ $(val 1 copylock) == unlocked ]]'
 
@@ -720,6 +763,8 @@ check "aimed north, the row follows the aim: 4 copies end to end, each the copy'
 check "the first copy stays where the first click fixed it" copy_is 1 "^at -45,-60,33\.\.-44,-59,35 "
 check "Litematica draws each copy, the fourth's stairs at its north west corner" eval \
 	'[[ $(val 1 "get -45 -59 24") == minecraft:oak_stairs ]] && [[ $(val 1 "get -45 -59 33") == minecraft:oak_stairs ]]'
+check "Litematica draws no box for the row's copies, and Building Planner draws them blue" eval \
+	'[[ $(val 1 boxes) == *"others: none" ]] && [[ $(val 1 copycolour) == BLUE ]]'
 shots zoop-row
 aim 1 -45 -60 0
 check "aimed farther, the row stops at 10 copies" \
@@ -1063,6 +1108,51 @@ drv 1 "edit 60 -60 2 139 -11 51 minecraft:air" "edit 139 -10 51 139 -10 51 minec
 check "erasing all of Big reaches both games" eval 'drv 2 "await block 60 -60 2 minecraft:air" \
 	"await block 139 -11 51 minecraft:air" "await block 139 -10 51 minecraft:air" &&
 	drv 1 "await block 139 -11 51 minecraft:air"'
+
+# A row over the block cap draws red, and its click pastes nothing. Ghost stone from 60 -60 2 to 123 -36 65, 64 by 25
+# by 64 blocks, is 102,400 blocks: one copy is under the cap and a row of two is over it. A box from the space above
+# its top corner copies it, and the copy rests on its top, from 60 -35 2 to 123 -11 65, and draws blue. In Vertical,
+# looking down at the stone's top, the row goes down 2 copies, 204,800 blocks.
+drv 1 "edit 60 -60 2 123 -36 65 minecraft:stone" > /dev/null
+check "client 1 sees the 102,400 ghost stone" drv 1 "await block 60 -60 2 minecraft:stone" \
+	"await block 123 -36 65 minecraft:stone"
+copy_button
+box 1 123.5 -35 65.5 -35 60 2 -60
+check "a box around it copies its 102,400 blocks" client_said 1 "Copied 102400 blocks."
+drv 1 "lookat 91.5 -35 33.5" "wait 5" > /dev/null
+check "the copy rests on the stone's top, under the block cap, blue" eval \
+	'drv 1 "await copy at 60,-35,2..123,-11,65 NONE NONE unselected 102400 blocks" > /dev/null &&
+	drv 1 "await copycolour BLUE" > /dev/null'
+press 1 r
+press 1 r
+attack_click 1
+check "in Vertical, the first click fixes the row's start, still blue" eval '[[ $(val 1 copymode) == VERTICAL ]] &&
+	drv 1 "await row 1 copies, 1 placements NONE NONE: 60,-35,2..123,-11,65" > /dev/null &&
+	[[ $(val 1 copycolour) == BLUE ]]'
+drv 1 "lookat 91.5 -36.5 33.5" "wait 5" > /dev/null
+check "a row of two copies, 204,800 blocks, is over the block cap and draws red" eval \
+	'drv 1 "await row 2 copies, 2 placements NONE NONE: 60,-35,2..123,-11,65 ; 60,-60,2..123,-36,65" > /dev/null &&
+	drv 1 "await copycolour RED TOO_MANY_BLOCKS" > /dev/null'
+check "Litematica draws no box for the copy or its row" eval '[[ $(val 1 boxes) == *"others: none" ]]'
+drv 1 "wait 200" > /dev/null
+shots copy-red-row-over-cap
+lines=$(chat_lines 1)
+attack_click 1
+check "its click pastes nothing and sends no edit" eval 'drv 1 "wait 20" > /dev/null &&
+	[[ $(val 1 holdlog) == *" edits=0 "* ]] && [[ $(val 2 "get 60 -35 2") == minecraft:air ]] &&
+	(($(chat_lines 1) == lines))'
+check "and leaves the row fixed" drv 1 "await row 2 copies"
+drv 1 "lookat 91.5 -20 33.5" "wait 5" > /dev/null
+check "aimed back into the first copy, the row is one copy again, and blue" eval \
+	'drv 1 "await row 1 copies" > /dev/null && drv 1 "await copycolour BLUE" > /dev/null'
+use_click 1
+press 1 r
+check "a right click drops the row, and R switches back to Single" eval '[[ $(val 1 copyrow) == none ]] &&
+	[[ $(val 1 copymode) == SINGLE ]]'
+use_click 1
+drv 1 "edit 60 -60 2 123 -36 65 minecraft:air" > /dev/null
+check "a right click puts the copy away, and the stone is erased" eval 'drv 1 "wait 10" > /dev/null &&
+	copy_is 1 "^away " && drv 1 "await block 60 -60 2 minecraft:air" "await block 123 -36 65 minecraft:air" > /dev/null'
 
 # A box of one block: three clicks on the glowstone at 4 -59 3, the first on its side.
 drv 1 "cmd tp @s 8.5 -56 9.5 0 30" "wait 40" > /dev/null

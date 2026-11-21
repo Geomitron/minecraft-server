@@ -3,6 +3,7 @@ package dev.buildingplanner.client;
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.buildingplanner.BuildingPlanner;
 import dev.buildingplanner.ClientConfig;
+import dev.buildingplanner.input.CopyColour;
 import dev.buildingplanner.input.MouseMode;
 import dev.buildingplanner.layer.Layer;
 import dev.buildingplanner.look.GhostsShown;
@@ -121,6 +122,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		copyKeys = new CopyKeys();
 		glow = EditGlow.registered();
 		BoxOutline.registered(BuildingPlannerClient::boxShown);
+		CopyOutline.registered(BuildingPlannerClient::copyShown);
 		modeHud = new ModeHud(BuildingPlannerClient::mouseMode, BuildingPlannerClient::boxShown,
 			() -> session == null ? List.of() : session.boxList());
 		HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(BuildingPlanner.MOD_ID, "mode_controls"),
@@ -334,6 +336,15 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		return session == null ? null : session.boxShown();
 	}
 
+	/** The copy at the aim as it's drawn, in its colour, with its row's boxes, or null. */
+	private static CopyOutline.Shown copyShown() {
+		if (session == null) {
+			return null;
+		}
+		CopyColour.Shown colour = session.copyShown();
+		return colour == null ? null : new CopyOutline.Shown(colour, session.clipboard().rowSpots());
+	}
+
 	/**
 	 * The radial menu's Paste button: brings the most recent copy back to the aim, ending a box and dropping a shape
 	 * under way, whose clicks the copy now takes; with no copy, says so. Only the radial menu, which is Effortless
@@ -472,12 +483,15 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		return session != null;
 	}
 
-	/** Hook L6: whether the placement is one of the tiles that hand the layer to Litematica. */
+	/** Whether the placement is one of the tiles that hand the layer to Litematica. */
 	public static boolean isTile(SchematicPlacement placement) {
 		return session != null && session.tiles().holds(placement);
 	}
 
-	/** Hooks L4 and L5: whether the placement is a tile or the copy, which Litematica never selects or lists. */
+	/**
+	 * Hooks L4 and L5: whether the placement is a tile or the copy or one of its row's, which Litematica never selects
+	 * or lists.
+	 */
 	public static boolean isOurs(SchematicPlacement placement) {
 		return session != null && (session.tiles().holds(placement) || session.clipboard().holds(placement));
 	}
@@ -487,16 +501,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		return session != null && session.tiles().holds(container);
 	}
 
-	/** Hook L6: the placements without the tiles. */
-	public static List<SchematicPlacement> withoutTiles(Collection<SchematicPlacement> placements) {
-		if (session == null) {
-			return placements instanceof List<SchematicPlacement> list ? list : List.copyOf(placements);
-		}
-		Tiles tiles = session.tiles();
-		return placements.stream().filter(placement -> !tiles.holds(placement)).toList();
-	}
-
-	/** Hook L5: the placements without the tiles and the copy. */
+	/** Hooks L5 and L6: the placements without the tiles, the copy and its row. */
 	public static List<SchematicPlacement> withoutOurs(Collection<SchematicPlacement> placements) {
 		if (session == null) {
 			return placements instanceof List<SchematicPlacement> list ? list : List.copyOf(placements);

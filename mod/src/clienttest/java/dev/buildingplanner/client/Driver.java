@@ -1,5 +1,6 @@
 package dev.buildingplanner.client;
 
+import dev.buildingplanner.input.CopyColour;
 import dev.buildingplanner.input.CopyNudge;
 import dev.buildingplanner.input.CopyPlacement;
 import dev.buildingplanner.input.RepeatSpeed;
@@ -222,6 +223,11 @@ public final class Driver implements ClientModInitializer {
 			case "copymode" -> {
 				// copymode: the copy's build mode, SINGLE, ZOOP or VERTICAL.
 				return ClientSession.copyMode().name();
+			}
+			case "copycolour" -> {
+				// copycolour: the colour Building Planner draws the copy at the aim's box in, BLUE, YELLOW or RED with
+				// the server's reason (RED BUILD_HEIGHT, say), or none.
+				return copyColour();
 			}
 			case "copyrow" -> {
 				// copyrow: the zoop's row at the copy (see row()).
@@ -951,6 +957,7 @@ public final class Driver implements ClientModInitializer {
 			case "glow" -> glows().contains(what.substring(5));
 			case "copy" -> copy().startsWith(what.substring(5));
 			case "row" -> row().startsWith(what.substring(4));
+			case "copycolour" -> copyColour().equals(what.substring(11));
 			case "sprint" -> mc.options.keySprint.isDown() == Boolean.parseBoolean(a[1]);
 			case "noglow" -> glows().isEmpty();
 			case "held" -> SentPackets.held(a[1].equals("use"));
@@ -974,6 +981,7 @@ public final class Driver implements ClientModInitializer {
 				case "glow" -> glows();
 				case "copy" -> copy();
 				case "row" -> row();
+				case "copycolour" -> copyColour();
 				case "layer" -> LayerProbe.compare(Minecraft.getInstance().gameDirectory.toPath().resolve(a[2]));
 				case "listfile" -> "file " + ListProbe.lastCounted(Minecraft.getInstance().gameDirectory.toPath()
 					.resolve(a[2])) + ", game " + ListProbe.current();
@@ -1147,6 +1155,15 @@ public final class Driver implements ClientModInitializer {
 			: "away") + " "
 			+ p.getMirror() + " " + p.getRotation() + (selected ? " selected " : " unselected ")
 			+ clipboard.worldBlocks().size() + " blocks";
+	}
+
+	/** The copy at the aim's colour, as {@code copycolour} gives it. */
+	private static String copyColour() throws Exception {
+		if (session() == null) {
+			return "nosession";
+		}
+		CopyColour.Shown shown = session().copyShown();
+		return shown == null ? "none" : shown.colour() + (shown.refusal() == null ? "" : " " + shown.refusal());
 	}
 
 	/**
