@@ -37,6 +37,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
 import net.minecraft.client.tutorial.TutorialSteps;
@@ -59,23 +60,50 @@ import net.minecraft.world.phys.Vec3;
  */
 public final class Driver implements ClientModInitializer {
 	private static final int AWAIT_TICKS = 1200;
+	/**
+	 * The most client ticks a {@code quickclick} lasts: the most a click can last and still act once, since a held
+	 * button first repeats on its fifth tick down ({@code HoldRepeat.FIRST_WAIT}).
+	 */
+	private static final int QUICK_CLICK_TICKS = 3;
 
 	private int done;
 	private int wait;
 	private String awaiting;
 	private Supplier<String> condition;
 	private int awaitedTicks;
+	/** The button {@code quickclick} armed, and the client ticks it has been down since. */
+	private KeyMapping quickClick;
+	private int quickClickTicks;
+	/** The button to let go at the start of the next client tick. */
+	private KeyMapping release;
 
 	@Override
 	public void onInitializeClient() {
 		PageProbe.register();
-		ClientTickEvents.START_CLIENT_TICK.register(mc -> SentPackets.startTick());
+		ClientTickEvents.START_CLIENT_TICK.register(mc -> {
+			SentPackets.startTick();
+			if (release != null) {
+				release.setDown(false);
+				release = null;
+			}
+		});
 		ClientTickEvents.END_CLIENT_TICK.register(this::tick);
 	}
 
 	private void tick(Minecraft mc) {
 		SentPackets.buttons(mc.options.keyUse.isDown() && mc.gui.screen() == null,
 			mc.options.keyAttack.isDown() && mc.gui.screen() == null);
+		if (quickClick != null) {
+			if (quickClick.isDown() && mc.gui.screen() == null) {
+				if (++quickClickTicks == QUICK_CLICK_TICKS) {
+					release = quickClick;
+					quickClick = null;
+				}
+			} else if (quickClickTicks > 0) {
+				// The real button came up first.
+				quickClick = null;
+			}
+		}
 		if (wait > 0) {
 			wait--;
 			return;
@@ -430,8 +458,17 @@ public final class Driver implements ClientModInitializer {
 				return SentPackets.effortless();
 			}
 			case "holdreset" -> {
-				// holdreset: starts the hold log again.
+				// holdreset: starts the hold log again, and disarms quickclick.
 				SentPackets.resetHoldLog();
+				quickClick = null;
+				return "ok";
+			}
+			case "quickclick" -> {
+				// quickclick <use|attack>: the next press of that button lasts at most 3 client ticks: the driver lets
+				// it go in the game then, however late the real button comes up, so a slow frame the game catches up
+				// on can't stretch the click to the ticks after which a held button repeats.
+				quickClick = a[1].equals("use") ? mc.options.keyUse : mc.options.keyAttack;
+				quickClickTicks = 0;
 				return "ok";
 			}
 			case "holdlog" -> {

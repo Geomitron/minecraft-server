@@ -173,8 +173,11 @@ click() {
 }
 
 # use_click <client> and attack_click <client>: the right (use) and left (attack) mouse buttons, held until the
-# driver has seen them down in a client tick, as Effortless Building checks, and let go at once, well before the 4
-# ticks after which a held button repeats. A held time would make a click repeat when the game runs fast.
+# driver has seen them down in a client tick, as Effortless Building checks, then let go. The driver's quickclick
+# ends the click in the game after 3 ticks at most, the longest a click can last and act once: the real button comes
+# up only after a round trip through the driver's files, and a slow frame on the virtual screen's software rendering,
+# which the game then catches up on, can stretch that wait past the 4 ticks after which a held button repeats. A held
+# time would make a click repeat too.
 use_click() {
 	held_click "$1" 3 use
 }
@@ -183,7 +186,7 @@ attack_click() {
 }
 held_click() {
 	local status=0
-	drv "$1" "holdreset" > /dev/null
+	drv "$1" "holdreset" "quickclick $3" > /dev/null
 	xdo "$1" mousedown "$2"
 	drv "$1" "await held $3" > /dev/null || status=$?
 	xdo "$1" mouseup "$2"
