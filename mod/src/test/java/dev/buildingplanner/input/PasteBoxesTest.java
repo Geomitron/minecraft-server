@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import dev.buildingplanner.input.CopyPlacement.Spot;
+import java.util.ArrayList;
+import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
@@ -79,6 +81,35 @@ class PasteBoxesTest {
 			pastes.place(new BlockPos(1, 1, 1), Direction.UP, SIZE, false));
 		pastes.clear();
 		assertNull(pastes.latest());
+	}
+
+	@Test
+	void eachCopyOfARowIsAPasteOfItsOwn() {
+		// A row of 4 copies, each 2 by 2 by 3, end to end along x.
+		PasteBoxes pastes = new PasteBoxes();
+		pastes.addAll(List.of(spot(0, 0, 0, 1, 1, 2), spot(2, 0, 0, 3, 1, 2), spot(4, 0, 0, 5, 1, 2), spot(6, 0, 0, 7, 1, 2)));
+		// Aimed in the third copy, the new copy sits flush beside the third, not the row's end.
+		assertEquals(spot(4, 0, 3, 5, 1, 5), pastes.place(new BlockPos(4, 0, 2), Direction.SOUTH, SIZE, false));
+		// The last copy is the most recent paste, which Left Ctrl lines up with.
+		assertEquals(spot(6, 0, 0, 7, 1, 2), pastes.latest());
+	}
+
+	@Test
+	void theSixteenPasteCapCountsEachCopyOfARow() {
+		PasteBoxes pastes = new PasteBoxes();
+		List<Spot> first = new ArrayList<>();
+		List<Spot> second = new ArrayList<>();
+		for (int i = 0; i < 10; i++) {
+			first.add(spot(2 * i, 0, 0, 2 * i + 1, 1, 2));
+			second.add(spot(2 * i, 0, 10, 2 * i + 1, 1, 12));
+		}
+		pastes.addAll(first);
+		pastes.addAll(second);
+		// Two rows of 10 keep the second row and only the last 6 copies of the first.
+		assertEquals(spot(8, 0, 3, 9, 1, 5), pastes.place(new BlockPos(8, 0, 2), Direction.SOUTH, SIZE, false));
+		assertEquals(CopyPlacement.againstFace(new BlockPos(6, 0, 2), Direction.SOUTH, SIZE),
+			pastes.place(new BlockPos(6, 0, 2), Direction.SOUTH, SIZE, false));
+		assertEquals(spot(18, 0, 10, 19, 1, 12), pastes.latest());
 	}
 
 	@Test

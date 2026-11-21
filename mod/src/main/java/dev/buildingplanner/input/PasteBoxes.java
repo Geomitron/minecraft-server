@@ -3,6 +3,7 @@ package dev.buildingplanner.input;
 import dev.buildingplanner.input.CopyPlacement.Spot;
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
@@ -24,6 +25,11 @@ public final class PasteBoxes {
 		while (boxes.size() > KEPT) {
 			boxes.removeLast();
 		}
+	}
+
+	/** A row's copies, each as a paste of its own, in the order they were laid, so the last is the most recent. */
+	public void addAll(List<Spot> row) {
+		row.forEach(this::add);
 	}
 
 	/** Forgets every paste, on leaving the server or changing dimension. */

@@ -924,7 +924,8 @@ against the aimed face again, unless it's locked (below), when it spins in place
 **Snapping.** Every position is on Minecraft's block grid, so the copy always lines up with blocks, as Satisfactory's
 buildings line up with the grid on a foundation. Beyond the grid, the copy snaps to the player's own pastes, as a
 Satisfactory foundation snaps edge to edge to the foundation it's aimed at (806 Q3 C): while the aimed block lies in the box of
-one of the player's 16 most recent pastes in this dimension (`PasteBoxes`, whatever has happened to their blocks since),
+one of the player's 16 most recent pastes in this dimension (`PasteBoxes`, whatever has happened to their blocks since;
+each copy of a Zoop or Vertical row counts as a paste of its own),
 the copy sits flush against the face of that box the player aims at, without overlapping it, with its edges in line
 with the box's edges at the corner nearest the aim. The most recent of those pastes counts when the aimed block lies in
 several. "Nearest" compares the aimed block with the box's two edges along each side of the face, and a tie takes the
@@ -983,7 +984,10 @@ three modes; its wheel, shown while R is held, has no equivalent here, since tap
   row ends with the copy that holds it along the row, and a tie between directions takes east or west. While the
   player aims at nothing, the row stays as it was. The second left click pastes the whole row as one shape edit, which
   one undo takes back, and the copy follows the aim again for a new row, unless it's locked, when it stays where the
-  row started. The row's box, around all its copies, joins the recent pastes the copy snaps to, as one paste.
+  row started. Each copy's box joins the recent pastes the copy snaps to, as a paste of its own, in the order the
+  copies lie in the row from the first (961 Q1 A): aimed beside the third copy of a row, the copy sits flush beside
+  that copy, and a row of 10 counts as 10 of the 16 pastes. Left Ctrl's line stays with the most recent paste, the
+  row's last copy.
 - Vertical: as Zoop, with the row going up or down from the first copy, whichever way the view is: the row reaches the
   height where the view's line passes nearest the vertical line through the first copy's middle, within 64 blocks, so
   it follows the view up and down with no block to aim at (`CopyRow`).
@@ -1507,7 +1511,8 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   laid again at the turned length (6 copies), and a notch down turns them back. H and the nudge keys act on nothing
   while the row is fixed. A right click drops the row, sending no edit, and leaves the copy following the aim, still in
   Zoop. A row of 4 pastes as one edit, which the other player sees, every copy's blocks; the copy is then at the aim
-  with no row, and one Ctrl+Z takes back the whole row. In Vertical, looking up past the copy, the row goes up 5
+  with no row, and aimed at the east face of the row's third copy it sits flush beside that copy, not beside the row's
+  end. One Ctrl+Z takes back the whole row. In Vertical, looking up past the copy, the row goes up 5
   copies, each the copy's height above the one before, and is shot at both sizes; looking down, it goes down 3, to the
   bottom of the world.
 - With Zoop set, a new copy made with the Copy button keeps the mode, and its first click fixes a row. After Planner1's
@@ -1704,7 +1709,7 @@ world's spawn, where Planner2, who isn't an operator, may build:
 The copy's placement has unit tests as pure functions. `CopyPlacementTest` covers the copy against each of the six
 faces, with sides of odd and even lengths, the origin for each turn and mirror filling the turned box, and a turn or
 mirror keeping the middle block. `PasteBoxesTest` covers snapping: flush against each face of a paste's box at the
-corner nearest the aim, the most recent paste winning, only 16 kept, and the guide line along a row and a column on the
+corner nearest the aim, the most recent paste winning, only 16 kept, each copy of a row a paste of its own, and the guide line along a row and a column on the
 latest paste's level.
 
 The copy's keys have unit tests too. `CopyNudgeTest` covers each nudge key's direction from the view's yaw: forward the

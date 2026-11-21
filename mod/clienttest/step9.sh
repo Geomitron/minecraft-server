@@ -802,6 +802,14 @@ check "which the other player sees, every copy's blocks" drv 2 "await block -45 
 	"await block -45 -59 24 minecraft:oak_stairs" "await block -44 -60 26 minecraft:stone_bricks"
 check "and the copy is at the aim again with no row, for a new row" eval '[[ $(val 1 copyrow) == none ]] &&
 	copy_is 1 "^at "'
+# Each copy of the row is a paste of its own. Aimed at the east face of the stone bricks at -44 -60 29, in the third
+# copy's box (z 27..29), the copy sits flush against that copy's east face, -43..-42, its edges in line with the
+# copy's at the corner nearest the aim, 27..29 north to south; against the whole row's box (24..35) it would stand at
+# 24..26.
+drv 1 "cmd tp @s -38.5 -58 29.5 90 0" "wait 40" "lookat -43.0 -59.5 29.5" "wait 5" > /dev/null
+check "aimed at the row's third copy, the copy sits flush beside that copy, not beside the row's end" \
+	drv 1 "await copy at -43,-60,27..-42,-59,29 FRONT_BACK COUNTERCLOCKWISE_90"
+drv 1 "cmd tp @s -44.5 -55 42.5 180 30" "wait 40" > /dev/null
 drv 1 "close" > /dev/null
 keys 1 keydown ctrl key z sleep 0.3 keyup ctrl
 check "one Ctrl+Z takes back the whole row" drv 2 "await block -45 -59 33 minecraft:air" \

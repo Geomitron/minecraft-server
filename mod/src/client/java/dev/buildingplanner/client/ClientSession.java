@@ -472,8 +472,8 @@ final class ClientSession {
 	 * The left click with the copy at the aim. In Single it pastes the copy as one shape edit. In Zoop and Vertical the
 	 * first click fixes the copy as the row's first, and the second pastes the whole row as one shape edit, which one
 	 * undo takes back, and the copy then follows the aim again (unless it's locked) for a new row. A paste names only
-	 * the copies' blocks, so their empty space leaves the layer's, and its box joins the recent pastes the copy snaps
-	 * to. While the copy, or its row, is red ({@link #copyShown}), the click that would paste pastes nothing and sends
+	 * the copies' blocks, so their empty space leaves the layer's, and each copy's box joins the recent pastes the copy
+	 * snaps to, as a paste of its own. While the copy, or its row, is red ({@link #copyShown}), the click that would paste pastes nothing and sends
 	 * no edit; a zoop's first click, which pastes nothing anyway, still fixes the row.
 	 */
 	void paste() {
@@ -492,9 +492,9 @@ final class ClientSession {
 			clipboard.fixRow();
 			followAim();
 		} else if (!red) {
-			CopyPlacement.Spot box = clipboard.rowBox();
+			List<CopyPlacement.Spot> copies = clipboard.rowSpots();
 			if (sendShape(EditKind.SHAPE, clipboard.rowBlocks())) {
-				pastes.add(box);
+				pastes.addAll(copies);
 				dropRow();
 			}
 		}
