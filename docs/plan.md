@@ -382,7 +382,10 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
     click erases the ghost block where it's locked (1009 Q1 A). Left Ctrl turns and flips the block in every one of
     Effortless Building's modes, not only Single, and every mode's shapes take the turn (1009 Q2 C). In Disable, where
     the player places real blocks, Left Ctrl turns and flips the real blocks they place only while they hold Left
-    Ctrl, with a preview of the turned block (1029 Q1 A), and 0.6.0 waits for it (1029 Q2 B).
+    Ctrl, with a preview of the turned block (1029 Q1 A), and 0.6.0 waits for it (1029 Q2 B). A turned block that
+    can't stay places nothing, and the preview shows red with "Can't place here" (1033 Q1 A). Before Left Ctrl is
+    held, Disable's line says "Hold Left Control to turn or flip", as in the other modes (1033 Q2 A), "but only for
+    block types where this is useful" (Geo's comment).
   - **Delete by aim (981):** R switches Delete between "Box" and "Aim", as it switches the copy's modes (Q1 A). Holding
     Left Ctrl and sweeping the aim marks each ghost block the crosshair passes over, and holding the left button for a
     second erases the marked ones (Q2 A, Q3 A). A sweep that starts on a marked block unmarks what it passes over,
@@ -399,8 +402,8 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
 **Building Planner 0.6.0** (the bullet "Building Planner 0.6.0 takes the six changes" in "Decisions" above: 806, 808,
 809, 811, 972, 980, 981 and the choices the agent settled). [building-planner.md](building-planner.md) is the design,
 and Geo's answers settle every choice in it but the ones it marks "(open: ...)" in "Turning real blocks in Disable":
-what a turned block that can't stay does, and whether Disable's line shows without Left Control. They go to Geo
-before step 18. Steps 1 to 10 build the
+which block types Disable's line shows for before Left Control is held. It goes to Geo before step 19. Steps 1 to 10
+build the
 six changes, step 11 builds the texts Geo approved for them (972), steps 12 and 13 build Delete by aim, and steps 14
 to 20 the copy's controls for one ghost block, with turning and flipping in every mode and the real blocks placed in
 Disable; those features' texts are proposed, for Geo to edit in step 21, which sets the version, and step 22 is the
@@ -525,23 +528,23 @@ the last step, when the server and the pack update together.
     Minecraft's until steps 18 and 19 add Disable's turning. Needs step 16. Done when `SingleRuleTest` and `ControlsLineTest` pass and the spec's "Turning in every mode
     (step 17)" checks pass, with shots of a Line of turned stairs and of the turning line before a shape and during one
     (with GUI scale 4).
-18. **Turning real blocks in Disable** ("One ghost block": "Turning real blocks in Disable") (open: Geo chooses
-    what a turned block that can't stay does): the payload `place_turn` and each player's turn on the server
-    (`PlaceTurns`), dropped when the player leaves; hook M6 sending it before a right click on a block while Left Ctrl
-    is held (`DisableTurn`); hook S2 in `BlockItem.place`, on both sides, setting the turn, the shape from the neighbours, and the checks
-    that the turned block can stay, a bed's head space among them, with Geo's rule for a block that can't; the turning
-    controls (M4, M5 and L11) active in Disable; and `place_turn` among the payloads the client checks at joining,
-    in protocol version 5. Needs step 17. Done when `DisableTurnTest` and
+18. **Turning real blocks in Disable** ("One ghost block": "Turning real blocks in Disable"): the payload
+    `place_turn` and each player's turn on the server (`PlaceTurns`), dropped when the player leaves; hook M6 sending
+    it before a right click on a block while Left Ctrl is held (`DisableTurn`); hook S2 in `BlockItem.place`, on both
+    sides, setting the turn, the shape from the neighbours, and the checks that the turned block can stay, a bed's head
+    space among them, placing nothing when it can't (1033 Q1 A); the turning controls (M4, M5 and L11) active in
+    Disable; and `place_turn` among the payloads the client checks at joining, in protocol version 5. Needs step 17.
+    Done when `DisableTurnTest` and
     `PlaceTurnTest` pass as pure functions and the spec's "Turning real blocks in Disable (step 18)" checks pass:
     Planner1 places a turned stair and log in Disable, the server's world and Planner2 show them turned, and Planner1's
     own block shows turned at every tick from the click; a torch and a bed that can't stay turned place nothing; and a
     game on another protocol version places as Minecraft does. Shots of the turned stair and log, placed.
 19. **Disable's preview and its line** ("One ghost block": "Turning real blocks in Disable") (open: Geo chooses
-    whether Disable's line shows without Left Control): hooks E29 and E30, and E28's Disable state,
+    which block types Disable's line shows for without Left Control): hooks E29 and E30, and E28's Disable state,
     drawing in Effortless Building's preview the block a right click would place (`DisablePreview`), red through E8
     when it can't stay, and none while Freecam's "Allow interaction" is off or the player is beyond reach; and
-    Disable's controls line (`ControlsLine.disable`), drawn by `ModeHud`, with Geo's answer on whether it shows without
-    Left Control. Needs step 18. Done when `DisablePreviewTest` and `ControlsLineTest` pass and the spec's "Disable's
+    Disable's controls line (`ControlsLine.disable`), drawn by `ModeHud`, showing without Left
+    Control for the block types Geo chooses (1033 Q2 A). Needs step 18. Done when `DisablePreviewTest` and `ControlsLineTest` pass and the spec's "Disable's
     preview and its line (step 19)" checks pass, with shots of the preview of a turned stair and of a red torch at 854
     by 480 and 1920 by 1080, GUI scale 2, and of each line (with GUI scale 4), with the changes outlined in red.
 20. **One ghost block: colours and its line** ("One ghost block"): `CopyOutline` for the locked block and the row,

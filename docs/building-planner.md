@@ -1421,8 +1421,8 @@ stay where it goes and that no entity is in its way (`BlockItem.canPlace`). S2 c
 way, so a wall torch turned away from its wall or a lantern turned to hang under nothing fails. A bed places its head
 toward its facing (`AbstractBedBlock.setPlacedBy`, which checks nothing), and Minecraft checks that space only for the
 player's facing (`getStateForPlacement`), so S2 also checks that the space toward the turned facing can take a block
-and is inside the world border. A turned block that fails places nothing, and the player keeps the item (open: what a
-turned block that can't stay does, Geo's to choose). The preview draws it red, as Effortless Building draws a block
+and is inside the world border. A turned block that fails places nothing, and the player keeps the item (1033 Q1 A).
+The preview draws it red, as Effortless Building draws a block
 the player lacks: tinted red with a red outline (hook E8, which marks that one position missing).
 
 Blocks of two parts turn whole. A door's upper half takes the placed half's state (`DoorBlock.setPlacedBy`), and so
@@ -1446,8 +1446,8 @@ turning line's phrases and Single's line's "Right-click to place". These texts a
 the build's screenshots:
 
 - without Left Control, the turning line: "Hold Left Control to turn or flip", or "Hold Left Control to turn" or
-  "Hold Left Control to flip", with no "Turned:", since a right click then places as in Minecraft (open: whether
-  Disable shows this line, Geo's to choose);
+  "Hold Left Control to flip", with no "Turned:", since a right click then places as in Minecraft (1033 Q2 A), "but
+  only for block types where this is useful" (Geo's comment on that answer; open: which block types, Geo's to choose);
 - while Left Control is held, "Right-click to place, Scroll to turn, Middle-click to flip", or with the one of "Scroll
   to turn" and "Middle-click to flip" the block has, and "Turned:" before it once the block is turned or flipped;
 - while the turned block can't stay, the reason in red, "Can't place here", in place of "Right-click to place".
