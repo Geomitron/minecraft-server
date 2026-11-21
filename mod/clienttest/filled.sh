@@ -1,6 +1,8 @@
 # Ghost blocks the real world fills: real blocks placed by hand, by /fill, by a piston and by flowing water remove the
 # ghost blocks they fill, on both clients within a tick and with no glow; a block placed another way leaves its ghost
-# block; breaking a filled block brings none back; a paste onto built blocks changes nothing; and ghost blocks saved over
+# block; a block placed several to a spot fills its ghost block only at the same count; ghost blocks drawn over real
+# blocks that fill them remove the older ghost block there, and undo and redo bring it back and remove it again;
+# breaking a filled block brings none back; a paste onto built blocks changes nothing; and ghost blocks saved over
 # matching real blocks while the server ran without the add-on go once their chunk loads. Shots of a wall half built,
 # before and after, at 854 by 480 and 1920 by 1080, GUI scale 2. Sourced by inside.sh, which provides drv, val, check,
 # use_click, start_server, stop_server, start_client, stop_client and $ADDON. Everything happens more than 16 blocks
@@ -97,6 +99,41 @@ check "a waterlogged stair facing the same way fills its ghost block" both_layer
 drv 1 "cmd setblock 40 -60 40 minecraft:air" "cmd fill 41 -60 40 42 -60 40 minecraft:air" "wait 20" > /dev/null
 check "breaking a filled block brings no ghost block back" eval 'drv 2 "await real 41 -60 40 minecraft:air" > /dev/null &&
 	both_layer 40 -60 40 minecraft:air && both_layer 41 -60 40 minecraft:air && both_layer 42 -60 40 minecraft:air'
+
+# A block placed several to a spot fills its ghost block only at the same count: a ghost block of 4 candles at 74 -60 40
+# stays with 1, 2 and 3 real candles and goes at the 4th.
+both_state() {
+	[[ $(val 1 "layerstate $1 $2 $3") == *"$4"* && $(val 2 "layerstate $1 $2 $3") == *"$4"* ]]
+}
+drv 1 "edit 74 -60 40 74 -60 40 minecraft:candle[candles=4]" > /dev/null
+for n in 1 2; do
+	check "client $n sees the ghost block of 4 candles" drv "$n" "await block 74 -60 40 minecraft:candle"
+done
+for count in 1 2 3; do
+	drv 1 "cmd setblock 74 -60 40 minecraft:candle[candles=$count]" "wait 10" > /dev/null
+	check "$count real candles leave the ghost block of 4 on both clients" both_state 74 -60 40 candles=4
+done
+drv 1 "cmd setblock 74 -60 40 minecraft:candle[candles=4]" "wait 10" > /dev/null
+check "the 4th real candle removes the ghost block on both clients" both_layer 74 -60 40 minecraft:air
+
+# Drawing a ghost block where the real block already fills it: a ghost stone block at 76 -60 40 stays under real oak
+# planks; ghost oak planks drawn there remove it as part of the same edit, one Ctrl+Z brings it back and Ctrl+Y removes
+# it again.
+drv 1 "edit 76 -60 40 76 -60 40 minecraft:stone" "cmd setblock 76 -60 40 minecraft:oak_planks" "wait 10" > /dev/null
+check "a ghost stone block stays where real oak planks are built" both_layer 76 -60 40 minecraft:stone
+drv 1 "edit 76 -60 40 76 -60 40 minecraft:oak_planks" "wait 10" > /dev/null
+check "ghost oak planks drawn over real oak planks remove the ghost stone block on both clients" eval \
+	'drv 1 "await block 76 -60 40 minecraft:air" && drv 2 "await block 76 -60 40 minecraft:air" &&
+	both_layer 76 -60 40 minecraft:air'
+keys 1 keydown ctrl key z sleep 0.3 keyup ctrl
+check "one undo brings the ghost stone block back on both clients" eval \
+	'drv 1 "await block 76 -60 40 minecraft:stone" && drv 2 "await block 76 -60 40 minecraft:stone" &&
+	both_layer 76 -60 40 minecraft:stone'
+keys 1 keydown ctrl key y sleep 0.3 keyup ctrl
+check "a redo removes it again on both clients" eval \
+	'drv 1 "await block 76 -60 40 minecraft:air" && drv 2 "await block 76 -60 40 minecraft:air" &&
+	both_layer 76 -60 40 minecraft:air'
+check "Planner1's edit, undo and redo glows fade on client 2" drv 2 "await noglow"
 
 # A paste onto built blocks: real stone bricks from 40 -60 48 to 43 -59 48, copied and pasted where they stand.
 drv 1 "cmd fill 40 -60 48 43 -59 48 minecraft:stone_bricks" "wait 10" > /dev/null

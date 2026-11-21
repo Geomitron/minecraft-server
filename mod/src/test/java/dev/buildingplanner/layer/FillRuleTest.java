@@ -15,6 +15,7 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.DoorHingeSide;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.level.block.state.properties.Half;
+import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.level.block.state.properties.SlabType;
 import net.minecraft.world.level.block.state.properties.StairsShape;
 import net.minecraft.world.level.block.state.properties.WallSide;
@@ -147,6 +148,33 @@ class FillRuleTest {
 			Direction.EAST);
 		assertTrue(FillRule.fills(furnace.setValue(BlockStateProperties.LIT, true), furnace));
 		assertFalse(FillRule.fills(furnace.setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.WEST), furnace));
+	}
+
+	@Test
+	void aBlockOfAnotherCountStaysAndOneOfTheSameCountFillsForEachBlockPlacedSeveralToASpot() {
+		assertCount(Blocks.CANDLE.defaultBlockState(), BlockStateProperties.CANDLES, 4, 1, 3);
+		assertCount(Blocks.SEA_PICKLE.defaultBlockState(), BlockStateProperties.PICKLES, 4, 1, 2);
+		assertCount(Blocks.SNOW.defaultBlockState(), BlockStateProperties.LAYERS, 8, 1, 4);
+		assertCount(Blocks.TURTLE_EGG.defaultBlockState(), BlockStateProperties.EGGS, 4, 1, 3);
+		assertCount(Blocks.PINK_PETALS.defaultBlockState(), BlockStateProperties.FLOWER_AMOUNT, 4, 1, 2);
+		assertCount(Blocks.LEAF_LITTER.defaultBlockState(), BlockStateProperties.SEGMENT_AMOUNT, 4, 1, 2);
+	}
+
+	@Test
+	void aCandleOfTheSameCountFillsWhateverTheWorldSets() {
+		BlockState ghost = Blocks.CANDLE.defaultBlockState().setValue(BlockStateProperties.CANDLES, 4);
+		assertTrue(FillRule.fills(ghost.setValue(BlockStateProperties.LIT, true).setValue(BlockStateProperties.WATERLOGGED,
+			true), ghost));
+	}
+
+	/** A block with {@code count} of its property fills a ghost block of the same count only; the rest stay. */
+	private static void assertCount(BlockState base, IntegerProperty property, int ghostCount, int... otherCounts) {
+		BlockState ghost = base.setValue(property, ghostCount);
+		assertTrue(FillRule.fills(ghost, ghost));
+		for (int count : otherCounts) {
+			assertFalse(FillRule.fills(base.setValue(property, count), ghost), base + " with " + count + " fills " + ghostCount);
+			assertFalse(FillRule.fills(ghost, base.setValue(property, count)));
+		}
 	}
 
 	@Test

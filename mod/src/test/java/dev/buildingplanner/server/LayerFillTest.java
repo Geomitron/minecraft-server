@@ -160,6 +160,100 @@ class LayerFillTest {
 	}
 
 	@Test
+	void drawingAGhostBlockOverARealBlockThatFillsItRemovesTheOlderGhostBlockAndUndoBringsItBack() {
+		BlockState planks = Blocks.OAK_PLANKS.defaultBlockState();
+		edit(alex, stone, A);
+		network.build(A, planks);
+		network.endTick();
+		assertEquals(stone, at(A), "oak planks don't fill the ghost stone");
+
+		int seq = alex.edit(new LayerChange(A, planks), new LayerChange(B, planks), new LayerChange(C, planks));
+		network.settle();
+
+		assertEquals(air, at(A), "the real planks fill the new ghost block, so the older one goes with it");
+		assertEquals(planks, at(B));
+		assertEquals(planks, at(C));
+		Payloads.Applied answer = alex.applied().getLast();
+		assertEquals(seq, answer.clientSeq());
+		assertEquals(List.of(new LayerChange(A, air), new LayerChange(B, planks), new LayerChange(C, planks)),
+			answer.changes());
+		assertEquals(answer, blair.applied().getLast());
+		network.assertSameAsServer(alex);
+		network.assertSameAsServer(blair);
+
+		alex.undo();
+		network.settle();
+		assertEquals(stone, at(A), "one undo brings the older ghost block back");
+		assertEquals(air, at(B));
+		assertEquals(air, at(C));
+		assertEquals(Payloads.NO_CLIENT_SEQ, alex.applied().getLast().clientSeq());
+		network.assertSameAsServer(alex);
+		network.assertSameAsServer(blair);
+
+		alex.redo();
+		network.settle();
+		assertEquals(air, at(A), "a redo removes it again");
+		assertEquals(planks, at(B));
+		assertEquals(planks, at(C));
+		network.assertSameAsServer(blair);
+
+		alex.undo();
+		network.settle();
+		assertEquals(stone, at(A));
+		assertEquals(air, at(B));
+	}
+
+	@Test
+	void aRedoOverRealBlocksBuiltSinceRemovesTheOlderGhostBlockToo() {
+		BlockState planks = Blocks.OAK_PLANKS.defaultBlockState();
+		edit(alex, stone, A);
+		edit(alex, planks, A);
+		alex.undo();
+		network.settle();
+		assertEquals(stone, at(A));
+		network.build(A, planks);
+		network.endTick();
+
+		alex.redo();
+		network.settle();
+
+		assertEquals(air, at(A));
+		alex.undo();
+		network.settle();
+		assertEquals(stone, at(A));
+		network.assertSameAsServer(blair);
+	}
+
+	@Test
+	void aGhostBlockDrawnOverARealOneWithNoOlderGhostBlockLeavesNoUndoStep() {
+		network.build(A, stone);
+		network.endTick();
+
+		edit(alex, stone, A);
+		alex.undo();
+		network.settle();
+
+		assertEquals(PlayerMessage.nothingToUndo(), alex.notices.getLast());
+	}
+
+	@Test
+	void aBlockPlacedSeveralToASpotFillsItsGhostBlockOnlyAtTheSameCount() {
+		BlockState ghost = Blocks.CANDLE.defaultBlockState().setValue(BlockStateProperties.CANDLES, 4);
+		edit(alex, ghost, A);
+		for (int count = 1; count <= 3; count++) {
+			network.build(A, ghost.setValue(BlockStateProperties.CANDLES, count));
+			network.endTick();
+			assertEquals(ghost, at(A), count + " candles leave the ghost block");
+		}
+
+		network.build(A, ghost.setValue(BlockStateProperties.LIT, true));
+		network.endTick();
+
+		assertEquals(air, at(A), "the 4th candle fills it, lit or not");
+		network.assertSameAsServer(blair);
+	}
+
+	@Test
 	void aPasteOntoBuiltBlocksChangesNothing() {
 		network.build(A, stone);
 		network.build(B, joinedFence);

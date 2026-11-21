@@ -464,7 +464,9 @@ A ghost block leaves the layer once the real block at its position fills it, so 
 as planned, for everyone. A real block fills a ghost block when it's the same block placed the same way, whatever it
 connects to (809 Q1 C): the same block, with the same value for each property a player sets by placing it (facing,
 axis, top or bottom half, slab type, door hinge, bed part, attach face and rotation), and any value for the properties
-the world sets (connections, stair shape, waterlogged, powered, open, lit, age, distance and the like). A shape takes
+the world sets (connections, stair shape, waterlogged, powered, open, lit, age, distance and the like). A block that
+goes several to a spot (candles, sea pickles, snow layers, turtle eggs, pink petals and leaf litter) fills its ghost
+block only at the same count (823 Q1 B): the ghost block of 4 candles stays until the 4th candle goes in. A shape takes
 each block's connections from the real world as it was when the shape was drawn (`EffortlessShapes.place`, through
 `getStateForPlacement`), so a built fence, wall or stair rarely has its ghost block's exact state. One pure function
 decides it, for S1, the edits and the check at chunk load alike, with unit tests for each property.
@@ -485,10 +487,14 @@ the change as they take any edit.
 A ghost block, once removed, doesn't come back when the real block goes: breaking a finished wall leaves no ghost
 blocks where it stood (809). Undo can bring it back only as it brings back any block someone else changed (below).
 
-Edits never write a ghost block over a real block that fills it: before applying a shape, a paste, an undo or a redo,
-the server drops each position whose real block fills the new ghost block, where the server has the chunk loaded
-(`ServerChunkCache.getChunkNow`), so a paste of a copied house onto the house changes nothing. Where the server hasn't
-loaded the chunk, the ghost block goes when the chunk loads.
+Edits never write a ghost block over a real block that fills it, and they remove any older ghost block there (823 Q2
+B): in a shape, a paste, an undo or a redo, each position whose real block fills the new ghost block, where the server
+has the chunk loaded (`ServerChunkCache.getChunkNow`), takes air instead of the new ghost block, as if the new ghost
+block had been drawn first and built afterwards. A ghost stone block under real oak planks goes when ghost oak planks
+are drawn there, as part of the same edit and the same undo step, so one undo brings the stone back and a redo removes
+it again; where no older ghost block is there, the position changes nothing, so a paste of a copied house onto the
+house changes nothing. Where the server hasn't loaded the chunk, the new ghost block is written and goes when the chunk
+loads. The end-of-tick edit and the check at chunk load only remove ghost blocks, so this changes nothing for them.
 
 Ghost blocks already filled, such as those built before 0.6.0, go as each chunk loads: on Fabric API's
 `ServerChunkEvents.CHUNK_LOAD`, which also fires for the chunks the server loads as it starts (it reads the layer at
@@ -499,7 +505,8 @@ player sees a filled ghost block. A section needs 4,096 comparisons, expected to
 a chunk without ghost blocks costs one lookup.
 
 Undo and redo treat a filled ghost block as gone: an undo of a shape whose blocks have since been built leaves those
-positions as they are, since the layer no longer holds the shape's blocks there. The undo's notice counts only the
+positions as they are, since the layer no longer holds the shape's blocks there. A redo of a shape over a ghost block
+whose real block now fills the shape's block removes that older ghost block, as an edit would. The undo's notice counts only the
 blocks another player changed, not the ones built since: the server checks the real block at each position it leaves
 and counts it only when it doesn't fill the step's ghost block. A redo skips the positions built since, like any edit.
 
@@ -1623,6 +1630,10 @@ world's spawn, where Planner2, who isn't an operator, may build:
   glow. The ghost blocks beside them stay.
 - A stair placed facing the other way leaves its ghost block; one facing the same way, waterlogged, fills it.
 - Breaking filled blocks brings no ghost block back.
+- A ghost block of 4 candles stays with 1, 2 and 3 real candles and goes at the 4th (the driver's `layerstate` shows
+  the ghost block's properties).
+- Ghost oak planks drawn over real oak planks that have a ghost stone block on them remove the ghost stone on both
+  clients; one Ctrl+Z brings the stone back, and Ctrl+Y removes it again.
 - A paste onto built blocks (the driver's `pastehere`, which copies a box and pastes it where it was copied from)
   changes nothing, with no glow.
 - Ghost blocks saved over matching real blocks while the server ran without the add-on are gone once their chunk
@@ -1642,10 +1653,13 @@ upside down, a log on another axis, a door with the other hinge or its other hal
 another face, a sign turned another way and a hopper, piston, dripstone tip and crafter facing another way stay; a
 stair of another shape or waterlogged, a fence or wall with other connections, a waterlogged slab, a crop of another
 age, an open or powered door, an occupied bed, a lit furnace and an extended piston fill it; a top or double slab
-doesn't fill a bottom one; air fills nothing. `LayerFillTest` covers the end-of-tick edit (by the nil author with no
+doesn't fill a bottom one; air fills nothing; and for each of candles, sea pickles, snow layers, turtle eggs, pink
+petals and leaf litter, a block of another count stays and one of the same count fills. `LayerFillTest` covers the end-of-tick edit (by the nil author with no
 client sequence, to every watcher, only for blocks still filled when the tick ends, split at the block cap), an edit's
-filter (positions a real block fills are dropped, unless the server hasn't loaded their chunk; a paste onto built blocks
-changes nothing and leaves no undo step), undo and redo skipping positions built since, the undo notice counting only
+filter (a position a real block fills takes air instead of the new ghost block, unless the server hasn't loaded its
+chunk, so a ghost block drawn over a real block that fills it removes the older ghost block there, one undo brings it
+back, a redo removes it again, and a redo over blocks built since does the same; a paste onto built blocks with no older
+ghost blocks changes nothing and leaves no undo step), the candle count rule at the end of the tick, undo and redo skipping positions built since, the undo notice counting only
 blocks another player changed, and the check at chunk load reading only the sections that hold ghost blocks.
 
 The import's unit tests (`PlanImportTest`) build the layer from files the writers' own code makes: a `placements.json`

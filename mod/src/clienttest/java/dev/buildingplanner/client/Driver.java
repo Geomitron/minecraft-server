@@ -362,6 +362,14 @@ public final class Driver implements ClientModInitializer {
 				// layer x y z: the ghost block in this game's copy of the layer there.
 				return BuiltInRegistries.BLOCK.getKey(session().replica().layer().get(pos(a, 1)).getBlock()).toString();
 			}
+			case "layerstate" -> {
+				// layerstate x y z: the ghost block there with its properties, such as minecraft:candle[candles=4].
+				BlockState state = session().replica().layer().get(pos(a, 1));
+				String properties = state.getProperties().stream()
+					.map(property -> property.getName() + "=" + state.getValue(property)).sorted()
+					.collect(java.util.stream.Collectors.joining(","));
+				return BuiltInRegistries.BLOCK.getKey(state.getBlock()) + "[" + properties + "]";
+			}
 			case "tile" -> {
 				// tile <chunk x> <chunk z>: that column's tile as its lowest..highest block y, or none.
 				return tile(Integer.parseInt(a[1]), Integer.parseInt(a[2]));

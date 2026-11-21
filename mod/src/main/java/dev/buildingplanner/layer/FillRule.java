@@ -12,15 +12,18 @@ import net.minecraft.world.level.block.state.properties.Property;
 public final class FillRule {
 	/**
 	 * The properties a player sets by placing a block: facing (with the hopper's, a dripstone's tip and the crafter's
-	 * orientation), axis, top or bottom half, slab type, door hinge, bed part, attach face and rotation. Every other
-	 * property (connections, stair shape, waterlogged, powered, open, lit, age, distance and the like) is the world's,
-	 * and takes any value.
+	 * orientation), axis, top or bottom half, slab type, door hinge, bed part, attach face and rotation, and the count of
+	 * a block that goes several to a spot (candles, sea pickles, snow layers, turtle eggs, pink petals and leaf litter).
+	 * Every other property (connections, stair shape, waterlogged, powered, open, lit, age, distance and the like) is
+	 * the world's, and takes any value.
 	 */
 	static final Set<Property<?>> PLACED = Set.of(BlockStateProperties.FACING, BlockStateProperties.HORIZONTAL_FACING,
 		BlockStateProperties.FACING_HOPPER, BlockStateProperties.VERTICAL_DIRECTION, BlockStateProperties.ORIENTATION,
 		BlockStateProperties.AXIS, BlockStateProperties.HORIZONTAL_AXIS, BlockStateProperties.HALF,
 		BlockStateProperties.DOUBLE_BLOCK_HALF, BlockStateProperties.SLAB_TYPE, BlockStateProperties.DOOR_HINGE,
-		BlockStateProperties.BED_PART, BlockStateProperties.ATTACH_FACE, BlockStateProperties.ROTATION_16);
+		BlockStateProperties.BED_PART, BlockStateProperties.ATTACH_FACE, BlockStateProperties.ROTATION_16,
+		BlockStateProperties.CANDLES, BlockStateProperties.PICKLES, BlockStateProperties.LAYERS,
+		BlockStateProperties.EGGS, BlockStateProperties.FLOWER_AMOUNT, BlockStateProperties.SEGMENT_AMOUNT);
 
 	private FillRule() {
 	}

@@ -35,8 +35,8 @@ import net.minecraft.world.level.block.state.BlockState;
  * Messages to one player keep their order, so nothing falls between a column's snapshot and the edits after it.
  *
  * <p>Ghost blocks real blocks fill ({@link FillRule}) leave the layer: hook S1 and the check at chunk load note them,
- * and the end of each server tick removes them as an edit by no player. Edits, undo and redo don't write a ghost block
- * over a real block that fills it.
+ * and the end of each server tick removes them as an edit by no player. Edits, undo and redo that draw a ghost block
+ * over a real block that fills it remove any older ghost block there instead, as part of the same step.
  */
 public final class LayerSync {
 	/** How many chunks past the server's view distance a watched column may be. */
@@ -173,7 +173,8 @@ public final class LayerSync {
 	 * Checks and applies one edit: the dimension is the player's own, the edit is within the block cap, and every
 	 * position is in a column the player watches, within the build height and inside the world border. A failed check
 	 * changes nothing and answers the player with {@code rejected}. A ghost block a real block already fills isn't
-	 * written. An edit that changed a block goes on the player's undo list and clears their redo list.
+	 * written; it removes any older ghost block at its position. An edit that changed a block goes on the player's undo
+	 * list and clears their redo list.
 	 */
 	public void edit(UUID player, Identifier dimension, int clientSeq, List<LayerChange> changes) {
 		Optional<PlayerMessage> problem = check(player, dimension, changes);
@@ -186,10 +187,7 @@ public final class LayerSync {
 		// Each block's state before the edit (its first write) and after it (its last).
 		Map<BlockPos, StepBlock> step = new LinkedHashMap<>();
 		for (LayerChange change : changes) {
-			BlockState state = change.state().isAir() ? AIR : change.state();
-			if (builtOver(dimension, change.pos(), state)) {
-				continue;
-			}
+			BlockState state = filledOrSelf(dimension, change.pos(), change.state().isAir() ? AIR : change.state());
 			BlockState before = layer.set(change.pos(), state);
 			if (before != state) {
 				applied.add(new LayerChange(change.pos(), state));
@@ -209,9 +207,9 @@ public final class LayerSync {
 
 	/**
 	 * Takes back the player's newest step, in whichever dimension they made it: each block goes back to its state
-	 * before the step only if the layer still holds the step's state there. Blocks someone has changed since stay as
-	 * they are, and a notice says how many. The undo goes to watchers as an ordinary {@code applied} with no client
-	 * sequence; one that changes no block sends none.
+	 * before the step only if the layer still holds the step's state there (air where a real block fills it). Blocks
+	 * someone has changed since stay as they are, and a notice says how many. The undo goes to watchers as an ordinary
+	 * {@code applied} with no client sequence; one that changes no block sends none.
 	 */
 	public void undo(UUID player) {
 		Optional<Step> step = history.takeUndo(player);
@@ -314,6 +312,15 @@ public final class LayerSync {
 		return real != null && FillRule.fills(real, ghost);
 	}
 
+	/**
+	 * The state an edit leaves at the position: air where the server has the chunk loaded and its real block already
+	 * fills the ghost block, since the spot ends as if the ghost block were drawn first and built afterwards, which
+	 * also removes any older ghost block there; the ghost block itself elsewhere.
+	 */
+	private BlockState filledOrSelf(Identifier dimension, BlockPos pos, BlockState ghost) {
+		return builtOver(dimension, pos, ghost) ? AIR : ghost;
+	}
+
 	private Optional<PlayerMessage> check(UUID player, Identifier dimension, List<LayerChange> changes) {
 		Optional<Place> place = world.place(player);
 		if (place.isEmpty() || !place.get().dimension().equals(dimension)) {
@@ -339,8 +346,8 @@ public final class LayerSync {
 	}
 
 	/**
-	 * Sets each block from its before-state to its after-state where the layer still holds the before-state, except
-	 * where a real block already fills the after-state. The notice counts the blocks left as they are, leaving out those
+	 * Sets each block from its before-state to its after-state where the layer still holds the before-state, with air
+	 * for an after-state a real block already fills. The notice counts the blocks left as they are, leaving out those
 	 * whose real block fills the before-state: built since, not changed by another player.
 	 */
 	private Step applyStep(UUID player, Step step) {
@@ -353,9 +360,12 @@ public final class LayerSync {
 				if (!builtOver(dimension, block.pos(), block.before())) {
 					left++;
 				}
-			} else if (!builtOver(dimension, block.pos(), block.after())) {
-				layer.set(block.pos(), block.after());
-				done.add(block);
+			} else {
+				BlockState after = filledOrSelf(dimension, block.pos(), block.after());
+				if (after != block.before()) {
+					layer.set(block.pos(), after);
+					done.add(new StepBlock(block.pos(), block.before(), after));
+				}
 			}
 		}
 		if (!done.isEmpty()) {
