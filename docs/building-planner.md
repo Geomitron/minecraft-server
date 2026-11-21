@@ -1446,8 +1446,10 @@ turning line's phrases and Single's line's "Right-click to place". These texts a
 the build's screenshots:
 
 - without Left Control, the turning line: "Hold Left Control to turn or flip", or "Hold Left Control to turn" or
-  "Hold Left Control to flip", with no "Turned:", since a right click then places as in Minecraft (1033 Q2 A), "but
-  only for block types where this is useful" (Geo's comment on that answer; open: which block types, Geo's to choose);
+  "Hold Left Control to flip", with no "Turned:", since a right click then places as in Minecraft (1033 Q2 A); no
+  line while the block a right click would place hangs on the block behind it, as Minecraft's rule for that block
+  requires (a ladder; a torch, sign, banner, button or lever on a wall; a tripwire hook), though Left Control still
+  turns it (1037 Q1 B);
 - while Left Control is held, "Right-click to place, Scroll to turn, Middle-click to flip", or with the one of "Scroll
   to turn" and "Middle-click to flip" the block has, and "Turned:" before it once the block is turned or flipped;
 - while the turned block can't stay, the reason in red, "Can't place here", in place of "Right-click to place".
@@ -2262,7 +2264,8 @@ Delete box's message writing 16,001 with digit grouping. For the new features (s
 `ControlsLineTest` also covers Aim's lines (no marks, marks, unmarking, the hold's progress in steps of 5%, the cap's
 warning) and the Delete box's "R for Aim", the turning line (each turn phrase, with Left Control held, "Turned:", and
 no line for a block that neither turns nor flips), Disable's lines (without Left Control and with no "Turned:", with
-it held, turned, each turn phrase, and the red "Can't place here"), and the one ghost block's lines for each state
+it held, turned, each turn phrase, the red "Can't place here", and no line without Left Control for a ladder or a
+torch aimed at a wall), and the one ghost block's lines for each state
 above, with each turn phrase and title.
 
 Delete by aim's marks have unit tests as pure functions (step 12). `DeleteMarksTest` covers a sweep between two aims
