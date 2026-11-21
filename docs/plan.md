@@ -378,7 +378,9 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
     wheel turns the block and the middle click steps through the other ways that block can sit, so the player can place
     it facing any way wherever they stand (Q5 and Q6, Geo's answers). Blocks keep the turn until the player switches to
     another block (revision 2, Q1 A). The copy's blue, yellow or red box shows only while the block is locked or a row
-    is fixed (Q7 A), and Single mode's controls line shows whenever a block is in hand (Q8 A).
+    is fixed (Q7 A), and Single mode's controls line shows whenever a block is in hand (Q8 A). A locked block's left
+    click erases the ghost block where it's locked (1009 Q1 A). Left Ctrl turns and flips the block in every one of
+    Effortless Building's modes, not only Single, and every mode's shapes take the turn (1009 Q2 C).
   - **Delete by aim (981):** R switches Delete between "Box" and "Aim", as it switches the copy's modes (Q1 A). Holding
     Left Ctrl and sweeping the aim marks each ghost block the crosshair passes over, and holding the left button for a
     second erases the marked ones (Q2 A, Q3 A). A sweep that starts on a marked block unmarks what it passes over,
