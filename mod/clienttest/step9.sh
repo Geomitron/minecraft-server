@@ -299,17 +299,17 @@ xdo 1 mousemove --window %w 5 5
 drv 1 "wait 5" > /dev/null
 check "letting the key go with the pointer moved off Block mix closes the menu and opens nothing" radial_let_go
 
-# Controls: Building Planner's keys, the copy's seven among them, and Effortless Building's four show under the
+# Controls: Building Planner's keys, the copy's eight among them, and Effortless Building's four show under the
 # "Building Planner" heading, in the order Controls sorts them, and no raw key name. The driver's own Page Up key, under
 # a heading of its own, is unbound first, so Controls shows no clash with "Nudge the copy up". The list is scrolled to
 # the heading and shot at 854 by 480 and 1920 by 1080, GUI scale 2, and at 1920 by 1080, GUI scale 4, with the
 # heading's, the keys' and each key row's window boxes (left top right bottom) in the log.
 drv 1 "unbindprobe" "keybinds" "wait 10" > /dev/null
 echo "  controls: $(val 1 keybindlist)" >> /out/checks.log
-planner_keys="Block mix, Lock or unlock the copy, Nudge the copy back, Nudge the copy down, Nudge the copy forward, \
+planner_keys="Block mix, Change copy mode, Lock or unlock the copy, Nudge the copy back, Nudge the copy down, Nudge the copy forward, \
 Nudge the copy left, Nudge the copy right, Nudge the copy up, Open Modifier Settings, Open Radial Menu, Redo, \
 Show or hide ghost blocks, Undo"
-check "Controls shows the copy's seven keys and Effortless Building's four under \"Building Planner\", with its own" \
+check "Controls shows the copy's eight keys and Effortless Building's four under \"Building Planner\", with its own" \
 	eval '[[ $(val 1 keybindlist) == *"Building Planner: $planner_keys ; "* ]]'
 check "under one heading" eval '(($(val 1 keybindlist | grep -o "Building Planner: " | wc -l) == 1))'
 check "with no raw key name" eval '[[ $(val 1 keybindlist) != *"key."* ]]'
@@ -691,6 +691,97 @@ check "Freecam's camera goes off" eval '[[ $(val 1 "freecam false") == false ]] 
 press 1 h
 check "and H unlocks the copy again" eval '[[ $(val 1 copylock) == unlocked ]]'
 
+# Zoop and Vertical, on the grass west of the locking checks. Aimed from the south at -45 -61 34's top, the copy, 2 by
+# 2 by 3 blocks as it's turned, fills -45..-44 east to west and 33..35 north to south. R cycles the copy's mode.
+drv 1 "cmd tp @s -44.5 -55 42.5 180 30" "wait 40" > /dev/null
+aim 1 -45 -60 34
+check "the copy's mode starts as Single" eval '[[ $(val 1 copymode) == SINGLE ]] &&
+	drv 1 "await copy at -45,-60,33..-44,-59,35 FRONT_BACK COUNTERCLOCKWISE_90" > /dev/null'
+press 1 r
+check "R switches the copy to Zoop" eval '[[ $(val 1 copymode) == ZOOP ]]'
+press 1 r
+check "then to Vertical" eval '[[ $(val 1 copymode) == VERTICAL ]]'
+press 1 r
+check "then back to Single" eval '[[ $(val 1 copymode) == SINGLE ]]'
+press 1 r
+check "and to Zoop again, the copy still following the aim" eval '[[ $(val 1 copymode) == ZOOP ]] &&
+	copy_is 1 "^at -45,-60,33\.\.-44,-59,35 FRONT_BACK COUNTERCLOCKWISE_90 " && [[ $(val 1 copyrow) == none ]]'
+# In Zoop the first click fixes the copy as the row's start and sends no edit.
+attack_click 1
+check "in Zoop the first click fixes the copy as the start of a row, sending no edit" eval \
+	'[[ $(val 1 holdlog) == *" edits=0 "* ]] &&
+	drv 1 "await row 1 copies, 1 placements FRONT_BACK COUNTERCLOCKWISE_90: -45,-60,33..-44,-59,35" > /dev/null'
+# Aimed 9 blocks north, the row runs north from the first copy, end to end, each 3 blocks (the copy's length north to
+# south) from the one before, to the copy that holds the aim: 4 copies, each one of Litematica's placements.
+row4="-45,-60,33..-44,-59,35 ; -45,-60,30..-44,-59,32 ; -45,-60,27..-44,-59,29 ; -45,-60,24..-44,-59,26"
+aim 1 -45 -60 25
+check "aimed north, the row follows the aim: 4 copies end to end, each the copy's length from the one before" \
+	drv 1 "await row 4 copies, 4 placements FRONT_BACK COUNTERCLOCKWISE_90: $row4"
+check "the first copy stays where the first click fixed it" copy_is 1 "^at -45,-60,33\.\.-44,-59,35 "
+check "Litematica draws each copy, the fourth's stairs at its north west corner" eval \
+	'[[ $(val 1 "get -45 -59 24") == minecraft:oak_stairs ]] && [[ $(val 1 "get -45 -59 33") == minecraft:oak_stairs ]]'
+shots zoop-row
+aim 1 -45 -60 0
+check "aimed farther, the row stops at 10 copies" \
+	drv 1 "await row 10 copies, 10 placements FRONT_BACK COUNTERCLOCKWISE_90: -45,-60,33..-44,-59,35 ; "
+check "the tenth 27 blocks north of the first" eval '[[ $(val 1 copyrow) == *" ; -45,-60,6..-44,-59,8" ]]'
+aim 1 -45 -60 25
+check "aimed back, the row shrinks to 4 copies" \
+	drv 1 "await row 4 copies, 4 placements FRONT_BACK COUNTERCLOCKWISE_90: $row4"
+# A notch up turns every copy a quarter turn clockwise: the first in place, around its middle -45 -60 34, now 3 blocks
+# east to west and 2 north to south; the row, laid again at the turned length, reaches the aim with 6 copies.
+xdo 1 click 4
+check "a notch of the wheel up turns every copy in the row, laid again end to end at the turned length" \
+	drv 1 "await row 6 copies, 6 placements FRONT_BACK NONE: -46,-60,34..-44,-59,35 ; -46,-60,32..-44,-59,33 ; -46,-60,30..-44,-59,31 ; -46,-60,28..-44,-59,29 ; -46,-60,26..-44,-59,27 ; -46,-60,24..-44,-59,25"
+xdo 1 click 5
+check "and a notch down turns them back" drv 1 "await row 4 copies, 4 placements FRONT_BACK COUNTERCLOCKWISE_90: $row4"
+check "H and the nudge keys act on nothing while the row is fixed" eval 'press 1 h && press 1 Up &&
+	[[ $(val 1 copylock) == unlocked ]] && [[ $(val 1 copyrow) == "4 copies, 4 placements FRONT_BACK COUNTERCLOCKWISE_90: $row4" ]]'
+# A right click after the first click drops the row and leaves the copy at the aim, following it again.
+use_click 1
+check "a right click after the first click drops the row" eval \
+	'drv 1 "wait 10" > /dev/null && [[ $(val 1 copyrow) == none ]] && [[ $(val 1 holdlog) == *" edits=0 "* ]]'
+check "and leaves the copy at the aim, following it again" \
+	drv 1 "await copy at -45,-60,24..-44,-59,26 FRONT_BACK COUNTERCLOCKWISE_90"
+check "still in Zoop" eval '[[ $(val 1 copymode) == ZOOP ]]'
+# A row of 4 pastes as one edit, which the other player sees, and one Ctrl+Z takes back.
+aim 1 -45 -60 34
+drv 1 "await copy at -45,-60,33..-44,-59,35" > /dev/null
+attack_click 1
+aim 1 -45 -60 25
+drv 1 "await row 4 copies, 4 placements FRONT_BACK COUNTERCLOCKWISE_90: $row4" > /dev/null
+attack_click 1
+check "the second click pastes the row of 4 as one edit" eval '[[ $(val 1 holdlog) == *" edits=1 "* ]]'
+check "which the other player sees, every copy's blocks" drv 2 "await block -45 -59 33 minecraft:oak_stairs" \
+	"await block -45 -59 30 minecraft:oak_stairs" "await block -45 -59 27 minecraft:oak_stairs" \
+	"await block -45 -59 24 minecraft:oak_stairs" "await block -44 -60 26 minecraft:stone_bricks"
+check "and the copy is at the aim again with no row, for a new row" eval '[[ $(val 1 copyrow) == none ]] &&
+	copy_is 1 "^at "'
+drv 1 "close" > /dev/null
+keys 1 keydown ctrl key z sleep 0.3 keyup ctrl
+check "one Ctrl+Z takes back the whole row" drv 2 "await block -45 -59 33 minecraft:air" \
+	"await block -45 -59 30 minecraft:air" "await block -45 -59 27 minecraft:air" \
+	"await block -45 -59 24 minecraft:air" "await block -44 -60 26 minecraft:air"
+# Vertical: the row goes up or down from the first copy, the way the view is, each copy 2 blocks (its height) apart.
+press 1 r
+aim 1 -45 -60 34
+drv 1 "await copy at -45,-60,33..-44,-59,35" > /dev/null
+attack_click 1
+check "in Vertical the first click fixes the row's start too" eval '[[ $(val 1 copymode) == VERTICAL ]] &&
+	drv 1 "await row 1 copies, 1 placements FRONT_BACK COUNTERCLOCKWISE_90: -45,-60,33..-44,-59,35" > /dev/null'
+# Looking up past the copy's middle, the view crosses the line above it at -50.5: 5 copies up to -52..-51.
+drv 1 "lookat -44.5 -50.5 34.5" "wait 5" > /dev/null
+check "looking up, the row goes up: 5 copies, each the copy's height above the one before" \
+	drv 1 "await row 5 copies, 5 placements FRONT_BACK COUNTERCLOCKWISE_90: -45,-60,33..-44,-59,35 ; -45,-58,33..-44,-57,35 ; -45,-56,33..-44,-55,35 ; -45,-54,33..-44,-53,35 ; -45,-52,33..-44,-51,35"
+shots vertical-row
+drv 1 "lookat -44.5 -63.5 34.5" "wait 5" > /dev/null
+check "looking down, it goes down: 3 copies, to the bottom of the world" \
+	drv 1 "await row 3 copies, 3 placements FRONT_BACK COUNTERCLOCKWISE_90: -45,-60,33..-44,-59,35 ; -45,-62,33..-44,-61,35 ; -45,-64,33..-44,-63,35"
+use_click 1
+check "a right click drops it" eval 'drv 1 "wait 10" > /dev/null && [[ $(val 1 copyrow) == none ]] && copy_is 1 "^at "'
+press 1 r
+check "R then switches back to Single" eval '[[ $(val 1 copymode) == SINGLE ]]'
+
 # A right click puts the copy away, keeping it, and its controls line goes; the click builds nothing. The scroll wheel
 # then changes the hotbar slot again.
 use_click 1
@@ -746,6 +837,9 @@ drv 1 "cmd fill 50 -60 10 52 -58 12 minecraft:oak_planks hollow" "cmd setblock 5
 	"cmd tp @s 46.5 -56 6.5 0 30" "wait 40" > /dev/null
 check "the house is real" eval '[[ $(val 1 "real 51 -59 10") == minecraft:glass ]] &&
 	[[ $(val 1 "real 51 -59 11") == minecraft:air ]] && [[ $(val 1 "layer 50 -60 10") == minecraft:air ]]'
+# The copy's mode, set to Zoop here, stays for the next copy.
+press 1 r
+check "with the copy at the aim, R sets Zoop" eval '[[ $(val 1 copymode) == ZOOP ]]'
 radial_open
 radial_click "Copy"
 check "the radial menu's Copy button puts the copy away and starts a box" eval \
@@ -753,6 +847,15 @@ check "the radial menu's Copy button puts the copy away and starts a box" eval \
 radial_let_go
 house_box copy-real-box
 check "a box around only real blocks copies them: the house's 26 blocks" client_said 1 "Copied 26 blocks."
+check "the new copy keeps the mode, Zoop" eval '[[ $(val 1 copymode) == ZOOP ]]'
+attack_click 1
+check "and its first click fixes a row, sending no edit" eval '[[ $(val 1 holdlog) == *" edits=0 "* ]] &&
+	drv 1 "await row 1 copies, 1 placements NONE NONE: " > /dev/null'
+use_click 1
+check "a right click drops the row" eval 'drv 1 "wait 10" > /dev/null && [[ $(val 1 copyrow) == none ]] && copy_is 1 "^at "'
+press 1 r
+press 1 r
+check "R twice sets Single again" eval '[[ $(val 1 copymode) == SINGLE ]]'
 
 # Two ghost blocks on the house: a gold block inside, where the world has air, and stone at its top corner, over the
 # real oak planks there. The same box copies the ghost blocks and the real blocks together: 27 blocks, taking the
@@ -1354,6 +1457,10 @@ check "a box Planner1 counts is Last counted in their file on the server within 
 	((SECONDS - list_counted <= 31))'
 echo "  seconds from the count to the file: $((SECONDS - list_counted)); the file's Last counted: $(val 1 "listfile $lists_file")" \
 	>> /out/checks.log
+# The copy's mode, set to Zoop before the restart, starts as Single again after it.
+paste_button
+press 1 r
+check "before the restart, R sets the copy's mode to Zoop" eval '[[ $(val 1 copymode) == ZOOP ]]'
 cp /out/client1.log /out/client1-before-lists-restart.log
 cp /out/server.log /out/server-before-lists-restart.log
 stop_client 1
@@ -1362,6 +1469,7 @@ start_server "" server-lists
 start_client 1
 check "after the server and Planner1's game restart, the game has the list it counted as its current list" eval \
 	'drv 1 "await session" "await noscreen" "wait 20" > /dev/null && [[ $(val 1 currentlist) == "$counted_list" ]]'
+check "and the copy's mode is Single again" eval '[[ $(val 1 copymode) == SINGLE ]]'
 echo "  the current list after the restart: $(val 1 currentlist)" >> /out/checks.log
 drv 1 "fly false" > /dev/null
 

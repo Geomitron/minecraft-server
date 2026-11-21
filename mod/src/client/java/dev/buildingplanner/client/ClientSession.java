@@ -2,6 +2,9 @@ package dev.buildingplanner.client;
 
 import dev.buildingplanner.BuildingPlanner;
 import dev.buildingplanner.ClientConfig;
+import dev.buildingplanner.input.CopyMode;
+import dev.buildingplanner.input.CopyPlacement;
+import dev.buildingplanner.input.CopyRow;
 import dev.buildingplanner.input.MouseMode;
 import dev.buildingplanner.input.PasteBoxes;
 import dev.buildingplanner.layer.BoxCount;
@@ -32,6 +35,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 
@@ -41,6 +45,11 @@ import net.minecraft.world.phys.BlockHitResult;
  * thread, where Fabric runs the payload handlers.
  */
 final class ClientSession {
+	/**
+	 * The copy's build mode, which starts as Single each time the game starts and stays as the player last set it while
+	 * the game runs, across copies, servers and dimensions, as Satisfactory keeps a build mode until R changes it.
+	 */
+	private static CopyMode copyMode = CopyMode.SINGLE;
 	private final int maxEditBlocks;
 	private final EditGlow glow;
 	private final Tiles tiles;
@@ -156,9 +165,13 @@ final class ClientSession {
 	/**
 	 * Moves the copy at the aim against the face the player aims at, flush to a recent paste aimed at, and in line with
 	 * the most recent paste while the sprint key is held ({@link PasteBoxes#place}); aiming at nothing, or the copy locked,
-	 * leaves it.
+	 * leaves it. With a row fixed, the copy stays and the row follows the aim instead.
 	 */
 	private void followAim() {
+		if (clipboard.rowFixed()) {
+			followAimWithRow();
+			return;
+		}
 		if (!clipboard.atAim() || clipboard.locked()) {
 			return;
 		}
@@ -167,6 +180,53 @@ final class ClientSession {
 			clipboard.moveTo(pastes.place(hit.getBlockPos(), hit.getDirection(), clipboard.spot().size(),
 				Minecraft.getInstance().options.keySprint.isDown()).min());
 		}
+	}
+
+	/**
+	 * Lays the fixed row from the copy toward the aim ({@link CopyRow#row}): in Zoop toward where the copy would rest
+	 * against the aimed face, leaving the row as it was while the player aims at nothing; in Vertical toward the view's
+	 * height above or below the copy ({@link CopyRow#verticalAim}).
+	 */
+	private void followAimWithRow() {
+		CopyPlacement.Spot first = clipboard.spot();
+		BlockPos toward = null;
+		if (copyMode == CopyMode.VERTICAL) {
+			Entity view = Aim.entity();
+			if (view != null) {
+				toward = CopyRow.verticalAim(first, view.getEyePosition(), view.getLookAngle(), GhostAim.COPY_REACH);
+			}
+		} else {
+			BlockHitResult hit = GhostAim.aim(replica.layer(), tiles.shown(), GhostAim.COPY_REACH);
+			if (hit != null) {
+				toward = CopyPlacement.againstFace(hit.getBlockPos(), hit.getDirection(), first.size()).middle();
+			}
+		}
+		if (toward != null) {
+			clipboard.showRow(CopyRow.row(copyMode, first, toward));
+		}
+	}
+
+	/** The copy's build mode. */
+	static CopyMode copyMode() {
+		return copyMode;
+	}
+
+	/** "Change copy mode": Single, Zoop and Vertical, in that order. */
+	void cycleCopyMode() {
+		copyMode = copyMode.next();
+	}
+
+	/**
+	 * The right click during a zoop, after its first click: drops the row and leaves the copy at the aim, which follows
+	 * the aim again unless it's locked. Returns whether there was a row.
+	 */
+	boolean dropRow() {
+		if (!clipboard.rowFixed()) {
+			return false;
+		}
+		clipboard.dropRow();
+		followAim();
+		return true;
 	}
 
 	/** Building Planner's mode that takes over the mouse now, or null. */
@@ -402,12 +462,29 @@ final class ClientSession {
 	}
 
 	/**
-	 * Pastes the copy at the aim as one shape edit. It names only the copy's blocks, so its empty space leaves the
-	 * layer's. The copy's box joins the recent pastes it snaps to.
+	 * The left click with the copy at the aim. In Single it pastes the copy as one shape edit. In Zoop and Vertical the
+	 * first click fixes the copy as the row's first, and the second pastes the whole row as one shape edit, which one
+	 * undo takes back, and the copy then follows the aim again (unless it's locked) for a new row. A paste names only
+	 * the copies' blocks, so their empty space leaves the layer's, and its box joins the recent pastes the copy snaps
+	 * to.
 	 */
 	void paste() {
-		if (clipboard.atAim() && sendShape(EditKind.SHAPE, clipboard.worldBlocks())) {
-			pastes.add(clipboard.spot());
+		if (!clipboard.atAim()) {
+			return;
+		}
+		if (copyMode == CopyMode.SINGLE) {
+			if (sendShape(EditKind.SHAPE, clipboard.worldBlocks())) {
+				pastes.add(clipboard.spot());
+			}
+		} else if (!clipboard.rowFixed()) {
+			clipboard.fixRow();
+			followAim();
+		} else {
+			CopyPlacement.Spot box = clipboard.rowBox();
+			if (sendShape(EditKind.SHAPE, clipboard.rowBlocks())) {
+				pastes.add(box);
+				dropRow();
+			}
 		}
 	}
 
@@ -427,7 +504,8 @@ final class ClientSession {
 
 	/**
 	 * Gives the copy at the aim a quarter turn around its middle, clockwise or counterclockwise seen from above, and sets
-	 * it against the aim again unless it's locked.
+	 * it against the aim again unless it's locked; with a row fixed, the copy turns in place and the row's other copies
+	 * turn with it, laid end to end again at their turned length.
 	 */
 	void turnCopy(boolean clockwise) {
 		if (clipboard.atAim()) {

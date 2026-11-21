@@ -1,6 +1,7 @@
 package dev.buildingplanner.client;
 
 import dev.buildingplanner.input.CopyNudge;
+import dev.buildingplanner.input.CopyPlacement;
 import dev.buildingplanner.input.RepeatSpeed;
 import dev.buildingplanner.sync.EditKind;
 import dev.buildingplanner.sync.Payloads;
@@ -217,6 +218,14 @@ public final class Driver implements ClientModInitializer {
 			}
 			case "copy" -> {
 				return copy();
+			}
+			case "copymode" -> {
+				// copymode: the copy's build mode, SINGLE, ZOOP or VERTICAL.
+				return ClientSession.copyMode().name();
+			}
+			case "copyrow" -> {
+				// copyrow: the zoop's row at the copy (see row()).
+				return row();
 			}
 			case "pastehere" -> {
 				// pastehere x1 y1 z1 x2 y2 z2: copies the box, as Copy does, and pastes the copy at once where it was
@@ -941,6 +950,7 @@ public final class Driver implements ClientModInitializer {
 			case "tile" -> String.valueOf(tile(Integer.parseInt(a[1]), Integer.parseInt(a[2]))).equals(a[3]);
 			case "glow" -> glows().contains(what.substring(5));
 			case "copy" -> copy().startsWith(what.substring(5));
+			case "row" -> row().startsWith(what.substring(4));
 			case "sprint" -> mc.options.keySprint.isDown() == Boolean.parseBoolean(a[1]);
 			case "noglow" -> glows().isEmpty();
 			case "held" -> SentPackets.held(a[1].equals("use"));
@@ -963,6 +973,7 @@ public final class Driver implements ClientModInitializer {
 				case "tile" -> tile(Integer.parseInt(a[2]), Integer.parseInt(a[3]));
 				case "glow" -> glows();
 				case "copy" -> copy();
+				case "row" -> row();
 				case "layer" -> LayerProbe.compare(Minecraft.getInstance().gameDirectory.toPath().resolve(a[2]));
 				case "listfile" -> "file " + ListProbe.lastCounted(Minecraft.getInstance().gameDirectory.toPath()
 					.resolve(a[2])) + ", game " + ListProbe.current();
@@ -1136,6 +1147,29 @@ public final class Driver implements ClientModInitializer {
 			: "away") + " "
 			+ p.getMirror() + " " + p.getRotation() + (selected ? " selected " : " unselected ")
 			+ clipboard.worldBlocks().size() + " blocks";
+	}
+
+	/**
+	 * The zoop's row at the copy: {@code none} while no row is fixed, otherwise how many copies it has, how many of
+	 * Litematica's placements are the copy's or its row's, with the mirrors and rotations they have (one, when every copy
+	 * is turned alike), then each copy's box, the first's first: {@code 2 copies, 2 placements NONE NONE:
+	 * 4,-60,20..6,-59,21 ; 7,-60,20..9,-59,21}.
+	 */
+	private static String row() throws Exception {
+		if (session() == null) {
+			return "nosession";
+		}
+		Clipboard clipboard = clipboard();
+		if (!clipboard.rowFixed()) {
+			return "none";
+		}
+		List<CopyPlacement.Spot> spots = clipboard.rowSpots();
+		List<SchematicPlacement> placements = DataManager.getSchematicPlacementManager().getAllSchematicsPlacements()
+			.stream().filter(clipboard::holds).toList();
+		String turns = placements.stream().map(p -> p.getMirror() + " " + p.getRotation()).distinct()
+			.collect(Collectors.joining(","));
+		return spots.size() + " copies, " + placements.size() + " placements " + turns + ": " + spots.stream()
+			.map(spot -> shortPos(spot.min()) + ".." + shortPos(spot.max())).collect(Collectors.joining(" ; "));
 	}
 
 	private static String shortPos(BlockPos pos) {

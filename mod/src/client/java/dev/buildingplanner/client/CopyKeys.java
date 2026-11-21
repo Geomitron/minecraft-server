@@ -11,16 +11,18 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.Entity;
 
 /**
- * The copy's own keys (see "Keys"): "Lock or unlock the copy" (H) and the six "Nudge the copy" keys (the arrow keys,
- * Page Up and Page Down), Satisfactory's keys for its hologram. They need no hook: the client tick reads them, with no
- * screen open, while the copy is at the aim, and otherwise empties their presses, so a press made before the copy came
- * to the aim doesn't act once it does. A nudge key acts only while the copy is locked, and held down it acts again
- * ({@link KeyRepeat}).
+ * The copy's own keys (see "Keys"): "Lock or unlock the copy" (H), the six "Nudge the copy" keys (the arrow keys, Page
+ * Up and Page Down) and "Change copy mode" (R), Satisfactory's keys for its hologram. They need no hook: the client
+ * tick reads them, with no screen open, while the copy is at the aim and no zoop's row is fixed, and otherwise empties
+ * their presses, so a press made before the copy came to the aim doesn't act once it does. A nudge key acts only while
+ * the copy is locked, and held down it acts again ({@link KeyRepeat}).
  */
 final class CopyKeys {
 	static final KeyMapping LOCK =
 		new KeyMapping("key.buildingplanner.lock_copy", InputConstants.KEY_H, BuildingPlannerClient.category());
 	static final Map<CopyNudge, KeyMapping> NUDGES = new EnumMap<>(CopyNudge.class);
+	static final KeyMapping MODE =
+		new KeyMapping("key.buildingplanner.copy_mode", InputConstants.KEY_R, BuildingPlannerClient.category());
 
 	static {
 		Map<CopyNudge, Integer> defaults = Map.of(CopyNudge.FORWARD, InputConstants.KEY_UP, CopyNudge.BACK,
@@ -39,19 +41,25 @@ final class CopyKeys {
 		}
 	}
 
-	/** Registers the seven keys; call while the client starts, before the game reads its options. */
+	/** Registers the eight keys; call while the client starts, before the game reads its options. */
 	static void register() {
 		KeyMappingHelper.registerKeyMapping(LOCK);
 		NUDGES.values().forEach(KeyMappingHelper::registerKeyMapping);
+		KeyMappingHelper.registerKeyMapping(MODE);
 	}
 
 	/** Once a client tick, after the session's: acts on the keys for the copy at the aim, or empties their presses. */
 	void tick(Minecraft mc, ClientSession session) {
-		boolean acting = session != null && session.clipboard().atAim() && mc.gui.screen() == null;
+		boolean acting = session != null && session.clipboard().atAim() && !session.clipboard().rowFixed()
+			&& mc.gui.screen() == null;
 		int lockPresses = presses(LOCK);
+		int modePresses = presses(MODE);
 		if (acting) {
 			for (int i = 0; i < lockPresses; i++) {
 				session.toggleCopyLock();
+			}
+			for (int i = 0; i < modePresses; i++) {
+				session.cycleCopyMode();
 			}
 		}
 		Entity view = Aim.entity();

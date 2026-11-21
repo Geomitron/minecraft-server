@@ -417,15 +417,18 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	}
 
 	/**
-	 * Hook M2: the right click puts the copy away; returns whether the game's use is skipped, which it is too while the
-	 * button stays down after a mode started or ended.
+	 * Hook M2: the right click puts the copy away, or during a zoop, after its first click, drops the row and leaves the
+	 * copy at the aim; returns whether the game's use is skipped, which it is too while the button stays down after a
+	 * mode started or ended.
 	 */
 	public static boolean rightClick() {
 		if (session == null) {
 			return false;
 		}
 		if (session.mouseMode() != null && !useHeld) {
-			session.modeAction(MouseMode.Action.RIGHT_CLICK);
+			if (!session.dropRow()) {
+				session.modeAction(MouseMode.Action.RIGHT_CLICK);
+			}
 			useHeld = true;
 			return true;
 		}

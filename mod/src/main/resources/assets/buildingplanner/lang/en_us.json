@@ -90,5 +90,6 @@
 	"key.buildingplanner.nudge_left": "Nudge the copy left",
 	"key.buildingplanner.nudge_right": "Nudge the copy right",
 	"key.buildingplanner.nudge_up": "Nudge the copy up",
-	"key.buildingplanner.nudge_down": "Nudge the copy down"
+	"key.buildingplanner.nudge_down": "Nudge the copy down",
+	"key.buildingplanner.copy_mode": "Change copy mode"
 }

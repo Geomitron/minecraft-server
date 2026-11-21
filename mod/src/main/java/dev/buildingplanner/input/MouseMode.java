@@ -13,8 +13,8 @@ public enum MouseMode {
 	 */
 	BOX,
 	/**
-	 * The copy at the aim: a left click pastes it, the scroll wheel turns it, a middle click mirrors it, and a right
-	 * click puts it away.
+	 * The copy at the aim: a left click pastes it (in Zoop and Vertical, the first fixes a row and the second pastes the
+	 * row), the scroll wheel turns it, a middle click mirrors it, and a right click puts it away, or drops a fixed row.
 	 */
 	COPY_AT_AIM;
 

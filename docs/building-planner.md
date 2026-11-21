@@ -971,18 +971,24 @@ it while the game runs, as Satisfactory keeps a build mode until R changes it. S
 three modes; its wheel, shown while R is held, has no equivalent here, since tapping R reaches each of the three.
 
 - Single: each left click pastes one copy, as above.
-- Zoop: the first left click fixes the first copy where it is. The row then follows the aim: copies end to end from the
-  first, each the copy's own length (as it's turned) from the one before, so they touch without overlapping, along
-  whichever of the four compass directions from the first copy the aim is farthest along, up to 10 copies in all, as
-  Satisfactory zoops up to 10. The second left click pastes the whole row as one shape edit, which one undo takes back,
-  and the copy follows the aim again for a new row.
-- Vertical: as Zoop, with the row going up or down from the first copy, whichever way the aim is.
+- Zoop: the first left click fixes the first copy where it is, and sends nothing. The row then follows the aim: copies
+  end to end from the first, each the copy's own length (as it's turned) from the one before, so they touch without
+  overlapping, along whichever of the four compass directions from the first copy the aim is farthest along, up to 10
+  copies in all, as Satisfactory zoops up to 10. The aim here is where the copy would rest against the aimed face; the
+  row ends with the copy that holds it along the row, and a tie between directions takes east or west. While the
+  player aims at nothing, the row stays as it was. The second left click pastes the whole row as one shape edit, which
+  one undo takes back, and the copy follows the aim again for a new row, unless it's locked, when it stays where the
+  row started. The row's box, around all its copies, joins the recent pastes the copy snaps to, as one paste.
+- Vertical: as Zoop, with the row going up or down from the first copy, whichever way the view is: the row reaches the
+  height where the view's line passes nearest the vertical line through the first copy's middle, within 64 blocks, so
+  it follows the view up and down with no block to aim at (`CopyRow`).
 
 The row's other copies are placements of the same schematic, which Litematica draws as it draws the copy and Building
 Planner adds and removes as the row grows and shrinks (hooks L4 and L5 treat them as the copy). While the row is
-fixed, the wheel and the middle click turn and mirror every copy in it, H and the nudge keys act on nothing, and a
-right click drops the row. A row whose blocks together pass the block cap draws red (below), and its click pastes
-nothing.
+fixed, the wheel and the middle click turn and mirror every copy in it (the first in place, around its middle, and the
+others laid end to end again at the turned length), H, R and the nudge keys act on nothing, and a right click drops
+the row. A copy locked before the first click starts the row where it's locked. A row whose blocks together pass the
+block cap draws red (below), and its click pastes nothing.
 
 **Colours.** The copy's box is drawn by Building Planner through MaLiLib's renderer, as the box for Copy is
 (`RenderUtils.renderAreaOutline`), in Satisfactory's hologram colours (806 Q7 B): blue (#00D4FF) where a paste would go in as it
@@ -1438,8 +1444,9 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   after the menu opens show the buttons nearer the middle and smaller than when it's open, as the menu's own are. With
   Effortless Building's mode Line, no mode segment shows selected while the copy is at the aim or a box is drawn, and
   Paste, Copy, "Material list" or Delete does; with the box ended, Line's segment does, and no button.
-- The menu's corner text reads "Building Planner", and Controls shows Building Planner's keys, the copy's seven among
-  them, and Effortless Building's under the "Building Planner" heading, in the order "Keys" gives, with no raw key name;
+- The menu's corner text reads "Building Planner", and Controls shows Building Planner's keys, the copy's eight among
+  them, and Effortless Building's under the "Building Planner" heading, sorted by name as Controls sorts them, with no
+  raw key name;
   each is shot, Controls at 854 by 480 and 1920 by 1080, GUI scale 2, and at 1920 by 1080, GUI scale 4. The driver's
   own Page Up key, under a heading of its own, is unbound first, so Controls shows no clash.
 - The Copy button starts a box: the controls line shows "Copy: Left-click to set the first corner, Right-click to
@@ -1476,6 +1483,19 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   count of the ticks the key was down, about 5 a second. H unlocks it, and it rests on the aimed face again. Locked
   again, a left click pastes it, for the other player too, and it stays locked where it was. With Freecam's camera on
   and facing east while Planner1 faces north, Up moves it east, away from the camera.
+- The copy's mode starts as Single, and R switches it to Zoop, Vertical, Single and Zoop again. In Zoop the first left
+  click fixes the copy as the row's start and sends no edit. Aimed 9 blocks north, the row has 4 copies end to end,
+  each the copy's length north to south from the one before, each one of Litematica's placements, which Litematica
+  draws; the first stays where the click fixed it. It's shot at 854 by 480 and 1920 by 1080. Aimed farther, the row
+  stops at 10 copies; aimed back, it shrinks to 4. A notch of the wheel up turns every copy a quarter turn, the row
+  laid again at the turned length (6 copies), and a notch down turns them back. H and the nudge keys act on nothing
+  while the row is fixed. A right click drops the row, sending no edit, and leaves the copy following the aim, still in
+  Zoop. A row of 4 pastes as one edit, which the other player sees, every copy's blocks; the copy is then at the aim
+  with no row, and one Ctrl+Z takes back the whole row. In Vertical, looking up past the copy, the row goes up 5
+  copies, each the copy's height above the one before, and is shot at both sizes; looking down, it goes down 3, to the
+  bottom of the world.
+- With Zoop set, a new copy made with the Copy button keeps the mode, and its first click fixes a row. After Planner1's
+  game restarts, the mode is Single again.
 - A right click puts the copy away, and the radial menu's Paste button brings it back to the aim, turned and mirrored
   as it was. Choosing a mode in the radial menu, or the Block mix button, puts it away too.
 - A box around a real house with no ghost blocks copies its real blocks. With a ghost gold block added inside the house
@@ -1663,6 +1683,12 @@ The copy's keys have unit tests too. `CopyNudgeTest` covers each nudge key's dir
 nearest compass direction, back its opposite, left and right its sides, up and down whatever the facing. `KeyRepeatTest`
 covers a key's repeat: a press acts at once, a held key again after 4 ticks and then every 4 (5 a second), the
 computer's own key repeat not counting while the key stays down, and each new press acting at once.
+
+The zoop's row has unit tests as a pure function too. `CopyRowTest` covers R's order of the modes; Single as the first
+copy alone; Zoop in each compass direction, the copies touching without overlapping, the direction the aim is
+farthest along with a tie going east or west, the row ending with the copy that holds the aim, at most 10 copies, and a
+turned copy its turned length apart; Vertical up and down its height apart, whatever the aim's distance to the side;
+the view's height for Vertical, looking up, down, away and straight up; and the box around the row.
 
 The fill rule's unit tests (`FillRuleTest`) cover each property it compares or ignores: a stair facing another way or
 upside down, a log on another axis, a door with the other hinge or its other half, a bed's other part, a button on
