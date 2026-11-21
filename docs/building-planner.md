@@ -13,8 +13,9 @@ except 0.6.0's changes, from Geo's requests of November 20th (in [plan.md](plan.
   Planner's mouse modes" and "Keys");
 - the radial menu's Delete button and its box (see "The Delete box"), and a second Delete mode, Aim, that marks the
   ghost blocks the player looks at and erases them on a confirm (see "Delete by aim");
-- the copy's controls for one ghost block in Effortless Building's Single mode: locking and nudging, Zoop and Vertical
-  rows, and turning and flipping the block with Left Ctrl held (see "One ghost block");
+- the copy's controls for one ghost block in Effortless Building's Single mode (locking and nudging, and Zoop and
+  Vertical rows), and turning and flipping the block in hand with Left Ctrl held, in every mode but Disable (see "One
+  ghost block");
 - ghost blocks leaving the layer once real blocks fill them, with protocol version 5 (see "Ghost blocks the real world
   fills");
 - editing ghost blocks from Freecam's camera (see "Editing from Freecam");
@@ -44,9 +45,12 @@ The build steps are in [plan.md](plan.md) ("Agent-ready work").
 - **One ghost block.** In Single mode, with a block in hand, the copy's controls work for the one ghost block at the
   aim, as if it were a copy of one block, while Single's buttons stay: H locks it in place, and the arrow keys, Page
   Up and Page Down nudge it; R switches it between Single, Zoop and Vertical, whose rows of up to 32 blocks go down
-  with two right clicks; while Left Ctrl is held, the wheel turns the block and the middle click flips it to the
-  other ways it can sit (a log's axis, a stair's top or bottom half), and it keeps that turn until the player switches
-  to another block. A line of these controls shows at the bottom of the screen (see "One ghost block").
+  with two right clicks. A line of these controls shows at the bottom of the screen (see "One ghost block").
+- **Turning and flipping.** In every mode but Disable, with a block in hand, while Left Ctrl is held, the wheel turns
+  the block and the middle click flips it to the other ways it can sit (a log's axis, a stair's top or bottom half).
+  Every shape and its preview take that turn, in each mode, until the player switches to another block. These
+  controls show at the bottom of the screen, in Single mode's line or in a line of their own in the other modes (see
+  "One ghost block").
 - **Hold to repeat.** In Single mode, holding the place button keeps placing ghost blocks and holding the break button
   keeps erasing them. Two sliders in Effortless Building's radial menu, "Build speed" and "Break speed", set how fast,
   from 1 to 20 blocks a second; at first they're the game's own pace for a held button, five a second to place and
@@ -149,7 +153,7 @@ One jar, mod id `buildingplanner`, installed on the server and in the player pac
 menus, so it adds nothing to the registries Fabric API syncs at login, and players without mods can still join.
 
 - **Common:** the layer's column storage and its file format, the network payloads, the material lists' format and
-  limits, the hold-to-repeat timer, the look defaults' rules, the turns of one ghost block (`BlockTurn`) and the marks
+  limits, the hold-to-repeat timer, the look defaults' rules, the turns of the block in hand (`BlockTurn`) and the marks
   of Delete by aim (`DeleteMarks`).
 - **Server:** the layer store and its files, column watching, edits and their order, per-player undo, each player's
   material lists and their files, and the one-time import of the plans Syncmatica shared. They run only on a dedicated server, which is how the group plays.
@@ -183,7 +187,7 @@ Effortless Building, under `common/src/main/java/nl/requios/effortlessbuilding/`
 
 | # | File, method | Hook | Purpose |
 |---|---|---|---|
-| E1 | `buildpipeline/BuildPipelineClient.java`, `handleClick` | `@WrapWithCondition` on `PacketHandler.sendToServer(PlaceBuildModePacket)`, reading the local `BlockSet blocks` | Take the finished shape (every entry, after mode, modifiers, mix and constraints) into the layer; don't send the packet. `getFirstClickHit()` is still set here, so block states use the first click's face. In Single mode each state then takes the one ghost block's turn (`BlockTurn.apply`, see "One ghost block"). |
+| E1 | `buildpipeline/BuildPipelineClient.java`, `handleClick` | `@WrapWithCondition` on `PacketHandler.sendToServer(PlaceBuildModePacket)`, reading the local `BlockSet blocks` | Take the finished shape (every entry, after mode, modifiers, mix and constraints) into the layer; don't send the packet. `getFirstClickHit()` is still set here, so block states use the first click's face. In every mode each state takes the turn of the block in hand (`BlockTurn.apply`, see "One ghost block") after its placement rules and before the entry's mirror and turn from the modifiers (`BlockEntry.applyTransforms`). |
 | E2 | same method | `@WrapWithCondition` on `PacketHandler.sendToServer(BreakBuildModePacket)` | Erase the ghost blocks among the shape's positions, in the game's copy of the layer, with the other half of each two-block ghost block (`GhostErase.of`); don't send. A shape over no ghost blocks sends no edit. |
 | E3 | same method | `@WrapWithCondition` on `PlacedBlockTracker.clientTrackAll` | Don't record ghost positions as real blocks the player placed. |
 | E4 | `network/PacketHandler.java`, `sendToServer(UndoPacket)` and `sendToServer(RedoPacket)` | `@Inject` at head, cancellable | Route undo and redo to the layer. Covers both the Ctrl+Z/Ctrl+Y keys (`fabric/.../EffortlessBuildingClient.java`, client tick) and the radial menu (`buildmode/ModeOptions.java`, `performAction`). |
@@ -206,7 +210,7 @@ Effortless Building, under `common/src/main/java/nl/requios/effortlessbuilding/`
 | E22 | `render/BlockPreviewRenderer.java`, `render` | `@Inject` at head, cancellable | No shape preview while a box is drawn or the copy is at the aim: the method draws the current mode's first block at the aim each frame (`BuildPipelineClient.getPreviewBlocks`). |
 | E23 | `utilities/KeyBindings.java`, `<clinit>` | `@ModifyArg` on the category of each of the four `KeyMapping` constructors | Effortless Building's keys go under Building Planner's heading in Controls (see "Keys"). |
 | E27 | `buildpipeline/BuildPipelineClient.java`, public static `getPreviewBlocks` | `@ModifyReturnValue` | While the one ghost block is locked, or a Zoop or Vertical row of it is fixed (after its first click), the preview draws the locked block or the row (`SingleBlock.previewBlocks`, run through Effortless Building's modifiers, mix and constraints), not the block at the aim (see "One ghost block"). |
-| E28 | `render/BlockPreviewRenderer.java`, `getPlacementState(BlockItem, Minecraft, ItemStack)` | `@ModifyReturnValue` | The preview's block takes the one ghost block's turn (`BlockTurn.apply`), as E1's states do, so the player sees the block as it will be placed. |
+| E28 | `render/BlockPreviewRenderer.java`, `getPlacementState(BlockItem, Minecraft, ItemStack)` | `@ModifyReturnValue` | In every mode, the preview's block takes the turn of the block in hand (`BlockTurn.apply`), as E1's states do, so the player sees the block as it will be placed. `BlockPreviewRenderer.render` makes one state through this method for the held block, or one for each of the mix's blocks, and applies each entry's mirror and turn to it after (`BlockEntry.applyTransforms`), so every block of a shape's preview takes the turn. |
 
 Effortless Building's limits on its shapes come from its config on the player's computer (`config/ServerConfig.java`),
 which keeps its defaults, since only Effortless Building's server sends other values (`SyncServerConfigS2CPacket`): in
@@ -227,8 +231,8 @@ Minecraft 26.3, read in the client jar Loom maps (`minecraft-clientonly-deobf-26
 | M1 | `Minecraft.java`, `startAttack()` | `@Inject` at head, cancellable, returning false | While a box is drawn, the left click sets its next corner; while the copy is at the aim, it pastes the copy; in Delete by aim, it starts the one-second hold that erases the marks. With the one ghost block's row fixed, it drops the row, and while the block is locked, it erases the ghost block where it's locked. None attacks or breaks. `handleKeybinds` calls it once for each press of the attack key. |
 | M2 | `Minecraft.java`, `startUseItem()` | `@Inject` at head, cancellable | While a box is drawn or the copy is at the aim, the right click leaves that mode and uses nothing; during a zoop, after its first click, it drops the row and leaves the copy at the aim. In Delete by aim it clears the marks, or leaves the mode when there are none. While the one ghost block is locked or in Zoop or Vertical, it places the block where it's locked, fixes the row's start, or places the row. `handleKeybinds` also calls `startUseItem` every 4 ticks while the use key stays down (`rightClickDelay`), so the use key does nothing more until it's let go. |
 | M3 | `Minecraft.java`, `continueAttack(boolean)` | `@Inject` at head, cancellable | Holding the left click breaks nothing while a box is drawn, the copy is at the aim or Delete by aim is on. |
-| M4 | `Minecraft.java`, `pickBlockOrEntity()` | `@Inject` at head, cancellable | While the copy is at the aim, the middle click (the pick block key) mirrors the copy; while a box is drawn or Delete by aim is on, it does nothing. In Single mode, with a block in hand that flips and Minecraft's sprint key held, it flips the one ghost block (see "One ghost block"). |
-| M5 | `MouseHandler.java`, `onScroll(long, double, double)` | `@WrapWithCondition` on `Inventory.setSelectedSlot`, reading the local `wheel` | While the copy is at the aim, each notch of the wheel turns the copy a quarter turn, instead of changing the hotbar slot: clockwise seen from above for a notch up, counterclockwise for a notch down, as Satisfactory's wheel turns a hologram. In Single mode, with a block in hand that turns and Minecraft's sprint key held, each notch turns the one ghost block the same way. The method reaches that call only with no screen open and the player not a spectator. |
+| M4 | `Minecraft.java`, `pickBlockOrEntity()` | `@Inject` at head, cancellable | While the copy is at the aim, the middle click (the pick block key) mirrors the copy; while a box is drawn or Delete by aim is on, it does nothing. While the turning controls are active (every mode but Disable), with a block in hand that flips and Minecraft's sprint key held, it flips the block (see "One ghost block"). |
+| M5 | `MouseHandler.java`, `onScroll(long, double, double)` | `@WrapWithCondition` on `Inventory.setSelectedSlot`, reading the local `wheel` | While the copy is at the aim, each notch of the wheel turns the copy a quarter turn, instead of changing the hotbar slot: clockwise seen from above for a notch up, counterclockwise for a notch down, as Satisfactory's wheel turns a hologram. While the turning controls are active (every mode but Disable), with a block in hand that turns and Minecraft's sprint key held, each notch turns the block the same way. The method reaches that call only with no screen open and the player not a spectator. |
 
 The hooks go by Minecraft's attack, use and pick block keys, so a player who moves one of them to another button finds
 the copy's controls there too. Effortless Building's own hooks into `startUseItem`, `startAttack` and
@@ -250,7 +254,7 @@ Litematica, under `src/main/java/fi/dy/masa/litematica/`:
 | L8 | `schematic/placement/PlacementManagerTaskRebuild.java`, `run()`; `PlacementManagerTask.java`'s constructors | `@WrapMethod`; a number for each task, in the order they're made (`RebuildOrder`) | Run the rebuilds of one chunk column one at a time. Litematica's background threads (at least two) rebuild a column from its placements' blocks as they are when the rebuild runs, so two rebuilds of one column at once could end with the older one's result, read before an edit's blocks were written. It also notes when each rebuild begins and ends, for the self-check ("Overlapping shapes"). |
 | L9 | `schematic/placement/PlacementManagerDaemonHandler.java`, `removeRebuildTasksFor` and `removeDeferredTasksFor` | `@WrapMethod` | A running rebuild drops from the queue only the rebuilds of its column made before it began, whose edits it reads. Litematica's rebuild drops every queued rebuild of its column as it ends, and as it unloads a column with no placements, including one queued for an edit written after it read the column, which would leave that edit undrawn. Elsewhere (a new rebuild replacing the queued ones, an unload) every queued rebuild of the column still goes. |
 | L10 | `gui/GuiMaterialList.java`, private `createButtons()` and `createButton(int, int, ButtonListener.Type)` | `@WrapOperation` on `addButton` in `createButton`, which adds "Save list" or "Saved lists" in place of the `EXPORT` or `EXPORT_TYPE` button, telling them by the listener's `type` (read by reflection, since `ButtonListener.Type` is private); `@WrapOperation` on `addButton` in `createButtons`, the call that adds the `ButtonListenerChangeMenu` | For Building Planner's list only (`GhostMaterialList`): no "Export" button, no export type button ("Write to file", which cycles), and no "Litematica menu" button, which `createButtons` adds at the bottom right; "Save list" and "Saved lists" go where "Export" and the export type were, in the same row, which the method moves to the bottom left when the screen is narrow (`isNarrow`). Other material lists keep their buttons. |
-| L11 | `util/WorldUtils.java`, `doSchematicWorldPickBlock(boolean, Minecraft)` | `@Inject` at head, cancellable, returning false | While a mouse mode is on, Litematica picks no block from its placements, so its "pick block first" hotkey (the middle click by default), which runs before the game sees the click and keeps the click when it picks, leaves the click to the game's pick block key and hook M4. The copy sits under the crosshair, so the click would otherwise pick one of the copy's blocks and never mirror it. The same holds while Minecraft's sprint key is held with the one ghost block active and a block in hand that flips, so the middle click on a ghost block flips the block rather than picking the ghost block. Otherwise Litematica's pick block works as it does without Building Planner. |
+| L11 | `util/WorldUtils.java`, `doSchematicWorldPickBlock(boolean, Minecraft)` | `@Inject` at head, cancellable, returning false | While a mouse mode is on, Litematica picks no block from its placements, so its "pick block first" hotkey (the middle click by default), which runs before the game sees the click and keeps the click when it picks, leaves the click to the game's pick block key and hook M4. The copy sits under the crosshair, so the click would otherwise pick one of the copy's blocks and never mirror it. The same holds while Minecraft's sprint key is held with the turning controls active and a block in hand that flips, so the middle click on a ghost block flips the block rather than picking the ghost block. Otherwise Litematica's pick block works as it does without Building Planner. |
 
 Public Litematica API the add-on calls: `LitematicaSchematic.createEmptySchematic`, `getSubRegionContainer`,
 `getAreaSize`; `LitematicaBlockStateContainer`'s `get` and `set`; `SchematicPlacement.createFor`,
@@ -916,7 +920,7 @@ for R alone, Delete is on (see "Delete by aim"): "Lock or unlock" (H), "Nudge fo
 "Nudge left" (Left), "Nudge right" (Right), "Nudge up" (Page Up), "Nudge down" (Page Down) and "Change Zoop or Delete
 mode" (R), Satisfactory's keys for the same controls. These names are proposed, for Geo's review with the build's
 screenshots, since the keys act for more than the copy; their ids stay `key.buildingplanner.lock_copy`, the
-`nudge_*` ids and `key.buildingplanner.copy_mode`. Lining the copy up, turning and flipping the one ghost block, and
+`nudge_*` ids and `key.buildingplanner.copy_mode`. Lining the copy up, turning and flipping the block in hand, and
 marking in Delete by aim use Minecraft's sprint key (Left Ctrl), as the copy's clicks and wheel use Minecraft's own
 keys, so Controls shows no clash with sprinting. Checked against each mod's defaults:
 
@@ -1187,15 +1191,20 @@ and a left click erases. Two of the copy's controls are Single's own already for
 face is, for one block, the block beside that face (`CopyPlacement.againstFace` with a 1×1×1 box), which is where
 Single places; and a one-block copy flush against a paste's box lands where aiming at that face puts it. So neither
 adds anything here, and a ghost block's row doesn't join the recent pastes the copy snaps to. Left Ctrl doesn't line
-the block up (980 Q6): it turns and flips the block instead (below).
+the block up (980 Q6): it turns and flips the block instead (below), in every one of Effortless Building's modes but
+Disable (1009 Q2 C).
 
 The block's controls are active while Building Planner has a session, Effortless Building's mode is Single, no mouse
-mode is on, and the main hand holds an item that places a block (`ClickRule`, as for shapes). A client class beside
-the copy's, `SingleBlock`, stores their state: the block's own mode, Single, Zoop or Vertical (`CopyMode`), apart from
-the copy's (980 Q3 A); the locked position, with the face and hit point aimed at when it was locked; a fixed row's
-start; and the turn. The mode starts as Single at each launch and stays as the player last set it while the game
-runs, as the copy's does. Leaving the server, changing dimension, choosing a mode in the radial menu (E21) and any
-mouse mode starting unlock the block and drop its row. The block at the aim has Single's reach, Effortless
+mode is on, and the main hand holds an item that places a block (`ClickRule`, as for shapes). The turning controls
+(Left Ctrl with the wheel and the middle click) are active under the same conditions in every mode but Disable, while
+no shape drawn with the break click is under way (`getBuildState()` isn't `BREAKING`), since that shape erases
+(`SingleRule.turning`). H, the nudge keys, R's Zoop and Vertical, the coloured box and Single's controls line act in
+Single mode only. A client class beside the copy's, `SingleBlock`, stores the Single controls' state: the block's own
+mode, Single, Zoop or Vertical (`CopyMode`), apart from the copy's (980 Q3 A); the locked position, with the face and
+hit point aimed at when it was locked; and a fixed row's start. A second client class, `HeldTurn`, stores the turn and
+the item it was set for, since the turn reaches every mode. The mode starts as Single at each launch and stays as the
+player last set it while the game runs, as the copy's does. Leaving the server, changing dimension, choosing a mode in
+the radial menu (E21) and any mouse mode starting unlock the block and drop its row. The block at the aim has Single's reach, Effortless
 Building's own (32 in survival, 200 in creative).
 
 **Locking and nudging.** H ("Lock or unlock") locks the block where a right click would place it at that moment (980
@@ -1205,7 +1214,7 @@ is while the player walks or flies around it, and the arrow keys, Page Up and Pa
 they nudge the copy: along the compass direction nearest the view (the Freecam camera's while Freecam flies it), with
 the copy's repeat for a held key (`CopyNudge`, `KeyRepeat`) and no distance limit. A right click places one ghost
 block at the locked position, and the block stays locked for the next. A left click erases the ghost block at the
-locked position (open: whether a locked block's left click erases there or, as in Single, at the aim). Holding either
+locked position, whatever the player aims at (1009 Q1 A), and the block stays locked. Holding either
 button acts once, since repeats would land on the same position until it's nudged. H again unlocks it, and it follows
 the aim again. A locked block's state comes from its placement rules with the face and hit point aimed at when it was
 locked and the facing of the player (or the camera) at each click, then the turn (below).
@@ -1221,7 +1230,7 @@ stays as it was. The second right click places the whole row as one shape edit, 
 click with the row fixed drops it and erases nothing. While the row is fixed, H, R and the nudge keys act on nothing,
 and turning and flipping (below) act on every block in the row. After the row is placed, the block follows the aim
 again for a new row, or stays locked where the row started. Before the first click, the left click erases as in
-Single.
+Single, at the aim, or at the locked position while the block is locked.
 
 Each block in the row faces the same way, as in a Line, and the row goes through the same steps as Effortless
 Building's shapes: Building Planner makes a `BlockSet` of the row's positions, with its first and last positions, and
@@ -1237,8 +1246,9 @@ Building, M2 takes the right click and M1 the left (see "Hooks"). Hold to repeat
 follows the aim in Single.
 
 **Turning and flipping.** The wheel and the middle click work as in Minecraft, changing the hotbar slot and picking a
-block (980 Q5). While the player holds Minecraft's sprint key (Left Ctrl unless they change it), they turn and flip
-the block instead, so the player can place it facing any way wherever they stand (980 Q5 and Q6, Geo's answers):
+block (980 Q5). While the player holds Minecraft's sprint key (Left Ctrl unless they change it) and the turning
+controls are active, they turn and flip the block in hand instead, so the player can place it facing any way wherever
+they stand (980 Q5 and Q6, Geo's answers), in each of Effortless Building's modes but Disable (1009 Q2 C):
 
 - Each notch of the wheel (M5) gives the block a quarter turn: clockwise seen from above for a notch up, and
   counterclockwise for a notch down, as the copy turns. The turn is Minecraft's own for a turned structure
@@ -1256,9 +1266,26 @@ a block, drops the turn, and so does switching to another block and back; the sa
 keeps it. The turn is kept as the values of the block's orientation properties (facing, axis, rotation, half, slab
 type, attached face, hanging), and `BlockTurn.apply` sets each on every block placed that has that property, after
 the placement rules, which still set the rest (waterlogging, a fence's connections). With the block mix on, each of
-the mix's blocks takes the properties it has. E1 applies it to the states it places, and E28 to the preview's block.
-The turn applies in Single mode only, and stays while the player uses Effortless Building's other modes (open: whether
-the turn also applies to shapes drawn in Effortless Building's other modes).
+the mix's blocks takes the properties it has.
+
+Every mode's shapes and their preview take the turn (1009 Q2 C): Single's one block and its rows, and the shapes of
+Line, Wall, Floor, Cube, Diagonal Line, Diagonal Wall, Slope Floor, Circle, Cylinder and Sphere, the modes Effortless
+Building 4.3 offers besides Disable and Single (`buildmode/BuildModeEnum.java`, where Pyramid, Cone and Dome are
+commented out). Each of these modes gives every block of its shape the held block's placement rules with the first
+click's face (`BuildPipelineClient.getFirstClickHit`), then each entry's mirror and turn from the modifiers
+(`BlockEntry.applyTransforms`), in the preview (`BlockPreviewRenderer.render`) as in E1's states
+(`EffortlessShapes.place`). The turn goes between the two: E1 applies `BlockTurn.apply` to each state after its
+placement rules and before the entry's transforms, and E28 to the state the preview starts from, so a mirrored copy
+of a turned stair faces the mirrored way, as the preview shows it. The turn stays as the player changes mode, Disable
+among them, until they switch to another block (980 revision 2, Q1 A). The player may turn the block before a shape's
+first click or between its clicks; the preview shows each turn at once, and the shape places with the turn it has at its
+last click. A turn changes a shape's states and never its positions: no mode reads the held block's state (the only
+block state read under `buildmode/` is the world's, in `BuildSettings.java`).
+
+In Disable the turning controls aren't active: the wheel and the middle click work as in Minecraft, Left Ctrl or
+not, and no turning line shows (open: whether Disable leaves the wheel and the middle click as in Minecraft, as here,
+since Disable places real blocks as the game does and Building Planner never changes real blocks, or turns the block
+too, for the turn to take effect when the player picks another mode).
 
 Left Ctrl takes the wheel only while the block in hand (or a block of the mix) is one a turn changes, and the middle
 click only while it's one that flips. With a stone block in hand, the wheel changes the hotbar slot and the middle
@@ -1296,6 +1323,25 @@ that moment. These texts are proposed, for Geo's review with the build's screens
   in Single: "Turned: Right-click to place, ...", "Zoop, locked, turned: Right-click to set the start, ...";
 - while the block or the row is red, the reason in red, "Can't place: outside the world", in place of "Right-click to
   place" or the row's place; in Zoop and Vertical before the first click, before "Right-click to set the start".
+
+In Effortless Building's other modes, while the turning controls are active and the block in hand turns or flips, a
+line of the turning controls, the turning line, shows in the same place, look and background (`ControlsLine.turning`),
+with the sprint key as the player has it bound, in Single's line's phrases for the same actions. It names only the
+turning controls, since Effortless Building's clicks in those modes are its own. These texts are proposed, for Geo's
+review with the build's screenshots:
+
+- "Hold Left Control to turn or flip", or "Hold Left Control to turn" or "Hold Left Control to flip" as in Single, and
+  no line for a block that does neither;
+- while Left Control is held, "Scroll to turn, Middle-click to flip", or the one of them the block has;
+- once the block is turned or flipped, "Turned:" before either: "Turned: Hold Left Control to turn or flip".
+
+During a shape drawn with the place click, Effortless Building draws its own line, "Left-click to cancel, Right-click
+to place", 58 above the screen's bottom (`RenderHandler.renderSubtitle`), and the shape's block count in the action
+bar just above it (`RenderHandler.updateFeedback`, which calls `sendOverlayMessage`). The game draws the action bar's
+text from 72 to 63 above the screen's bottom (`Hud.extractOverlayMessage`), so while Effortless Building's line shows,
+`ModeHud` draws the turning line above the action bar, its last line ending 2 pixels above it, and both of Effortless
+Building's texts stay readable. A shape drawn with the break click has no turning line, since its turning controls
+aren't active.
 
 ### The material list
 
@@ -1870,8 +1916,9 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
 - One ghost block, locking and nudging (step 14): in Single mode with stone bricks, H locks the block beside the aimed
   face, and with Planner1 flown 5 blocks away and aiming elsewhere, Effortless Building's preview draws it there.
   Facing north, Up moves it one block north and Page Up one up. A right click places one ghost block there, on both
-  clients, and it stays locked; holding the right button for a second sends one edit; a left click erases that ghost
-  block. Locked, an oak stair placed with Planner1 facing east faces east. H unlocks it. With a stick in hand, H and
+  clients, and it stays locked; holding the right button for a second sends one edit; with Planner1 aiming at another
+  ghost block, a left click erases the ghost block at the locked position, leaves the aimed one, and the block stays
+  locked; holding the left button for a second sends one edit. Locked, an oak stair placed with Planner1 facing east faces east. H unlocks it. With a stick in hand, H and
   the nudge keys do nothing and Single's clicks act as without the add-on; choosing Line in the radial menu unlocks
   the block; with the copy at the aim, H locks the copy and not the block. With Freecam's camera on and facing east
   while Planner1 faces north, Up moves the locked block east. The locked block is shot in open air at 854 by 480 and
@@ -1893,14 +1940,31 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   Left Ctrl and the wheel change the hotbar slot. With the mix of oak and spruce stairs, both take the turn. A Zoop
   row of turned stairs faces one way. Turned and flipped stairs are shot before and after placing at 854 by 480 and
   1920 by 1080, GUI scale 2.
-- One ghost block, colours and its line (step 17): locked over grass the block is blue (the driver's `copycolour`);
+- Turning in every mode (step 17): with oak stairs turned a quarter turn in Single, the turn stays after choosing Line
+  in the radial menu, and a Line of 5 places 5 stairs facing the turned way, on both clients, as its preview showed
+  (the driver's `preview`, with each block's state). In Line, a notch up with Left Ctrl held before the first click,
+  and another between the two clicks, turns the preview at once each time, and the Line places with the second turn. One
+  shape of turned stairs in each of Wall, Floor, Cube, Diagonal Line, Diagonal Wall, Slope Floor, Circle, Cylinder and
+  Sphere has every stair facing the turned way; a Floor of oak slabs flipped to the top half has every slab's top half.
+  With Effortless Building's mirror on along X, a Line of turned stairs has its mirrored stairs facing the mirrored
+  way, in the preview and once placed; with the mix of oak and spruce stairs, a Wall's stairs all take the turn. In
+  Disable, Left Ctrl with the wheel changes the hotbar slot and the middle click picks a block, and back in Line the
+  stairs keep the turn; switching to stone and back to the stairs drops it. During a Line drawn with the break click,
+  Left Ctrl with the wheel changes the hotbar slot. The turning line, checked word for word (the driver's `modehud`):
+  in Line with stairs, with Left Ctrl held, turned, for a chest (turn only) and a slab (flip only); none for stone, in
+  Disable, during a break shape, with a stick in hand, or with the copy at the aim (the copy's line shows); with the
+  sprint key on Right Control, it names Right Control; F1 hides it. During a Line after its first click, the turning
+  line shows above the action bar's block count, which shows above Effortless Building's "Left-click to cancel,
+  Right-click to place", none covering another. The turning line is shot in Line before the first click at 1920 by
+  1080, GUI scale 4, and during a Line shape at 854 by 480 and 1920 by 1080, GUI scale 2 and 4.
+- One ghost block, colours and its line (step 18): locked over grass the block is blue (the driver's `copycolour`);
   nudged into a ghost gold block it's yellow and its click still places; nudged below the world's bottom it's red, and
   its click sends no edit; a Zoop row crossing ghost blocks is yellow; with a world border crossing a row, it's red and
   places nothing. With Planner1 following the aim, no box shows. The lines, each checked word for word: following the
   aim, with Left Ctrl held, for a chest (turn only), a slab (flip only) and stone (neither), turned, locked, Zoop and
   Vertical before the first click, Zoop locked, a row of 12 and of 1, and red; with the lock key on K, the mode key on
   G, the nudge forward on I and the sprint key on Right Control, the lines name them. No line shows with a stick in
-  hand, in Line mode, or with the copy at the aim (the copy's line shows); F1 hides it. Each line is shot at 1920 by
+  hand or with the copy at the aim (the copy's line shows), and in Line mode only the turning line shows; F1 hides it. Each line is shot at 1920 by
   1080, GUI scale 4, the locked line at 854 by 480 and 1920 by 1080, GUI scale 2, and a yellow row crossing ghost
   blocks at 1920 by 1080, GUI scale 2.
 
@@ -2040,9 +2104,11 @@ the start"), the reason as a warning and the actions as actions, keys a player r
 keys named one by one, the up and down keys named with their shared first word dropped ("Page Up/Down", "Keypad
 8/2") or in full ("U/J"), the nudge phrase with only one of its two parts, unbound keys left out and the phrase gone
 with all six unbound, and each box's lines, Delete's among them. `PayloadsTest` covers the
-Delete box's message writing 16,001 with digit grouping. For the new features (steps 13 and 17), `ControlsLineTest`
-also covers Aim's lines (no marks, marks, unmarking, the hold's progress in steps of 5%, the cap's warning) and the
-Delete box's "R for Aim", and the one ghost block's lines for each state above, with each turn phrase and title.
+Delete box's message writing 16,001 with digit grouping. For the new features (steps 13, 17 and 18),
+`ControlsLineTest` also covers Aim's lines (no marks, marks, unmarking, the hold's progress in steps of 5%, the cap's
+warning) and the Delete box's "R for Aim", the turning line (each turn phrase, with Left Control held, "Turned:", and
+no line for a block that neither turns nor flips), and the one ghost block's lines for each state above, with each
+turn phrase and title.
 
 Delete by aim's marks have unit tests as pure functions (step 12). `DeleteMarksTest` covers a sweep between two aims
 10 blocks apart marking all 10 ghost blocks between them and none past a real block; a sweep that starts on a mark
@@ -2050,9 +2116,10 @@ unmarking until it ends; the cap, with the other halves counted; and marks dropp
 layer. `EraseHoldTest` (step 13) covers the hold: 19 ticks erase nothing, the 20th erases once, a release starts the
 count again, and the progress shown.
 
-The one ghost block's rules have unit tests as pure functions (steps 14 to 16). `SingleRuleTest` covers when its
-controls are active (session, Single mode, no mouse mode, an item that places a block) and which clicks are Building
-Planner's in each state. `CopyRowTest` covers a 1×1×1 row up to 32 and the copy's up to 10. `BlockTurnTest` covers a
+The one ghost block's rules have unit tests as pure functions (steps 14 to 17). `SingleRuleTest` covers when its
+controls are active (session, Single mode, no mouse mode, an item that places a block), which clicks are Building
+Planner's in each state, and when the turning controls are active (each mode, none in Disable, none during a shape
+drawn with the break click, but during one drawn with the place click). `CopyRowTest` covers a 1×1×1 row up to 32 and the copy's up to 10. `BlockTurnTest` covers a
 quarter turn each way for stairs, logs, chests and signs; the flips' order for a log, a stair, a slab, a piston, a
 button and a lantern; the turn kept as property values and set on another block of the mix that has them; a block
 that neither turns nor flips; and the turn dropping when the item in hand changes. `CopyColourTest` covers a 1×1×1
@@ -2139,8 +2206,10 @@ other in the game's own copy of the layer, again after a restart, which doesn't 
   modifiers, though its positions don't come from its own mode; and that `processBlocks` over a hand-made set gives
   the modifiers' output a Line gives. If the preview can't, the row and the locked block would show as a Litematica
   placement of one block, as the copy does, without the mix.
-- Which block states Effortless Building's preview draws for a shape's blocks other than the first, and so whether
-  hook E28 alone shows the turn on every block of a row.
+- Where the action bar draws in the game: `Hud.extractOverlayMessage` pushes the numbers 68 and −4, read in the client
+  jar's bytecode, not decompiled, which puts its text from 72 to 63 above the screen's bottom, as in earlier versions.
+  The turning line during a shape goes above that (see "One ghost block"); step 17's shots show whether the three
+  texts overlap.
 - That no Litematica or MaLiLib hotkey acts on Left Ctrl with the wheel or the middle button while Litematica's tool
   item is off, as Building Planner sets it.
 - Satisfactory's mass dismantle as Delete by aim follows it: marking by sweeping the aim with Ctrl held rests on one
