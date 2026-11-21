@@ -362,7 +362,29 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
   - **Settled by the agent:** editing in Freecam aims from the camera whenever Freecam's camera is on, since Geo asked
     to edit ghost blocks there "like I would as the player"; ghost blocks filled before 0.6.0 are found as each chunk
     loads; a filled ghost block goes without a glow, since Litematica already draws it as nothing.
-  - **Texts:** the controls line's and the Delete button's go to Geo with the build's screenshots.
+  - **Texts (972):** the controls lines, the key names and the Delete texts as Geo read them, with Geo's wording of the
+    locked line, whose phrase "Arrow keys + Page Up/Down to nudge" every locked line uses (PR1 c3, and revision 2); a
+    dark background behind the line always, as chat has (Q1 B); the controls lines go in 0.6.0 (Q2 A). Every text the
+    game shows uses the fewest words that stay clear, and one name for each action, as the spec states with the controls
+    lines (985 Q1 A).
+  - **Two more changes (972):** Zoop and the copy's other controls for Effortless Building's Single mode, as if one
+    ghost block were a copy of one block, and a second Delete mode like Satisfactory's dismantle, where the ghost
+    blocks the player looks at are marked and a confirm erases them (Geo's note on 972). Both go in 0.6.0, and its
+    release waits for them (972 revision 2, Q1 B).
+  - **One ghost block (980):** Single mode keeps its buttons: a right click places, a left click erases, and holding
+    either repeats (Q1 A). R gives it Zoop and Vertical rows of up to 32 blocks (Q2, Geo's answer), in a mode of its
+    own, apart from the copy's (Q3 A). H locks it, and the arrow keys and Page Up and Page Down nudge it (Q4 A). The
+    wheel and the middle click work as in Minecraft, and Left Ctrl keeps nothing in line; while Left Ctrl is held, the
+    wheel turns the block and the middle click steps through the other ways that block can sit, so the player can place
+    it facing any way wherever they stand (Q5 and Q6, Geo's answers). Blocks keep the turn until the player switches to
+    another block (revision 2, Q1 A). The copy's blue, yellow or red box shows only while the block is locked or a row
+    is fixed (Q7 A), and Single mode's controls line shows whenever a block is in hand (Q8 A).
+  - **Delete by aim (981):** R switches Delete between "Box" and "Aim", as it switches the copy's modes (Q1 A). Holding
+    Left Ctrl and sweeping the aim marks each ghost block the crosshair passes over, and holding the left button for a
+    second erases the marked ones (Q2 A, Q3 A). A sweep that starts on a marked block unmarks what it passes over,
+    until the player lets go (Q4 A). Up to 200,000 can be marked, the server's limit for one edit, as for the Delete
+    box (Q5 A). Each marked ghost block has a red outline and see-through red sides, with their count and kinds under
+    the crosshair (Q6 A). The mode stays on after an erase (Q7 A).
 - The shared layer replaces the decisions above that concern separate plans: named plans that move and turn as a whole
   (411 Q1), plan growth (411 Q2), who deletes a plan (411 Q3, 420 Q9), starting a plan with N (420 Q1, 469 Q1), hiding
   a plan with Litematica or Syncmatica (420 Q2, 469 Q2), the paste's target plan (485 Q3), Litematica's Edit Schematic
