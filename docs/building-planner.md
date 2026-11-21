@@ -229,7 +229,7 @@ Litematica, under `src/main/java/fi/dy/masa/litematica/`:
 | L5 | `gui/widgets/WidgetListSchematicPlacements.java`, `getAllEntries()` | `@ModifyReturnValue` | Leave tiles and the copy out of Litematica's placement list. |
 | L6 | `render/OverlayRenderer.java`, `updatePlacementCache()` | `@WrapOperation` on `SchematicPlacementManager.getAllSchematicsPlacements()` | Leave tiles, the copy and its zoop row out of the boxes and origin markers `renderBoxes` draws; Building Planner draws the copy's box itself, in its colours (see "Copy and paste"). This leaves Litematica's own switch for those boxes (`enablePlacementBoxesRendering`) as the player set it. |
 | L7 | `render/schematic/ChunkRendererSchematicVbo.java`, `getOverlayType(BlockState, BlockState)` | `@ModifyReturnValue` | While Building Planner has a session, turn `EXTRA` into `NONE`. Litematica marks a real block as extra wherever a placement's box holds air there (`schematicOverlayTypeExtra`, on by default), and a tile's box is a whole chunk column's sections, so every real block in it would be marked. The layer holds only blocks to place, so no real block is extra. Missing and wrong blocks keep their colours. |
-| L8 | `schematic/placement/PlacementManagerTaskRebuild.java`, `run()`; `PlacementManagerTask.java`'s constructors | `@WrapMethod`; a number for each task, in the order they're made (`RebuildOrder`) | Run the rebuilds of one chunk column one at a time. Litematica's background threads (at least two) rebuild a column from its placements' blocks as they are when the rebuild runs, so two rebuilds of one column at once could end with the older one's result, read before an edit's blocks were written. It also notes each finished rebuild, for the self-check ("Overlapping shapes"). |
+| L8 | `schematic/placement/PlacementManagerTaskRebuild.java`, `run()`; `PlacementManagerTask.java`'s constructors | `@WrapMethod`; a number for each task, in the order they're made (`RebuildOrder`) | Run the rebuilds of one chunk column one at a time. Litematica's background threads (at least two) rebuild a column from its placements' blocks as they are when the rebuild runs, so two rebuilds of one column at once could end with the older one's result, read before an edit's blocks were written. It also notes when each rebuild begins and ends, for the self-check ("Overlapping shapes"). |
 | L9 | `schematic/placement/PlacementManagerDaemonHandler.java`, `removeRebuildTasksFor` and `removeDeferredTasksFor` | `@WrapMethod` | A running rebuild drops from the queue only the rebuilds of its column made before it began, whose edits it reads. Litematica's rebuild drops every queued rebuild of its column as it ends, and as it unloads a column with no placements, including one queued for an edit written after it read the column, which would leave that edit undrawn. Elsewhere (a new rebuild replacing the queued ones, an unload) every queued rebuild of the column still goes. |
 | L10 | `gui/GuiMaterialList.java`, private `createButtons()` and `createButton(int, int, ButtonListener.Type)` | `@WrapOperation` on `addButton` in `createButton`, which adds "Save list" or "Saved lists" in place of the `EXPORT` or `EXPORT_TYPE` button, telling them by the listener's `type` (read by reflection, since `ButtonListener.Type` is private); `@WrapOperation` on `addButton` in `createButtons`, the call that adds the `ButtonListenerChangeMenu` | For Building Planner's list only (`GhostMaterialList`): no "Export" button, no export type button ("Write to file", which cycles), and no "Litematica menu" button, which `createButtons` adds at the bottom right; "Save list" and "Saved lists" go where "Export" and the export type were, in the same row, which the method moves to the bottom left when the screen is narrow (`isNarrow`). Other material lists keep their buttons. |
 | L11 | `util/WorldUtils.java`, `doSchematicWorldPickBlock(boolean, Minecraft)` | `@Inject` at head, cancellable, returning false | While a mouse mode is on, Litematica picks no block from its placements, so its "pick block first" hotkey (the middle click by default), which runs before the game sees the click and keeps the click when it picks, leaves the click to the game's pick block key and hook M4. The copy sits under the crosshair, so the click would otherwise pick one of the copy's blocks and never mirror it. Without a mouse mode, Litematica's pick block works as it does without Building Planner. |
@@ -321,9 +321,14 @@ The self-check (`SelfCheck`, with the comparisons in `ColumnCheck`) reads only t
 edit it copies the sections the edit's positions fall in, and after it compares those sections outside the edit's
 positions and checks that the column's other sections are the same ones, holding as many blocks. Litematica fills its
 schematic world from the tiles on its own threads, so the second comparison waits until a rebuild of the column that
-began after the change queued its own rebuild has finished (hook L8 notes each one, `RebuildOrder`), or 30 seconds; it
-then reads Litematica's schematic world over the tile's sections, leaving out the boxes of other placements (the
-copy's, a player's own), which Litematica draws over the tile. Nothing is compared while ghost blocks are hidden or
+began after the change queued its own rebuild has finished (hook L8 notes when each one begins and ends,
+`RebuildOrder`), or 30 seconds. It reads the column only while no rebuild of it runs. A rebuild unloads the column's
+chunk and loads an empty one in its place, fills a new chunk from the placements, and puts that in only as it ends
+(`PlacementManagerTaskRebuild`). Another rebuild of the column can begin as soon as one ends, such as one that
+Litematica's own check around the camera made before the tile came and queued at the next tick. If a rebuild of the
+column begins while the self-check reads it, the self-check reads it again at a later tick. It reads Litematica's
+schematic world over the tile's sections, leaving out the boxes of other placements (the copy's, a player's own),
+which Litematica draws over the tile. Nothing is compared while ghost blocks are hidden or
 Litematica's rendering is off, for a column whose chunk the game no longer has, or for one Litematica holds no chunk
 for: a rebuild that can't handle the column yet leaves it out, and Litematica's own check around the camera
 (`PlacementManagerTaskFixer`) loads it once it comes into view, so the check waits for a rebuild that leaves a chunk.
@@ -1650,7 +1655,10 @@ column with a fresh render (`rendered` and `rerender`):
 The self-check's unit tests (`ColumnCheckTest`) cover the comparisons as pure functions: an edit's own positions, set
 or erased, are ignored; a block lost or changed outside them, in the edit's section or another, is reported; Litematica
 missing a block or holding nothing is reported, and other placements' boxes are left out; and a column gets at most one
-warning a minute, with each of 300 columns keeping its own minute.
+warning a minute, with each of 300 columns keeping its own minute. They also cover when Litematica's rebuilds let the
+self-check read a column: only after a rebuild that began at or past the change's mark has finished, never while a
+later rebuild of the column runs, not after a rebuild that began during the read, and after the 30 seconds without a
+finished rebuild.
 
 `filled.sh`, ghost blocks the real world fills ("Ghost blocks the real world fills"), more than 16 blocks from the
 world's spawn, where Planner2, who isn't an operator, may build:

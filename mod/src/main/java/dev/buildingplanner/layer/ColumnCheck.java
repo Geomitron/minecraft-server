@@ -4,6 +4,7 @@ import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2LongOpenHashMap;
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import java.util.BitSet;
 import java.util.Collection;
 import java.util.List;
@@ -194,6 +195,61 @@ public final class ColumnCheck {
 
 	private static boolean differ(BlockState a, BlockState b) {
 		return a.isAir() ? !b.isAir() : a != b;
+	}
+
+	/**
+	 * Litematica's rebuilds of each column, by {@link Layer#key}, as the self-check needs them: whether one that began
+	 * at or past a change's mark has finished, and whether one is running or began while the self-check read the
+	 * column. A running rebuild swaps an empty chunk in for the column's (it unloads the chunk and loads a new one) and
+	 * puts the filled chunk in only as it ends, so the column can be judged only between rebuilds. Rebuilds run on
+	 * Litematica's threads and the self-check on the game's, so every method is safe from any thread.
+	 */
+	public static final class Rebuilds {
+		/** A column's rebuilds: how many began, whether one runs and its number, and the newest a finished one had. */
+		private static final class Column {
+			long began;
+			long running = -1;
+			long finished = -1;
+		}
+
+		private final Long2ObjectOpenHashMap<Column> columns = new Long2ObjectOpenHashMap<>();
+
+		/** A rebuild of the column begins, numbered {@code number}: no task made after that number was made yet. */
+		public synchronized void begin(long column, long number) {
+			Column state = columns.computeIfAbsent(column, key -> new Column());
+			state.began++;
+			state.running = number;
+		}
+
+		/** The rebuild of the column that began last has ended; {@code finished} unless it failed with an error. */
+		public synchronized void end(long column, boolean finished) {
+			Column state = columns.get(column);
+			if (finished) {
+				state.finished = Math.max(state.finished, state.running);
+			}
+			state.running = -1;
+		}
+
+		/**
+		 * Whether the column may be judged now: no rebuild of it runs, and, unless {@code anyRebuild}, one that began at
+		 * or past {@code mark} has finished. Returns a token for {@link #unchanged}, or -1 when it may not.
+		 */
+		public synchronized long settled(long column, long mark, boolean anyRebuild) {
+			Column state = columns.get(column);
+			if (state == null) {
+				return anyRebuild ? 0 : -1;
+			}
+			if (state.running >= 0 || !anyRebuild && state.finished < mark) {
+				return -1;
+			}
+			return state.began;
+		}
+
+		/** Whether no rebuild of the column began since {@link #settled} gave {@code token}, so what was read stands. */
+		public synchronized boolean unchanged(long column, long token) {
+			Column state = columns.get(column);
+			return (state == null ? 0 : state.began) == token && (state == null || state.running < 0);
+		}
 	}
 
 	/** At most one warning a minute for each column. */

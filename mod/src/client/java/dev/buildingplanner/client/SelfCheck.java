@@ -91,7 +91,8 @@ final class SelfCheck {
 
 	/**
 	 * Once a client tick: compares what Litematica holds with the copy of the layer in each changed column that
-	 * Litematica has rebuilt since and holds a chunk for, or that has waited {@link #REBUILD_WAIT_MILLIS}. Nothing is
+	 * Litematica has rebuilt since and holds a chunk for, or that has waited {@link #REBUILD_WAIT_MILLIS}, read only
+	 * while no rebuild of the column runs, and again if one began during the read. Nothing is
 	 * compared while ghost blocks are hidden or Litematica's rendering is off, when Litematica holds no tile, nor in a
 	 * column Litematica holds no chunk for: a rebuild that can't handle the column yet leaves it out, and Litematica's
 	 * own check around the camera (PlacementManagerTaskFixer) loads it once it comes into view.
@@ -112,23 +113,34 @@ final class SelfCheck {
 		var entries = pending.long2ObjectEntrySet().iterator();
 		while (entries.hasNext()) {
 			Long2ObjectMap.Entry<Pending> entry = entries.next();
-			int x = Layer.keyX(entry.getLongKey());
-			int z = Layer.keyZ(entry.getLongKey());
+			long key = entry.getLongKey();
+			int x = Layer.keyX(key);
+			int z = Layer.keyZ(key);
 			Pending waiting = entry.getValue();
-			boolean rebuilt = RebuildOrder.rebuiltSince(x, z, waiting.mark());
+			// A rebuild swaps an empty chunk in until it ends, so the column is read only between rebuilds: once one
+			// that began at or past the mark has finished, or after the wait, and again if one began during the read.
+			long token = RebuildOrder.REBUILDS.settled(key, waiting.mark(), false);
+			boolean rebuilt = token >= 0;
+			if (!rebuilt && now - waiting.since() >= REBUILD_WAIT_MILLIS) {
+				token = RebuildOrder.REBUILDS.settled(key, waiting.mark(), true);
+			}
 			ChunkSchematic chunk = world.getChunkSource().getChunkIfExists(x, z);
-			if (!(rebuilt && chunk != null) && now - waiting.since() < REBUILD_WAIT_MILLIS) {
+			if (token < 0 || rebuilt && chunk == null && now - waiting.since() < REBUILD_WAIT_MILLIS) {
 				continue;
 			}
-			entries.remove();
 			LayerColumn column = replica.holds(x, z) ? replica.layer().column(x, z) : null;
 			// Litematica holds only columns whose chunk the game has (SchematicPlacementManager.canHandleChunk).
 			ClientLevel level = Minecraft.getInstance().level;
 			if (column == null || !waiting.dimension().equals(replica.dimension()) || level == null
 				|| !WorldUtils.isClientChunkLoaded(level, x, z) || chunk == null) {
+				entries.remove();
 				continue;
 			}
 			ColumnCheck.Held held = ColumnCheck.held(column, x, z, sections(chunk), otherPlacements(x, z));
+			if (!RebuildOrder.REBUILDS.unchanged(key, token)) {
+				continue;
+			}
+			entries.remove();
 			if (held.differing() > 0) {
 				warn(waiting.dimension(), x, z, waiting.cause(), "the game's copy of the layer holds " + held.layer()
 					+ " ghost blocks (the column held " + waiting.blocksBefore() + " before), Litematica holds "

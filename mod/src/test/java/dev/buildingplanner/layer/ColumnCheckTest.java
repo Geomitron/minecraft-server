@@ -160,6 +160,71 @@ class ColumnCheckTest {
 	}
 
 	@Test
+	void aColumnWaitsForARebuildThatBeganAtTheMark() {
+		ColumnCheck.Rebuilds rebuilds = new ColumnCheck.Rebuilds();
+		long column = Layer.key(0, 0);
+		assertEquals(-1, rebuilds.settled(column, 10, false), "no rebuild yet");
+		rebuilds.begin(column, 9);
+		rebuilds.end(column, true);
+		assertEquals(-1, rebuilds.settled(column, 10, false), "a rebuild that began before the mark");
+		rebuilds.begin(column, 10);
+		assertEquals(-1, rebuilds.settled(column, 10, false), "the rebuild is running");
+		rebuilds.end(column, true);
+		assertTrue(rebuilds.settled(column, 10, false) >= 0);
+		assertEquals(-1, rebuilds.settled(Layer.key(1, 0), 10, false), "another column");
+	}
+
+	@Test
+	void aColumnIsntJudgedWhileALaterRebuildRuns() {
+		// A rebuild swaps an empty chunk in until it ends, so the rebuild that finished since the mark doesn't make
+		// the column ready while the next one runs.
+		ColumnCheck.Rebuilds rebuilds = new ColumnCheck.Rebuilds();
+		long column = Layer.key(0, 0);
+		rebuilds.begin(column, 10);
+		rebuilds.end(column, true);
+		rebuilds.begin(column, 12);
+		assertEquals(-1, rebuilds.settled(column, 10, false));
+		assertEquals(-1, rebuilds.settled(column, 10, true), "nor after the wait for a rebuild");
+		rebuilds.end(column, true);
+		assertTrue(rebuilds.settled(column, 10, false) >= 0);
+	}
+
+	@Test
+	void aRebuildThatBeginsDuringTheReadVoidsIt() {
+		ColumnCheck.Rebuilds rebuilds = new ColumnCheck.Rebuilds();
+		long column = Layer.key(0, 0);
+		rebuilds.begin(column, 10);
+		rebuilds.end(column, true);
+		long token = rebuilds.settled(column, 10, false);
+		assertTrue(rebuilds.unchanged(column, token));
+		rebuilds.begin(column, 11);
+		assertFalse(rebuilds.unchanged(column, token), "running");
+		rebuilds.end(column, true);
+		assertFalse(rebuilds.unchanged(column, token), "began and ended during the read");
+	}
+
+	@Test
+	void aFailedRebuildIsntWaitedFor() {
+		ColumnCheck.Rebuilds rebuilds = new ColumnCheck.Rebuilds();
+		long column = Layer.key(0, 0);
+		rebuilds.begin(column, 10);
+		rebuilds.end(column, false);
+		assertEquals(-1, rebuilds.settled(column, 10, false));
+		assertTrue(rebuilds.settled(column, 10, true) >= 0, "after the wait, the column is judged anyway");
+	}
+
+	@Test
+	void afterTheWaitAColumnNeverRebuiltIsJudged() {
+		ColumnCheck.Rebuilds rebuilds = new ColumnCheck.Rebuilds();
+		long column = Layer.key(0, 0);
+		long token = rebuilds.settled(column, 10, true);
+		assertTrue(token >= 0);
+		assertTrue(rebuilds.unchanged(column, token));
+		rebuilds.begin(column, 11);
+		assertFalse(rebuilds.unchanged(column, token));
+	}
+
+	@Test
 	void manyColumnsEachKeepTheirMinute() {
 		ColumnCheck.Limit limit = new ColumnCheck.Limit();
 		for (int x = 0; x < 300; x++) {
