@@ -341,6 +341,9 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
     and Vertical (Q6 A); its box is blue when it can be pasted, yellow when it would replace ghost blocks, and red when
     the server would refuse it (Q7 B). While Left Ctrl is held, a copy narrower or wider than the paste sits flush
     with the paste's nearer edge (890 Q1 A), and it follows the aim along the line, onto the paste too (890 Q2 A).
+    Each copy in a Zoop or Vertical row counts as a paste of its own, so a later copy snaps to the copy aimed at
+    (961 Q1 A). The box is drawn as an outline with see-through sides in its colour (962 Q1 B). Locking and nudging
+    (954 A), Zoop and Vertical (961 Q2 A) and the copy's colours (962 Q2 A) go in 0.6.0 as their screenshots showed.
   - **Deleting (808):** a Delete button in the radial menu draws a box the way Copy does, then deletes every ghost
     block in it (Q1 A). Its icon is a Minecraft item, as "Material lists" uses the Book and Quill (Geo); the agent
     picked the Barrier, which Geo sees in the build's screenshots.
