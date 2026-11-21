@@ -3,6 +3,7 @@ package dev.buildingplanner.client;
 import dev.buildingplanner.BuildingPlanner;
 import dev.buildingplanner.ClientConfig;
 import dev.buildingplanner.input.MouseMode;
+import dev.buildingplanner.input.PasteBoxes;
 import dev.buildingplanner.layer.BoxCount;
 import dev.buildingplanner.layer.GhostErase;
 import dev.buildingplanner.layer.Layer;
@@ -32,6 +33,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
 
 /**
  * Building Planner on one connection to a server that has it: the player's copy of the layer, kept equal to the
@@ -45,6 +47,8 @@ final class ClientSession {
 	private final SelfCheck check;
 	private final LayerReplica replica;
 	private final Clipboard clipboard = new Clipboard();
+	/** The player's recent pastes in this dimension, which the copy snaps to. */
+	private final PasteBoxes pastes = new PasteBoxes();
 	private final BoxDraw box;
 	private final BoxList list = new BoxList();
 	private final ListSync lists = new ListSync();
@@ -124,6 +128,7 @@ final class ClientSession {
 		check.clear();
 		box.end();
 		clipboard.clear();
+		pastes.clear();
 		glow.clear();
 	}
 
@@ -148,13 +153,18 @@ final class ClientSession {
 		lists.tick(System.currentTimeMillis());
 	}
 
-	/** Moves the copy at the aim to the block beside the face the player aims at; aiming at nothing leaves it. */
+	/**
+	 * Moves the copy at the aim against the face the player aims at, flush to a recent paste aimed at, and in line with
+	 * the most recent paste while the sprint key is held ({@link PasteBoxes#place}); aiming at nothing leaves it.
+	 */
 	private void followAim() {
-		if (clipboard.atAim()) {
-			BlockPos origin = GhostAim.copyOrigin(replica.layer(), tiles.shown());
-			if (origin != null) {
-				clipboard.follow(origin);
-			}
+		if (!clipboard.atAim()) {
+			return;
+		}
+		BlockHitResult hit = GhostAim.aim(replica.layer(), tiles.shown(), GhostAim.COPY_REACH);
+		if (hit != null) {
+			clipboard.moveTo(pastes.place(hit.getBlockPos(), hit.getDirection(), clipboard.spot().size(),
+				Minecraft.getInstance().options.keySprint.isDown()).min());
 		}
 	}
 
@@ -368,7 +378,8 @@ final class ClientSession {
 			return;
 		}
 		Map<BlockPos, BlockState> blocks = CopyRules.blocks(min, max, replica.layer(), world, tiles.shown());
-		clipboard.place(blocks, GhostAim.copyOrigin(replica.layer(), tiles.shown()));
+		clipboard.place(blocks);
+		followAim();
 		if (clipboard.atAim()) {
 			show(PlayerMessage.copied(blocks.size()));
 		}
@@ -391,11 +402,11 @@ final class ClientSession {
 
 	/**
 	 * Pastes the copy at the aim as one shape edit. It names only the copy's blocks, so its empty space leaves the
-	 * layer's.
+	 * layer's. The copy's box joins the recent pastes it snaps to.
 	 */
 	void paste() {
-		if (clipboard.atAim()) {
-			sendShape(EditKind.SHAPE, clipboard.worldBlocks());
+		if (clipboard.atAim() && sendShape(EditKind.SHAPE, clipboard.worldBlocks())) {
+			pastes.add(clipboard.spot());
 		}
 	}
 
@@ -413,16 +424,22 @@ final class ClientSession {
 		return true;
 	}
 
-	/** Gives the copy at the aim a quarter turn, clockwise or counterclockwise seen from above. */
+	/**
+	 * Gives the copy at the aim a quarter turn around its middle, clockwise or counterclockwise seen from above, and sets
+	 * it against the aim again.
+	 */
 	void turnCopy(boolean clockwise) {
 		if (clipboard.atAim()) {
 			clipboard.turn(clockwise);
+			followAim();
 		}
 	}
 
+	/** Flips the copy at the aim left to right for a view facing {@code facing}, around its middle. */
 	void mirrorCopy(Direction facing) {
 		if (clipboard.atAim()) {
 			clipboard.mirror(facing);
+			followAim();
 		}
 	}
 

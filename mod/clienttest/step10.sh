@@ -391,14 +391,15 @@ check "the second sets the opposite corner, and the height follows the camera's 
 	'[[ $(val 1 drawbox) == "COPY 2 64,-60,23..75,-60,24 white SINGLE" ]]'
 attack_click 1
 check "the third copies the line's 9 ghost blocks" client_said 1 "Copied 9 blocks."
+# The copy, 9 blocks along x, rests on the grass the camera aims at with its middle on the block above.
 cam 60.5 -60 22.5
-check "the copy goes where the camera aims" drv 1 "await copy origin 60,-60,22 NONE NONE unselected 9 blocks"
+check "the copy goes where the camera aims" drv 1 "await copy at 56,-60,22..64,-60,22 NONE NONE unselected 9 blocks"
 cam 63.5 -60 21.5
-check "and follows the camera's aim" drv 1 "await copy origin 63,-60,21 NONE NONE"
+check "and follows the camera's aim" drv 1 "await copy at 59,-60,21..67,-60,21 NONE NONE"
 cam_shot freecam-copy
 # The camera faces north and Planner1 east: a middle click mirrors it left to right for the camera's facing.
 xdo 1 click 2
-check "a middle click mirrors the copy by the camera's facing" drv 1 "await copy origin 63,-60,21 FRONT_BACK NONE"
+check "a middle click mirrors the copy by the camera's facing" drv 1 "await copy at 59,-60,21..67,-60,21 FRONT_BACK NONE"
 use_click 1
 check "a right click puts the copy away" eval 'drv 1 "wait 10" > /dev/null && [[ $(val 1 copy) == "away "* ]]'
 

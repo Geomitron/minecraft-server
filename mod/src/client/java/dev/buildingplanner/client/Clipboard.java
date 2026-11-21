@@ -1,5 +1,7 @@
 package dev.buildingplanner.client;
 
+import dev.buildingplanner.input.CopyPlacement;
+import dev.buildingplanner.input.CopyPlacement.Spot;
 import dev.buildingplanner.plan.Turn;
 import fi.dy.masa.litematica.data.DataManager;
 import fi.dy.masa.litematica.schematic.LitematicaSchematic;
@@ -28,9 +30,9 @@ import net.minecraft.world.level.block.state.BlockState;
 /**
  * The player's most recent copy: a Litematica placement of a schematic kept in memory, which only this player sees.
  * Litematica doesn't save it, since it has no file; hooks L4 and L5 keep it out of Litematica's selection and placement
- * list, as for tiles. At the aim, the placement is in Litematica and its origin, the corner with the lowest coordinates
- * when it's made, follows where the player aims. Put away, it's out of Litematica, and the same placement, with its
- * schematic, turn and mirror, comes back to the aim.
+ * list, as for tiles. At the aim, the placement is in Litematica, and its origin is set so that the copy, as it's
+ * turned and mirrored, sits in the box {@link CopyPlacement} and {@code PasteBoxes} give for the player's aim. Put
+ * away, it's out of Litematica, and the same placement, with its schematic, turn and mirror, comes back to the aim.
  */
 final class Clipboard {
 	private static final String REGION = "Copy";
@@ -66,10 +68,10 @@ final class Clipboard {
 	}
 
 	/**
-	 * Replaces any copy with one of {@code blocks} (world positions and states as the world shows them), at the aim, with
-	 * its origin at {@code origin}, or over the blocks when that's null.
+	 * Replaces any copy with one of {@code blocks} (world positions and states as the world shows them), at the aim, over
+	 * the blocks until it follows the aim.
 	 */
-	void place(Map<BlockPos, BlockState> blocks, BlockPos origin) {
+	void place(Map<BlockPos, BlockState> blocks) {
 		clear();
 		BlockPos min = null;
 		BlockPos max = null;
@@ -100,7 +102,7 @@ final class Clipboard {
 		blocks.forEach((pos, state) -> container.set(pos.getX() - corner.getX(), pos.getY() - corner.getY(),
 			pos.getZ() - corner.getZ(), state));
 		// Known as the copy before it's added, so hook L4 keeps Litematica from selecting it.
-		placement = SchematicPlacement.createFor(schematic, origin != null ? origin : min, name, true, true);
+		placement = SchematicPlacement.createFor(schematic, min, name, true, true);
 		manager().addSchematicPlacement(placement, false);
 		atAim = true;
 	}
@@ -125,8 +127,27 @@ final class Clipboard {
 		}
 	}
 
-	/** Moves the copy's origin to {@code origin}, when it isn't there already. */
-	void follow(BlockPos origin) {
+	/** The schematic's size, before it's turned. */
+	Vec3i size() {
+		return placement.getSchematic().getSubRegionContainer(REGION).getSize();
+	}
+
+	/** How the copy is mirrored and turned. */
+	Turn turnNow() {
+		return new Turn(placement.getMirror(), placement.getRotation());
+	}
+
+	/** The box the copy fills in the world, as it's turned and mirrored. */
+	Spot spot() {
+		Turn turn = turnNow();
+		Vec3i size = size();
+		return new Spot(placement.getOrigin().offset(CopyPlacement.cornerFromOrigin(size, turn)),
+			CopyPlacement.turnedSize(size, turn));
+	}
+
+	/** Moves the copy so that, as it's turned and mirrored, its lowest corner is at {@code min}. */
+	void moveTo(BlockPos min) {
+		BlockPos origin = CopyPlacement.origin(min, size(), turnNow());
 		if (!origin.equals(placement.getOrigin())) {
 			placement.setOrigin(origin,
 				message -> InfoUtils.showGuiOrInGameMessage(Message.MessageType.WARNING, message));
@@ -151,15 +172,15 @@ final class Clipboard {
 		return blocks;
 	}
 
-	/** Gives the copy a quarter turn around its origin, clockwise or counterclockwise seen from above. */
+	/** Gives the copy a quarter turn around its middle, clockwise or counterclockwise seen from above. */
 	void turn(boolean clockwise) {
-		Turn turn = new Turn(placement.getMirror(), placement.getRotation());
+		Turn turn = turnNow();
 		set(clockwise ? turn.turnedClockwise() : turn.turnedCounterclockwise());
 	}
 
-	/** Flips the copy left to right for a player facing {@code facing}, around its origin. */
+	/** Flips the copy left to right for a player facing {@code facing}, around its middle. */
 	void mirror(Direction facing) {
-		set(new Turn(placement.getMirror(), placement.getRotation()).flippedLeftRight(facing));
+		set(turnNow().flippedLeftRight(facing));
 	}
 
 	/** Drops the copy. */
@@ -212,10 +233,15 @@ final class Clipboard {
 		return state.mirror(placement.getMirror()).mirror(subMirror).rotate(rotation);
 	}
 
-	/** Litematica refuses to change a locked placement, with its own message. */
+	/**
+	 * Sets the copy's mirror and turn, keeping its middle block where it was. Litematica refuses to change a locked
+	 * placement, with its own message.
+	 */
 	private void set(Turn turn) {
+		Spot before = spot();
 		placement.setMirror(turn.mirror(), LITEMATICA_MESSAGES);
 		placement.setRotation(turn.rotation(), LITEMATICA_MESSAGES);
+		moveTo(CopyPlacement.aroundMiddle(before, CopyPlacement.turnedSize(size(), turnNow())).min());
 	}
 
 	/** Shows Litematica's messages as its own actions do. */

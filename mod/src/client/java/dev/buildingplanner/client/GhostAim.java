@@ -50,15 +50,6 @@ final class GhostAim {
 	}
 
 	/**
-	 * Where the copy goes for the player's aim: the block beside the face they aim at, real or ghost, within {@link
-	 * #COPY_REACH}; null when they aim at nothing.
-	 */
-	static BlockPos copyOrigin(Layer layer, boolean shown) {
-		BlockHitResult hit = aim(layer, shown, COPY_REACH);
-		return hit == null ? null : hit.getBlockPos().relative(hit.getDirection());
-	}
-
-	/**
 	 * The block the player aims at within {@code reach} of the eyes they aim from ({@link Aim}), the nearer of a real block and a ghost block, with
 	 * the face aimed at; null when they aim at nothing.
 	 */

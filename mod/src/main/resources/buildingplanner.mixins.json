@@ -29,6 +29,7 @@
 		"litematica.SchematicPlacementManagerMixin",
 		"litematica.SchematicUtilsMixin",
 		"litematica.WidgetListSchematicPlacementsMixin",
+		"litematica.WorldUtilsMixin",
 		"minecraft.MinecraftMouseModeMixin",
 		"minecraft.MinecraftUseItemMixin",
 		"minecraft.MouseHandlerMixin"

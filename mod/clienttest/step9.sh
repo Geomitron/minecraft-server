@@ -329,8 +329,8 @@ shot 1 paste-nothing-message
 half() {
 	awk -v n="$1" 'BEGIN { print n + 0.5 }'
 }
-# aim <client> <x y z>: the player looks at the middle of the top of the block below x y z, so the copy's corner goes
-# there.
+# aim <client> <x y z>: the player looks at the middle of the top of the block below x y z, so the copy rests on that
+# top with the middle of its bottom at x y z.
 aim() {
 	drv "$1" "lookat $(half "$2") $3 $(half "$4")" "wait 5" > /dev/null
 }
@@ -390,7 +390,13 @@ paste_button() {
 }
 # copy_kept: the copy as the driver describes it, without where it is.
 copy_kept() {
-	val 1 copy | sed -E 's/^(origin [^ ]+|away) //'
+	val 1 copy | sed -E 's/^(at [^ ]+|away) //'
+}
+# shots <name>: Planner1's view at 854 by 480 and at 1920 by 1080, both at GUI scale 2, as <name>-854x480 and
+# <name>-1920x1080, once the chat lines that draw over the controls line have faded, 200 ticks after they came.
+shots() {
+	drv 1 "wait 210" "notoasts" "wait 5" "shot $1-854x480" "window 1920 1080 2" "wait 20" "notoasts" \
+		"shot $1-1920x1080" "window 854 480 2" "wait 20" > /dev/null
 }
 
 # The Copy button starts a box, with its line, leaving Effortless Building's mode as it was; a right click ends it,
@@ -449,52 +455,79 @@ check "and ends the box, leaving the player's mode" box_is "none SINGLE"
 check "and places no real block, leaving the ghost blocks" eval '[[ $(val 1 "real 4 -59 3") == minecraft:air ]] &&
 	[[ $(val 1 "real 5 -60 4") == minecraft:air ]] && [[ $(val 1 "layer 4 -59 3") == minecraft:glowstone ]] &&
 	[[ $(val 2 "get 5 -60 4") == minecraft:stone_bricks ]]'
-check "the copy is at the aim, with its controls line" eval 'copy_is 1 "^origin " && [[ $(val 1 modehud) == "$controls" ]]'
+check "the copy is at the aim, with its controls line" eval 'copy_is 1 "^at " && [[ $(val 1 modehud) == "$controls" ]]'
 
-# The copy follows the aim: its corner goes on the block beside the face aimed at.
+# The copy, 3 by 2 by 2 blocks, rests against the face aimed at, with the middle of its side that touches the face on
+# the block beside it; along a side 2 blocks across, the middle is the block with the lower coordinate. On the grass's
+# top at 5 -61 20, its bottom's middle is on 5 -60 20: it fills 4..6 east to west and 20..21 north to south.
 drv 1 "cmd tp @s 5.5 -57 25.5 180 30" "wait 40" > /dev/null
 aim 1 5 -60 20
-check "the copy's corner sits on the aimed block" drv 1 "await copy origin 5,-60,20 NONE NONE unselected 8 blocks"
-check "the copy shows the ghost blocks as they were" eval 'state_has 1 "5 -59 20" "oak_stairs" &&
-	state_has 1 "5 -59 20" "facing=north" && [[ $(val 1 "get 6 -59 20") == minecraft:glowstone ]] &&
-	[[ $(val 1 "get 7 -60 21") == minecraft:stone_bricks ]] && [[ $(val 1 "get 7 -59 21") == minecraft:air ]]'
-check "and places no real block" eval '[[ $(val 1 "real 5 -59 20") == minecraft:air ]]'
-check "and isn't shared" eval 'drv 2 "wait 20" > /dev/null && [[ $(val 2 "get 5 -59 20") == minecraft:air ]]'
+check "the copy rests on the aimed top face, its middle under the crosshair" \
+	drv 1 "await copy at 4,-60,20..6,-59,21 NONE NONE unselected 8 blocks"
+check "the copy shows the ghost blocks as they were" eval 'state_has 1 "4 -59 20" "oak_stairs" &&
+	state_has 1 "4 -59 20" "facing=north" && [[ $(val 1 "get 5 -59 20") == minecraft:glowstone ]] &&
+	[[ $(val 1 "get 6 -60 21") == minecraft:stone_bricks ]] && [[ $(val 1 "get 6 -59 21") == minecraft:air ]]'
+check "and places no real block" eval '[[ $(val 1 "real 4 -59 20") == minecraft:air ]]'
+check "and isn't shared" eval 'drv 2 "wait 20" > /dev/null && [[ $(val 2 "get 4 -59 20") == minecraft:air ]]'
 check "Litematica neither selects the copy nor lists it" eval '[[ $(val 1 selected) != "the copy" ]] &&
 	[[ $(val 1 placementlist) == *"others: none" ]]'
-drv 1 "close" "cmd tp @s 30.5 -57 26.5 180 30" "wait 40" > /dev/null
+drv 1 "close" "await noscreen" > /dev/null
+shots copy-on-floor
+
+# A real stone wall from 40 -60 30 to 44 -56 30, and a real stone block in the air at 46 -55 32. Aimed at the wall's
+# south face at 42 -58 30, the copy stands south of it, the middle of its north side on 42 -58 31; aimed at the floating
+# block's bottom, it hangs under it, the middle of its top on 46 -56 32.
+drv 1 "cmd fill 40 -60 30 44 -56 30 minecraft:stone" "cmd setblock 46 -55 32 minecraft:stone" \
+	"cmd tp @s 42.5 -57 36.5 180 10" "wait 40" > /dev/null
+drv 1 "lookat 42.5 -57.5 31.0" "wait 5" > /dev/null
+check "against the aimed side face, the copy stands beside it" \
+	drv 1 "await copy at 41,-58,31..43,-57,32 NONE NONE unselected 8 blocks"
+check "with its blocks as they were" eval 'state_has 1 "41 -57 31" "facing=north" &&
+	[[ $(val 1 "get 42 -57 31") == minecraft:glowstone ]] && [[ $(val 1 "get 43 -58 32") == minecraft:stone_bricks ]]'
+shots copy-against-wall
+drv 1 "cmd tp @s 46.5 -59 36.5 180 -30" "wait 40" > /dev/null
+drv 1 "lookat 46.5 -55.0 32.5" "wait 5" > /dev/null
+check "under the aimed bottom face, the copy hangs below it" \
+	drv 1 "await copy at 45,-57,32..47,-56,33 NONE NONE unselected 8 blocks"
+drv 1 "cmd fill 40 -60 30 46 -55 32 minecraft:air" > /dev/null
+
+drv 1 "cmd tp @s 30.5 -57 26.5 180 30" "wait 40" > /dev/null
 aim 1 30 -60 20
-check "the copy moves with the aim" drv 1 "await copy origin 30,-60,20 NONE NONE unselected"
+check "the copy moves with the aim" drv 1 "await copy at 29,-60,20..31,-59,21 NONE NONE unselected"
 check "with its controls line on screen" eval '[[ $(val 1 modehud) == "$controls" ]]'
 # Chat lines draw over the controls line until they fade, 200 ticks after they came.
 drv 1 "wait 210" > /dev/null
 shot 1 copy-follows-aim
 
-# The scroll wheel turns it a quarter turn around its origin for each notch, clockwise for a notch down, instead of
-# changing the hotbar slot: the stairs now face east.
+# The scroll wheel turns it a quarter turn around its middle for each notch, clockwise for a notch up, instead of
+# changing the hotbar slot. Turned, it's 2 by 3: the middle of its bottom stays on 30 -60 20, so it fills 30..31 east to
+# west and 19..21 north to south, and the stairs face east.
 slot=$(val 1 slot)
-xdo 1 click 5
-check "a notch of the scroll wheel down turns the copy a quarter turn clockwise" \
-	drv 1 "await copy origin 30,-60,20 NONE CLOCKWISE_90"
-check "its blocks turn with it" eval 'state_has 1 "30 -59 20" "facing=east" &&
-	[[ $(val 1 "get 30 -59 21") == minecraft:glowstone ]] && [[ $(val 1 "get 29 -60 22") == minecraft:stone_bricks ]]'
+xdo 1 click 4
+check "a notch of the scroll wheel up turns the copy a quarter turn clockwise, in place" \
+	drv 1 "await copy at 30,-60,19..31,-59,21 NONE CLOCKWISE_90"
+check "its blocks turn with it" eval 'state_has 1 "31 -59 19" "facing=east" &&
+	[[ $(val 1 "get 31 -59 20") == minecraft:glowstone ]] && [[ $(val 1 "get 30 -60 21") == minecraft:stone_bricks ]]'
 check "and the hotbar slot stays" eval '[[ $(val 1 slot) == "$slot" ]]'
 shot 1 copy-turned
-xdo 1 click 4
-check "a notch up turns it a quarter turn counterclockwise" drv 1 "await copy origin 30,-60,20 NONE NONE"
 xdo 1 click 5
-check "and down again, clockwise, the hotbar slot staying" eval \
-	'drv 1 "await copy origin 30,-60,20 NONE CLOCKWISE_90" > /dev/null && [[ $(val 1 slot) == "$slot" ]]'
+check "a notch down turns it a quarter turn counterclockwise, back where it was" \
+	drv 1 "await copy at 29,-60,20..31,-59,21 NONE NONE"
+xdo 1 click 4
+check "and up again, clockwise, the hotbar slot staying" eval \
+	'drv 1 "await copy at 30,-60,19..31,-59,21 NONE CLOCKWISE_90" > /dev/null && [[ $(val 1 slot) == "$slot" ]]'
 
-# A middle click flips it left to right for Planner1, who faces south: the stairs face west, and the copy's floor moves
-# from 29..30 to 30..31 east to west.
+# A middle click flips it left to right for Planner1, who faces south, around its middle: the copy keeps its box, the
+# stairs face west, and the stairs and the glowstone move from the box's east column to its west one. The crosshair
+# is on the copy's blocks, which Litematica's own pick block on the middle click would otherwise take (hook L11).
 drv 1 "cmd tp @s 30.5 -57 14.5 0 30" "wait 40" > /dev/null
 aim 1 30 -60 20
 xdo 1 click 2
-check "a middle click mirrors the copy left to right" drv 1 "await copy origin 30,-60,20 FRONT_BACK COUNTERCLOCKWISE_90"
+check "a middle click mirrors the copy left to right, in place" \
+	drv 1 "await copy at 30,-60,19..31,-59,21 FRONT_BACK COUNTERCLOCKWISE_90"
 check "and picks no block, leaving the hotbar as it was" eval '[[ $(val 1 slot) == "$slot" ]]'
-check "its blocks flip with it" eval 'state_has 1 "30 -59 20" "facing=west" &&
-	[[ $(val 1 "get 31 -60 22") == minecraft:stone_bricks ]] && [[ $(val 1 "get 29 -60 22") == minecraft:air ]]'
+check "its blocks flip with it" eval 'state_has 1 "30 -59 19" "facing=west" &&
+	[[ $(val 1 "get 30 -59 20") == minecraft:glowstone ]] && [[ $(val 1 "get 31 -59 19") == minecraft:air ]]'
 shot 1 copy-mirrored
 
 # Ghost glass where the copy will have empty space, and a ghost gold block where it will have stone bricks, on the
@@ -505,7 +538,7 @@ check "client 2 sees the glass and the gold block" drv 2 "await block 14 -58 6 m
 	"await block 15 -59 5 minecraft:gold_block"
 drv 1 "cmd tp @s 11.5 -55 1.5 0 30" "wait 40" > /dev/null
 aim 1 14 -59 4
-check "the copy moves over them" drv 1 "await copy origin 14,-59,4 FRONT_BACK COUNTERCLOCKWISE_90"
+check "the copy moves over them" drv 1 "await copy at 14,-59,3..15,-58,5 FRONT_BACK COUNTERCLOCKWISE_90"
 # Where the copy and the layer overlap, Litematica shows one block; the log records which.
 echo "  where the copy overlaps ghost blocks: 15 -59 5 shows $(val 1 "get 15 -59 5") (copy stone_bricks, layer" \
 	"gold_block); 15 -58 4 shows $(val 1 "get 15 -58 4") (copy empty, layer glass)" >> /out/checks.log
@@ -518,28 +551,59 @@ shot 1 copy-over-ghosts
 drv 1 "cmd tp Planner2 18.5 -57 11.5 150 30" "wait 40" > /dev/null
 attack_click 1
 check "a left click pastes the copy where it shows, for the other player" drv 2 \
-	"await block 14 -58 4 minecraft:oak_stairs" "await block 14 -58 5 minecraft:glowstone" \
-	"await block 15 -59 5 minecraft:stone_bricks" "await block 14 -59 6 minecraft:stone_bricks"
+	"await block 14 -58 3 minecraft:oak_stairs" "await block 14 -58 4 minecraft:glowstone" \
+	"await block 15 -59 5 minecraft:stone_bricks" "await block 14 -59 3 minecraft:stone_bricks"
 check "glowing with Planner1's name" drv 2 "await glow Planner1:8"
 shot 2 paste-seen
-check "turned and mirrored as the copy showed it" state_has 2 "14 -58 4" "facing=west"
+check "turned and mirrored as the copy showed it" state_has 2 "14 -58 3" "facing=west"
 check "the copy's empty space leaves the ghost blocks under it" eval '[[ $(val 2 "get 15 -58 4") == minecraft:glass ]] &&
-	[[ $(val 2 "get 15 -58 6") == minecraft:glass ]] && [[ $(val 2 "get 14 -58 6") == minecraft:glass ]]'
+	[[ $(val 2 "get 15 -58 5") == minecraft:glass ]] && [[ $(val 2 "get 14 -58 6") == minecraft:glass ]]'
 check "the click breaks no real block" eval '[[ $(val 1 "real 15 -61 5") == minecraft:grass_block ]]'
 check "and the copy stays at the aim for another paste, with its controls line" eval \
-	'copy_is 1 "^origin [-0-9,]+ FRONT_BACK COUNTERCLOCKWISE_90 unselected 8 blocks$" &&
+	'copy_is 1 "^at [-0-9,.]+ FRONT_BACK COUNTERCLOCKWISE_90 unselected 8 blocks$" &&
 	[[ $(val 1 modehud) == "$controls" ]]'
 echo "  after the paste, the copy, which now meets the pasted blocks in the aim: $(val 1 copy)" >> /out/checks.log
 
 # One Ctrl+Z undoes the whole paste; Ctrl+Y redoes it. Neither puts the copy away.
 drv 1 "close" > /dev/null
 keys 1 keydown ctrl key z sleep 0.3 keyup ctrl
-check "Ctrl+Z undoes the whole paste" drv 2 "await block 14 -58 4 minecraft:air" "await block 14 -58 5 minecraft:air" \
-	"await block 15 -59 5 minecraft:gold_block" "await block 14 -59 6 minecraft:air" "await block 15 -58 4 minecraft:glass"
+check "Ctrl+Z undoes the whole paste" drv 2 "await block 14 -58 3 minecraft:air" "await block 14 -58 4 minecraft:air" \
+	"await block 15 -59 5 minecraft:gold_block" "await block 14 -59 3 minecraft:air" "await block 15 -58 4 minecraft:glass"
 keys 1 keydown ctrl key y sleep 0.3 keyup ctrl
-check "Ctrl+Y redoes it" drv 2 "await block 14 -58 4 minecraft:oak_stairs" "await block 15 -59 5 minecraft:stone_bricks" \
-	"await block 14 -59 6 minecraft:stone_bricks"
-check "and the copy stays at the aim" copy_is 1 "^origin "
+check "Ctrl+Y redoes it" drv 2 "await block 14 -58 3 minecraft:oak_stairs" "await block 15 -59 5 minecraft:stone_bricks" \
+	"await block 14 -59 3 minecraft:stone_bricks"
+check "and the copy stays at the aim" copy_is 1 "^at "
+
+# Snapping to the paste, whose box is 14 -59 3 to 15 -58 5. Aimed at the east face of the glass at 15 -58 5, inside
+# the paste's box, the copy sits flush against the box's east face, its edges in line with the box's at the corner
+# nearest the aim, the box's top south corner: 16..17 east to west, -59..-58 up, and 3..5 north to south. Without the
+# paste it would stand at 16 -58 4 to 17 -57 6, its middle on the aim.
+drv 1 "cmd tp @s 20.5 -58 5.5 90 0" "wait 40" > /dev/null
+drv 1 "lookat 16.0 -57.5 5.5" "wait 5" > /dev/null
+check "aimed at a recent paste, the copy sits flush beside it" \
+	drv 1 "await copy at 16,-59,3..17,-58,5 FRONT_BACK COUNTERCLOCKWISE_90"
+shots copy-snapped
+
+# Holding Left Ctrl, Minecraft's sprint key, keeps the copy in line with the latest paste: on its level, -59, and on
+# its row, 3..5 north to south, while the aim is nearer that row than the paste's column, moving only along the row as
+# the aim moves; nearer the column, on 14..15 east to west. Let go, it rests on the aimed face again.
+drv 1 "cmd time set noon" "cmd tp @s 20.5 -54 14.5 180 30" "wait 40" > /dev/null
+xdo 1 keydown Control_L
+check "Left Ctrl holds down the sprint key" drv 1 "await sprint true"
+aim 1 24 -60 6
+check "with Left Ctrl held, the copy stays on the latest paste's level and row" \
+	drv 1 "await copy at 24,-59,3..25,-58,5 FRONT_BACK COUNTERCLOCKWISE_90"
+aim 1 28 -60 6
+check "moving along the row with the aim" drv 1 "await copy at 28,-59,3..29,-58,5 FRONT_BACK COUNTERCLOCKWISE_90"
+aim 1 20 -60 6
+check "and back toward the paste" drv 1 "await copy at 20,-59,3..21,-58,5 FRONT_BACK COUNTERCLOCKWISE_90"
+shots copy-in-line
+aim 1 15 -60 14
+check "and on the paste's column when the aim is nearer it" \
+	drv 1 "await copy at 14,-59,13..15,-58,15 FRONT_BACK COUNTERCLOCKWISE_90"
+xdo 1 keyup Control_L
+check "let go, the copy rests on the aimed face again" eval 'drv 1 "await sprint false" > /dev/null &&
+	drv 1 "await copy at 15,-60,13..16,-59,15 FRONT_BACK COUNTERCLOCKWISE_90" > /dev/null'
 
 # A right click puts the copy away, keeping it, and its controls line goes; the click builds nothing. The scroll wheel
 # then changes the hotbar slot again.
@@ -559,7 +623,7 @@ check "and back" eval 'drv 1 "wait 5" > /dev/null && [[ $(val 1 slot) == "$slot"
 # The radial menu's Paste button brings it back to the aim, turned and mirrored as it was.
 paste_button
 check "the radial menu's Paste button brings the copy back, turned and mirrored as it was" eval \
-	'drv 1 "wait 5" > /dev/null && copy_is 1 "^origin [-0-9,]+ FRONT_BACK COUNTERCLOCKWISE_90 unselected 8 blocks$"'
+	'drv 1 "wait 5" > /dev/null && copy_is 1 "^at [-0-9,.]+ FRONT_BACK COUNTERCLOCKWISE_90 unselected 8 blocks$"'
 check "with its controls line" eval '[[ $(val 1 modehud) == "$controls" ]]'
 
 # Choosing a build mode, Block mix, and showing or hiding ghost blocks each put it away.
@@ -567,7 +631,7 @@ drv 1 "ebmode LINE" "wait 5" > /dev/null
 check "choosing a build mode puts it away" copy_is 1 "^away "
 drv 1 "ebmode SINGLE" > /dev/null
 paste_button
-check "Paste brings it back again" copy_is 1 "^origin "
+check "Paste brings it back again" copy_is 1 "^at "
 radial_open
 radial_point "Block mix"
 xdo 1 keyup Alt_L
@@ -584,7 +648,7 @@ check "and hiding ghost blocks puts it away" eval \
 	'drv 1 "wait 5" > /dev/null && [[ $(val 1 ghosts) == "hidden, "* ]] && copy_is 1 "^away "'
 press 1 n
 paste_button
-check "Paste brings it back once more" copy_is 1 "^origin "
+check "Paste brings it back once more" copy_is 1 "^at "
 
 # The radial menu's Copy button around a real house of oak planks, hollow, with a glass window: 26 real blocks, and no
 # ghost blocks. house_box [<shot>]: the box from the house's top corner nearest Planner1, aimed at its north side, to
@@ -606,7 +670,8 @@ check "a box around only real blocks copies them: the house's 26 blocks" client_
 
 # Two ghost blocks on the house: a gold block inside, where the world has air, and stone at its top corner, over the
 # real oak planks there. The same box copies the ghost blocks and the real blocks together: 27 blocks, taking the
-# ghost stone where a position has both. Client 2 shows them; client 1's copy of the house sits there now.
+# ghost stone where a position has both. Client 2 shows them; client 1's copy of the house sits there now. Aimed at the
+# grass's top at 50 -61 20, the copy, 3 blocks each way, fills 49..51 east to west and 19..21 north to south.
 drv 1 "edit 51 -59 11 51 -59 11 minecraft:gold_block" "edit 52 -58 12 52 -58 12 minecraft:stone" > /dev/null
 check "client 2 sees the two ghost blocks" drv 2 "await block 51 -59 11 minecraft:gold_block" \
 	"await block 52 -58 12 minecraft:stone"
@@ -619,10 +684,10 @@ check "a box around ghost blocks and real blocks copies both: 27 blocks" client_
 drv 1 "cmd tp @s 51.5 -56 27.5 180 30" "wait 40" > /dev/null
 aim 1 50 -60 20
 check "the copy shows the house with the gold block inside" eval '
-	drv 1 "await copy origin 50,-60,20 NONE NONE unselected 27 blocks" > /dev/null &&
-	[[ $(val 1 "get 51 -59 20") == minecraft:glass ]] && [[ $(val 1 "get 51 -59 21") == minecraft:gold_block ]] &&
-	[[ $(val 1 "get 50 -58 22") == minecraft:oak_planks ]]'
-check "and the ghost stone, not the real oak plank, at its corner" eval '[[ $(val 1 "get 52 -58 22") == minecraft:stone ]]'
+	drv 1 "await copy at 49,-60,19..51,-58,21 NONE NONE unselected 27 blocks" > /dev/null &&
+	[[ $(val 1 "get 50 -59 19") == minecraft:glass ]] && [[ $(val 1 "get 50 -59 20") == minecraft:gold_block ]] &&
+	[[ $(val 1 "get 49 -58 21") == minecraft:oak_planks ]]'
+check "and the ghost stone, not the real oak plank, at its corner" eval '[[ $(val 1 "get 51 -58 21") == minecraft:stone ]]'
 use_click 1
 check "a right click puts it away" eval 'drv 1 "wait 5" > /dev/null && copy_is 1 "^away "'
 radial_open
@@ -630,15 +695,15 @@ radial_point "Paste"
 radial_let_go
 aim 1 50 -60 20
 check "letting the menu's key go over its Paste button brings it back" \
-	drv 1 "await copy origin 50,-60,20 NONE NONE unselected 27 blocks"
+	drv 1 "await copy at 49,-60,19..51,-58,21 NONE NONE unselected 27 blocks"
 attack_click 1
 check "and a left click pastes them as ghost blocks" drv 2 \
-	"await block 50 -60 20 minecraft:oak_planks" "await block 50 -58 22 minecraft:oak_planks" \
-	"await block 51 -59 20 minecraft:glass" "await block 51 -59 21 minecraft:gold_block"
+	"await block 49 -60 19 minecraft:oak_planks" "await block 49 -58 21 minecraft:oak_planks" \
+	"await block 50 -59 19 minecraft:glass" "await block 50 -59 20 minecraft:gold_block"
 check "the ghost stone among them, where the copy had a ghost block over a real one" drv 2 \
-	"await block 52 -58 22 minecraft:stone"
-check "and no real blocks" eval '[[ $(val 1 "real 51 -59 20") == minecraft:air ]] &&
-	[[ $(val 1 "real 52 -58 22") == minecraft:air ]]'
+	"await block 51 -58 21 minecraft:stone"
+check "and no real blocks" eval '[[ $(val 1 "real 50 -59 19") == minecraft:air ]] &&
+	[[ $(val 1 "real 51 -58 21") == minecraft:air ]]'
 shot 1 copy-both-pasted
 
 # With ghost blocks hidden, the same box copies the house's real blocks only: 26, with the real oak plank where the ghost
@@ -656,9 +721,9 @@ check "and ghost blocks stay hidden" eval '[[ $(val 1 ghosts) == "hidden, "* ]]'
 drv 1 "cmd tp @s 51.5 -56 27.5 180 30" "wait 40" > /dev/null
 aim 1 50 -60 20
 check "the copy has the real oak plank where the ghost stone stands, and no gold block" eval '
-	drv 1 "await copy origin 50,-60,20 NONE NONE unselected 26 blocks" > /dev/null &&
-	[[ $(val 1 "get 52 -58 22") == minecraft:oak_planks ]] && [[ $(val 1 "get 51 -59 21") != minecraft:gold_block ]] &&
-	[[ $(val 1 "get 51 -59 20") == minecraft:glass ]]'
+	drv 1 "await copy at 49,-60,19..51,-58,21 NONE NONE unselected 26 blocks" > /dev/null &&
+	[[ $(val 1 "get 51 -58 21") == minecraft:oak_planks ]] && [[ $(val 1 "get 50 -59 20") != minecraft:gold_block ]] &&
+	[[ $(val 1 "get 50 -59 19") == minecraft:glass ]]'
 shot 1 copy-hidden
 press 1 n
 check "ghost blocks show again" eval 'drv 1 "wait 5" > /dev/null && [[ $(val 1 ghosts) == "shown, "* ]]'
@@ -666,7 +731,7 @@ drv 1 "cmd tp @s 46.5 -56 6.5 0 30" "wait 40" > /dev/null
 copy_button
 house_box
 check "the copy is the house with the gold block and the ghost stone again: 27 blocks" \
-	eval 'drv 1 "wait 5" > /dev/null && copy_is 1 "^origin [-0-9,]+ NONE NONE unselected 27 blocks$"'
+	eval 'drv 1 "wait 5" > /dev/null && copy_is 1 "^at [-0-9,.]+ NONE NONE unselected 27 blocks$"'
 
 # With the copy at the aim, the menu shows the same seven buttons, none of them for turning, mirroring or clearing the
 # copy; shot at 1920 by 1080, GUI scales 2 and 4, with the pointer off the buttons, and failing unless the buttons
@@ -691,7 +756,7 @@ xdo 1 mousemove --window %w 427 240
 drv 1 "wait 10" "notoasts" "wait 5" "notoasts" "shot radial-with-copy" > /dev/null
 echo "  radial-with-copy buttons: $(val 1 buttons)" >> /out/checks.log
 check "with the copy at the aim, the menu shows the same seven buttons in their slots, with their hover texts" eval \
-	'copy_is 1 "^origin " && [[ $(val 1 slots) == "$slots" ]]'
+	'copy_is 1 "^at " && [[ $(val 1 slots) == "$slots" ]]'
 xdo 1 mousemove --window %w 5 5
 radial_let_go
 
@@ -710,7 +775,7 @@ drv 1 "ebmode LINE" "wait 5" > /dev/null
 paste_button
 radial_open
 selected_shot radial-paste-selected
-check "with the copy at the aim in Line mode, Paste shows selected" eval 'copy_is 1 "^origin " &&
+check "with the copy at the aim in Line mode, Paste shows selected" eval 'copy_is 1 "^at " &&
 	[[ $(val 1 selectedbuttons) == Paste ]] && [[ $(val 1 ebmode) == LINE ]]'
 check "and no mode segment does" eval '[[ $(val 1 "ringselected radial-paste-selected") == none ]]'
 radial_click "Copy"
@@ -1132,7 +1197,7 @@ check "the box ends, leaving the player's mode" box_is "none SINGLE"
 press 1 n
 check "ghost blocks show again" eval 'drv 1 "wait 5" > /dev/null && [[ $(val 1 ghosts) == "shown, "* ]]'
 paste_button
-check "the copy is back at the aim" copy_is 1 "^origin "
+check "the copy is back at the aim" copy_is 1 "^at "
 radial_open
 radial_point "Material list"
 radial_let_go

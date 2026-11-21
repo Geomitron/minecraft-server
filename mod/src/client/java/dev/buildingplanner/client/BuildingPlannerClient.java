@@ -357,7 +357,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		return session == null ? null : session.mouseMode();
 	}
 
-	/** Whether a mouse mode is on (hooks E15 and E22). */
+	/** Whether a mouse mode is on (hooks E15, E22 and L11). */
 	public static boolean mouseModeOn() {
 		return mouseMode() != null;
 	}
@@ -445,16 +445,16 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	}
 
 	/**
-	 * Hook M5: each notch of the scroll wheel gives the copy at the aim a quarter turn, clockwise for a notch down
-	 * ({@code wheel} below 0) and counterclockwise for a notch up; returns whether the hotbar slot changes as without
-	 * the add-on.
+	 * Hook M5: each notch of the scroll wheel gives the copy at the aim a quarter turn around its middle, clockwise for a
+	 * notch up ({@code wheel} above 0) and counterclockwise for a notch down, as Satisfactory's wheel turns a hologram;
+	 * returns whether the hotbar slot changes as without the add-on.
 	 */
 	public static boolean scroll(int wheel) {
 		if (mouseMode() != MouseMode.COPY_AT_AIM) {
 			return true;
 		}
 		for (int notch = 0; notch < Math.abs(wheel); notch++) {
-			session.turnCopy(wheel < 0);
+			session.turnCopy(wheel > 0);
 		}
 		return false;
 	}

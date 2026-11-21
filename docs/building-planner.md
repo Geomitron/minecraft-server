@@ -232,6 +232,7 @@ Litematica, under `src/main/java/fi/dy/masa/litematica/`:
 | L8 | `schematic/placement/PlacementManagerTaskRebuild.java`, `run()`; `PlacementManagerTask.java`'s constructors | `@WrapMethod`; a number for each task, in the order they're made (`RebuildOrder`) | Run the rebuilds of one chunk column one at a time. Litematica's background threads (at least two) rebuild a column from its placements' blocks as they are when the rebuild runs, so two rebuilds of one column at once could end with the older one's result, read before an edit's blocks were written. It also notes each finished rebuild, for the self-check ("Overlapping shapes"). |
 | L9 | `schematic/placement/PlacementManagerDaemonHandler.java`, `removeRebuildTasksFor` and `removeDeferredTasksFor` | `@WrapMethod` | A running rebuild drops from the queue only the rebuilds of its column made before it began, whose edits it reads. Litematica's rebuild drops every queued rebuild of its column as it ends, and as it unloads a column with no placements, including one queued for an edit written after it read the column, which would leave that edit undrawn. Elsewhere (a new rebuild replacing the queued ones, an unload) every queued rebuild of the column still goes. |
 | L10 | `gui/GuiMaterialList.java`, private `createButtons()` and `createButton(int, int, ButtonListener.Type)` | `@WrapOperation` on `addButton` in `createButton`, which adds "Save list" or "Saved lists" in place of the `EXPORT` or `EXPORT_TYPE` button, telling them by the listener's `type` (read by reflection, since `ButtonListener.Type` is private); `@WrapOperation` on `addButton` in `createButtons`, the call that adds the `ButtonListenerChangeMenu` | For Building Planner's list only (`GhostMaterialList`): no "Export" button, no export type button ("Write to file", which cycles), and no "Litematica menu" button, which `createButtons` adds at the bottom right; "Save list" and "Saved lists" go where "Export" and the export type were, in the same row, which the method moves to the bottom left when the screen is narrow (`isNarrow`). Other material lists keep their buttons. |
+| L11 | `util/WorldUtils.java`, `doSchematicWorldPickBlock(boolean, Minecraft)` | `@Inject` at head, cancellable, returning false | While a mouse mode is on, Litematica picks no block from its placements, so its "pick block first" hotkey (the middle click by default), which runs before the game sees the click and keeps the click when it picks, leaves the click to the game's pick block key and hook M4. The copy sits under the crosshair, so the click would otherwise pick one of the copy's blocks and never mirror it. Without a mouse mode, Litematica's pick block works as it does without Building Planner. |
 
 Public Litematica API the add-on calls: `LitematicaSchematic.createEmptySchematic`, `getSubRegionContainer`,
 `getAreaSize`; `LitematicaBlockStateContainer`'s `get` and `set`; `SchematicPlacement.createFor`,
@@ -905,16 +906,23 @@ side that touches the face on the block beside it, as a Satisfactory hologram si
 For a side an even number of blocks across, the middle is the block before it in the direction of lower coordinates.
 When the player aims at nothing, the copy stays where it was, and a copy made then starts over the blocks it was copied
 from. Each client tick Building Planner sets the placement's origin so that the copy, as it's turned and mirrored,
-sits there.
+sits there (`CopyPlacement`). A turn or a mirror keeps the copy's middle block where it was, and the copy then rests
+against the aimed face again.
 
 **Snapping.** Every position is on Minecraft's block grid, so the copy always lines up with blocks, as Satisfactory's
 buildings line up with the grid on a foundation. Beyond the grid, the copy snaps to the player's own pastes, as a
 Satisfactory foundation snaps edge to edge to the foundation it's aimed at (806 Q3 C): while the aimed block lies in the box of
 one of the player's 16 most recent pastes in this dimension (`PasteBoxes`, whatever has happened to their blocks since),
 the copy sits flush against the face of that box the player aims at, without overlapping it, with its edges in line
-with the box's edges at the corner nearest the aim. While the player holds Minecraft's sprint key (Left Ctrl unless they
-change it), which is the key of Satisfactory's "Snap To Guide Lines", the copy stays in line with the most recent paste:
-on its level and on its row or its column, whichever the aim is nearer, moving only along that line as the aim moves.
+with the box's edges at the corner nearest the aim. The most recent of those pastes counts when the aimed block lies in
+several. "Nearest" compares the aimed block with the box's two edges along each side of the face, and a tie takes the
+lower coordinates. While the player holds Minecraft's sprint key (Left Ctrl unless they change it), which is the key of
+Satisfactory's "Snap To Guide Lines", the copy stays in line with the most recent paste: on its level and on its row or
+its column, whichever the aim is nearer, moving only along that line as the aim moves. Nearer compares the copy's middle
+with the paste's: a row runs east to west and a column north to south, and a tie takes the row. On a row or a column,
+the copy's edge lines up with the paste's on the side the copy's middle is on, so a copy as wide as the paste lines up
+with both its edges. The copy goes where the aim and the flush snap put it, and then into line, so in line it can
+overlap the paste.
 The sprint key still sprints, as the copy's other controls go by the game's own keys (see "Keys"), so a player who walks
 forward holding it also sprints, and in Freecam the camera flies faster. Leaving the server or changing dimension
 forgets the pastes.
@@ -1427,21 +1435,29 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   as they were. Aiming at a block's top face, the box's first corner is the space above it; aiming at its side, the
   block itself. The box follows the aim between clicks and the list under the crosshair counts its blocks. The third
   click makes the copy, with its message, places no real block, doesn't reach the other player, and leaves
-  Effortless Building's mode as it was. The copy's corner sits on the aimed block and follows the aim, and Litematica
-  neither selects nor lists it.
+  Effortless Building's mode as it was. The copy rests on the aimed top face, the middle of its bottom on the block
+  above, and follows the aim, and Litematica neither selects nor lists it. Against a real wall's side face, it stands
+  beside the wall, the middle of the side that touches it on the block beside the face; under a floating block's bottom
+  face, it hangs below it. On the floor and against the wall it's shot at 854 by 480 and 1920 by 1080, GUI scale 2.
 - At 854 by 480, GUI scale 2, the list counts a small box's blocks, most numerous first, and the material list box's
   controls line wraps onto two lines with the box's size whole. A box of 144 by 3 by 144 (as wide as the chunks the dev
   server's view distance of 6 loads around the player allows) over a floor of 40 kinds of block shows the list in rows
   of 10 that end inside the screen and above the controls line, with a "+11" cell; it's shot. A break shape drawn in
   Line mode over real grass has an empty break list (E8). A box past the side limit, or over a chunk not loaded, draws
   red, says which limit, and its click sets no corner.
-- With the copy at the aim, the controls line shows its controls. A notch down turns it a quarter turn clockwise, a
-  notch up back, and the hotbar slot stays; a middle click, facing south, flips it east to west, with its stairs
-  turning with it, and picks no block.
+- With the copy at the aim, the controls line shows its controls. A notch up turns it a quarter turn clockwise in place,
+  the middle of its bottom staying on the same block, a notch down back, and the hotbar slot stays; a middle click,
+  facing south with the crosshair on the copy's blocks, flips it east to west within the same box, with its stairs
+  turning with it, and picks no block, neither the game's nor Litematica's.
 - Over other ghost blocks, the copy's blocks show where they overlap, and the ghost blocks show in its empty space.
 - A left click pastes it: the other player sees its blocks at once, turned and mirrored as the copy showed them,
   glowing with the paster's name; the copy's empty space leaves the ghost blocks under it, and the copy stays. One
   Ctrl+Z undoes the whole paste, and Ctrl+Y redoes it.
+- Aimed at a side face inside that paste's box, the copy sits flush against the box's face, its edges in line with the
+  box's at the corner nearest the aim, not where the aim alone would put it; it's shot at 854 by 480 and 1920 by 1080.
+- With Left Ctrl held, the copy stays on the paste's level and its row, moving along the row as the aim moves, and on
+  its column when the aim is nearer that; it's shot on the row at both sizes. Let go, the copy rests on the aimed face
+  again.
 - A right click puts the copy away, and the radial menu's Paste button brings it back to the aim, turned and mirrored
   as it was. Choosing a mode in the radial menu, or the Block mix button, puts it away too.
 - A box around a real house with no ghost blocks copies its real blocks. With a ghost gold block added inside the house
@@ -1614,6 +1630,12 @@ world's spawn, where Planner2, who isn't an operator, may build:
 - Neither client's log has a self-check warning, checked before the restarts and at the end.
 - Planner2 is shot at 854 by 480 and 1920 by 1080, GUI scale 2, looking at a ghost wall before and after real blocks
   fill half of it.
+
+The copy's placement has unit tests as pure functions. `CopyPlacementTest` covers the copy against each of the six
+faces, with sides of odd and even lengths, the origin for each turn and mirror filling the turned box, and a turn or
+mirror keeping the middle block. `PasteBoxesTest` covers snapping: flush against each face of a paste's box at the
+corner nearest the aim, the most recent paste winning, only 16 kept, and the guide line along a row and a column on the
+latest paste's level.
 
 The fill rule's unit tests (`FillRuleTest`) cover each property it compares or ignores: a stair facing another way or
 upside down, a log on another axis, a door with the other hinge or its other half, a bed's other part, a button on

@@ -101,7 +101,7 @@ check "breaking a filled block brings no ghost block back" eval 'drv 2 "await re
 # A paste onto built blocks: real stone bricks from 40 -60 48 to 43 -59 48, copied and pasted where they stand.
 drv 1 "cmd fill 40 -60 48 43 -59 48 minecraft:stone_bricks" "wait 10" > /dev/null
 check "Planner1 copies the 8 built blocks and pastes them where they stand" eval \
-	'[[ $(val 1 "pastehere 40 -60 48 43 -59 48") == "origin 40,-60,48 "*" 8 blocks" ]]'
+	'[[ $(val 1 "pastehere 40 -60 48 43 -59 48") == "at 40,-60,48..43,-59,48 "*" 8 blocks" ]]'
 drv 1 "wait 20" > /dev/null
 check "the paste onto built blocks changes nothing, with no glow" eval 'both_layer 40 -60 48 minecraft:air &&
 	both_layer 43 -59 48 minecraft:air && [[ -z $(val 2 glows) ]]'

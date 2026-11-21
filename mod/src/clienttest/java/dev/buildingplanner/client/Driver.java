@@ -215,7 +215,7 @@ public final class Driver implements ClientModInitializer {
 				// pastehere x1 y1 z1 x2 y2 z2: copies the box, as Copy does, and pastes the copy at once where it was
 				// copied from, as a left click with the copy there would; the box's lowest corner must hold a block.
 				session().copy(pos(a, 1), pos(a, 4));
-				clipboard().follow(pos(a, 1));
+				clipboard().moveTo(pos(a, 1));
 				session().paste();
 				return copy();
 			}
@@ -899,6 +899,7 @@ public final class Driver implements ClientModInitializer {
 			case "tile" -> String.valueOf(tile(Integer.parseInt(a[1]), Integer.parseInt(a[2]))).equals(a[3]);
 			case "glow" -> glows().contains(what.substring(5));
 			case "copy" -> copy().startsWith(what.substring(5));
+			case "sprint" -> mc.options.keySprint.isDown() == Boolean.parseBoolean(a[1]);
 			case "noglow" -> glows().isEmpty();
 			case "held" -> SentPackets.held(a[1].equals("use"));
 			case "pressedafter" -> SentPackets.presses() > Integer.parseInt(a[1]);
@@ -1074,9 +1075,10 @@ public final class Driver implements ClientModInitializer {
 	}
 
 	/**
-	 * The player's copy: {@code none}, or {@code origin} and its origin while it's at the aim and {@code away} while it's
-	 * put away, then its mirror, rotation, whether it's the selected placement, and how many blocks it has;
-	 * {@code nosession} while Building Planner is off.
+	 * The player's copy: {@code none}, or {@code at} and the box it fills, as it's turned, from its lowest corner to its
+	 * highest ({@code at 4,-60,20..6,-59,21}), while it's at the aim and {@code away} while it's put away, then its
+	 * mirror, rotation, whether it's the selected placement, and how many blocks it has; {@code nosession} while
+	 * Building Planner is off.
 	 */
 	private static String copy() throws Exception {
 		if (session() == null) {
@@ -1088,9 +1090,14 @@ public final class Driver implements ClientModInitializer {
 		}
 		SchematicPlacement p = clipboard.placement();
 		boolean selected = DataManager.getSchematicPlacementManager().getSelectedSchematicPlacement() == p;
-		return (clipboard.atAim() ? "origin " + p.getOrigin().toShortString().replace(" ", "") : "away") + " "
+		return (clipboard.atAim() ? "at " + shortPos(clipboard.spot().min()) + ".." + shortPos(clipboard.spot().max())
+			: "away") + " "
 			+ p.getMirror() + " " + p.getRotation() + (selected ? " selected " : " unselected ")
 			+ clipboard.worldBlocks().size() + " blocks";
+	}
+
+	private static String shortPos(BlockPos pos) {
+		return pos.getX() + "," + pos.getY() + "," + pos.getZ();
 	}
 
 	private static BlockPos pos(String[] a, int i) {
