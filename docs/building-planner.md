@@ -996,8 +996,9 @@ the row. A copy locked before the first click starts the row where it's locked. 
 block cap draws red (below), and its click pastes nothing.
 
 **Colours.** The copy's box is drawn by Building Planner through MaLiLib's renderer, as the box for Copy is
-(`RenderUtils.renderAreaOutline`, an outline without sides, `CopyOutline`), in Satisfactory's hologram colours (806 Q7
-B): blue (#00D4FF) where a paste would go in as it shows; yellow (#FFE100) where some of its blocks would replace ghost
+(`RenderUtils.renderAreaOutline` and `renderAreaSides`, an outline and see-through sides in the box's colour, as
+transparent as that box's: 0.15 alpha, and 0.2 where it is red; `CopyOutline`), in Satisfactory's hologram colours (806
+Q7 B): blue (#00D4FF) where a paste would go in as it shows; yellow (#FFE100) where some of its blocks would replace ghost
 blocks already there, which the paste still does, as Satisfactory's yellow "soft clearance" still builds; and red
 (#FF7070) where the server would refuse the paste: part of the copy outside the world's build height or its border, or
 a zoop row over the block cap. While it's red, the controls line says why and a left click pastes nothing and sends no

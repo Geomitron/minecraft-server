@@ -18,7 +18,7 @@ import org.joml.Vector4f;
 
 /**
  * Draws the box of the copy at the aim, and of each copy in its row, each frame through MaLiLib's renderer, as the box
- * for Copy is drawn, in Satisfactory's hologram colours ({@link CopyColour}): blue, yellow or red. Hook L6 leaves these
+ * for Copy is drawn (an outline and see-through sides), in Satisfactory's hologram colours ({@link CopyColour}): blue, yellow or red. Hook L6 leaves these
  * placements out of Litematica's own boxes.
  */
 final class CopyOutline implements IRenderer {
@@ -28,6 +28,10 @@ final class CopyOutline implements IRenderer {
 	private static final Color4f YELLOW = new Color4f(1f, 225 / 255f, 0f, 1f);
 	/** #FF7070. */
 	private static final Color4f RED = new Color4f(1f, 112 / 255f, 112 / 255f, 1f);
+	/** The see-through sides, as transparent as the box for Copy's: 0.15 alpha, and 0.2 where that box is red. */
+	private static final Color4f BLUE_SIDES = new Color4f(0f, 212 / 255f, 1f, 0.15f);
+	private static final Color4f YELLOW_SIDES = new Color4f(1f, 225 / 255f, 0f, 0.15f);
+	private static final Color4f RED_SIDES = new Color4f(1f, 112 / 255f, 112 / 255f, 0.2f);
 
 	/** The copy's colour and the boxes of the copies, the copy's own first. */
 	record Shown(CopyColour.Shown colour, List<Spot> boxes) {
@@ -53,14 +57,27 @@ final class CopyOutline implements IRenderer {
 		if (shown == null) {
 			return;
 		}
-		Color4f line = switch (shown.colour().colour()) {
-			case BLUE -> BLUE;
-			case YELLOW -> YELLOW;
-			case RED -> RED;
-		};
+		Color4f line;
+		Color4f sides;
+		switch (shown.colour().colour()) {
+			case BLUE -> {
+				line = BLUE;
+				sides = BLUE_SIDES;
+			}
+			case YELLOW -> {
+				line = YELLOW;
+				sides = YELLOW_SIDES;
+			}
+			case RED -> {
+				line = RED;
+				sides = RED_SIDES;
+			}
+			default -> throw new IllegalStateException();
+		}
 		profiler.push("buildingplanner_copy");
 		for (Spot box : shown.boxes()) {
 			RenderUtils.renderAreaOutline(box.min(), box.max(), 2f, line, line, line);
+			RenderUtils.renderAreaSides(box.min(), box.max(), sides);
 		}
 		profiler.pop();
 	}
