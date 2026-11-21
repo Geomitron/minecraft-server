@@ -393,16 +393,20 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
 ## Agent-ready work
 
 **Building Planner 0.6.0** (the bullet "Building Planner 0.6.0 takes the six changes" in "Decisions" above: 806, 808,
-809, 811 and the choices the agent settled). [building-planner.md](building-planner.md) is the design, and Geo's
-answers settle every choice in it; the texts players see are proposed, for Geo to edit in step 11. The steps come in
-this order, each small enough for one child. A step that changes nothing players see goes to `main` once its checks
-pass (inbox request 429). A step that changes what players see is committed without pushing, and goes to `main` once
-Geo has seen its in-game screenshots, with the changes outlined in red, and its texts. Each step adds its checks to the
-spec's "In-game checks", and every step's checks include `step6.sh` to `step10.sh` still passing. `overlap.sh` (about
-15 minutes) runs in the steps that change the layer, edits, tiles or what Litematica draws (1, 3, 4 and 8) and at the
-release. Screenshots are at 854 by 480 and 1920 by 1080, GUI scale 2, plus GUI scale 4 where a step says so. Filled
-ghost blocks need protocol version 5, so nothing goes to the server or the pack before the last step, when the server
-and the pack update together.
+809, 811, 972, 980, 981 and the choices the agent settled). [building-planner.md](building-planner.md) is the design,
+and Geo's answers settle every choice in it but the two it marks "(open: ...)", which go to Geo before steps 14 and 16.
+Steps 1 to 10 build the six changes, step 11 builds the texts Geo approved for them (972), steps 12 and 13 build Delete
+by aim, and steps 14 to 17 the copy's controls for one ghost block; those two features' texts are proposed, for Geo to
+edit in step 18, which sets the version, and step 19 is the release, which waits for both features (972 revision 2, Q1
+B). The steps come in this order, each small enough for one child; steps 12 to 17 each change `CopyKeys`,
+`ControlsLine`, `ModeHud` and `step9.sh`, so they run one at a time. A step that changes nothing players see goes to
+`main` once its checks pass (inbox request 429). A step that changes what players see is committed without pushing,
+and goes to `main` once Geo has seen its in-game screenshots, with the changes outlined in red, and its texts. Each
+step adds its checks to the spec's "In-game checks", and every step's checks include `step6.sh` to `step10.sh` still
+passing. `overlap.sh` (about 15 minutes) runs in the steps that change the layer, edits, tiles or what Litematica
+draws (1, 3, 4 and 8) and at the release. Screenshots are at 854 by 480 and 1920 by 1080, GUI scale 2, plus GUI scale
+4 where a step says so. Filled ghost blocks need protocol version 5, so nothing goes to the server or the pack before
+the last step, when the server and the pack update together.
 
 1. **Older shapes stay drawn** ("Overlapping shapes"): the new tile added
    before the old one is removed, and the game's self-check that logs a warning when a column loses ghost blocks an
@@ -477,19 +481,54 @@ and the pack update together.
     mode, locked, after the first paste ("Hold Ctrl to line up") and red, with the keys as the player has them bound.
     Done when unit tests cover the line for each state as a pure function, and `step9.sh` checks each line exactly.
     Shots of each line (with GUI scale 4).
-11. **Texts for Geo**: every text steps 4 to 10 add (the Delete button's name, its controls line and its two messages,
-    the eight keys' names, the copy's controls lines and the red reasons), with the Barrier icon, goes to Geo as
-    editable text with its step's screenshots, and Geo's version is built in, with `step9.sh` checking each text
-    exactly. The same step sets the version 0.6.0.
-12. **The release**: after Geo's approval, released as 0.5.0 was: the GitHub release, then the server and the pack in
+11. **Geo's texts (972)** ("Building Planner's mouse modes", "Keys" and "The Delete box"): the texts steps 4 to 10
+    add, as Geo approved them in inbox request 972 (the "Texts (972)" bullet in "Decisions"): the controls lines, with
+    Geo's phrase "Arrow keys + Page Up/Down to nudge" in every locked line, the eight keys' names, and the Delete
+    button's name, its icon and its messages. Done when `ControlsLineTest` and `step9.sh` check each text exactly, and
+    the shots of each line (with GUI scale 4) show Geo's wording. It doesn't set the version.
+12. **Delete by aim: marking** ("Delete by aim"): Delete's two modes (`DeleteMode`) and the mouse mode `DELETE_AIM`, R
+    switching a Delete box and Aim, the sweep with the sprint key (`DeleteAim`, `DeleteMarks`), the marks' red outline
+    and sides (`MarksOutline`), their list under the crosshair, the cap, and marks dropping with their ghost blocks.
+    Done when `DeleteMarksTest` passes and the spec's "Delete by aim, marking (step 12)" checks in `step9.sh` pass, with
+    shots of a marked wall.
+13. **Delete by aim: erasing and its line** ("Delete by aim"): the one-second hold (M1 and the client tick), the erase
+    edit and its message, Aim staying on, the right click that clears the marks or ends Aim, the Delete box's "R for
+    Aim" and Aim's controls lines (`ControlsLine.deleteAim`). Needs step 12. Done when `EraseHoldTest` and
+    `ControlsLineTest` pass and the spec's "Delete by aim, erasing and its line (step 13)" checks pass, with shots of
+    each line (with GUI scale 4).
+14. **One ghost block: locking and nudging** ("One ghost block"): `SingleBlock` and when its controls are active
+    (`SingleRule`), H and the nudge keys acting for it in `CopyKeys`, hooks E14, M1 and M2 taking its clicks while
+    it's locked, E27 drawing the locked block, and the eight keys' proposed names. Needs Geo's answer on the locked
+    block's left click. Done when `SingleRuleTest` passes and the spec's "One ghost block, locking and nudging (step
+    14)" checks pass, with shots of the locked block and of Controls' "Building Planner" heading (with GUI scale 4).
+15. **One ghost block: Zoop and Vertical** ("One ghost block"): R cycling the block's own mode, `CopyRow` with a
+    longest row of 32 for a block and 10 for the copy, the row through Effortless Building's `processBlocks` and
+    `EffortlessShapes.place`, and its preview through E27. Needs step 14. Done when `CopyRowTest` passes and the spec's
+    "One ghost block, Zoop and Vertical (step 15)" checks pass, with shots of a Zoop row and a Vertical row before the
+    second click.
+16. **One ghost block: turning and flipping** ("One ghost block"): `BlockTurn`, hooks M4 and M5 with the sprint key
+    held, L11 for the flip, E1 and E28 applying the turn, and the turn dropping when the player switches to another
+    block. Needs step 14 and Geo's answer on the turn in Effortless Building's other modes. Done when `BlockTurnTest`
+    passes and the spec's "One ghost block, turning and flipping (step 16)" checks pass, with shots of turned and
+    flipped stairs before and after placing.
+17. **One ghost block: colours and its line** ("One ghost block"): `CopyOutline` for the locked block and the row,
+    red placing nothing, and the controls line for each state (`ControlsLine.single`), drawn by `ModeHud`. Needs steps
+    15 and 16. Done when `CopyColourTest` and `ControlsLineTest` pass and the spec's "One ghost block, colours and its
+    line (step 17)" checks pass, with shots of each line (with GUI scale 4) and of a yellow row crossing ghost blocks.
+18. **Texts for Geo**: every text steps 12 to 17 add (Aim's controls lines and the Delete box's "R for Aim", the one
+    ghost block's controls lines and its red reason, and the eight keys' proposed names) goes to Geo as editable text
+    with its step's screenshots, each following the rule Geo approved for the game's texts (985 Q1 A), and Geo's
+    version is built in, with `ControlsLineTest` and `step9.sh` checking each text exactly. The same step sets the
+    version 0.6.0.
+19. **The release**: after Geo's approval, released as 0.5.0 was: the GitHub release, then the server and the pack in
     one sitting, since protocol version 5 turns Building Planner off for a game and a server on different versions. On
     the server: a backup of the world named for 0.6.0, the jar in `mods/` in place of 0.5.0's, and a
     restart; the log shows Building Planner start with no error, and a player beside a part of a plan that's already
     built sees no ghost blocks over it. Then the pack's push to `main`. "Current setup" in this plan is updated to
     0.6.0, protocol version 5 and the new backup, and the README and the guide are checked against what 0.6.0 changes.
     Then Geo gets one walkthrough of the released game, naming the version it walks through: 0.5.0's material lists
-    and every 0.6.0 change, as a revision of inbox request 815. A walkthrough waits until every change Geo asked for
-    in its version is approved and released (815 [c1]).
+    and every 0.6.0 change, Delete by aim and the one ghost block's controls among them, as a revision of inbox request
+    815. A walkthrough waits until every change Geo asked for in its version is approved and released (815 [c1]).
 
 ## Design work: Building Planner
 

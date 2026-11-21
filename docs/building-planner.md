@@ -11,7 +11,10 @@ except 0.6.0's changes, from Geo's requests of November 20th (in [plan.md](plan.
 - the copy placed with the controls of Satisfactory's build gun: against the aimed face, snapping to recent pastes,
   locking and nudging, Zoop and Vertical, and its box in blue, yellow and red (see "Copy and paste", "Building
   Planner's mouse modes" and "Keys");
-- the radial menu's Delete button and its box (see "The Delete box");
+- the radial menu's Delete button and its box (see "The Delete box"), and a second Delete mode, Aim, that marks the
+  ghost blocks the player looks at and erases them on a confirm (see "Delete by aim");
+- the copy's controls for one ghost block in Effortless Building's Single mode: locking and nudging, Zoop and Vertical
+  rows, and turning and flipping the block with Left Ctrl held (see "One ghost block");
 - ghost blocks leaving the layer once real blocks fill them, with protocol version 5 (see "Ghost blocks the real world
   fills");
 - editing ghost blocks from Freecam's camera (see "Editing from Freecam");
@@ -38,11 +41,18 @@ The build steps are in [plan.md](plan.md) ("Agent-ready work").
   else in hand (a tool, food, an empty hand, or an item that places an entity or a fluid, such as a bucket, an item
   frame, an armor stand or a boat), every click acts as without mods, in every mode, breaking and using real blocks,
   and holding a button repeats as the game does.
+- **One ghost block.** In Single mode, with a block in hand, the copy's controls work for the one ghost block at the
+  aim, as if it were a copy of one block, while Single's buttons stay: H locks it in place, and the arrow keys, Page
+  Up and Page Down nudge it; R switches it between Single, Zoop and Vertical, whose rows of up to 32 blocks go down
+  with two right clicks; while Left Ctrl is held, the wheel turns the block and the middle click flips it to the
+  other ways it can sit (a log's axis, a stair's top or bottom half), and it keeps that turn until the player switches
+  to another block. A line of these controls shows at the bottom of the screen (see "One ghost block").
 - **Hold to repeat.** In Single mode, holding the place button keeps placing ghost blocks and holding the break button
   keeps erasing them. Two sliders in Effortless Building's radial menu, "Build speed" and "Break speed", set how fast,
   from 1 to 20 blocks a second; at first they're the game's own pace for a held button, five a second to place and
   just over three to erase. The first repeat waits at least 0.2 seconds, the game's own wait before a held click
-  repeats, so a quick click places or erases one block at every speed. The other modes act once for each click.
+  repeats, so a quick click places or erases one block at every speed. The other modes act once for each click, and so
+  does Single mode while its ghost block is locked or in Zoop or Vertical (see "One ghost block").
 - **Disable.** With "Disable" chosen in Effortless Building's radial menu, clicks act as they do without mods, placing
   and breaking real blocks, even with the block mix on.
 - **Block mixes.** The block mix key (B unless the player changes it in Controls) and the Block mix button in the
@@ -64,7 +74,9 @@ The build steps are in [plan.md](plan.md) ("Agent-ready work").
   block leaves the layer for everyone, however the real block got there, including ghost blocks built before 0.6.0.
   Breaking the real block later doesn't bring the ghost block back (see "Ghost blocks the real world fills").
 - **Delete.** The radial menu's Delete button draws a box, with the same limits as a box for Copy, and erases every
-  ghost block in it as one change, which one undo takes back (see "The Delete box").
+  ghost block in it as one change, which one undo takes back (see "The Delete box"). R switches Delete to Aim, as in
+  Satisfactory's dismantle: holding Left Ctrl and sweeping the aim marks each ghost block the crosshair passes over,
+  and holding the left button for a second erases the marked ones as one change (see "Delete by aim").
 - **Overlapping shapes.** A shape drawn across older ghost blocks replaces them only where the two meet; the older
   shape's other ghost blocks stay (see "Overlapping shapes").
 - **Freecam.** With Freecam's camera on, shapes, erasing, boxes and the copy aim from the camera, as if the player
@@ -113,7 +125,8 @@ The build steps are in [plan.md](plan.md) ("Agent-ready work").
   hasn't changed it from Litematica's default (off, and 0.5), and never again, so a player's own later change stays.
   This happens whether or not the player joins a server with Building Planner.
 - **Messages.** Building Planner's messages show in the player's chat. Every text players see (messages, key names,
-  button and slider labels, the panel) is in the wording Geo approved, which this spec quotes.
+  button and slider labels, the panel) is in the wording Geo approved, which this spec quotes, except the texts "One
+  ghost block", "Delete by aim" and "Keys" mark as proposed, which go to Geo with their build's screenshots.
 
 ## Geo's goals, and what meets each
 
@@ -136,12 +149,14 @@ One jar, mod id `buildingplanner`, installed on the server and in the player pac
 menus, so it adds nothing to the registries Fabric API syncs at login, and players without mods can still join.
 
 - **Common:** the layer's column storage and its file format, the network payloads, the material lists' format and
-  limits, the hold-to-repeat timer and the look defaults' rules.
+  limits, the hold-to-repeat timer, the look defaults' rules, the turns of one ghost block (`BlockTurn`) and the marks
+  of Delete by aim (`DeleteMarks`).
 - **Server:** the layer store and its files, column watching, edits and their order, per-player undo, each player's
   material lists and their files, and the one-time import of the plans Syncmatica shared. They run only on a dedicated server, which is how the group plays.
 - **Client:** the player's copy of the layer and its column watching, the tiles that hand it to Litematica and the
   hooks that hide them, the show or hide switch, the Effortless Building capture, hold to repeat, the radial menu's
-  buttons and sliders, the block mix and its panel, copy and paste, the material list with its panel and saved lists,
+  buttons and sliders, the block mix and its panel, copy and paste, the controls for one ghost block, the Delete box
+  and Delete by aim, the material list with its panel and saved lists,
   the edit glow, the settings it changes once, and the check for a server without the add-on.
 
 `fabric.mod.json` depends on Fabric API, which both sides run. Litematica, MaLiLib and Effortless Building run only on
@@ -168,7 +183,7 @@ Effortless Building, under `common/src/main/java/nl/requios/effortlessbuilding/`
 
 | # | File, method | Hook | Purpose |
 |---|---|---|---|
-| E1 | `buildpipeline/BuildPipelineClient.java`, `handleClick` | `@WrapWithCondition` on `PacketHandler.sendToServer(PlaceBuildModePacket)`, reading the local `BlockSet blocks` | Take the finished shape (every entry, after mode, modifiers, mix and constraints) into the layer; don't send the packet. `getFirstClickHit()` is still set here, so block states use the first click's face. |
+| E1 | `buildpipeline/BuildPipelineClient.java`, `handleClick` | `@WrapWithCondition` on `PacketHandler.sendToServer(PlaceBuildModePacket)`, reading the local `BlockSet blocks` | Take the finished shape (every entry, after mode, modifiers, mix and constraints) into the layer; don't send the packet. `getFirstClickHit()` is still set here, so block states use the first click's face. In Single mode each state then takes the one ghost block's turn (`BlockTurn.apply`, see "One ghost block"). |
 | E2 | same method | `@WrapWithCondition` on `PacketHandler.sendToServer(BreakBuildModePacket)` | Erase the ghost blocks among the shape's positions, in the game's copy of the layer, with the other half of each two-block ghost block (`GhostErase.of`); don't send. A shape over no ghost blocks sends no edit. |
 | E3 | same method | `@WrapWithCondition` on `PlacedBlockTracker.clientTrackAll` | Don't record ghost positions as real blocks the player placed. |
 | E4 | `network/PacketHandler.java`, `sendToServer(UndoPacket)` and `sendToServer(RedoPacket)` | `@Inject` at head, cancellable | Route undo and redo to the layer. Covers both the Ctrl+Z/Ctrl+Y keys (`fabric/.../EffortlessBuildingClient.java`, client tick) and the radial menu (`buildmode/ModeOptions.java`, `performAction`). |
@@ -181,7 +196,7 @@ Effortless Building, under `common/src/main/java/nl/requios/effortlessbuilding/`
 | E11 | `screen/RadialMenu.java`, `init()` | `@Inject` at tail, calling `Screen.addRenderableWidget` | Add Building Planner's buttons and sliders to the radial menu each time it opens (Minecraft clears a screen's widgets and calls `init` on each open). They're children of the screen, so `RadialMenu.mouseClicked`, which calls `super.mouseClicked` after its own `performAction`, routes clicks and drags to them. |
 | E12 | `screen/RadialMenu.java`, `extractRenderState(GuiGraphicsExtractor, int, int, float)` | `@Inject` before its call to `drawTexts` | Place those widgets for the opening animation (E20) and draw them: the method draws the menu itself and never calls `Screen`'s own drawing, which would draw them. Drawn before the menu's texts, they leave a hovered mode's name, which can fall on the sliders, on top. |
 | E13 | `buildpipeline/BuildPipeline.java`, `isBuildTriggerItem` | `@ModifyReturnValue` | On a server (with a session, or with Building Planner off), an item starts shapes only if it places a block (`ClickRule.placeable`: Minecraft's `BlockItem`, the same test as the mix's; `ClickRule` uses none of Litematica's classes, so these hooks can ask it while Building Planner is off). Effortless Building's own rule also takes buckets and tools with a `TOOL` component, and leaves out doors, beds and tall plants. |
-| E14 | `buildpipeline/BuildPipelineClient.java`, `shouldInterceptPlacing` and `shouldInterceptBreaking` | `@ModifyReturnValue` | While the player draws a box or the copy is at the aim (`MouseMode`), neither click is Effortless Building's in any mode, so hooks M1 to M5 take them. With the same rule as E13, while the main hand holds no item that places a block and no shape is under way (`getBuildState()` null), neither click is Effortless Building's either: its client tick, its `AttackBlockCallback`, and its cancelling of vanilla's `startUseItem`, `startAttack` and `continueAttack` all ask these first, and so does hold to repeat, so both clicks and holding them are vanilla's. A shape under way still takes the click that finishes or cancels it. |
+| E14 | `buildpipeline/BuildPipelineClient.java`, `shouldInterceptPlacing` and `shouldInterceptBreaking` | `@ModifyReturnValue` | While the player draws a box or the copy is at the aim (`MouseMode`), neither click is Effortless Building's in any mode, so hooks M1 to M5 take them. With the same rule as E13, while the main hand holds no item that places a block and no shape is under way (`getBuildState()` null), neither click is Effortless Building's either: its client tick, its `AttackBlockCallback`, and its cancelling of vanilla's `startUseItem`, `startAttack` and `continueAttack` all ask these first, and so does hold to repeat, so both clicks and holding them are vanilla's. A shape under way still takes the click that finishes or cancels it. In Single mode, the place click isn't Effortless Building's while the one ghost block is locked or in Zoop or Vertical, and the break click isn't while the block is locked or a row is fixed (`SingleBlock`), so hooks M2 and M1 take them (see "One ghost block"). |
 | E15 | `Minecraft.pick(float)`, into which Effortless Building's `MixinGameRenderer` adds, at its tail, a reach of 32 for an empty hand, aiming through entities; `buildmode/BuildModes.java`, `getBuildMode` | `@WrapMethod` on `pick`; `@ModifyReturnValue` on `getBuildMode` | While the main hand holds no item that places a block and no shape is under way, or while a box is drawn or the copy is at the aim, `getBuildMode` reads Disable during the pick, which that code skips, so the hand aims as without mods, at an entity before the block behind it. |
 | E16 | `screen/RadialMenu.java`, `onClose()` | `@Inject` at head, finding the button under the pointer, and at tail, acting | Let Building Planner's buttons act when the menu closes, as the menu's own do: its `tick` calls `onClose` once its key is let go (Escape calls it too), and `onClose` acts on the menu's button under the pointer unless a click acted since the menu opened (`performedActionUsingMouse`). Building Planner's button is found as `onClose` begins, before closing grabs the mouse and moves the pointer to the window's middle, and acts after the menu has closed, like the menu's own, so "Block mix" can open its screen. |
 | E18 | `screen/RadialMenu.java`, `drawTexts` | `@ModifyConstant` on the string `"Effortless Building"` | The menu's corner text, which the method draws right-aligned from the string's width, reads "Building Planner" (`buildingplanner.ui.radial.credits`). It is the only place the game shows Effortless Building's name to a player on this server: its welcome message and its build mode hint come from its server side (`config/WelcomeMessageStorage.java`, `config/BuildModeHintStorage.java`), which the server doesn't run, and its screens' titles ("Build Modes", "Modifier Settings") don't name it. |
@@ -190,6 +205,8 @@ Effortless Building, under `common/src/main/java/nl/requios/effortlessbuilding/`
 | E21 | `buildmode/BuildModes.java`, `setBuildMode` | `@Inject` at head | Choosing a mode (the radial menu's `performAction` is its only caller outside `BuildModes`) ends a box and puts the copy away, even when the player chooses the mode they had. |
 | E22 | `render/BlockPreviewRenderer.java`, `render` | `@Inject` at head, cancellable | No shape preview while a box is drawn or the copy is at the aim: the method draws the current mode's first block at the aim each frame (`BuildPipelineClient.getPreviewBlocks`). |
 | E23 | `utilities/KeyBindings.java`, `<clinit>` | `@ModifyArg` on the category of each of the four `KeyMapping` constructors | Effortless Building's keys go under Building Planner's heading in Controls (see "Keys"). |
+| E27 | `buildpipeline/BuildPipelineClient.java`, public static `getPreviewBlocks` | `@ModifyReturnValue` | While the one ghost block is locked, or a Zoop or Vertical row of it is fixed (after its first click), the preview draws the locked block or the row (`SingleBlock.previewBlocks`, run through Effortless Building's modifiers, mix and constraints), not the block at the aim (see "One ghost block"). |
+| E28 | `render/BlockPreviewRenderer.java`, `getPlacementState(BlockItem, Minecraft, ItemStack)` | `@ModifyReturnValue` | The preview's block takes the one ghost block's turn (`BlockTurn.apply`), as E1's states do, so the player sees the block as it will be placed. |
 
 Effortless Building's limits on its shapes come from its config on the player's computer (`config/ServerConfig.java`),
 which keeps its defaults, since only Effortless Building's server sends other values (`SyncServerConfigS2CPacket`): in
@@ -207,18 +224,19 @@ Minecraft 26.3, read in the client jar Loom maps (`minecraft-clientonly-deobf-26
 
 | # | File, method | Hook | Purpose |
 |---|---|---|---|
-| M1 | `Minecraft.java`, `startAttack()` | `@Inject` at head, cancellable, returning false | While a box is drawn, the left click sets its next corner; while the copy is at the aim, it pastes the copy. Neither attacks or breaks. `handleKeybinds` calls it once for each press of the attack key. |
-| M2 | `Minecraft.java`, `startUseItem()` | `@Inject` at head, cancellable | While a box is drawn or the copy is at the aim, the right click leaves that mode and uses nothing; during a zoop, after its first click, it drops the row and leaves the copy at the aim. `handleKeybinds` also calls `startUseItem` every 4 ticks while the use key stays down (`rightClickDelay`), so the use key does nothing more until it's let go. |
-| M3 | `Minecraft.java`, `continueAttack(boolean)` | `@Inject` at head, cancellable | Holding the left click breaks nothing while a box is drawn or the copy is at the aim. |
-| M4 | `Minecraft.java`, `pickBlockOrEntity()` | `@Inject` at head, cancellable | While the copy is at the aim, the middle click (the pick block key) mirrors the copy; while a box is drawn, it does nothing. |
-| M5 | `MouseHandler.java`, `onScroll(long, double, double)` | `@WrapWithCondition` on `Inventory.setSelectedSlot`, reading the local `wheel` | While the copy is at the aim, each notch of the wheel turns the copy a quarter turn, instead of changing the hotbar slot: clockwise seen from above for a notch up, counterclockwise for a notch down, as Satisfactory's wheel turns a hologram. The method reaches that call only with no screen open and the player not a spectator. |
+| M1 | `Minecraft.java`, `startAttack()` | `@Inject` at head, cancellable, returning false | While a box is drawn, the left click sets its next corner; while the copy is at the aim, it pastes the copy; in Delete by aim, it starts the one-second hold that erases the marks. With the one ghost block's row fixed, it drops the row, and while the block is locked, it erases the ghost block where it's locked. None attacks or breaks. `handleKeybinds` calls it once for each press of the attack key. |
+| M2 | `Minecraft.java`, `startUseItem()` | `@Inject` at head, cancellable | While a box is drawn or the copy is at the aim, the right click leaves that mode and uses nothing; during a zoop, after its first click, it drops the row and leaves the copy at the aim. In Delete by aim it clears the marks, or leaves the mode when there are none. While the one ghost block is locked or in Zoop or Vertical, it places the block where it's locked, fixes the row's start, or places the row. `handleKeybinds` also calls `startUseItem` every 4 ticks while the use key stays down (`rightClickDelay`), so the use key does nothing more until it's let go. |
+| M3 | `Minecraft.java`, `continueAttack(boolean)` | `@Inject` at head, cancellable | Holding the left click breaks nothing while a box is drawn, the copy is at the aim or Delete by aim is on. |
+| M4 | `Minecraft.java`, `pickBlockOrEntity()` | `@Inject` at head, cancellable | While the copy is at the aim, the middle click (the pick block key) mirrors the copy; while a box is drawn or Delete by aim is on, it does nothing. In Single mode, with a block in hand that flips and Minecraft's sprint key held, it flips the one ghost block (see "One ghost block"). |
+| M5 | `MouseHandler.java`, `onScroll(long, double, double)` | `@WrapWithCondition` on `Inventory.setSelectedSlot`, reading the local `wheel` | While the copy is at the aim, each notch of the wheel turns the copy a quarter turn, instead of changing the hotbar slot: clockwise seen from above for a notch up, counterclockwise for a notch down, as Satisfactory's wheel turns a hologram. In Single mode, with a block in hand that turns and Minecraft's sprint key held, each notch turns the one ghost block the same way. The method reaches that call only with no screen open and the player not a spectator. |
 
 The hooks go by Minecraft's attack, use and pick block keys, so a player who moves one of them to another button finds
 the copy's controls there too. Effortless Building's own hooks into `startUseItem`, `startAttack` and
 `continueAttack` (`mixin/MixinMinecraft.java`) and its client tick ask `shouldInterceptPlacing` and
 `shouldInterceptBreaking` first, which hook E14 answers false in these modes. The copy's own keys (see "Keys") need no
-hook: Building Planner's client tick reads them (`CopyKeys`), with no screen open, while the copy is at the aim, and empties their
-clicks (`consumeClick`) otherwise, so a press made before the copy came to the aim doesn't act once it does.
+hook: Building Planner's client tick reads them (`CopyKeys`), with no screen open, while the copy is at the aim, the
+one ghost block is active, or Delete is on, and empties their clicks (`consumeClick`) otherwise, so a press made
+before then doesn't act once they act.
 
 Litematica, under `src/main/java/fi/dy/masa/litematica/`:
 
@@ -232,7 +250,7 @@ Litematica, under `src/main/java/fi/dy/masa/litematica/`:
 | L8 | `schematic/placement/PlacementManagerTaskRebuild.java`, `run()`; `PlacementManagerTask.java`'s constructors | `@WrapMethod`; a number for each task, in the order they're made (`RebuildOrder`) | Run the rebuilds of one chunk column one at a time. Litematica's background threads (at least two) rebuild a column from its placements' blocks as they are when the rebuild runs, so two rebuilds of one column at once could end with the older one's result, read before an edit's blocks were written. It also notes when each rebuild begins and ends, for the self-check ("Overlapping shapes"). |
 | L9 | `schematic/placement/PlacementManagerDaemonHandler.java`, `removeRebuildTasksFor` and `removeDeferredTasksFor` | `@WrapMethod` | A running rebuild drops from the queue only the rebuilds of its column made before it began, whose edits it reads. Litematica's rebuild drops every queued rebuild of its column as it ends, and as it unloads a column with no placements, including one queued for an edit written after it read the column, which would leave that edit undrawn. Elsewhere (a new rebuild replacing the queued ones, an unload) every queued rebuild of the column still goes. |
 | L10 | `gui/GuiMaterialList.java`, private `createButtons()` and `createButton(int, int, ButtonListener.Type)` | `@WrapOperation` on `addButton` in `createButton`, which adds "Save list" or "Saved lists" in place of the `EXPORT` or `EXPORT_TYPE` button, telling them by the listener's `type` (read by reflection, since `ButtonListener.Type` is private); `@WrapOperation` on `addButton` in `createButtons`, the call that adds the `ButtonListenerChangeMenu` | For Building Planner's list only (`GhostMaterialList`): no "Export" button, no export type button ("Write to file", which cycles), and no "Litematica menu" button, which `createButtons` adds at the bottom right; "Save list" and "Saved lists" go where "Export" and the export type were, in the same row, which the method moves to the bottom left when the screen is narrow (`isNarrow`). Other material lists keep their buttons. |
-| L11 | `util/WorldUtils.java`, `doSchematicWorldPickBlock(boolean, Minecraft)` | `@Inject` at head, cancellable, returning false | While a mouse mode is on, Litematica picks no block from its placements, so its "pick block first" hotkey (the middle click by default), which runs before the game sees the click and keeps the click when it picks, leaves the click to the game's pick block key and hook M4. The copy sits under the crosshair, so the click would otherwise pick one of the copy's blocks and never mirror it. Without a mouse mode, Litematica's pick block works as it does without Building Planner. |
+| L11 | `util/WorldUtils.java`, `doSchematicWorldPickBlock(boolean, Minecraft)` | `@Inject` at head, cancellable, returning false | While a mouse mode is on, Litematica picks no block from its placements, so its "pick block first" hotkey (the middle click by default), which runs before the game sees the click and keeps the click when it picks, leaves the click to the game's pick block key and hook M4. The copy sits under the crosshair, so the click would otherwise pick one of the copy's blocks and never mirror it. The same holds while Minecraft's sprint key is held with the one ghost block active and a block in hand that flips, so the middle click on a ghost block flips the block rather than picking the ghost block. Otherwise Litematica's pick block works as it does without Building Planner. |
 
 Public Litematica API the add-on calls: `LitematicaSchematic.createEmptySchematic`, `getSubRegionContainer`,
 `getAreaSize`; `LitematicaBlockStateContainer`'s `get` and `set`; `SchematicPlacement.createFor`,
@@ -608,21 +626,23 @@ again. Press N to hide them.", with the key as the player has it bound (`ClientS
 
 ### Building Planner's mouse modes
 
-Building Planner has two modes of its own that take over the mouse (`MouseMode`): drawing a box, for Copy, Delete or
-the material list, and the copy at the aim. At most one is on at a time. Neither changes Effortless Building's mode, so
-nothing needs putting back when one ends: while one is on, hook E14 keeps Effortless Building's clicks out and E15 its
-longer aim, E22 hides its preview, E19 shows no mode selected in the radial menu, and hooks M1 to M5 take the clicks and
-the wheel. A mode ends when the player:
+Building Planner has three modes of its own that take over the mouse (`MouseMode`): drawing a box, for Copy, Delete or
+the material list; the copy at the aim; and Delete by aim (`DELETE_AIM`, see "Delete by aim"). At most one is on at a
+time. None changes Effortless Building's mode, so nothing needs putting back when one ends: while one is on, hook E14
+keeps Effortless Building's clicks out and E15 its longer aim, E22 hides its preview, E19 shows no mode selected in the
+radial menu, and hooks M1 to M5 take the clicks and the wheel. The one ghost block's controls (see "One ghost block")
+aren't a mouse mode: they act only while no mouse mode is on. A mode ends when the player:
 
-- right-clicks (M2);
+- right-clicks (M2), in Delete by aim only once no ghost block is marked;
 - chooses a mode in the radial menu (E21), even the one they had;
 - shows or hides ghost blocks;
 - presses the radial menu's Copy, Delete, "Material list", Paste or Block mix button, or the block mix key, each of
-  which then does its own action (Copy, Delete and "Material list" start or switch a box, Paste brings the copy back);
+  which then does its own action (Copy, Delete and "Material list" start or switch a box, Paste brings the copy back;
+  in Delete by aim, Delete ends it, and Copy and "Material list" start a box for themselves);
 - leaves the server or changes dimension.
 
 Undo, redo and the speed sliders keep the mode, so a player can undo a paste and paste again, and so do the copy's own
-keys (see "Keys").
+keys (see "Keys"). R switches a Delete box and Delete by aim into each other (see "Delete by aim").
 
 Chat says nothing when a box ends before its third click: the controls line goes away and the box stops drawing.
 
@@ -742,6 +762,9 @@ other players see them glow as they go. The player sees "Erased 120 ghost blocks
 counting the edit's positions, written with digit grouping from 1,000 ("Erased 16,001 ghost blocks."), or, for a box without ghost blocks, "There are no ghost blocks in that box to erase."
 and nothing changes. Geo approved these texts and the button's name (inbox request 972).
 
+R ("Change Zoop or Delete mode", see "Keys") switches a Delete box to Delete by aim at any of its clicks, and drops
+the corners set so far (see "Delete by aim").
+
 Effortless Building's shapes drawn with the break click keep Effortless Building's own limits (in survival, reach 32,
 64 a side and 2,000 positions a shape, counted whether or not they hold ghost blocks), and erase only the ghost blocks
 in the shape: hook E2 sends air only for the positions that hold a ghost block in the game's copy of the layer, and the
@@ -749,6 +772,72 @@ other halves of two-block ghost blocks, rather than every position of the shape.
 limits to the box's instead would freeze the game for a large shape: it lists and sorts every position of the shape
 each frame while it follows the aim (`BuildPipelineClient.getPreviewBlocks`, `BlockSet.sortByDistance`), 16.7 million
 for a cube 256 across (inferred from the code, not measured).
+
+### Delete by aim
+
+Delete has a second mode, Aim, like Satisfactory's dismantle: the ghost blocks the player looks at are marked, and a
+confirm erases them (Geo's note on 972, and inbox request 981). Delete's two modes are Box, the Delete box above, and
+Aim (`DeleteMode`). R switches between them, as it switches the copy's modes (981 Q1 A). Delete starts in the mode the
+player last used while the game runs, and in Box at each launch, as the copy's mode starts in Single. Aim is the
+mouse mode `DELETE_AIM`, so the radial menu's Delete button ends it, and Copy and "Material list" start their own box,
+with no corners set; while it's on, the Delete button draws in the menu's blue for a selected option, as for a Delete
+box. R switches Aim back to a Delete box with no corners, and keeps the marks, which show again when R comes back to
+Aim. Starting Aim, or switching to it, while ghost blocks are hidden shows them first, as a Delete box does.
+
+**Marking.** While the player holds Minecraft's sprint key (Left Ctrl unless they change it), each ghost block the
+crosshair passes over is marked (981 Q2 A, Q3 A). Each frame, Building Planner aims as hook E9 aims (`GhostAim`, ghost
+blocks only, up to 256 blocks from the eyes, as a box's corner): a real block in front of a ghost block stops the aim,
+and only ghost blocks are marked. So that a quick sweep leaves no gap, it also aims along the look directions between
+the last frame's and this frame's, from eye positions between the two, in as many steps as keep the aimed points at
+most half a block apart, up to 64 steps a frame (`DeleteAim`). The sweep decides at its first ghost block whether it
+marks or unmarks: a sweep whose first ghost block is marked unmarks each ghost block it passes over, until the player
+lets go of the key (981 Q4 A), as Satisfactory's mass dismantle deselects. The sprint key still sprints, so a player
+who walks forward while marking also sprints, and in Freecam the camera flies faster, as when lining up the copy.
+
+Only the ghost block is marked, not the other half of a two-block ghost block (a door, a bed), which the erase takes
+with it (`GhostErase.of`). Up to 200,000 ghost blocks may be marked, the server's limit for one edit, as for the Delete
+box (981 Q5 A), counting the other halves the erase would take; once the marks reach it, a sweep marks nothing more,
+and the controls line shows "Too many blocks" above its controls, as a box past the cap does. A mark drops when its
+ghost block leaves the player's copy of the layer, for any reason: another player's edit, the player's own undo, a
+real block filling it, or its column unloading (`DeleteMarks.retain`, run when the layer's version changes). Leaving
+the server, changing dimension, and anything else that ends Delete clear the marks.
+
+**Look.** Each marked ghost block has a red outline and see-through red sides (981 Q6 A), in the red of the copy's box
+(#FF7070, sides at 0.2 alpha), drawn through MaLiLib's renderer as the copy's box is (`MarksOutline`). Only the faces
+that don't touch another marked block are drawn, so a marked wall shows as one red shape, and the shape is built again
+only when the marks change. The marked ghost blocks show under the crosshair as the Delete box's do (`BoxList`): each
+kind of block with its count, most numerous first.
+
+**Erasing.** Holding the left button for one second (20 ticks) erases the marked ghost blocks (981 Q2 A), as holding
+the left button for a second dismantles in Satisfactory: M1 starts the count when the button goes down, the client
+tick counts each tick it stays down, and letting go before the 20th tick erases nothing and starts the count again at
+the next press. Holding on past the erase erases nothing more until the button is let go and pressed again. With no
+marks, the left button does nothing. The erase sends one erase edit (`GhostErase.of` over the marks), so one undo
+brings them all back, other players see them glow as they go, and the player sees the Delete box's message ("Erased
+120 ghost blocks.", "Erased 1 ghost block."). The marks go with their ghost blocks, and Aim stays on to mark more (981
+Q7 A); an undo brings the ghost blocks back unmarked. A right click clears the marks; with no marks, it ends Aim.
+
+**Controls line.** Aim's line shows as the other mouse modes' lines do (see "Building Planner's mouse modes"), with
+the keys as the player has them bound, and names only the controls that work at that moment (`ControlsLine.deleteAim`).
+These texts are proposed, for Geo's review with the build's screenshots:
+
+- a Delete box's lines name R before the right click: "Delete: Left-click to set the first corner, R for Aim,
+  Right-click to cancel", then "the opposite corner" and "the height", as Copy's box goes on;
+- Aim with no marks: "Delete, Aim: Hold Left Control to mark, R for Box, Right-click to close";
+- Aim with marks: "Delete, Aim: Hold Left-click to erase, Hold Left Control to mark, R for Box, Right-click to clear";
+- during a sweep that unmarks, "Hold Left Control to unmark" in place of "Hold Left Control to mark";
+- while the left button is held to erase, its progress in place of "Hold Left-click to erase": "Erasing 60%", in
+  steps of 5%;
+- once the marks reach the cap, the warning line "Too many blocks" above the controls, as for a box.
+
+Satisfactory's dismantle, from the official wiki's [Build Gun](https://satisfactory.wiki.gg/wiki/Build_Gun) and
+[Controls](https://satisfactory.wiki.gg/wiki/Controls) pages: holding the left button for one second dismantles the
+building aimed at; holding Left Ctrl marks up to 50 buildings at once, and letting go of Ctrl and pressing it again
+while aiming at a marked building deselects instead. A player's post in the Steam discussion
+["HOW DO I REMOVE BUILDINGS"](https://steamcommunity.com/app/526870/discussions/0/2577697615749987269/) (reply #5,
+July 2nd, 2020) describes moving the mouse with Ctrl held marking everything the cursor touches. Satisfactory marks
+whole buildings, such as an 8-metre foundation, where Aim marks single blocks, so Aim's limit is the server's, not 50.
+Satisfactory's Dismantle Filter (G) and its blueprint mode have no equivalent here.
 
 ### The radial menu's buttons and sliders
 
@@ -822,11 +911,14 @@ MaLiLib, Effortless Building 4.3 or Freecam 1.5.1. Copy, Delete, the material li
 buttons in the radial menu and no keys.
 
 The copy at the aim is worked by the mouse and by eight keys of its own, under the same heading, which act
-only while the copy is at the aim (see "Copy and paste"): "Lock or unlock the copy" (H), "Nudge the copy forward" (Up),
-"Nudge the copy back" (Down), "Nudge the copy left" (Left), "Nudge the copy right" (Right), "Nudge the copy up" (Page
-Up), "Nudge the copy down" (Page Down) and "Change copy mode" (R), Satisfactory's keys for the same controls. Lining
-the copy up uses Minecraft's sprint key (Left Ctrl), as the copy's clicks and wheel use Minecraft's own keys, so
-Controls shows no clash with sprinting. Checked against each mod's defaults:
+only while the copy is at the aim (see "Copy and paste"), the one ghost block is active (see "One ghost block"), or,
+for R alone, Delete is on (see "Delete by aim"): "Lock or unlock" (H), "Nudge forward" (Up), "Nudge back" (Down),
+"Nudge left" (Left), "Nudge right" (Right), "Nudge up" (Page Up), "Nudge down" (Page Down) and "Change Zoop or Delete
+mode" (R), Satisfactory's keys for the same controls. These names are proposed, for Geo's review with the build's
+screenshots, since the keys act for more than the copy; their ids stay `key.buildingplanner.lock_copy`, the
+`nudge_*` ids and `key.buildingplanner.copy_mode`. Lining the copy up, turning and flipping the one ghost block, and
+marking in Delete by aim use Minecraft's sprint key (Left Ctrl), as the copy's clicks and wheel use Minecraft's own
+keys, so Controls shows no clash with sprinting. Checked against each mod's defaults:
 
 - Minecraft 26.3 (its client's `Options`, and the Minecraft Wiki's
   [Controls](https://minecraft.wiki/w/Controls) page) binds none of H, R, the arrow keys, Page Up or Page Down; F3 with
@@ -874,9 +966,9 @@ heading `key.category.effortlessbuilding.keybindings`: Minecraft 26.3 names a ke
 `key.category.<namespace>.<path>` of its id (`KeyMapping.Category.label`), Effortless Building registers the id
 `effortlessbuilding:keybindings` (`utilities/KeyBindings.java`), and its language file names
 `key.categories.effortlessbuilding` instead. Hook E23 moves them under the "Building Planner" heading. Controls
-sorts the keys of one heading by their names (`KeyMapping.compareTo`), so the heading lists "Block mix", "Change copy
-mode", "Lock or unlock the copy", the six "Nudge the copy" keys (back, down, forward, left, right and up), "Open
-Modifier Settings", "Open Radial Menu", "Redo", "Show or hide ghost blocks" and "Undo".
+sorts the keys of one heading by their names (`KeyMapping.compareTo`), so the heading lists "Block mix", "Change Zoop
+or Delete mode", "Lock or unlock", the six "Nudge" keys (back, down, forward, left, right and up), "Open Modifier
+Settings", "Open Radial Menu", "Redo", "Show or hide ghost blocks" and "Undo".
 
 ### The block mix and its panel
 
@@ -977,7 +1069,7 @@ forgets the pastes.
   Freecam camera's while Freecam flies it, and the player's otherwise. Satisfactory's middle click samples the building
   aimed at instead, and its build gun has no mirror; the middle click still mirrors here (806 Q4 A), and Minecraft's
   pick block samples whenever the copy isn't at the aim.
-- H ("Lock or unlock the copy") locks the copy where it is: it stops following the aim, so the player can walk around it, or fly
+- H ("Lock or unlock") locks the copy where it is: it stops following the aim, so the player can walk around it, or fly
   the Freecam camera, to see it from every side, as Satisfactory's "Lock Hologram" does (806 Q5 A). While it's locked, the arrow
   keys move it one block: Up away from the player's view, Down toward it, and Left and Right to the view's sides, along
   the compass direction nearest the way the view faces (the Freecam camera's while Freecam flies it); Page Up moves it
@@ -988,7 +1080,7 @@ forgets the pastes.
   nudge keys do nothing. Nudging has no distance limit. Pressing H again unlocks the copy, and it follows the aim
   again. Satisfactory's half step (Ctrl with a nudge key) has no equivalent,
   since the copy moves a whole block at a time.
-- R ("Change copy mode") switches the copy between Single, Zoop and Vertical, in that order, as R cycles
+- R ("Change Zoop or Delete mode") switches the copy between Single, Zoop and Vertical, in that order, as R cycles
   Satisfactory's build modes (806 Q6 A; below).
 - A right click (M2), or anything else that ends the mode, puts the copy away: Building Planner removes its placement
   from Litematica and keeps the schematic, with its turn and mirror, as the most recent copy. During a zoop, after the
@@ -1074,7 +1166,7 @@ official wiki's pages [Build Gun](https://satisfactory.wiki.gg/wiki/Build_Gun),
 | One-Click Build: hold to place a multi-step building (off by default) | Setting | None: two clicks. |
 | Sample Building or Blueprint, with its settings | Middle click | Minecraft's pick block outside the mode; in the mode the middle click mirrors. |
 | Build menu, Quick Switch, hotbars, Save Hologram to Hotbar, Quick Search | Q, E, 0–9, Left Alt with a number, N | None: one copy at a time; the radial menu (Left Alt) starts Copy and Paste. |
-| Dismantle, mass dismantle, Dismantle Filter, Customizer | F, Ctrl, G, X | None for the copy: the break click erases with Effortless Building's shapes. |
+| Dismantle, mass dismantle, Dismantle Filter, Customizer | F, Ctrl, G, X | None for the copy: the break click erases with Effortless Building's shapes, and Delete by aim marks with Left Ctrl and erases with a held left button, as mass dismantle does (see "Delete by aim"). |
 | Hologram colours: blue, yellow (soft clearance), red (hard clearance) | Automatic | The copy's box in the same colours. |
 | Toggle HUD (build mode's text) | T | Minecraft's F1, which hides the controls line. |
 
@@ -1086,6 +1178,124 @@ locked after it's placed isn't stated; the copy stays locked, as it stays at the
 Snapping Toggle" option keeps "the last used snap mode", which suggests snapping can be toggled, but the wiki doesn't
 say how on a keyboard, and its "Hold To Snap Building" setting is for controllers only; the copy's guide lines follow
 the key held.
+
+### One ghost block
+
+In Effortless Building's Single mode, the copy's controls work for the one ghost block a click places, as if it were
+a copy of one block (Geo's note on 972, and inbox request 980). Single's buttons stay (980 Q1 A): a right click places
+and a left click erases. Two of the copy's controls are Single's own already for one block: the copy against the aimed
+face is, for one block, the block beside that face (`CopyPlacement.againstFace` with a 1×1×1 box), which is where
+Single places; and a one-block copy flush against a paste's box lands where aiming at that face puts it. So neither
+adds anything here, and a ghost block's row doesn't join the recent pastes the copy snaps to. Left Ctrl doesn't line
+the block up (980 Q6): it turns and flips the block instead (below).
+
+The block's controls are active while Building Planner has a session, Effortless Building's mode is Single, no mouse
+mode is on, and the main hand holds an item that places a block (`ClickRule`, as for shapes). A client class beside
+the copy's, `SingleBlock`, stores their state: the block's own mode, Single, Zoop or Vertical (`CopyMode`), apart from
+the copy's (980 Q3 A); the locked position, with the face and hit point aimed at when it was locked; a fixed row's
+start; and the turn. The mode starts as Single at each launch and stays as the player last set it while the game
+runs, as the copy's does. Leaving the server, changing dimension, choosing a mode in the radial menu (E21) and any
+mouse mode starting unlock the block and drop its row. The block at the aim has Single's reach, Effortless
+Building's own (32 in survival, 200 in creative).
+
+**Locking and nudging.** H ("Lock or unlock") locks the block where a right click would place it at that moment (980
+Q4 A): beside the aimed face, at the position Effortless Building's preview draws its first block
+(`BuildPipelineClient.resolveFirstClickPos`). With nothing aimed at, H does nothing. Locked, the block stays where it
+is while the player walks or flies around it, and the arrow keys, Page Up and Page Down nudge it a block at a time, as
+they nudge the copy: along the compass direction nearest the view (the Freecam camera's while Freecam flies it), with
+the copy's repeat for a held key (`CopyNudge`, `KeyRepeat`) and no distance limit. A right click places one ghost
+block at the locked position, and the block stays locked for the next. A left click erases the ghost block at the
+locked position (open: whether a locked block's left click erases there or, as in Single, at the aim). Holding either
+button acts once, since repeats would land on the same position until it's nudged. H again unlocks it, and it follows
+the aim again. A locked block's state comes from its placement rules with the face and hit point aimed at when it was
+locked and the facing of the player (or the camera) at each click, then the turn (below).
+
+**Zoop and Vertical.** R ("Change Zoop or Delete mode") switches the block between Single, Zoop and Vertical, in
+that order (980 Q2). In Zoop and Vertical the first right click fixes the row's start where the block is (where it's
+locked, if it is) and sends nothing. The row then follows the aim as the copy's does (`CopyRow` with a 1×1×1 spot and
+the row's longest length): along whichever of the four compass directions from the start the aim (where a right click
+would place) is farthest along, a tie taking east or west, up to 32 blocks in all (Geo's answer to 980 Q2); in
+Vertical, up or down from the start, to the height where the view's line passes nearest the vertical line through the
+start, up to 32 blocks, so it rises into open air with no block to aim at. While the player aims at nothing, the row
+stays as it was. The second right click places the whole row as one shape edit, which one undo takes back. A left
+click with the row fixed drops it and erases nothing. While the row is fixed, H, R and the nudge keys act on nothing,
+and turning and flipping (below) act on every block in the row. After the row is placed, the block follows the aim
+again for a new row, or stays locked where the row started. Before the first click, the left click erases as in
+Single.
+
+Each block in the row faces the same way, as in a Line, and the row goes through the same steps as Effortless
+Building's shapes: Building Planner makes a `BlockSet` of the row's positions, with its first and last positions, and
+runs it through Effortless Building's modifiers, the block mix and its constraints
+(`BuildPipelineClient.CLIENT.processBlocks`), so Effortless Building's mirror, radial mirror and array apply to the
+row as to a Line. Each entry then takes its state as E1 makes it (`EffortlessShapes.place`, which takes the hit as an
+argument for this): the placement rules with the start's face and hit point, the facing at the second click, then the
+turn. Hook E27 hands the same processed set to Effortless Building's preview, which draws it with the mix and the
+modifiers. A locked block that isn't in a row goes through the same steps, as a row of one.
+
+The block's clicks while it's locked or in Zoop or Vertical are Building Planner's: hook E14 takes them from Effortless
+Building, M2 takes the right click and M1 the left (see "Hooks"). Hold to repeat therefore runs only while the block
+follows the aim in Single.
+
+**Turning and flipping.** The wheel and the middle click work as in Minecraft, changing the hotbar slot and picking a
+block (980 Q5). While the player holds Minecraft's sprint key (Left Ctrl unless they change it), they turn and flip
+the block instead, so the player can place it facing any way wherever they stand (980 Q5 and Q6, Geo's answers):
+
+- Each notch of the wheel (M5) gives the block a quarter turn: clockwise seen from above for a notch up, and
+  counterclockwise for a notch down, as the copy turns. The turn is Minecraft's own for a turned structure
+  (`BlockState.rotate`): a stair's or a chest's facing, a log's axis between east-west and north-south, a sign's
+  rotation.
+- The middle click (M4) flips the block to the next of the other ways it can sit, in a fixed order, back to the first
+  after the last (`BlockTurn.flips`): a log's or a chain's axis up and back; a stair's or a trapdoor's half and a
+  slab's top or bottom (never double); a piston, an observer or a dispenser facing up, down and back to its turn; a
+  button or a lever on the floor, a wall or the ceiling; a lantern hanging or standing.
+
+The first turn or flip starts from the block as Minecraft would place it at that moment, as the preview shows it. From
+then on, the block keeps that orientation whichever way the player faces and whichever face they aim at, until they
+switch to another block (980 revision 2, Q1 A): the main hand's item becoming another item, by the hotbar or by picking
+a block, drops the turn, and so does switching to another block and back; the same block in another hotbar slot
+keeps it. The turn is kept as the values of the block's orientation properties (facing, axis, rotation, half, slab
+type, attached face, hanging), and `BlockTurn.apply` sets each on every block placed that has that property, after
+the placement rules, which still set the rest (waterlogging, a fence's connections). With the block mix on, each of
+the mix's blocks takes the properties it has. E1 applies it to the states it places, and E28 to the preview's block.
+The turn applies in Single mode only, and stays while the player uses Effortless Building's other modes (open: whether
+the turn also applies to shapes drawn in Effortless Building's other modes).
+
+Left Ctrl takes the wheel only while the block in hand (or a block of the mix) is one a turn changes, and the middle
+click only while it's one that flips. With a stone block in hand, the wheel changes the hotbar slot and the middle
+click picks a block, Left Ctrl or not; with a chest, which turns but doesn't flip, the middle click with Left Ctrl is
+Minecraft's, which in creative mode picks a block with its contents. Effortless Building 4.3 handles the wheel and
+Ctrl only in its screens (its jar's classes searched for those calls), so neither clashes with its controls. Litematica's pick block stays out while the middle click flips (hook
+L11). The sprint key still sprints, so a player who walks forward while turning the block also sprints.
+
+**Colours.** While the block is locked or its Zoop or Vertical row is fixed, the copy's box shows
+around the locked block or each block of the row (980 Q7 A), drawn as the copy's is (`CopyOutline`, with
+`CopyColour` over 1×1×1 spots): blue where it would go in as it shows, yellow where it would replace a different ghost
+block, and red where part of it is outside the world's build height or its border. A red block or row places nothing
+and sends no edit. The colour reads the row's own blocks; copies Effortless Building's modifiers make outside the world
+are left out by its constraints, as for its shapes. A row of 32 blocks can't pass the server's block cap, so no row is
+red for its size. While the block follows the aim in Single, only Effortless Building's preview draws it.
+
+**Controls line.** While the block's controls are active, with no screen open and the HUD shown, a line of them
+shows where the mouse modes' lines show, in the same look and with the same background (`ModeHud`,
+`ControlsLine.single`), with the keys as the player has them bound (980 Q8 A). It names only the controls that work at
+that moment. These texts are proposed, for Geo's review with the build's screenshots:
+
+- following the aim: "Right-click to place, Left-click to erase, Hold Left Control to turn or flip, H to lock, R for
+  Zoop";
+- while Left Control is held, "Scroll to turn, Middle-click to flip" in place of "Hold Left Control to turn or flip";
+  for a block that only turns, "Hold Left Control to turn" and "Scroll to turn"; for one that only flips, "Hold Left
+  Control to flip" and "Middle-click to flip"; for one that does neither, no part;
+- locked: "Locked: Right-click to place, Arrow keys + Page Up/Down to nudge, Left-click to erase, Hold Left Control to
+  turn or flip, H to unlock, R for Zoop";
+- Zoop before its first click: "Zoop: Right-click to set the start, Left-click to erase, Hold Left Control to turn or
+  flip, H to lock, R for Vertical", and Vertical the same, starting "Vertical:" and with "R for Single"; locked, it
+  starts "Zoop, locked:" and has the nudges and "H to unlock", as the locked line does;
+- a row after its first click: "Zoop: Right-click to place 12 blocks, Hold Left Control to turn or flip, Left-click
+  to cancel", with the row's count ("place 1 block" for one), locked or not;
+- once the block is turned or flipped, ", turned" after the mode and the lock in the line's start, or "Turned:" alone
+  in Single: "Turned: Right-click to place, ...", "Zoop, locked, turned: Right-click to set the start, ...";
+- while the block or the row is red, the reason in red, "Can't place: outside the world", in place of "Right-click to
+  place" or the row's place; in Zoop and Vertical before the first click, before "Right-click to set the start".
 
 ### The material list
 
@@ -1312,8 +1522,10 @@ after a restart the button opens the list the player left.
 
 Whenever Freecam's camera is on, the player edits ghost blocks from the camera as they would standing there, whatever
 Freecam's "Allow interaction" option says: Effortless Building's shapes, their preview and erasing, hold to repeat,
-Building Planner's boxes, and the copy at the aim all aim from the camera, and each block of a shape faces as it would for a player at the camera facing the same way (a stair
-drawn while the camera faces north faces north). The copy's middle click mirrors it by the way the camera faces. The
+Building Planner's boxes, the copy at the aim, the one ghost block's lock and rows, and Delete by aim's marking all aim
+from the camera, and each block of a shape faces as it would for a player at the camera facing the same way (a stair
+drawn while the camera faces north faces north). The nudge keys move the copy and the locked ghost block by the way the
+camera faces, and the copy's middle click mirrors it by the way the camera faces. The
 radial menu, the block mix, undo and redo, show or hide, and the material list's screens and panel don't aim, and work
 as without Freecam. Real blocks stay as Freecam's own options leave them: with its "Allow interaction" off, as by
 default, a click with an item that doesn't place a block, or in Disable, doesn't reach the world. That option guards
@@ -1326,9 +1538,10 @@ Planner's aim (`Aim`) is the eye position and look direction of the camera entit
 which is the player whenever Freecam's camera is off, so nothing changes then. While Freecam's "Player control" is on,
 which moves the player and keeps the camera still, the aim is the player's; `Aim` reads that option from Freecam's
 `Freecam.isPlayerControlEnabled()` by reflection, since Building Planner never compiles against Freecam, and the rule
-itself is `AimSource`. `GhostAim`, `BoxDraw`, the copy's aim and mirror, and E1's block states (each placed with a
-`BlockPlaceContext` for the camera entity) read it. Reaches count
-from the camera: 256 for a box's corner, 64 for the copy, and Effortless Building's own for shapes. Freecam loads no
+itself is `AimSource`. `GhostAim`, `BoxDraw`, the copy's aim and mirror, E1's block states (each placed with a
+`BlockPlaceContext` for the camera entity), the one ghost block's controls, and Delete by aim's sweep (`DeleteAim`)
+read it. Reaches count from the camera: 256 for a box's corner and Delete by aim's marks, 64 for the copy, and Effortless
+Building's own for shapes and the one ghost block. Freecam loads no
 chunks, so ghost blocks, boxes and edits reach only the chunks the game has loaded around the player: a box that
 touches an unloaded chunk draws red, and the server refuses a shape outside them with its usual message. The server checks no
 reach, so it needs no change.
@@ -1638,6 +1851,58 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
 - On the same server with Building Planner left out, N makes no message and leaves ghost blocks shown, the mouse
   works as without the add-on, and the material list panel doesn't show; with Building Planner back, the panel shows
   again with the same list.
+- Delete by aim, marking (step 12): R in a Delete box after its first click switches to Aim with no corners, and R
+  again to a box with no corners; after a Delete in Aim, the Delete button starts Aim, and after Planner1's game
+  restarts, a box. The Delete button with ghost blocks hidden, in Aim, shows them. Facing a ghost wall of 10 by 5
+  stone bricks 8 blocks away, with a real stone block in front of the middle row's fourth, holding Left Ctrl while the
+  driver turns the view across the middle row from end to end in 3 frames marks the row's other 9 blocks and no real
+  block (the driver's `marks`), with no gap; the list under the crosshair shows stone bricks and 9. A second hold that
+  starts on the third mark and sweeps west unmarks the first three. A ghost door marked by its lower half has one mark.
+  Planner2 erasing a marked block drops its mark. A right click clears the marks, a second ends Aim; the Copy button in
+  Aim starts a Copy box. The marked wall is shot at 854 by 480 and 1920 by 1080, GUI scale 2.
+- Delete by aim, erasing and its line (step 13): with 9 marks and the ghost door marked, a left click held 10 ticks
+  erases nothing; held 20 ticks it sends one edit, which takes the door's upper half too and which Planner2 sees glow
+  with Planner1's name, and says "Erased 11 ghost blocks."; holding on erases nothing more. Aim stays on with no marks,
+  and one Ctrl+Z brings the blocks back unmarked. The lines, each checked word for word (the driver's `modehud`): a
+  Delete box's three lines with "R for Aim", Aim with no marks and with marks, an unmarking sweep, and "Erasing 50%" at
+  the hold's 10th tick; with the mode key bound to G and the sprint key to Right Control, the lines name G and Right
+  Control. Each line is shot at 1920 by 1080, GUI scale 4.
+- One ghost block, locking and nudging (step 14): in Single mode with stone bricks, H locks the block beside the aimed
+  face, and with Planner1 flown 5 blocks away and aiming elsewhere, Effortless Building's preview draws it there.
+  Facing north, Up moves it one block north and Page Up one up. A right click places one ghost block there, on both
+  clients, and it stays locked; holding the right button for a second sends one edit; a left click erases that ghost
+  block. Locked, an oak stair placed with Planner1 facing east faces east. H unlocks it. With a stick in hand, H and
+  the nudge keys do nothing and Single's clicks act as without the add-on; choosing Line in the radial menu unlocks
+  the block; with the copy at the aim, H locks the copy and not the block. With Freecam's camera on and facing east
+  while Planner1 faces north, Up moves the locked block east. The locked block is shot in open air at 854 by 480 and
+  1920 by 1080, GUI scale 2, and Controls' "Building Planner" heading with the keys' proposed names at GUI scale 4.
+- One ghost block, Zoop and Vertical (step 15): R switches the block to Zoop, Vertical and Single, and the copy's mode
+  stays Single. In Zoop, a right click fixes the row's start and sends no edit; aimed 12 blocks east, the preview draws
+  12 blocks (the driver's `preview`); a second right click places 12 ghost blocks as one edit, which one Ctrl+Z takes
+  back. Aimed 40 blocks east, the row stops at 32. A left click with the row fixed drops it and erases nothing; the
+  right button held through both clicks places one row. In Vertical, looking up into open air, the row rises 8 blocks.
+  With the block mix of stone and andesite on, the row's blocks are the preview's; with Effortless Building's mirror
+  on, the row is mirrored. A row started while the block is locked starts where it's locked. A Zoop row and a
+  Vertical row are shot before the second click at 854 by 480 and 1920 by 1080, GUI scale 2.
+- One ghost block, turning and flipping (step 16): with oak stairs, facing north, a notch up with Left Ctrl held turns
+  the preview's stair a quarter turn clockwise and the hotbar slot stays; the stair placed then faces that way, and so
+  does one placed after Planner1 turns to face south. The middle click with Left Ctrl held makes the stair's top half,
+  with no block picked, from the game or Litematica, even aimed at a ghost block. An oak log flips to standing and
+  back. Switching to another hotbar slot's block and back drops the turn; the same stairs in a second slot keep it.
+  Without Left Ctrl, the wheel changes the hotbar slot and the middle click picks the aimed block; with stone in hand,
+  Left Ctrl and the wheel change the hotbar slot. With the mix of oak and spruce stairs, both take the turn. A Zoop
+  row of turned stairs faces one way. Turned and flipped stairs are shot before and after placing at 854 by 480 and
+  1920 by 1080, GUI scale 2.
+- One ghost block, colours and its line (step 17): locked over grass the block is blue (the driver's `copycolour`);
+  nudged into a ghost gold block it's yellow and its click still places; nudged below the world's bottom it's red, and
+  its click sends no edit; a Zoop row crossing ghost blocks is yellow; with a world border crossing a row, it's red and
+  places nothing. With Planner1 following the aim, no box shows. The lines, each checked word for word: following the
+  aim, with Left Ctrl held, for a chest (turn only), a slab (flip only) and stone (neither), turned, locked, Zoop and
+  Vertical before the first click, Zoop locked, a row of 12 and of 1, and red; with the lock key on K, the mode key on
+  G, the nudge forward on I and the sprint key on Right Control, the lines name them. No line shows with a stick in
+  hand, in Line mode, or with the copy at the aim (the copy's line shows); F1 hides it. Each line is shot at 1920 by
+  1080, GUI scale 4, the locked line at 854 by 480 and 1920 by 1080, GUI scale 2, and a yellow row crossing ghost
+  blocks at 1920 by 1080, GUI scale 2.
 
 `step10.sh`, hold to repeat, editing from Freecam and the settings Building Planner changes once, with Freecam 1.5.1 (Modrinth version
 `lwrkvqym`, the pack's) on both clients. The driver counts the ticks each mouse button was down and
@@ -1775,7 +2040,23 @@ the start"), the reason as a warning and the actions as actions, keys a player r
 keys named one by one, the up and down keys named with their shared first word dropped ("Page Up/Down", "Keypad
 8/2") or in full ("U/J"), the nudge phrase with only one of its two parts, unbound keys left out and the phrase gone
 with all six unbound, and each box's lines, Delete's among them. `PayloadsTest` covers the
-Delete box's message writing 16,001 with digit grouping.
+Delete box's message writing 16,001 with digit grouping. For the new features (steps 13 and 17), `ControlsLineTest`
+also covers Aim's lines (no marks, marks, unmarking, the hold's progress in steps of 5%, the cap's warning) and the
+Delete box's "R for Aim", and the one ghost block's lines for each state above, with each turn phrase and title.
+
+Delete by aim's marks have unit tests as pure functions (step 12). `DeleteMarksTest` covers a sweep between two aims
+10 blocks apart marking all 10 ghost blocks between them and none past a real block; a sweep that starts on a mark
+unmarking until it ends; the cap, with the other halves counted; and marks dropping when their ghost blocks leave the
+layer. `EraseHoldTest` (step 13) covers the hold: 19 ticks erase nothing, the 20th erases once, a release starts the
+count again, and the progress shown.
+
+The one ghost block's rules have unit tests as pure functions (steps 14 to 16). `SingleRuleTest` covers when its
+controls are active (session, Single mode, no mouse mode, an item that places a block) and which clicks are Building
+Planner's in each state. `CopyRowTest` covers a 1×1×1 row up to 32 and the copy's up to 10. `BlockTurnTest` covers a
+quarter turn each way for stairs, logs, chests and signs; the flips' order for a log, a stair, a slab, a piston, a
+button and a lantern; the turn kept as property values and set on another block of the mix that has them; a block
+that neither turns nor flips; and the turn dropping when the item in hand changes. `CopyColourTest` covers a 1×1×1
+spot blue, yellow and red.
 
 The fill rule's unit tests (`FillRuleTest`) cover each property it compares or ignores: a stair facing another way or
 upside down, a log on another axis, a door with the other hinge or its other half, a bed's other part, a button on
@@ -1851,3 +2132,19 @@ other in the game's own copy of the layer, again after a restart, which doesn't 
 - How long the copy's yellow check takes for a large copy moving over ghost blocks: each time the copy moves over a
   column of the layer, it reads the blocks of every copy in the row until one would replace a ghost block, up to the
   block cap of 200,000; expected a few milliseconds, not measured.
+- That Ctrl with the middle click in creative mode picks a block with its contents in Minecraft 26.3 (expected, from
+  earlier versions; the client's `pickBlockOrEntity` not read for it), which hook M4 stops while it flips the one
+  ghost block.
+- That Effortless Building's preview draws a block set Building Planner makes (hook E27), with the mix and the
+  modifiers, though its positions don't come from its own mode; and that `processBlocks` over a hand-made set gives
+  the modifiers' output a Line gives. If the preview can't, the row and the locked block would show as a Litematica
+  placement of one block, as the copy does, without the mix.
+- Which block states Effortless Building's preview draws for a shape's blocks other than the first, and so whether
+  hook E28 alone shows the turn on every block of a row.
+- That no Litematica or MaLiLib hotkey acts on Left Ctrl with the wheel or the middle button while Litematica's tool
+  item is off, as Building Planner sets it.
+- Satisfactory's mass dismantle as Delete by aim follows it: marking by sweeping the aim with Ctrl held rests on one
+  player's post from 2020, not the official wiki; whether holding the left button for a second also confirms a mass
+  dismantle isn't stated; and the colour of Satisfactory's marks isn't given.
+- How long drawing 200,000 marks and Delete by aim's up to 64 aims a frame take; expected well under a frame, not
+  measured.
