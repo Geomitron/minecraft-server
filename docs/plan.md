@@ -379,7 +379,8 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
     it facing any way wherever they stand (Q5 and Q6, Geo's answers). Blocks keep the turn until the player switches to
     another block (revision 2, Q1 A). The copy's blue, yellow or red box shows only while the block is locked or a row
     is fixed (Q7 A), and Single mode's controls line shows whenever a block is in hand (Q8 A). A locked block's left
-    click erases the ghost block where it's locked (1009 Q1 A). Left Ctrl turns and flips the block in every one of
+    click erases the ghost block where it's locked (1009 Q1 A), and with Effortless Building's mirror, radial mirror
+    or array on, every block a right click would place (1074 Q1 A). Left Ctrl turns and flips the block in every one of
     Effortless Building's modes, not only Single, and every mode's shapes take the turn (1009 Q2 C). In Disable, where
     the player places real blocks, Left Ctrl turns and flips the real blocks they place only while they hold Left
     Ctrl, with a preview of the turned block (1029 Q1 A), and 0.6.0 waits for it (1029 Q2 B). A turned block that
@@ -518,7 +519,9 @@ the last step, when the server and the pack update together.
     the sprint key held, L11 for the flip, E1 (after the placement rules and before the modifiers' transforms) and E28
     applying the turn, and the turn dropping when the player switches to another block, all in Single mode. Needs step
     14. Done when `BlockTurnTest` passes and the spec's "One ghost block, turning and flipping (step 16)" checks pass,
-    with shots of turned and flipped stairs before and after placing.
+    with shots of turned and flipped stairs before and after placing. The step also makes a locked block's left click
+    erase every block a right click would place (1074 Q1 A), with its check among the spec's "One ghost block, locking
+    and nudging (step 14)" checks.
 17. **Turning in every mode** ("One ghost block": "Turning and flipping" and "Controls line"): the turning controls
     active in every mode but Disable and not during a shape drawn with the break click (`SingleRule.turning`), so M4,
     M5, L11, E1 and E28 act in every mode, and the turning line (`ControlsLine.turning`), which `ModeHud` draws above

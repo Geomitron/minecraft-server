@@ -1227,8 +1227,9 @@ Q4 A): beside the aimed face, at the position Effortless Building's preview draw
 is while the player walks or flies around it, and the arrow keys, Page Up and Page Down nudge it a block at a time, as
 they nudge the copy: along the compass direction nearest the view (the Freecam camera's while Freecam flies it), with
 the copy's repeat for a held key (`CopyNudge`, `KeyRepeat`) and no distance limit. A right click places one ghost
-block at the locked position, and the block stays locked for the next. A left click erases the ghost block at the
-locked position, whatever the player aims at (1009 Q1 A), and the block stays locked. Holding either
+block at the locked position, with Effortless Building's mirror, radial mirror and array, and the block stays locked
+for the next. A left click erases every ghost block a right click would place, whatever the player aims at (1009 Q1
+A, 1074 Q1 A), and the block stays locked. Holding either
 button acts once, since repeats would land on the same position until it's nudged. H again unlocks it, and it follows
 the aim again. A locked block's state comes from its placement rules with the face and hit point aimed at when it was
 locked and the facing of the player (or the camera) at each click, then the turn (below).
