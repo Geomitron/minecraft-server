@@ -12,11 +12,14 @@ import net.minecraft.world.level.block.state.BlockState;
 /**
  * What Effortless Building's preview drew in the last whole frame: the positions it drew as blocks to place or break,
  * as its {@code renderBoundingBoxFaces} gets them, for the driver's {@code preview}, and the state it drew each block
- * in, after the entry's mirror and turn, for its {@code previewstate}.
+ * in, after the entry's mirror and turn, for its {@code previewstate}, and the positions it drew red, for its
+ * {@code previewred}.
  */
 public final class PreviewProbe {
 	private static List<BlockPos> drawing = new ArrayList<>();
 	private static List<BlockPos> drawn = List.of();
+	private static List<BlockPos> redDrawing = new ArrayList<>();
+	private static List<BlockPos> redDrawn = List.of();
 	private static Map<BlockPos, BlockState> statesDrawing = new HashMap<>();
 	private static Map<BlockPos, BlockState> statesDrawn = Map.of();
 
@@ -27,6 +30,8 @@ public final class PreviewProbe {
 	public static void beforeFrame() {
 		drawn = drawing;
 		drawing = new ArrayList<>();
+		redDrawn = redDrawing;
+		redDrawing = new ArrayList<>();
 		statesDrawn = statesDrawing;
 		statesDrawing = new HashMap<>();
 	}
@@ -34,6 +39,11 @@ public final class PreviewProbe {
 	/** The preview draws these positions in this frame. */
 	public static void drawing(List<BlockPos> positions) {
 		positions.forEach(pos -> drawing.add(pos.immutable()));
+	}
+
+	/** The preview draws these positions red in this frame, as blocks it can't place. */
+	public static void drawingRed(List<BlockPos> positions) {
+		positions.forEach(pos -> redDrawing.add(pos.immutable()));
 	}
 
 	/** The preview draws the block at {@code pos} in this state in this frame. */
@@ -45,6 +55,12 @@ public final class PreviewProbe {
 	static String positions() {
 		return drawn.isEmpty() ? "none" : String.join(" ",
 			drawn.stream().map(pos -> pos.getX() + "," + pos.getY() + "," + pos.getZ()).toList());
+	}
+
+	/** The positions the last whole frame's preview drew red, as x,y,z in the order drawn, or none. */
+	static String red() {
+		return redDrawn.isEmpty() ? "none" : String.join(" ",
+			redDrawn.stream().map(pos -> pos.getX() + "," + pos.getY() + "," + pos.getZ()).toList());
 	}
 
 	/**

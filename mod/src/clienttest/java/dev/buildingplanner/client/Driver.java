@@ -677,6 +677,11 @@ public final class Driver implements ClientModInitializer {
 				// await preview <positions> waits for them.
 				return PreviewProbe.positions();
 			}
+			case "previewred" -> {
+				// previewred: the positions Effortless Building's preview drew red in the last whole frame, as blocks
+				// it can't place, as x,y,z, or none.
+				return PreviewProbe.red();
+			}
 			case "previewstate" -> {
 				// previewstate x y z: the state Effortless Building's preview drew there in the last whole frame, with its
 				// properties, such as minecraft:oak_stairs[facing=east,...], or none.

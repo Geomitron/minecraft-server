@@ -8,6 +8,7 @@ import java.util.List;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.state.BlockState;
+import nl.requios.effortlessbuilding.buildpipeline.BuildPipelineClient;
 import nl.requios.effortlessbuilding.render.BlockPreviewRenderer;
 import nl.requios.effortlessbuilding.utilities.BlockEntry;
 import org.spongepowered.asm.mixin.Mixin;
@@ -27,6 +28,11 @@ abstract class BlockPreviewRendererMixin {
 		List<BlockPos> positions, double camX, double camY, double camZ, boolean breaking, boolean unbreakable,
 		CallbackInfo ci) {
 		PreviewProbe.drawing(positions);
+		if (!breaking && !unbreakable) {
+			// The method draws a block to place red where it's marked missing, as Disable's turned block that can't stay.
+			PreviewProbe.drawingRed(positions.stream()
+				.filter(BuildPipelineClient.ITEM_USAGE.missingPositions::contains).toList());
+		}
 	}
 
 	/** The state the preview draws each block in: its start's, after the entry's mirror and turn. */

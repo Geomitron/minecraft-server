@@ -199,7 +199,7 @@ Effortless Building, under `common/src/main/java/nl/requios/effortlessbuilding/`
 | E5 | `buildpipeline/RandomizerSystem.java`, `processBlocks` | `@Inject` at head, cancellable | While the mix applies, give each entry its block from the mix (`entry.item`, `entry.blockState`), chosen by a fixed hash of the position so the preview and the result match. |
 | E6 | `buildpipeline/BuildPipelineClient.java` `shouldInterceptPlacing`, `updateDisplayTrackers`; `render/BlockPreviewRenderer.java` `render` | `@ModifyExpressionValue` on `instanceof RandomizerToolItem` | While the mix applies, treat the held block as Effortless Building's Randomizer, so the preview draws each entry's own block. In `shouldInterceptPlacing` this holds only while the mode isn't Disable (`BuildModes.CLIENT.getBuildMode() != BuildModeEnum.DISABLED`), so clicks in Disable stay vanilla's. |
 | E7 | `buildpipeline/ConstraintSystem.java`, `processBlocks` | `@ModifyExpressionValue` on the `instabuild` read, and on `getProtectTileEntities()` | Skip the survival checks on real blocks (placed-by-player, hardness, tools) and the protected-block-entity check, which concern real blocks, not ghost blocks. World border, build height and the block cap still apply. |
-| E8 | `buildpipeline/BuildPipelineClient.java`, `updateDisplayTrackers` | `@WrapOperation` on both `ItemUsageTracker.compute` calls and on `BreakDisplayTracker.compute`, clearing the tracker instead | No red "missing items" tint: ghost blocks don't use up items. No list of the real blocks under a shape drawn with the break click either (`render/RenderHandler.java`, `drawBreakingStacks`, which draws them in one row from the screen's middle that never wraps): that shape erases ghost blocks and leaves those real blocks. In Disable's preview, it marks the one block missing when the turned block can't stay, so it draws red (see "Turning real blocks in Disable"). |
+| E8 | `buildpipeline/BuildPipelineClient.java`, `updateDisplayTrackers` | `@WrapOperation` on both `ItemUsageTracker.compute` calls and on `BreakDisplayTracker.compute`, clearing the tracker instead | No red "missing items" tint: ghost blocks don't use up items. No list of the real blocks under a shape drawn with the break click either (`render/RenderHandler.java`, `drawBreakingStacks`, which draws them in one row from the screen's middle that never wraps): that shape erases ghost blocks and leaves those real blocks. Disable's preview marks its one block missing after this clear (hook E29). |
 | E9 | `buildpipeline/BuildPipelineClient.java`, `handleClick` and `getPreviewBlocks`; `resolveFirstClickPos` | `@WrapOperation` on `ClientLevel.clip`; on `Level.getBlockState` | Let shapes start on ghost blocks: aim at the nearer of the real block and a ghost block (`GhostAim`, which traces the ray through the player's copy of the layer while ghost blocks show, not through Litematica's schematic world, which also holds the copy and shows an edit only after its rebuild; so a held click's repeat aims at the ghost blocks the click before it placed, as on real blocks), and read the ghost block's state, where the real block can be replaced, when picking the start position, so the shape goes beside it. |
 | E10 | `buildpipeline/BuildPipelineClient.java`, public static `handleRightClick` and `handleLeftClick`, with `shouldInterceptPlacing`, `shouldInterceptBreaking` and `getBuildState`; `buildpipeline/BuildPipeline.java`, `isBuildTriggerItem`; `buildmode/BuildModes.java`, `getBuildMode`; the click checks copy `fabric/.../EffortlessBuildingClient.java`'s client tick | No mixin: Building Planner's own `END_CLIENT_TICK` calls the two public methods again while a button stays down | Hold to repeat in Single mode (see "The client"). Effortless Building's own tick acts only when a button goes down (`rightJustPressed`, `leftJustPressed`). |
 | E11 | `screen/RadialMenu.java`, `init()` | `@Inject` at tail, calling `Screen.addRenderableWidget` | Add Building Planner's buttons and sliders to the radial menu each time it opens (Minecraft clears a screen's widgets and calls `init` on each open). They're children of the screen, so `RadialMenu.mouseClicked`, which calls `super.mouseClicked` after its own `performAction`, routes clicks and drags to them. |
@@ -1431,7 +1431,7 @@ sides apply it at the same step of Minecraft's own placing, so the client's gues
 |---|---|---|---|
 | M6 | `net/minecraft/client/multiplayer/MultiPlayerGameMode.java`, `useItemOn(LocalPlayer, InteractionHand, BlockHitResult)` | `@Inject` at head | Send `place_turn` when the turn the click takes has changed, before the click's prediction and packet. |
 | S2 | `net/minecraft/world/item/BlockItem.java`, `place(BlockPlaceContext)` | `@WrapOperation` on the call to `getPlacementState`, on both sides | Turn the state the click places, set its shape from its neighbours, and return null when the turned block can't stay. |
-| E29 | `buildpipeline/BuildPipelineClient.java`, `getPreviewBlocks` | `@ModifyReturnValue` | In Disable, while Disable's preview shows, a set of one block where a right click would place, or null when it wouldn't place. |
+| E29 | `buildpipeline/BuildPipelineClient.java`, `getPreviewBlocks` | `@ModifyReturnValue` | In Disable, while Disable's preview shows, a set of one block where a right click would place, marked missing, so it draws red, when the block wouldn't go in; or null when it wouldn't place at all. |
 | E30 | `render/BlockPreviewRenderer.java`, `render` | `@ModifyExpressionValue` on the first `BlockSet.size()` | Draw a set of one block, which the method skips while no shape is under way: Disable's, the locked one ghost block, a fixed row of one, and the block at the aim while the one ghost block follows it, in Single and in Zoop and Vertical before the first click (`SingleRule.drawnAtAim`, see "One ghost block"). A set of more than one block, such as the copies of the mirror, radial mirror and array, is drawn by the method as it is, so nothing is drawn twice. |
 
 S2 is the server's second hook, after S1 (see "Ghost blocks the real world fills"), in the mixin config's common
@@ -1444,7 +1444,8 @@ toward its facing (`AbstractBedBlock.setPlacedBy`, which checks nothing), and Mi
 player's facing (`getStateForPlacement`), so S2 also checks that the space toward the turned facing can take a block
 and is inside the world border. A turned block that fails places nothing, and the player keeps the item (1033 Q1 A).
 The preview draws it red, as Effortless Building draws a block
-the player lacks: tinted red with a red outline (hook E8, which marks that one position missing).
+the player lacks: tinted red with a red outline (hook E29, which marks that one position missing after hook E8
+clears the tracker).
 
 Blocks of two parts turn whole. A door's upper half takes the placed half's state (`DoorBlock.setPlacedBy`), and so
 does a small dripleaf's top; a bed's head takes the foot's facing. A tall plant neither turns nor flips, so it places
@@ -1455,8 +1456,10 @@ and white outline, as in the other modes. While Left Ctrl is held in Disable wit
 E29 gives the preview one block where a right click would place it, from Minecraft's own aim (`Minecraft.hitResult`,
 at Minecraft's reach): the aimed block when it can be replaced, and the space beside the aimed face otherwise
 (`BlockPlaceContext.getClickedPos`, after the item's `updatePlacementContext`). Hook E28 gives that block the state S2
-would give it (`DisablePreview.state`), the turned state from Minecraft's own `BlockItem.getPlacementState`, so a
-torch aimed at a wall shows as a wall torch. E30 lets the preview draw a set of one block; with no shape under way, it
+would give it (`EffortlessShapes.disableShown`, through S2's own step, `PlaceTurns.place`), the turned state from
+Minecraft's own `BlockItem.getPlacementState`, so a torch aimed at a wall shows as a wall torch. The block draws red
+where the turned block can't stay, where Minecraft's own right click would place nothing, and where an entity is in
+the turned block's way. E30 lets the preview draw a set of one block; with no shape under way, it
 shows no block count and plays no sound (`RenderHandler.updateFeedback`). Nothing shows while the aim isn't a block,
 or where the block can't go at all (`BlockPlaceContext.canPlace`). Effortless Building's mirror and array draw no
 copies while Disable's preview shows.
@@ -1469,18 +1472,19 @@ the build's screenshots:
 - without Left Control, the turning line: "Hold Left Control to turn or flip", or "Hold Left Control to turn" or
   "Hold Left Control to flip", with no "Turned:", since a right click then places as in Minecraft (1033 Q2 A); no
   line while the block a right click would place hangs on the block behind it, as Minecraft's rule for that block
-  requires (a ladder; a torch, sign, banner, button or lever on a wall; a tripwire hook), though Left Control still
-  turns it (1037 Q1 B);
+  requires (a ladder; a torch, sign, banner, button, lever or coral fan on a wall; a tripwire hook; cocoa;
+  `DisablePreview.hangs`), though Left Control still turns it (1037 Q1 B);
 - while Left Control is held, "Right-click to place, Scroll to turn, Middle-click to flip", or with the one of "Scroll
   to turn" and "Middle-click to flip" the block has, and "Turned:" before it once the block is turned or flipped;
 - while the turned block can't stay, the reason in red, "Can't place here", in place of "Right-click to place".
 
 **Freecam.** Minecraft aims from Freecam's camera while it's on (`Minecraft.pick` traces from `getCameraEntity`), so
-the preview goes where the camera aims. With Freecam's "Allow interaction" off, the click doesn't reach the world, so
-no preview shows (`Aim` reads the option by reflection, as it reads "Player control"). With it on, the right click
-goes to the server as the player's, and the server places only within the player's reach
-(`ServerPlayer.isWithinBlockInteractionRange`), so the preview shows only where the player, not the camera, is within
-that reach. The turn sets property values, so the block faces the same way from the camera as from the player.
+the preview goes where the camera aims. With Freecam's "Allow interaction" and "Player control" off, the click
+doesn't reach the world, so no preview shows (`Aim` reads both by reflection; `DisablePreview.interactionBlocked`).
+With it on, the right click goes to the server as the player's, and the server places only where the aimed block's
+box is within the player's block interaction range and one block more of the player's eyes
+(`Player.isWithinBlockInteractionRange`), so the preview shows only where the player, not the camera, is within that
+reach (`DisablePreview.withinReach`). The turn sets property values, so the block faces the same way from the camera as from the player.
 
 **Without the session.** On a server without Building Planner, or with another protocol version, Building Planner has
 no session, so in Disable Left Ctrl, the wheel and the middle click work as in Minecraft, M6 sends nothing, and S2
@@ -2129,14 +2133,13 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   1080, GUI scale 2, with its box in the window logged (the driver's `screenbox`) for outlining it in red. During a Line drawn with the break click, no turning line shows and Left Ctrl with the wheel
   changes the hotbar slot; a right click cancels it, erasing nothing. The turning line, checked word for word (the
   driver's `modehud`): in Line with stairs, with Left Ctrl held, turned, with and without Left Ctrl, and during a
-  Line's shape, for a chest (turn only) and a slab (flip only), each with Left Ctrl held too; none for stone, in
-  Disable, during a break shape, or with a stick in hand; with the copy at the aim, the copy's line shows; with the
+  Line's shape, for a chest (turn only) and a slab (flip only), each with Left Ctrl held too; none for stone,
+  during a break shape, or with a stick in hand; in Disable, Disable's line in its place (step 19); with the copy at the aim, the copy's line shows; with the
   sprint key on Right Control, it names Right Control; F1 hides it. During a Line after its first click, the turning
   line ends 2 GUI pixels above the action bar's text, which shows the shape's block count (the driver's `modebox` and
   `actionbar`), at 854 by 480, GUI scale 2, and at 1920 by 1080, GUI scale 2 and 4, each shot. The turning line is
   shot in Line before a shape at 1920 by 1080, GUI scale 4, and 854 by 480, GUI scale 2, and a placed Line of turned
-  stairs at 854 by 480 and 1920 by 1080, GUI scale 2. Step 19 replaces the check that no turning line shows in Disable
-  with its own.
+  stairs at 854 by 480 and 1920 by 1080, GUI scale 2.
 - Turning real blocks in Disable (step 18), with Planner1 3 blocks south of each block, facing north, first in
   creative and then in survival: oak stairs turned a quarter turn with Left Ctrl and a notch up, and a right click with
   Left Ctrl held, place a real stair facing east, which the server's world (read with `/execute if block … run say`,
@@ -2159,10 +2162,11 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   camera on, "Allow interaction" on and the camera 3 blocks east of Planner1, the turned stair goes where the camera
   aims and faces east. A turned stair and log are shot placed, at 854 by 480 and 1920 by 1080, GUI scale 2, with each
   one's box in the window logged (the driver's `screenbox`) for outlining them in red.
-- Disable's preview and its line (step 19): with Left Ctrl held and turned oak stairs, the preview draws one stair
-  where a right click would place it, facing east (the driver's `preview`, with each block's state), and the stair
-  placed matches it; aimed at grass, which a block replaces, the preview takes the grass's place. Without Left Ctrl,
-  no preview shows. A torch aimed at a wall and turned away from it shows red. Beyond Minecraft's reach, and aimed at
+- Disable's preview and its line (step 19): with Left Ctrl held and oak stairs, the preview draws one stair where a
+  right click would place it, facing north, and turned a notch, facing east (the driver's `preview` and
+  `previewstate`), not red (`previewred`), and the stair a Left Ctrl right click places matches it (`realstate`);
+  aimed at short grass, which a block replaces, the preview takes the grass's place. Without Left Ctrl, no preview
+  shows. A torch aimed at a wall shows as a wall torch; turned away from the wall, it shows red. Beyond Minecraft's reach, and aimed at
   the sky, no preview shows. With Freecam's camera on and "Allow interaction" off, no preview shows; with it on, it
   shows only while Planner1 is within reach of the aimed block. With Effortless Building's mirror on, the preview
   shows one block. The lines, each checked word for word (the driver's `modehud`): without Left Control, with it held,
@@ -2322,8 +2326,9 @@ Delete box's message writing 16,001 with digit grouping. For the new features (s
 warning) and the Delete box's "R for Aim", the turning line (each turn phrase, with Left Control held, "Turned:" with
 and without it, the sprint key as a player rebound it, the actions as actions, and no line for a block that neither
 turns nor flips or with the sprint key unbound), Disable's lines (without Left Control and with no "Turned:", with
-it held, turned, each turn phrase, the red "Can't place here", and no line without Left Control for a ladder or a
-torch aimed at a wall), and the one ghost block's lines for each state
+it held, turned, each turn phrase, the red "Can't place here" as a warning, the actions as actions, the sprint key as a player rebound it, no line
+without Left Control for a block that hangs on the block behind it, and none for a block that neither turns nor
+flips or with the sprint key unbound), and the one ghost block's lines for each state
 above, with each turn phrase and title.
 
 Delete by aim's marks have unit tests as pure functions (step 12). `DeleteMarksTest` covers a sweep between two aims
@@ -2362,9 +2367,11 @@ or with no turn; and a payload only when the item or the turn's values differ fr
 one, and no item clearing it; property names outside `BlockTurn`'s and values the block doesn't have refused; the
 shape set again from the neighbours for a stair but not for a door, a bed or a tall plant; a bed's head toward the
 turned facing, and the bed staying only where that space takes a block; and another block staying where Minecraft's
-own check lets it. `DisablePreviewTest` covers where the preview goes: the aimed block
-when it can be replaced, the space beside the aimed face otherwise, and none beyond the player's reach while Freecam's
-camera is on.
+own check lets it. `DisablePreviewTest` covers when the preview shows: only while the turning controls are active,
+the sprint key is held and Freecam doesn't keep the click from the world, by Freecam's rule; the reach, the range and
+one block more of the player's eyes, not the camera's; and which blocks hang on the block behind them and which don't
+(a grindstone, a wall skull or a hanging sign on a wall). Where the preview goes is Minecraft's own
+`BlockPlaceContext.getClickedPos`, checked in the game.
 
 The fill rule's unit tests (`FillRuleTest`) cover each property it compares or ignores: a stair facing another way or
 upside down, a log on another axis, a door with the other hinge or its other half, a bed's other part, a button on

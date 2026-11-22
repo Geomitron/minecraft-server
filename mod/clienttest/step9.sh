@@ -2314,7 +2314,8 @@ hold_ctrl
 xdo 1 click 5
 check "in Disable, Left Ctrl with a notch down turns the stairs to face south, and the hotbar slot stays" eval \
 	'turn_is "facing=south,half=bottom" && [[ $(val 1 slot) == "4 minecraft:oak_stairs" ]]'
-check "and no turning line shows there" eval '[[ $(val 1 modehud) == hidden ]]'
+check "and Disable's line shows there in place of the turning line" eval \
+	'[[ $(val 1 modehud) == "Turned: Right-click to place, Scroll to turn, Middle-click to flip" ]]'
 let_go_ctrl
 drv 1 "ebmode LINE" "wait 5" > /dev/null
 check "back in Line, the stairs keep the turn made in Disable" turn_is "facing=south,half=bottom"
@@ -2624,6 +2625,153 @@ disable_round survival -24
 drv 1 "cmd gamemode creative" "cmd fill -61 -60 -45 -36 -56 -19 minecraft:air" "ebmode SINGLE" "wait 10" \
 	"cmd tp @s ~ ~10 ~" "wait 5" "fly true" "wait 5" > /dev/null
 check "the blocks placed in Disable are cleared" eval '[[ $(val 1 "realstates -61 -60 -45 -36 -56 -19 x") == "0 0" ]]'
+
+# Disable's preview and its line (step 19), along z -31 again, in creative: with Left Ctrl held and a block that turns
+# or flips, Effortless Building's preview draws the block a right click would place, in the state it would place, red
+# where the turned block can't stay; Disable's line names the controls. Hotbar slots 4 to 9 hold a stick, oak stairs,
+# torches, a chest, oak slabs and stone; stone stands at -42 -60 -32 for the torch, and short grass at -50 -60 -31.
+# disable_line_is <text>: Disable's line, word for word, once the preview has followed the last change.
+disable_line_is() {
+	drv 1 "wait 10" > /dev/null && [[ $(val 1 modehud) == "$1" ]]
+}
+# preview_is <positions> [<state>]: the preview draws those positions, or none, and the first in a state with the text.
+preview_is() {
+	drv 1 "wait 10" > /dev/null && [[ $(val 1 preview) == "$1" ]] &&
+		{ [[ -z ${2:-} ]] || [[ $(val 1 "previewstate ${1//,/ }") == *"$2"* ]]; }
+}
+# disable_shots <name> <x y z>: Planner1's view with the preview at 854 by 480 and 1920 by 1080, GUI scale 2, with the
+# box of the block at x y z in the window logged, for outlining it.
+disable_shots() {
+	local size w h
+	drv 1 "wait 210" > /dev/null
+	for size in "854 480" "1920 1080"; do
+		read -r w h <<< "$size"
+		drv 1 "window $w $h 2" "wait 20" "notoasts" "wait 5" "shot $1-${w}x$h" > /dev/null
+		echo "  $1-${w}x$h: block $(val 1 "screenbox $2 $2")" >> /out/checks.log
+	done
+	drv 1 "window 854 480 2" "wait 20" > /dev/null
+}
+drv 1 "cmd item replace entity @s hotbar.3 with minecraft:stick" \
+	"cmd item replace entity @s hotbar.4 with minecraft:oak_stairs 64" \
+	"cmd item replace entity @s hotbar.5 with minecraft:torch 64" "cmd item replace entity @s hotbar.6 with minecraft:chest 64" \
+	"cmd item replace entity @s hotbar.7 with minecraft:oak_slab 64" "cmd item replace entity @s hotbar.8 with minecraft:stone 64" \
+	"cmd setblock -42 -60 -32 minecraft:stone" "cmd setblock -50 -60 -31 minecraft:short_grass" "cmd weather clear" \
+	"ebmode DISABLED" "wait 20" > /dev/null
+press 1 9
+press 1 5
+stand -54 -31
+check "in Disable with oak stairs, Disable's line says to hold Left Control to turn or flip" \
+	disable_line_is "Hold Left Control to turn or flip"
+check "and without Left Ctrl, no preview shows" preview_is none
+line_shot disable-line-hold
+hold_ctrl
+check "with Left Ctrl held, the line names the right click that places, the wheel and the middle click" \
+	disable_line_is "Right-click to place, Scroll to turn, Middle-click to flip"
+check "and the preview draws the stair where a right click would place it, facing north, as Minecraft would" \
+	preview_is "-54,-60,-31" "minecraft:oak_stairs[facing=north,half=bottom,"
+line_shot disable-line-held
+xdo 1 click 4
+check "a notch up turns it: the line starts \"Turned:\"" \
+	disable_line_is "Turned: Right-click to place, Scroll to turn, Middle-click to flip"
+check "and the preview draws the stair facing east, not red" eval \
+	'preview_is "-54,-60,-31" "minecraft:oak_stairs[facing=east,half=bottom," && [[ $(val 1 previewred) == none ]]'
+line_shot disable-line-turned
+disable_shots disable-preview-stair "-54 -60 -31"
+drawn=$(val 1 "previewstate -54 -60 -31")
+ctrl_click
+check "the stair placed matches the preview" eval 'drv 1 "await real -54 -60 -31 minecraft:oak_stairs" > /dev/null &&
+	placed=$(val 1 "realstate -54 -60 -31") && placed=${placed#Block\{} && placed=${placed/\}/} &&
+	echo "  drawn: $drawn; placed: $placed" >> /out/checks.log && [[ $placed == "$drawn" ]]'
+check "without Left Ctrl, the line has no \"Turned:\", since a right click places as Minecraft does" \
+	disable_line_is "Hold Left Control to turn or flip"
+# Short grass, which a block replaces, aimed at on its south side: the preview takes the grass's place, not the space
+# south of it.
+drv 1 "cmd tp @s -49.5 -60 -27.5 180 30" "wait 10" "lookat -49.5 -59.6 -30.5" "wait 5" > /dev/null
+hold_ctrl
+check "aimed at short grass, which a block replaces, the preview takes the grass's place" preview_is "-50,-60,-31"
+let_go_ctrl
+# A torch aimed at the stone's south side places a wall torch: Disable's line shows only with Left Ctrl held, since
+# the wall torch hangs on the stone; turned away from the stone, it can't stay, and the preview and the line show red.
+press 1 6
+drv 1 "cmd tp @s -41.5 -60 -28.5 180 30" "wait 10" "lookat -41.5 -59.5 -31.5" "wait 5" > /dev/null
+check "with a torch aimed at a wall, no line shows without Left Ctrl" disable_line_is hidden
+hold_ctrl
+check "with Left Ctrl held, Disable's line names the right click and the wheel" \
+	disable_line_is "Right-click to place, Scroll to turn"
+check "and the preview draws the wall torch on the stone, not red" eval \
+	'preview_is "-42,-60,-31" "minecraft:wall_torch[facing=south]" && [[ $(val 1 previewred) == none ]]'
+xdo 1 click 4
+check "turned away from the stone, the preview draws the torch red" eval \
+	'preview_is "-42,-60,-31" "minecraft:wall_torch[facing=west]" && [[ $(val 1 previewred) == "-42,-60,-31" ]]'
+check "and the line says in red that it can't be placed" disable_line_is "Turned: Can't place here, Scroll to turn"
+line_shot disable-line-red 1920 1080 4 "Can't place here"
+disable_shots disable-preview-torch-red "-42 -60 -31"
+let_go_ctrl
+check "without Left Ctrl, no line shows, though the torch is turned" disable_line_is hidden
+# Beyond Minecraft's reach (5 blocks in creative), and aimed at the sky, no preview shows.
+press 1 5
+stand -46 -31 8
+hold_ctrl
+check "beyond Minecraft's reach, no preview shows" preview_is none
+drv 1 "cmd tp @s -45.5 -60 -27.5 180 -60" "wait 10" > /dev/null
+check "aimed at the sky, no preview shows" preview_is none
+let_go_ctrl
+# With Freecam's camera on, 3 blocks east of Planner1, aimed at the grass at -46 -61 -31: with "Allow interaction" off,
+# no preview shows; with it on, it shows while Planner1 is within reach of the grass, and not once Planner1 is 16 blocks
+# south of it, the camera staying where it is.
+stand -46 -31
+drv 1 "freecam true" "wait 10" "camtp -42.5 -58.4 -27.5 90 30" "camlookat -45.5 -60 -30.5" \
+	"wait 5" > /dev/null
+hold_ctrl
+check "with Freecam's camera on and \"Allow interaction\" off, no preview shows" preview_is none
+drv 1 "allowinteraction true" > /dev/null
+check "with \"Allow interaction\" on, the preview shows where the camera aims" preview_is "-46,-60,-31"
+drv 1 "cmd tp @s -45.5 -60 -15.5 180 30" "wait 10" > /dev/null
+check "and not once Planner1 is beyond reach of the aimed block" preview_is none
+let_go_ctrl
+check "Freecam's camera and \"Allow interaction\" go off again" eval \
+	'[[ $(val 1 "freecam false") == false && $(val 1 "allowinteraction false") == false ]] && drv 1 "wait 10" > /dev/null'
+# With Effortless Building's mirror on, Disable's preview draws the one block a right click places.
+stand -46 -31
+drv 1 "ebmirror -50" "wait 5" > /dev/null
+hold_ctrl
+check "with Effortless Building's mirror on, the preview draws one block" preview_is "-46,-60,-31"
+let_go_ctrl
+drv 1 "ebarray 0" "wait 5" > /dev/null
+# Each block's line, word for word: a chest only turns, a slab only flips, and stone and a stick have none.
+press 1 7
+check "with a chest, which only turns, the line says to hold Left Control to turn" \
+	disable_line_is "Hold Left Control to turn"
+hold_ctrl
+check "and with it held, to place and scroll to turn" disable_line_is "Right-click to place, Scroll to turn"
+let_go_ctrl
+press 1 8
+check "with an oak slab, which only flips, the line says to hold Left Control to flip" \
+	disable_line_is "Hold Left Control to flip"
+hold_ctrl
+check "and with it held, to place and middle-click to flip" disable_line_is "Right-click to place, Middle-click to flip"
+let_go_ctrl
+press 1 9
+check "with stone, no line shows" disable_line_is hidden
+hold_ctrl
+check "nor with Left Ctrl held, and no preview" eval 'disable_line_is hidden && preview_is none'
+let_go_ctrl
+press 1 4
+check "with a stick, no line shows" disable_line_is hidden
+press 1 5
+drv 1 "bindkey key.sprint key.keyboard.right.control" "wait 2" > /dev/null
+check "with the sprint key on Right Control, Disable's line names Right Control" \
+	disable_line_is "Hold Right Control to turn or flip"
+drv 1 "bindkey key.sprint key.keyboard.left.control" "wait 2" > /dev/null
+press 1 F1
+check "F1 hides Disable's line" disable_line_is hidden
+press 1 F1
+check "and F1 again shows it" disable_line_is "Hold Left Control to turn or flip"
+drv 1 "cmd fill -61 -60 -45 -36 -56 -19 minecraft:air" "ebmode SINGLE" "wait 10" \
+	"cmd item replace entity @s hotbar.3 with minecraft:air" > /dev/null
+check "the blocks placed for Disable's preview are cleared" eval \
+	'[[ $(val 1 "realstates -61 -60 -45 -36 -56 -19 x") == "0 0" ]]'
+
 drv 1 "cmd item replace entity @s hotbar.4 with minecraft:air" "cmd item replace entity @s hotbar.5 with minecraft:air" \
 	"cmd item replace entity @s hotbar.6 with minecraft:air" "cmd item replace entity @s hotbar.7 with minecraft:air" \
 	"cmd item replace entity @s hotbar.8 with minecraft:air" > /dev/null
