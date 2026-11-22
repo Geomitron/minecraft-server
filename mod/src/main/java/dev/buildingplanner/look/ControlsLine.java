@@ -17,6 +17,7 @@ public final class ControlsLine {
 	private static final String BOX = "buildingplanner.ui.mode.box";
 	private static final String COPY = "buildingplanner.ui.mode.copy";
 	private static final String DELETE = "buildingplanner.ui.mode.delete";
+	private static final String TURN = "buildingplanner.ui.mode.turn";
 
 	private ControlsLine() {
 	}
@@ -139,6 +140,38 @@ public final class ControlsLine {
 			Translated.of(DELETE + ".titled", Look.PLAIN, Translated.of(DELETE + ".aim", Look.PLAIN)),
 			new Joined(List.copyOf(parts))), null));
 		return lines;
+	}
+
+	/**
+	 * The block in hand as the turning line tells it: whether it turns and whether it flips (or a block of the mix
+	 * does), whether Minecraft's sprint key is held, and whether the block has been turned or flipped.
+	 */
+	public record TurnState(boolean turns, boolean flips, boolean held, boolean turned) {
+	}
+
+	/**
+	 * The turning line (see "One ghost block": "Controls line"): with the sprint key held, the wheel that turns and the
+	 * middle click that flips, otherwise the sprint key held to turn or flip; each part only for a block that turns or
+	 * flips, and "Turned:" before them once the block is turned or flipped. Null for a block that does neither, and
+	 * while the sprint key has no key bound.
+	 */
+	public static Line turning(TurnState state, String sprint) {
+		if (!state.turns() && !state.flips() || sprint == null) {
+			return null;
+		}
+		List<Text> parts = new ArrayList<>(2);
+		if (state.held()) {
+			if (state.turns()) {
+				parts.add(Translated.of(COPY + ".scroll", Look.PLAIN, action(COPY + ".turn")));
+			}
+			if (state.flips()) {
+				parts.add(Translated.of(COPY + ".middle", Look.PLAIN, action(TURN + ".flip")));
+			}
+		} else {
+			String verb = !state.flips() ? COPY + ".turn" : !state.turns() ? TURN + ".flip" : TURN + ".turn_or_flip";
+			parts.add(Translated.of(COPY + ".hold", Look.PLAIN, new Literal(sprint), action(verb)));
+		}
+		return titled(state.turned() ? Translated.of(TURN + ".turned", Look.PLAIN) : null, parts);
 	}
 
 	/** "R for Aim": the mode key, by its name, and the mode it switches to, as an action. */

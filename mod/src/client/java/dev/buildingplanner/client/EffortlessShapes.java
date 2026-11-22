@@ -123,6 +123,16 @@ public final class EffortlessShapes {
 		return BuildModes.CLIENT.getBuildMode() == BuildModeEnum.SINGLE;
 	}
 
+	/** Whether Effortless Building's mode is Disable, where the player places real blocks. */
+	static boolean disableMode() {
+		return BuildModes.CLIENT.getBuildMode() == BuildModeEnum.DISABLED;
+	}
+
+	/** Whether a shape drawn with the break click is under way: it erases, so the turning controls aren't active. */
+	static boolean breakShapeUnderWay() {
+		return BuildPipelineClient.getBuildState() == BuildPipeline.BuildState.BREAKING;
+	}
+
 	/**
 	 * Where a right click would place the one ghost block now: beside the aimed face, at the position Effortless
 	 * Building's preview draws its first block (its {@code resolveFirstClickPos}), aimed as its preview aims: with

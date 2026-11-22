@@ -24,6 +24,17 @@ public final class SingleRule {
 	}
 
 	/**
+	 * Whether the turning controls are active (Left Ctrl with the wheel and the middle click, see "One ghost block":
+	 * "Turning and flipping"): under the block's conditions but in every one of Effortless Building's modes except
+	 * Disable, and not while a shape drawn with the break click is under way ({@code breakShape}), since that shape
+	 * erases.
+	 */
+	public static boolean turning(boolean session, boolean disableMode, boolean mouseMode, boolean placeable,
+		boolean breakShape) {
+		return session && !disableMode && !mouseMode && placeable && !breakShape;
+	}
+
+	/**
 	 * Whether the place click is Building Planner's: while the block is locked, which places it where it's locked, or in
 	 * Zoop or Vertical, whose clicks fix and place a row. Following the aim in Single, it's Effortless Building's.
 	 */

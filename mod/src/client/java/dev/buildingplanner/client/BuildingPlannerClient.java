@@ -133,7 +133,8 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		DeleteAim.registered(() -> session);
 		MarksOutline.registered(() -> session != null && session.aimOn() ? session.marks() : null);
 		modeHud = new ModeHud(BuildingPlannerClient::mouseMode, BuildingPlannerClient::boxShown,
-			BuildingPlannerClient::copyLine, BuildingPlannerClient::aimLines,
+			BuildingPlannerClient::copyLine, BuildingPlannerClient::aimLines, BuildingPlannerClient::turningLine,
+			() -> effortless && EffortlessShapes.shapeUnderWay(),
 			() -> CopyKeys.names(Minecraft.getInstance()).mode(),
 			() -> session == null ? List.of() : session.boxList());
 		HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(BuildingPlanner.MOD_ID, "mode_controls"),
@@ -468,11 +469,13 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 
 	/**
 	 * Whether the turning controls are active (Left Ctrl with the wheel and the middle click, see "One ghost block":
-	 * "Turning and flipping"), and hooks E1 and E28 give the blocks placed the turn: under the one ghost block's
-	 * conditions, in Single mode.
+	 * "Turning and flipping"), and hooks E1 and E28 give the blocks placed the turn ({@link SingleRule#turning}): a
+	 * session, any of Effortless Building's modes but Disable, no mouse mode, an item that places a block in the main
+	 * hand, and no shape drawn with the break click under way.
 	 */
 	static boolean turningActive() {
-		return singleActive();
+		return effortless && SingleRule.turning(session != null, EffortlessShapes.disableMode(), mouseModeOn(),
+			ClickRule.holdsPlaceable(), EffortlessShapes.breakShapeUnderWay());
 	}
 
 	/**
@@ -480,13 +483,31 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	 * sprint key is held, and the block in hand, or a block of the mix while it applies, turns or flips as asked.
 	 */
 	private static boolean turnTakes(Predicate<Block> can) {
-		Minecraft mc = Minecraft.getInstance();
-		if (!turningActive() || !mc.options.keySprint.isDown()
-			|| !(mc.player.getMainHandItem().getItem() instanceof BlockItem item)) {
+		return turningActive() && Minecraft.getInstance().options.keySprint.isDown() && heldCan(can);
+	}
+
+	/** Whether the block in hand, or a block of the mix while it applies, turns or flips as asked. */
+	private static boolean heldCan(Predicate<Block> can) {
+		if (!(Minecraft.getInstance().player.getMainHandItem().getItem() instanceof BlockItem item)) {
 			return false;
 		}
 		return can.test(item.getBlock())
 			|| EffortlessShapes.mixApplies() && MIX.parts().stream().anyMatch(part -> can.test(part.block()));
+	}
+
+	/**
+	 * The turning line ({@link ControlsLine#turning}): in Effortless Building's modes other than Single and Disable,
+	 * while the turning controls are active and the block in hand turns or flips, with the sprint key as the player has
+	 * it bound; or null. Single's own line (step 20) names the same controls.
+	 */
+	private static ControlsLine.Line turningLine() {
+		if (!turningActive() || EffortlessShapes.singleMode()) {
+			return null;
+		}
+		Minecraft mc = Minecraft.getInstance();
+		return ControlsLine.turning(new ControlsLine.TurnState(heldCan(BlockTurn::turns), heldCan(BlockTurn::flips),
+			mc.options.keySprint.isDown(), HeldTurn.of(mc.player.getMainHandItem().getItem()) != null),
+			CopyKeys.names(mc).sprint());
 	}
 
 	/** Hook L11: whether the middle click flips the block in hand, so Litematica picks no block with it. */

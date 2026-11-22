@@ -32,6 +32,24 @@ class SingleRuleTest {
 	}
 
 	@Test
+	void turningActiveInEveryModeButDisable() {
+		assertTrue(SingleRule.turning(true, false, false, true, false));
+		assertFalse(SingleRule.turning(true, true, false, true, false));
+	}
+
+	@Test
+	void turningNotActiveWithoutASessionAMouseModeOrABlockInHand() {
+		assertFalse(SingleRule.turning(false, false, false, true, false));
+		assertFalse(SingleRule.turning(true, false, true, true, false));
+		assertFalse(SingleRule.turning(true, false, false, false, false));
+	}
+
+	@Test
+	void turningNotActiveDuringAShapeDrawnWithTheBreakClick() {
+		assertFalse(SingleRule.turning(true, false, false, true, true));
+	}
+
+	@Test
 	void followingTheAimInSingleBothClicksAreEffortlessBuildings() {
 		SingleRule.State state = new SingleRule.State(CopyMode.SINGLE, false, false);
 		assertFalse(SingleRule.takesPlace(state));

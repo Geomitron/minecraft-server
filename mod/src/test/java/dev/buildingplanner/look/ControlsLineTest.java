@@ -16,6 +16,7 @@ import dev.buildingplanner.look.ControlsLine.Keys;
 import dev.buildingplanner.look.ControlsLine.Line;
 import dev.buildingplanner.look.ControlsLine.Look;
 import dev.buildingplanner.look.ControlsLine.Text;
+import dev.buildingplanner.look.ControlsLine.TurnState;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -278,6 +279,49 @@ class ControlsLineTest {
 			+ "clear"), aim(new AimState(true, false, -1, false), REBOUND));
 		assertEquals(List.of("Delete, Aim: Hold Left-click to erase, Right-click to clear"),
 			aim(new AimState(true, false, -1, false), UNBOUND));
+	}
+
+	@Test
+	void theTurningLineHoldsTheSprintKeyToTurnOrFlip() {
+		assertEquals("Hold Left Control to turn or flip", turning(new TurnState(true, true, false, false), "Left Control"));
+		assertEquals("Hold Left Control to turn", turning(new TurnState(true, false, false, false), "Left Control"));
+		assertEquals("Hold Left Control to flip", turning(new TurnState(false, true, false, false), "Left Control"));
+	}
+
+	@Test
+	void withTheSprintKeyHeldTheTurningLineNamesTheWheelAndTheMiddleClick() {
+		assertEquals("Scroll to turn, Middle-click to flip", turning(new TurnState(true, true, true, false), "Left Control"));
+		assertEquals("Scroll to turn", turning(new TurnState(true, false, true, false), "Left Control"));
+		assertEquals("Middle-click to flip", turning(new TurnState(false, true, true, false), "Left Control"));
+	}
+
+	@Test
+	void onceTurnedTheTurningLineStartsTurned() {
+		assertEquals("Turned: Hold Left Control to turn or flip",
+			turning(new TurnState(true, true, false, true), "Left Control"));
+		assertEquals("Turned: Scroll to turn, Middle-click to flip",
+			turning(new TurnState(true, true, true, true), "Left Control"));
+	}
+
+	@Test
+	void theTurningLineNamesTheSprintKeyAsBoundAndItsActionsAreActions() {
+		assertEquals("Hold Right Control to turn or flip", turning(new TurnState(true, true, false, false), "Right Control"));
+		List<String> actions = new ArrayList<>();
+		collect(ControlsLine.turning(new TurnState(true, true, true, true), "Left Control").text(), Look.ACTION, actions);
+		assertEquals(List.of("turn", "flip"), actions);
+	}
+
+	@Test
+	void noTurningLineForABlockThatNeitherTurnsNorFlipsOrWithTheSprintKeyUnbound() {
+		assertNull(ControlsLine.turning(new TurnState(false, false, false, false), "Left Control"));
+		assertNull(ControlsLine.turning(new TurnState(false, false, true, true), "Left Control"));
+		assertNull(ControlsLine.turning(new TurnState(true, true, false, false), null));
+	}
+
+	private static String turning(TurnState state, String sprint) {
+		Line line = ControlsLine.turning(state, sprint);
+		assertNull(line.size());
+		return read(line.text());
 	}
 
 	private static List<String> aim(AimState state, Keys keys) {

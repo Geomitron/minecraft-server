@@ -29,10 +29,18 @@ import net.minecraft.util.FormattedCharSequence;
  * line too wide for the screen wraps onto lines above it, keeping the size whole. While a box is drawn, the blocks in it
  * show under the crosshair ({@link BoxList}, laid out by {@link BoxListLayout}), in rows that end above the controls,
  * and in Delete by aim, the marked ghost blocks.
- * They show while a mode is on, with no screen open and the HUD shown (not hidden with F1).
+ * They show while a mode is on, with no screen open and the HUD shown (not hidden with F1). With no mode on, the
+ * turning line shows in the same place ({@link ControlsLine#turning}), and during a shape drawn with the place click,
+ * while Effortless Building draws its own line there and the shape's block count in the action bar above it, it shows
+ * above the action bar.
  */
 final class ModeHud implements HudElement {
 	private static final int BOTTOM = 58;
+	/**
+	 * Where the turning line ends during a shape: 2 above the top of the action bar's text, which the game draws from 72
+	 * to 63 above the screen's bottom ({@code Hud.extractOverlayMessage}).
+	 */
+	private static final int ABOVE_ACTION_BAR = 74;
 	private static final int MARGIN = 4;
 	private static final int WHITE = -1;
 	/** The black behind each line of text: the opacity of the game's chat background by default (0.5). */
@@ -51,21 +59,27 @@ final class ModeHud implements HudElement {
 	private final Supplier<BoxDraw.Shown> box;
 	private final Supplier<ControlsLine.Line> copy;
 	private final Supplier<List<ControlsLine.Line>> aim;
+	private final Supplier<ControlsLine.Line> turning;
+	private final Supplier<Boolean> shape;
 	private final Supplier<String> modeKey;
 	private final Supplier<List<BoxList.Entry>> list;
 
 	/**
 	 * {@code mode} is the mouse mode now, or null, {@code box} the box drawn now, or null, {@code copy} the copy at the
 	 * aim's line ({@link ControlsLine#copy}), or null, {@code aim} Delete by aim's lines ({@link ControlsLine#deleteAim}),
-	 * {@code modeKey} the name of the key that switches a Delete box to Aim, or null while it has none, and {@code list}
-	 * the kinds of block in the box, or the marks.
+	 * {@code turning} the turning line ({@link ControlsLine#turning}), or null, {@code shape} whether Effortless
+	 * Building's shape is under way, {@code modeKey} the name of the key that switches a Delete box to Aim, or null
+	 * while it has none, and {@code list} the kinds of block in the box, or the marks.
 	 */
 	ModeHud(Supplier<MouseMode> mode, Supplier<BoxDraw.Shown> box, Supplier<ControlsLine.Line> copy,
-		Supplier<List<ControlsLine.Line>> aim, Supplier<String> modeKey, Supplier<List<BoxList.Entry>> list) {
+		Supplier<List<ControlsLine.Line>> aim, Supplier<ControlsLine.Line> turning, Supplier<Boolean> shape,
+		Supplier<String> modeKey, Supplier<List<BoxList.Entry>> list) {
 		this.mode = mode;
 		this.box = box;
 		this.copy = copy;
 		this.aim = aim;
+		this.turning = turning;
+		this.shape = shape;
 		this.modeKey = modeKey;
 		this.list = list;
 	}
@@ -76,7 +90,7 @@ final class ModeHud implements HudElement {
 		if (!shown()) {
 			return List.of();
 		}
-		List<ControlsLine.Line> lines = switch (now) {
+		List<ControlsLine.Line> lines = now == null ? turningLines() : switch (now) {
 			case BOX -> {
 				BoxDraw.Shown shown = box.get();
 				yield shown == null ? List.of() : ControlsLine.box(shown.purpose().name(), shown.corners(),
@@ -93,15 +107,32 @@ final class ModeHud implements HudElement {
 			line.size() == null ? null : component(line.size()).withStyle(ChatFormatting.WHITE))).toList();
 	}
 
-	/** Whether the mode's controls and its list show: while a mode is on, with no screen open and the HUD shown. */
+	/** The turning line, while it shows, or none. */
+	private List<ControlsLine.Line> turningLines() {
+		ControlsLine.Line line = turning.get();
+		return line == null ? List.of() : List.of(line);
+	}
+
+	/** Whether the controls and the list show: with no screen open and the HUD shown. */
 	private boolean shown() {
 		Minecraft mc = Minecraft.getInstance();
-		return mode.get() != null && mc.gui.screen() == null && !mc.gui.hud.isHidden();
+		return mc.gui.screen() == null && !mc.gui.hud.isHidden();
+	}
+
+	/**
+	 * Whether the lines end above the action bar: the turning line during a shape, while Effortless Building draws its
+	 * own line where the lines otherwise end.
+	 */
+	private boolean raised() {
+		return mode.get() == null && shape.get();
 	}
 
 	/** Whether the list under the crosshair goes with the mode now: a box's, or Delete by aim's marks. */
 	private boolean listed() {
 		MouseMode now = mode.get();
+		if (now == null) {
+			return false;
+		}
 		return now == MouseMode.BOX || now == MouseMode.DELETE_AIM;
 	}
 
@@ -196,7 +227,7 @@ final class ModeHud implements HudElement {
 		Minecraft mc = Minecraft.getInstance();
 		int width = mc.getWindow().getGuiScaledWidth();
 		List<FormattedCharSequence> wrapped = wrapped(lines, mc.font, width - 2 * MARGIN);
-		int top = top(wrapped.size(), mc.font, mc.getWindow().getGuiScaledHeight());
+		int top = top(wrapped.size(), mc.font, mc.getWindow().getGuiScaledHeight(), raised());
 		int left = width;
 		int right = 0;
 		for (FormattedCharSequence line : wrapped) {
@@ -223,7 +254,7 @@ final class ModeHud implements HudElement {
 		Minecraft mc = Minecraft.getInstance();
 		int width = mc.getWindow().getGuiScaledWidth();
 		int height = mc.getWindow().getGuiScaledHeight();
-		int top = top(wrapped(lines, mc.font, width - 2 * MARGIN).size(), mc.font, height);
+		int top = top(wrapped(lines, mc.font, width - 2 * MARGIN).size(), mc.font, height, false);
 		BoxListLayout layout = BoxListLayout.of(width, height, entries.size(), top);
 		int right = 0;
 		int bottom = 0;
@@ -245,9 +276,13 @@ final class ModeHud implements HudElement {
 		return right + " " + width + " " + bottom + " " + top + " | " + rows;
 	}
 
-	/** The top of the controls, {@code count} lines ending 58 above the screen's bottom; with none, of one line there. */
-	private static int top(int count, Font font, int height) {
-		return height - BOTTOM - (Math.max(count, 1) - 1) * font.lineHeight;
+	/**
+	 * The top of the controls, {@code count} lines ending 58 above the screen's bottom, or while {@code raised}, 74 above
+	 * it, over the action bar; with none, of one line there.
+	 */
+	private static int top(int count, Font font, int height, boolean raised) {
+		return raised ? height - ABOVE_ACTION_BAR - Math.max(count, 1) * font.lineHeight
+			: height - BOTTOM - (Math.max(count, 1) - 1) * font.lineHeight;
 	}
 
 	@Override
@@ -258,7 +293,7 @@ final class ModeHud implements HudElement {
 		}
 		Font font = Minecraft.getInstance().font;
 		List<FormattedCharSequence> wrapped = wrapped(lines, font, graphics.guiWidth() - 2 * MARGIN);
-		int top = top(wrapped.size(), font, graphics.guiHeight());
+		int top = top(wrapped.size(), font, graphics.guiHeight(), raised());
 		// The backgrounds first, each as wide as its line's text, so no box covers the line above's shadow.
 		int y = top;
 		for (FormattedCharSequence text : wrapped) {
