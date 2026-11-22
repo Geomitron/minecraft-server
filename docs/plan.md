@@ -379,7 +379,8 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
     it facing any way wherever they stand (Q5 and Q6, Geo's answers). Blocks keep the turn until the player switches to
     another block (revision 2, Q1 A). The copy's blue, yellow or red box shows only while the block is locked or a row
     is fixed (Q7 A), and Single mode's controls line shows whenever a block is in hand (Q8 A). Building Planner always
-    draws the unlocked block at the aim in Single, turned as it will be placed (1108 Q1 A). A locked block's left
+    draws the unlocked block at the aim in Single, turned as it will be placed (1108 Q1 A), and in Zoop and Vertical
+    before their first click (1128 Q1 A). A locked block's left
     click erases the ghost block where it's locked (1009 Q1 A), and with Effortless Building's mirror, radial mirror
     or array on, every block a right click would place (1074 Q1 A). Left Ctrl turns and flips the block in every one of
     Effortless Building's modes, not only Single, and every mode's shapes take the turn (1009 Q2 C). In Disable, where
@@ -551,7 +552,9 @@ the last step, when the server and the pack update together.
     block that hangs on the block behind it (1033 Q2 A, 1037 Q1 B). Needs step 18. Done when `DisablePreviewTest` and
     `ControlsLineTest` pass and the spec's "Disable's
     preview and its line (step 19)" checks pass, with shots of the preview of a turned stair and of a red torch at 854
-    by 480 and 1920 by 1080, GUI scale 2, and of each line (with GUI scale 4), with the changes outlined in red.
+    by 480 and 1920 by 1080, GUI scale 2, and of each line (with GUI scale 4), with the changes outlined in red. The
+    step also draws the block at the aim in Zoop and Vertical before their first click, as in Single (1128 Q1 A),
+    with a check among the spec's "Turning in every mode (step 17)" checks.
 20. **One ghost block: colours and its line** ("One ghost block"): `CopyOutline` for the locked block and the row,
     red placing nothing, and the controls line for each state (`ControlsLine.single`), drawn by `ModeHud`. Needs steps
     15 and 17. Done when `CopyColourTest` and `ControlsLineTest` pass and the spec's "One ghost block, colours and its
