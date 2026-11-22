@@ -395,6 +395,26 @@ public final class Driver implements ClientModInitializer {
 					.collect(java.util.stream.Collectors.joining(","));
 				return BuiltInRegistries.BLOCK.getKey(state.getBlock()) + "[" + properties + "]";
 			}
+			case "boxstates" -> {
+				// boxstates x1 y1 z1 x2 y2 z2 <text>: how many ghost blocks the box holds in this game's copy of the layer,
+				// and how many of them have the text in their state as layerstate gives it, as "N M".
+				int all = 0;
+				int with = 0;
+				for (BlockPos pos : BlockPos.betweenClosed(pos(a, 1), pos(a, 4))) {
+					BlockState state = session().replica().layer().get(pos);
+					if (state.isAir()) {
+						continue;
+					}
+					all++;
+					String properties = state.getProperties().stream()
+						.map(property -> property.getName() + "=" + state.getValue(property)).sorted()
+						.collect(java.util.stream.Collectors.joining(","));
+					if ((BuiltInRegistries.BLOCK.getKey(state.getBlock()) + "[" + properties + "]").contains(a[7])) {
+						with++;
+					}
+				}
+				return all + " " + with;
+			}
 			case "tile" -> {
 				// tile <chunk x> <chunk z>: that column's tile as its lowest..highest block y, or none.
 				return tile(Integer.parseInt(a[1]), Integer.parseInt(a[2]));
@@ -851,6 +871,17 @@ public final class Driver implements ClientModInitializer {
 			case "modehud" -> {
 				// modehud: the line of the mouse mode's controls as the player reads it, or hidden.
 				return modeHud().text();
+			}
+			case "actionbar" -> {
+				// actionbar: the action bar's text while it shows, as Effortless Building's block count during a shape,
+				// or none.
+				Field text = mc.gui.hud.getClass().getDeclaredField("overlayMessageString");
+				Field time = mc.gui.hud.getClass().getDeclaredField("overlayMessageTime");
+				text.setAccessible(true);
+				time.setAccessible(true);
+				Object message = text.get(mc.gui.hud);
+				return message == null || time.getInt(mc.gui.hud) <= 0 ? "none"
+					: ((Component) message).getString();
 			}
 			case "modebox" -> {
 				// modebox: the window box (left top right bottom, in the window's pixels) of the controls as drawn now, or

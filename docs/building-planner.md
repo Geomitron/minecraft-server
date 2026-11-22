@@ -1298,8 +1298,9 @@ click's face (`BuildPipelineClient.getFirstClickHit`), then each entry's mirror 
 placement rules and before the entry's transforms, and E28 to the state the preview starts from, so a mirrored copy
 of a turned stair faces the mirrored way, as the preview shows it. The turn stays as the player changes mode, Disable
 among them, until they switch to another block (980 revision 2, Q1 A). The player may turn the block before a shape's
-first click or between its clicks; the preview shows each turn at once, and the shape places with the turn it has at its
-last click. A turn changes a shape's states and never its positions: no mode reads the held block's state (the only
+first click or between its clicks; the preview shows each turn at once (before the first click it draws no set of one
+block without the mirror, radial mirror or array, so a turn made then shows from the first click), and the shape places
+with the turn it has at its last click. A turn changes a shape's states and never its positions: no mode reads the held block's state (the only
 block state read under `buildmode/` is the world's, in `BuildSettings.java`).
 
 In Disable the turning controls act on the real block a right click places, as "Turning real blocks in Disable"
@@ -1352,7 +1353,7 @@ turning controls, since Effortless Building's clicks in those modes are its own.
 review with the build's screenshots:
 
 - "Hold Left Control to turn or flip", or "Hold Left Control to turn" or "Hold Left Control to flip" as in Single, and
-  no line for a block that does neither;
+  no line for a block that does neither or while the sprint key has no key;
 - while Left Control is held, "Scroll to turn, Middle-click to flip", or the one of them the block has;
 - once the block is turned or flipped, "Turned:" before either: "Turned: Hold Left Control to turn or flip".
 
@@ -2099,24 +2100,29 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   Ctrl, the wheel changes the hotbar slot and the middle click picks the aimed block. The checks log what an unlocked
   left click erases with Effortless Building's array and mirror on. Turned and flipped stairs are shot before placing,
   locked, and after, at 854 by 480 and 1920 by 1080, GUI scale 2.
-- Turning in every mode (step 17): with oak stairs turned a quarter turn in Single, the turn stays after choosing Line
-  in the radial menu, and a Line of 5 places 5 stairs facing the turned way, on both clients, as its preview showed
-  (the driver's `preview`, with each block's state). In Line, a notch up with Left Ctrl held before the first click,
-  and another between the two clicks, turns the preview at once each time, and the Line places with the second turn. One
-  shape of turned stairs in each of Wall, Floor, Cube, Diagonal Line, Diagonal Wall, Slope Floor, Circle, Cylinder and
-  Sphere has every stair facing the turned way; a Floor of oak slabs flipped to the top half has every slab's top half.
-  With Effortless Building's mirror on along X, a Line of turned stairs has its mirrored stairs facing the mirrored
-  way, in the preview and once placed; with the mix of oak and spruce stairs, a Wall's stairs all take the turn. In
-  Disable, Left Ctrl with the wheel changes the hotbar slot and the middle click picks a block, and back in Line the
-  stairs keep the turn; switching to stone and back to the stairs drops it. During a Line drawn with the break click,
-  Left Ctrl with the wheel changes the hotbar slot. The turning line, checked word for word (the driver's `modehud`):
-  in Line with stairs, with Left Ctrl held, turned, for a chest (turn only) and a slab (flip only); none for stone, in
-  Disable, during a break shape, with a stick in hand, or with the copy at the aim (the copy's line shows); with the
+- Turning in every mode (step 17): with oak stairs turned a quarter turn in Single, to face east, the turn stays after
+  choosing Line in the radial menu, and a Line of 5 places 5 stairs facing east, on both clients, as its preview drew
+  each of them (the driver's `previewstate`). In Line, a notch up with Left Ctrl held before the first click turns the
+  stairs to face south, which the preview draws from the first click, since before it the preview draws no set of one
+  block; another notch between the two clicks turns the preview at once, to face west, and the Line places facing
+  west. One shape of the turned stairs in each of Wall, Floor, Cube, Diagonal Line, Diagonal Wall, Slope Floor,
+  Circle, Cylinder and Sphere has every ghost block in its box facing west (the driver's `boxstates`, with each
+  shape's count in the log); a Floor of oak slabs flipped to the top half has every slab's top half. With Effortless
+  Building's mirror across x −52, a Line of 4 turned stairs has its mirror image's stairs facing east, in the preview
+  and once placed; with the mix of oak and spruce stairs, a Wall's stairs of both kinds all face west. In Disable, Left
+  Ctrl with the wheel changes the hotbar slot, to the same stairs in the next slot, and back in Line the stairs keep
+  the turn; switching to stone and back to the stairs drops it; and at the end, the middle click with Left Ctrl held
+  picks the aimed block. During a Line drawn with the break click, no turning line shows and Left Ctrl with the wheel
+  changes the hotbar slot; a right click cancels it, erasing nothing. The turning line, checked word for word (the
+  driver's `modehud`): in Line with stairs, with Left Ctrl held, turned, with and without Left Ctrl, and during a
+  Line's shape, for a chest (turn only) and a slab (flip only), each with Left Ctrl held too; none for stone, in
+  Disable, during a break shape, or with a stick in hand; with the copy at the aim, the copy's line shows; with the
   sprint key on Right Control, it names Right Control; F1 hides it. During a Line after its first click, the turning
-  line shows above the action bar's block count, which shows above Effortless Building's "Left-click to cancel,
-  Right-click to place", none covering another. The turning line is shot in Line before the first click at 1920 by
-  1080, GUI scale 4, and during a Line shape at 854 by 480 and 1920 by 1080, GUI scale 2 and 4. Steps 18 and 19
-  replace this check's Disable parts with their own.
+  line ends 2 GUI pixels above the action bar's text, which shows the shape's block count (the driver's `modebox` and
+  `actionbar`), at 854 by 480, GUI scale 2, and at 1920 by 1080, GUI scale 2 and 4, each shot. The turning line is
+  shot in Line before a shape at 1920 by 1080, GUI scale 4, and 854 by 480, GUI scale 2, and a placed Line of turned
+  stairs at 854 by 480 and 1920 by 1080, GUI scale 2. Steps 18 and 19 replace this check's Disable parts with their
+  own.
 - Turning real blocks in Disable (step 18), in creative and in survival, with Planner1 facing north: oak stairs
   turned a quarter turn with Left Ctrl and a notch up, and a right click with Left Ctrl held, place a real stair facing
   east, which the server's world (read with `/execute if block` from the server's console) and Planner2 show facing
@@ -2293,8 +2299,9 @@ keys named one by one, the up and down keys named with their shared first word d
 with all six unbound, and each box's lines, Delete's among them. `PayloadsTest` covers the
 Delete box's message writing 16,001 with digit grouping. For the new features (steps 13, 17, 19 and 20),
 `ControlsLineTest` also covers Aim's lines (no marks, marks, unmarking, the hold's progress in steps of 5%, the cap's
-warning) and the Delete box's "R for Aim", the turning line (each turn phrase, with Left Control held, "Turned:", and
-no line for a block that neither turns nor flips), Disable's lines (without Left Control and with no "Turned:", with
+warning) and the Delete box's "R for Aim", the turning line (each turn phrase, with Left Control held, "Turned:" with
+and without it, the sprint key as a player rebound it, the actions as actions, and no line for a block that neither
+turns nor flips or with the sprint key unbound), Disable's lines (without Left Control and with no "Turned:", with
 it held, turned, each turn phrase, the red "Can't place here", and no line without Left Control for a ladder or a
 torch aimed at a wall), and the one ghost block's lines for each state
 above, with each turn phrase and title.
@@ -2311,9 +2318,9 @@ shown in steps of 5%.
 
 The one ghost block's rules have unit tests as pure functions (steps 14 to 17). `SingleRuleTest` covers when its
 controls are active (session, Single mode, no mouse mode, an item that places a block), which clicks are Building
-Planner's in each state, and when the turning controls are active (each mode, Disable by `DisableTurn`'s rule from
-step 18, none during a shape
-drawn with the break click, but during one drawn with the place click). `CopyRowTest` covers a 1×1×1 row (step 15):
+Planner's in each state, and when the turning controls are active (`SingleRule.turning`: every mode but Disable,
+where step 18 adds `DisableTurn`'s rule; none without a session, with a mouse mode on, with an item that places no
+block, or during a shape drawn with the break click, but during one drawn with the place click). `CopyRowTest` covers a 1×1×1 row (step 15):
 every block to the aim east, north and up, the block alone when aimed at itself, and up to 32 blocks, where the copy's
 row stops at 10. `BlockTurnTest` (step 16) covers a
 quarter turn each way for stairs, logs, chests and signs, and two turns adding up; the flips' order for a log, a
@@ -2414,10 +2421,6 @@ other in the game's own copy of the layer, again after a restart, which doesn't 
   position. Step 14's checks show it drawing the locked block and an array's copies of it (with hook E30), and step
   15's a row and its mirror image, which the click places too, and a row with the mix on, whose placed blocks are the
   mix's; no check reads which block the preview draws at a position.
-- Where the action bar draws in the game: `Hud.extractOverlayMessage` pushes the numbers 68 and −4, read in the client
-  jar's bytecode, not decompiled, which puts its text from 72 to 63 above the screen's bottom, as in earlier versions.
-  The turning line during a shape goes above that (see "One ghost block"); step 17's shots show whether the three
-  texts overlap.
 - That no Litematica or MaLiLib hotkey acts on Left Ctrl with the wheel or the middle button while Litematica's tool
   item is off, as Building Planner sets it.
 - Satisfactory's mass dismantle as Delete by aim follows it: marking by sweeping the aim with Ctrl held rests on one

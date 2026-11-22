@@ -2131,6 +2131,256 @@ press 1 $((first_slot + 1))
 drv 1 "cmd item replace entity @s weapon.mainhand with $main_hand" "cmd tp @s 8.5 -56 9.5 0 30" \
 	"cmd tp Planner2 101.5 0 26.5 0 30" "wait 40" > /dev/null
 
+# Turning in every mode (step 17), on the same grass, from Planner1 at -58.5 -58 -34.5 facing north, with Planner2
+# beside it. Hotbar slots 5 to 9 hold oak stairs, oak stairs again, stone, a chest and an oak slab; a stair placed
+# facing north faces north.
+# preview_faces <y> <z> <x1> <x2> <turn>: the preview drew an oak stair with that turn's values at each x along that row.
+preview_faces() {
+	local x
+	for ((x = $3; x <= $4; x++)); do
+		[[ $(val 1 "previewstate $x $1 $2") == "minecraft:oak_stairs["*"$5,"* ]] || return 1
+	done
+}
+# box_all <client> <x1 y1 z1 x2 y2 z2> <text> <count>: that box holds <count> ghost blocks or more on that client, and
+# every one has the text in its state.
+box_all() {
+	local counts
+	counts=$(val "$1" "boxstates $2 $3 $4 $5 $6 $7 $8")
+	echo "  $2 $3 $4 to $5 $6 $7 on client $1: $counts with $8" >> /out/checks.log
+	((${counts% *} >= $9)) && [[ ${counts% *} == "${counts#* }" ]]
+}
+# turned_shape <mode> <stand x z> <x1 y1 z1 x2 y2 z2> <text> <aims>...: from 5 blocks above the grass at x z, facing
+# north, one shape in that Effortless Building mode with a right click at each aim (block positions, aimed at the
+# middle of the top of the block below for the first two and 2.5 above the block for a third, which sets the height);
+# then, within 5 seconds, the box holds 2 ghost blocks or more, each with the text in its state.
+turned_shape() {
+	local mode=$1 stand="$2 -55 $3" box="$4 $5 $6 $7 $8 $9" text=${10} x y z tries counts
+	shift 10
+	drv 1 "ebmode $mode" "cmd tp @s $stand 180 50" "wait 20" > /dev/null
+	aim 1 $1
+	use_click 1
+	aim 1 $2
+	use_click 1
+	if [[ -n ${3:-} ]]; then
+		read -r x y z <<< "$3"
+		drv 1 "lookat $(half "$x") $(half $((y + 2))) $(half "$z")" "wait 5" > /dev/null
+		use_click 1
+	fi
+	for ((tries = 0; tries < 20; tries++)); do
+		counts=$(val 1 "boxstates $box $text")
+		((${counts% *} >= 2)) && break
+		drv 1 "wait 5" > /dev/null
+	done
+	box_all 1 $box "$text" 2
+}
+drv 1 "cmd item replace entity @s hotbar.4 with minecraft:oak_stairs" \
+	"cmd item replace entity @s hotbar.5 with minecraft:oak_stairs" "cmd item replace entity @s hotbar.6 with minecraft:stone" \
+	"cmd item replace entity @s hotbar.7 with minecraft:chest" "cmd item replace entity @s hotbar.8 with minecraft:oak_slab" \
+	"ebmode SINGLE" "ebarray 0" "cmd tp @s -58.5 -58 -34.5 180 30" "cmd tp Planner2 -66.5 -55 -34.5 180 30" "wait 40" \
+	> /dev/null
+press 1 5
+aim 1 -60 -60 -40
+hold_ctrl
+xdo 1 click 4
+let_go_ctrl
+check "in Single, a notch up with Left Ctrl held turns the oak stairs to face east" turn_is "facing=east,half=bottom"
+drv 1 "ebmode LINE" "wait 5" > /dev/null
+check "the turn stays after choosing Line in the radial menu" turn_is "facing=east,half=bottom"
+# A Line of 5 at z -40, from -62 to -58.
+aim 1 -62 -60 -40
+use_click 1
+aim 1 -58 -60 -40
+check "a Line of 5 turned stairs: its preview draws each stair facing east" eval \
+	'drv 1 "wait 10" > /dev/null && preview_faces -60 -40 -62 -58 "facing=east,half=bottom"'
+use_click 1
+check "placed, the Line's 5 stairs face east, on both clients" eval \
+	'drv 1 "await block -58 -60 -40 minecraft:oak_stairs" > /dev/null && stairs_face -62 -58 -60 -40 "facing=east,half=bottom" &&
+	box_all 1 -63 -60 -40 -57 -60 -40 "facing=east," 5 && drv 2 "await block -58 -60 -40 minecraft:oak_stairs" > /dev/null &&
+	box_all 2 -63 -60 -40 -57 -60 -40 "facing=east," 5'
+shots line-turned-stairs
+# In Line, a notch up before the first click turns the stairs to face south; Effortless Building's preview draws no set
+# of one block before a shape, so the preview shows the turn once the first click draws it. Another notch between the
+# clicks turns the preview at once, and the Line places with it.
+hold_ctrl
+xdo 1 click 4
+let_go_ctrl
+check "in Line, a notch up with Left Ctrl held before the first click turns the stairs to face south" \
+	turn_is "facing=south,half=bottom"
+aim 1 -62 -60 -42
+use_click 1
+aim 1 -58 -60 -42
+check "the first click's preview draws the stairs facing south" eval \
+	'drv 1 "wait 10" > /dev/null && preview_faces -60 -42 -62 -58 "facing=south,half=bottom"'
+hold_ctrl
+xdo 1 click 4
+check "another notch between the two clicks turns the preview at once, to face west" eval \
+	'drv 1 "wait 3" > /dev/null && preview_faces -60 -42 -62 -58 "facing=west,half=bottom"'
+check "with Left Ctrl held during the shape, the turning line names the wheel and the middle click" eval \
+	'[[ $(val 1 modehud) == "Turned: Scroll to turn, Middle-click to flip" ]]'
+let_go_ctrl
+check "and without it, the sprint key" eval '[[ $(val 1 modehud) == "Turned: Hold Left Control to turn or flip" ]]'
+# During the shape, the turning line ends 2 GUI pixels above the action bar's text (72 to 63 above the screen's bottom),
+# which shows the shape's block count above Effortless Building's own line (58 above the bottom). Each shot comes once
+# the chat has faded, with the line's end moved between -57 and -58 first, so Effortless Building shows the count again.
+drv 1 "wait 210" > /dev/null
+end=-57
+for size in "854 480 2" "1920 1080 2" "1920 1080 4"; do
+	read -r w h s <<< "$size"
+	drv 1 "window $w $h $s" "wait 20" "notoasts" > /dev/null
+	aim 1 $end -60 -42
+	drv 1 "wait 5" "shot turning-line-shape-${w}x$h-gui$s" "wait 5" > /dev/null
+	echo "  turning-line-shape-${w}x$h-gui$s: $(val 1 modewrap) | box $(val 1 modebox) | action bar $(val 1 actionbar)" \
+		>> /out/checks.log
+	check "during a Line at $w by $h, GUI scale $s, the turning line ends 2 above the action bar's block count" eval \
+		'[[ $(val 1 modebox | cut -d" " -f2,4) == "$((h - 83 * s)) $((h - 74 * s))" ]] && [[ $(val 1 actionbar) != none ]]'
+	end=$((end == -57 ? -58 : -57))
+done
+drv 1 "window 854 480 2" "wait 20" > /dev/null
+aim 1 -58 -60 -42
+use_click 1
+check "the Line places with the second turn, facing west" eval \
+	'drv 1 "await block -58 -60 -42 minecraft:oak_stairs" > /dev/null && box_all 1 -63 -60 -42 -57 -60 -42 "facing=west," 5'
+# One shape of the west-facing stairs in each other mode, each in a box of its own, from 5 blocks above the grass south
+# of it.
+check "a Wall of turned stairs faces west" turned_shape WALL -80.5 -42.5 -83 -61 -50 -78 -54 -46 "facing=west," \
+	"-82 -60 -48" "-79 -60 -48"
+check "so does a Floor" turned_shape FLOOR -73.5 -42.5 -76 -61 -50 -72 -59 -46 "facing=west," "-75 -60 -47" "-73 -60 -49"
+check "a Cube" turned_shape CUBE -67.5 -42.5 -70 -61 -50 -66 -54 -46 "facing=west," "-69 -60 -47" "-67 -60 -49" \
+	"-67 -60 -49"
+check "a Diagonal Line" turned_shape DIAGONAL_LINE -61.5 -42.5 -64 -61 -50 -59 -54 -46 "facing=west," "-63 -60 -48" \
+	"-60 -60 -48" "-60 -60 -48"
+check "a Diagonal Wall" turned_shape DIAGONAL_WALL -54.5 -42.5 -57 -61 -50 -52 -54 -46 "facing=west," "-56 -60 -48" \
+	"-53 -60 -48" "-53 -60 -48"
+check "a Slope Floor" turned_shape SLOPE_FLOOR -80.5 -50.5 -83 -61 -58 -79 -54 -54 "facing=west," "-82 -60 -55" \
+	"-80 -60 -57" "-80 -60 -57"
+# Circle, Cylinder and Sphere start at a corner by default (Effortless Building's circleStart), so their two clicks
+# are opposite corners.
+check "a Circle" turned_shape CIRCLE -73.5 -50.5 -77 -61 -59 -71 -59 -53 "facing=west," "-76 -60 -54" "-72 -60 -58"
+check "a Cylinder" turned_shape CYLINDER -65.5 -50.5 -69 -61 -59 -63 -54 -53 "facing=west," "-68 -60 -54" "-64 -60 -58" \
+	"-64 -60 -58"
+check "and a Sphere" turned_shape SPHERE -56.5 -50.5 -60 -63 -59 -54 -54 -53 "facing=west," "-59 -60 -54" "-55 -60 -58" \
+	"-55 -60 -58"
+# With Effortless Building's mirror across x -52, a Line from -58 to -55 at z -38 has its mirror image from -50 to -47,
+# whose stairs face east, in the preview and once placed.
+drv 1 "ebmode LINE" "cmd tp @s -52.5 -58 -34.5 180 30" "wait 20" "ebmirror -52" "wait 5" > /dev/null
+aim 1 -58 -60 -38
+use_click 1
+aim 1 -55 -60 -38
+check "with the mirror on, the preview draws the Line's stairs facing west and its mirror image's facing east" eval \
+	'drv 1 "wait 10" > /dev/null && preview_faces -60 -38 -58 -55 "facing=west,half=bottom" &&
+	preview_faces -60 -38 -50 -47 "facing=east,half=bottom"'
+use_click 1
+check "and placed, they face so" eval 'drv 1 "await block -47 -60 -38 minecraft:oak_stairs" > /dev/null &&
+	box_all 1 -58 -60 -38 -55 -60 -38 "facing=west," 4 && box_all 1 -50 -60 -38 -47 -60 -38 "facing=east," 4'
+drv 1 "ebarray 0" > /dev/null
+# With the mix of oak and spruce stairs, a Wall's stairs all take the turn.
+drv 1 "setmix minecraft:oak_stairs:50,minecraft:spruce_stairs:50" > /dev/null
+check "with the mix of oak and spruce stairs, a Wall's stairs all face west" turned_shape WALL -46.5 -42.5 \
+	-49 -61 -50 -44 -54 -46 "facing=west," "-48 -60 -48" "-45 -60 -48"
+check "of both kinds" eval '(($(val 1 "boxstates -49 -61 -50 -44 -54 -46 spruce_stairs[" | cut -d" " -f2) > 0)) &&
+	(($(val 1 "boxstates -49 -61 -50 -44 -54 -46 oak_stairs[" | cut -d" " -f2) > 0))'
+drv 1 "setmix" > /dev/null
+# In Disable, Left Ctrl with the wheel changes the hotbar slot, to the second stairs, which keep the turn; back in Line,
+# they keep it. Switching to stone and back to the stairs drops it.
+drv 1 "ebmode DISABLED" "cmd tp @s -58.5 -58 -34.5 180 30" "wait 20" > /dev/null
+hold_ctrl
+xdo 1 click 5
+check "in Disable, Left Ctrl with the wheel changes the hotbar slot" eval \
+	'drv 1 "wait 5" > /dev/null && [[ $(val 1 slot) == "5 minecraft:oak_stairs" ]]'
+check "and no turning line shows there" eval '[[ $(val 1 modehud) == hidden ]]'
+let_go_ctrl
+drv 1 "ebmode LINE" "wait 5" > /dev/null
+check "back in Line, the stairs keep the turn" turn_is "facing=west,half=bottom"
+press 1 7
+press 1 6
+check "switching to stone and back to the stairs drops it" turn_is none
+aim 1 -54 -60 -36
+# The turning line, in Line, word for word.
+check "in Line with stairs in hand, the turning line says to hold Left Control to turn or flip" eval \
+	'[[ $(val 1 modehud) == "Hold Left Control to turn or flip" ]]'
+hold_ctrl
+check "with Left Ctrl held, to scroll to turn and middle-click to flip" eval \
+	'[[ $(val 1 modehud) == "Scroll to turn, Middle-click to flip" ]]'
+xdo 1 click 4
+check "turned, it starts with Turned" eval 'drv 1 "wait 5" > /dev/null &&
+	[[ $(val 1 modehud) == "Turned: Scroll to turn, Middle-click to flip" ]]'
+let_go_ctrl
+check "and so it does without Left Ctrl" eval '[[ $(val 1 modehud) == "Turned: Hold Left Control to turn or flip" ]]'
+line_shot turning-line-1920x1080-gui4
+line_shot turning-line-854x480-gui2 854 480 2
+press 1 8
+check "for a chest, which turns but doesn't flip, it names only the turn" eval \
+	'[[ $(val 1 modehud) == "Hold Left Control to turn" ]]'
+hold_ctrl
+check "with Left Ctrl held too" eval '[[ $(val 1 modehud) == "Scroll to turn" ]]'
+let_go_ctrl
+press 1 9
+check "for an oak slab, which flips but doesn't turn, only the flip" eval \
+	'[[ $(val 1 modehud) == "Hold Left Control to flip" ]]'
+hold_ctrl
+check "with Left Ctrl held too" eval '[[ $(val 1 modehud) == "Middle-click to flip" ]]'
+xdo 1 click 2
+check "the middle click with Left Ctrl held flips the slab to its top half" turn_is "type=top"
+let_go_ctrl
+check "a Floor of the flipped slabs has every slab's top half" turned_shape FLOOR -46.5 -50.5 -49 -61 -58 -45 -59 -54 \
+	"oak_slab[type=top," "-48 -60 -55" "-46 -60 -57"
+drv 1 "ebmode LINE" "cmd tp @s -58.5 -58 -34.5 180 30" "wait 20" > /dev/null
+aim 1 -54 -60 -36
+press 1 7
+check "no turning line shows for stone" eval '[[ $(val 1 modehud) == hidden ]]'
+drv 1 "cmd item replace entity @s hotbar.6 with minecraft:stick" "wait 5" > /dev/null
+check "nor with a stick in hand" eval '[[ $(val 1 modehud) == hidden ]]'
+drv 1 "cmd item replace entity @s hotbar.6 with minecraft:stone" > /dev/null
+press 1 5
+paste_button
+check "with the copy at the aim, the copy's line shows in its place" eval \
+	'[[ $(val 1 mousemode) == COPY_AT_AIM ]] && [[ $(val 1 modehud) == "Left-click to paste, "* ]]'
+drv 1 "ebmode LINE" "wait 5" > /dev/null
+check "choosing Line puts the copy away, and the turning line shows again" eval '[[ $(val 1 mousemode) == none ]] &&
+	[[ $(val 1 modehud) == "Hold Left Control to turn or flip" ]]'
+drv 1 "bindkey key.sprint key.keyboard.right.control" "wait 2" > /dev/null
+check "with the sprint key on Right Control, the turning line names Right Control" eval \
+	'[[ $(val 1 modehud) == "Hold Right Control to turn or flip" ]]'
+drv 1 "bindkey key.sprint key.keyboard.left.control" "wait 2" > /dev/null
+press 1 F1
+check "F1 hides the turning line" eval '[[ $(val 1 modehud) == hidden ]]'
+press 1 F1
+check "and F1 again shows it" eval '[[ $(val 1 modehud) == "Hold Left Control to turn or flip" ]]'
+# During a Line drawn with the break click, from the first Line's west end, the turning controls aren't active: no
+# turning line shows, and Left Ctrl with the wheel changes the hotbar slot; a right click cancels the shape.
+drv 1 "lookat -61.5 -59.5 -39.5" "wait 5" > /dev/null
+attack_click 1
+check "during a Line drawn with the break click, no turning line shows" eval \
+	'drv 1 "wait 5" > /dev/null && [[ $(val 1 modehud) == hidden ]]'
+hold_ctrl
+xdo 1 click 4
+check "and Left Ctrl with the wheel changes the hotbar slot" eval \
+	'drv 1 "wait 5" > /dev/null && [[ $(val 1 slot) == "3 "* ]]'
+let_go_ctrl
+press 1 5
+use_click 1
+check "a right click cancels the shape, erasing nothing, and the turning line shows again" eval \
+	'drv 1 "wait 10" > /dev/null && [[ $(val 1 "layer -62 -60 -40") == minecraft:oak_stairs ]] &&
+	[[ $(val 1 modehud) == "Hold Left Control to turn or flip" ]]'
+# In Disable, the middle click with Left Ctrl held picks the aimed block, here the grass below Planner1, within the
+# game's own reach, since Effortless Building's longer reach is left out in Disable.
+drv 1 "ebmode DISABLED" "wait 5" > /dev/null
+aim 1 -58 -60 -36
+hold_ctrl
+xdo 1 click 2
+check "in Disable, the middle click with Left Ctrl held picks the aimed block" eval 'drv 1 "wait 20" > /dev/null &&
+	[[ $(val 1 slot) == *" minecraft:grass_block" ]]'
+let_go_ctrl
+drv 1 "ebmode SINGLE" "edit -85 -63 -60 -40 -50 -36 minecraft:air" > /dev/null
+check "erasing the shapes reaches both games" eval 'drv 2 "await block -58 -60 -40 minecraft:air" \
+	"await block -47 -60 -38 minecraft:air" > /dev/null && drv 1 "await block -82 -60 -48 minecraft:air" > /dev/null'
+drv 1 "cmd item replace entity @s hotbar.4 with minecraft:air" "cmd item replace entity @s hotbar.5 with minecraft:air" \
+	"cmd item replace entity @s hotbar.6 with minecraft:air" "cmd item replace entity @s hotbar.7 with minecraft:air" \
+	"cmd item replace entity @s hotbar.8 with minecraft:air" > /dev/null
+press 1 $((first_slot + 1))
+drv 1 "cmd item replace entity @s weapon.mainhand with $main_hand" "cmd tp @s 8.5 -56 9.5 0 30" \
+	"cmd tp Planner2 101.5 0 26.5 0 30" "wait 40" > /dev/null
+
 # The list under the crosshair for a box of 144 by 3 by 144 over a real floor of 40 kinds of block, at 854 by 480,
 # GUI scale 2: strips 3 wide from the box's west side, the first 144 long and each next one 1 shorter, so the kinds
 # are in strip order, most numerous first. The box is as wide as the chunks the game loads around the player on the
