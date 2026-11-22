@@ -397,6 +397,11 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
     box (Q5 A). Each marked ghost block has a red outline and see-through red sides, with their count and kinds under
     the crosshair (Q6 A); together they show as one red shape, outlined at its outer edges (1060 Q1 A). The mode
     stays on after an erase (Q7 A).
+  - **Controls lines (1155):** every controls line shows each control as "key: action", as Geo wrote the Delete
+    box's line: "Delete: [Left-click: set the first corner][R: Delete mode][Right-click: cancel]". Geo's comment: "I
+    want all control hints to be formatted like this. If possible, instead of brackets separating them, they should be
+    different adjacent text rectangles across the bottom above the hotbar, with a gap between each one." Geo approved
+    the eight keys' new names and "Too many blocks" as proposed.
 - The shared layer replaces the decisions above that concern separate plans: named plans that move and turn as a whole
   (411 Q1), plan growth (411 Q2), who deletes a plan (411 Q3, 420 Q9), starting a plan with N (420 Q1, 469 Q1), hiding
   a plan with Litematica or Syncmatica (420 Q2, 469 Q2), the paste's target plan (485 Q3), Litematica's Edit Schematic
