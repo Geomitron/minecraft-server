@@ -6,11 +6,14 @@ import dev.buildingplanner.ClientConfig;
 import dev.buildingplanner.input.BlockTurn;
 import dev.buildingplanner.input.CopyColour;
 import dev.buildingplanner.input.DeleteMode;
+import dev.buildingplanner.input.DisableTurn;
 import dev.buildingplanner.input.MouseMode;
+import dev.buildingplanner.input.PlaceTurn;
 import dev.buildingplanner.input.SingleRule;
 import dev.buildingplanner.layer.Layer;
 import dev.buildingplanner.look.ControlsLine;
 import dev.buildingplanner.look.GhostsShown;
+import dev.buildingplanner.server.PlaceTurns;
 import dev.buildingplanner.sync.EditKind;
 import dev.buildingplanner.sync.Payloads;
 import dev.buildingplanner.sync.PlayerMessage;
@@ -21,6 +24,7 @@ import it.unimi.dsi.fastutil.longs.LongSet;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Predicate;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientChunkEvents;
@@ -39,6 +43,7 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
@@ -65,7 +70,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	/** The payloads a session sends; a server that can't receive them all doesn't run Building Planner. */
 	private static final List<CustomPacketPayload.Type<?>> SERVERBOUND = List.of(Payloads.Watch.TYPE,
 		Payloads.Unwatch.TYPE, Payloads.Edit.TYPE, Payloads.Undo.TYPE, Payloads.Redo.TYPE, Payloads.SaveList.TYPE,
-		Payloads.DeleteList.TYPE, Payloads.OpenList.TYPE, Payloads.CurrentList.TYPE);
+		Payloads.DeleteList.TYPE, Payloads.OpenList.TYPE, Payloads.CurrentList.TYPE, Payloads.PlaceTurn.TYPE);
 
 	/**
 	 * Null while not connected to a server with Building Planner: on any other server, Building Planner is off, so
@@ -269,6 +274,8 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 			session.close();
 			session = null;
 		}
+		// A new connection's server has no turn for this player, and without a session M6 sends none.
+		PlaceTurns.sentLocally(BlockTurn.Held.NONE);
 	}
 
 	/** The session, or null while Building Planner is off. */
@@ -474,13 +481,50 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 
 	/**
 	 * Whether the turning controls are active (Left Ctrl with the wheel and the middle click, see "One ghost block":
-	 * "Turning and flipping"), and hooks E1 and E28 give the blocks placed the turn ({@link SingleRule#turning}): a
-	 * session, any of Effortless Building's modes but Disable, no mouse mode, an item that places a block in the main
-	 * hand, and no shape drawn with the break click under way.
+	 * "Turning and flipping"): in the modes whose shapes take the turn ({@link #shapesTakeTurn}), or in Disable
+	 * ({@link #disableTurning}).
 	 */
 	static boolean turningActive() {
+		return shapesTakeTurn() || disableTurning();
+	}
+
+	/**
+	 * Whether hooks E1 and E28 give the blocks placed the turn ({@link SingleRule#turning}): a session, any of Effortless
+	 * Building's modes but Disable, no mouse mode, an item that places a block in the main hand, and no shape drawn with
+	 * the break click under way.
+	 */
+	static boolean shapesTakeTurn() {
 		return effortless && SingleRule.turning(session != null, EffortlessShapes.disableMode(), mouseModeOn(),
 			ClickRule.holdsPlaceable(), EffortlessShapes.breakShapeUnderWay());
+	}
+
+	/**
+	 * Whether Disable's turning controls are active ({@link DisableTurn#active}): a session, Disable, no mouse mode, and
+	 * a block in hand that turns or flips; the turn then goes to the real block a right click places (hooks M6 and S2).
+	 */
+	private static boolean disableTurning() {
+		return effortless && Minecraft.getInstance().player != null && DisableTurn.active(session != null,
+			EffortlessShapes.disableMode(), mouseModeOn(), heldCan(BlockTurn::turns) || heldCan(BlockTurn::flips));
+	}
+
+	/**
+	 * Hook M6, before a right click on a block: sends {@code place_turn} when the turn the click takes
+	 * ({@link DisableTurn#clickTakes}: the turn of the block in hand while the sprint key is held in Disable, and
+	 * otherwise none) differs from the one sent last, and keeps it as the one this computer's guess of the block takes.
+	 */
+	public static void beforeUseItemOn() {
+		Minecraft mc = Minecraft.getInstance();
+		if (session == null || mc.player == null) {
+			return;
+		}
+		Item inHand = mc.player.getMainHandItem().getItem();
+		BlockTurn.Turn turn = HeldTurn.of(inHand);
+		BlockTurn.Held now = DisableTurn.clickTakes(disableTurning(), mc.options.keySprint.isDown(),
+			turn == null ? BlockTurn.Held.NONE : new BlockTurn.Held(inHand, turn));
+		if (DisableTurn.sends(PlaceTurns.local(), now)) {
+			ClientPlayNetworking.send(new Payloads.PlaceTurn(Optional.ofNullable(now.item()), PlaceTurn.properties(now)));
+			PlaceTurns.sentLocally(now);
+		}
 	}
 
 	/**
@@ -491,22 +535,29 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		return turningActive() && Minecraft.getInstance().options.keySprint.isDown() && heldCan(can);
 	}
 
-	/** Whether the block in hand, or a block of the mix while it applies, turns or flips as asked. */
+	/**
+	 * Whether the block in hand, or a block of the mix while it applies, turns or flips as asked; in Disable, the block
+	 * Minecraft's right click would place counts too, so a torch aimed at a wall turns as the wall torch it places.
+	 */
 	private static boolean heldCan(Predicate<Block> can) {
 		if (!(Minecraft.getInstance().player.getMainHandItem().getItem() instanceof BlockItem item)) {
 			return false;
 		}
-		return can.test(item.getBlock())
-			|| EffortlessShapes.mixApplies() && MIX.parts().stream().anyMatch(part -> can.test(part.block()));
+		if (can.test(item.getBlock())
+			|| EffortlessShapes.mixApplies() && MIX.parts().stream().anyMatch(part -> can.test(part.block()))) {
+			return true;
+		}
+		Block placed = EffortlessShapes.disableMode() ? EffortlessShapes.placedInDisable() : null;
+		return placed != null && placed != item.getBlock() && can.test(placed);
 	}
 
 	/**
 	 * The turning line ({@link ControlsLine#turning}): in Effortless Building's modes other than Single and Disable,
 	 * while the turning controls are active and the block in hand turns or flips, with the sprint key as the player has
-	 * it bound; or null. Single's own line (step 20) names the same controls.
+	 * it bound; or null. Single's own line (step 20) and Disable's (step 19) name the same controls.
 	 */
 	private static ControlsLine.Line turningLine() {
-		if (!turningActive() || EffortlessShapes.singleMode()) {
+		if (!shapesTakeTurn() || EffortlessShapes.singleMode()) {
 			return null;
 		}
 		Minecraft mc = Minecraft.getInstance();

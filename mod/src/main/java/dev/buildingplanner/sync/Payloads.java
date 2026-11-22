@@ -5,8 +5,10 @@ import dev.buildingplanner.layer.PackedSection;
 import java.util.ArrayList;
 import io.netty.buffer.Unpooled;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
+import java.util.TreeMap;
 import java.util.UUID;
 import java.util.function.Function;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
@@ -22,7 +24,8 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * Building Planner's network payloads for the shared layer and the material lists, namespace {@code buildingplanner},
+ * Building Planner's network payloads for the shared layer, the material lists and the turn of real blocks placed in
+ * Disable, namespace {@code buildingplanner},
  * protocol version 5. Dimensions travel as their ids; block states as ids in the block-state registry and items as ids
  * in the item registry, since both sides run the same vanilla blocks and items.
  */
@@ -218,6 +221,48 @@ public final class Payloads {
 		}
 	}
 
+	/**
+	 * The turn of the real block a right click places in Disable (see "Turning real blocks in Disable"): the item it's
+	 * for and its orientation properties' values by name, or no item to clear it.
+	 */
+	public record PlaceTurn(Optional<Item> item, Map<String, String> properties) implements CustomPacketPayload {
+		public static final Type<PlaceTurn> TYPE = payloadType("place_turn");
+		/** More properties than a turn has ({@code BlockTurn}'s orientation properties) end the connection. */
+		private static final int MAX_PROPERTIES = 16;
+		static final StreamCodec<FriendlyByteBuf, PlaceTurn> CODEC = StreamCodec.of(
+			(buf, p) -> {
+				buf.writeBoolean(p.item.isPresent());
+				p.item.ifPresent(item -> buf.writeVarInt(BuiltInRegistries.ITEM.getId(item)));
+				buf.writeVarInt(p.properties.size());
+				p.properties.forEach((name, value) -> {
+					buf.writeUtf(name, dev.buildingplanner.input.PlaceTurn.MAX_TEXT);
+					buf.writeUtf(value, dev.buildingplanner.input.PlaceTurn.MAX_TEXT);
+				});
+			},
+			buf -> {
+				Optional<Item> item = buf.readBoolean() ? Optional.of(readItem(buf)) : Optional.empty();
+				int count = buf.readVarInt();
+				if (count < 0 || count > MAX_PROPERTIES) {
+					throw new IllegalArgumentException("A turn of " + count + " properties");
+				}
+				Map<String, String> properties = new TreeMap<>();
+				for (int i = 0; i < count; i++) {
+					properties.put(buf.readUtf(dev.buildingplanner.input.PlaceTurn.MAX_TEXT),
+						buf.readUtf(dev.buildingplanner.input.PlaceTurn.MAX_TEXT));
+				}
+				return new PlaceTurn(item, properties);
+			});
+
+		public PlaceTurn {
+			properties = Map.copyOf(properties);
+		}
+
+		@Override
+		public Type<PlaceTurn> type() {
+			return TYPE;
+		}
+	}
+
 	// Server to client.
 
 	/** Sent at join: the server's protocol version and the block cap for an edit. */
@@ -401,6 +446,7 @@ public final class Payloads {
 		serverbound.register(DeleteList.TYPE, DeleteList.CODEC);
 		serverbound.register(OpenList.TYPE, OpenList.CODEC);
 		serverbound.registerLarge(CurrentList.TYPE, CurrentList.CODEC, MAX_LIST_MESSAGE_BYTES);
+		serverbound.register(PlaceTurn.TYPE, PlaceTurn.CODEC);
 		PayloadTypeRegistry<?> clientbound = PayloadTypeRegistry.clientboundPlay();
 		clientbound.register(Hello.TYPE, Hello.CODEC);
 		clientbound.registerLarge(Columns.TYPE, Columns.CODEC, MAX_CLIENTBOUND_BYTES);

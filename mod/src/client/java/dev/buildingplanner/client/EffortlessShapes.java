@@ -8,6 +8,7 @@ import dev.buildingplanner.input.SingleRule;
 import dev.buildingplanner.layer.GhostErase;
 import dev.buildingplanner.layer.OtherHalf;
 import dev.buildingplanner.mixin.effortless.BuildPipelineClientAccessor;
+import dev.buildingplanner.mixin.minecraft.BlockItemInvoker;
 import dev.buildingplanner.sync.EditKind;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -25,6 +26,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
@@ -78,7 +80,7 @@ public final class EffortlessShapes {
 		double yFraction = hit.y - Math.floor(hit.y);
 		ItemStack held = player.getMainHandItem();
 		boolean mix = mixApplies();
-		boolean turning = BuildingPlannerClient.turningActive();
+		boolean turning = BuildingPlannerClient.shapesTakeTurn();
 		Map<BlockPos, BlockState> states = new LinkedHashMap<>();
 		for (Map.Entry<BlockPos, BlockEntry> e : blocks.validEntries()) {
 			BlockPos pos = e.getKey();
@@ -283,14 +285,14 @@ public final class EffortlessShapes {
 	/**
 	 * The preview's state (hook E28): for the one ghost block locked or in a fixed row, the held block's placement rules
 	 * with the hit it was locked or its row fixed with and the player's facing now, and otherwise the state Effortless
-	 * Building found; then, while the turning controls are active, the turn of the block in hand, so the preview shows
-	 * the blocks a right click places.
+	 * Building found; then, while the shapes take the turn (every mode but Disable), the turn of the block in hand, so
+	 * the preview shows the blocks a right click places.
 	 */
 	public static BlockState previewState(BlockItem item, ItemStack stack, BlockState aimed) {
 		SingleBlock block = BuildingPlannerClient.shownSingle();
 		BlockState state = block == null ? aimed : placementState(item, stack, block.hit());
 		Player player = Minecraft.getInstance().player;
-		return BuildingPlannerClient.turningActive() && player != null
+		return BuildingPlannerClient.shapesTakeTurn() && player != null
 			? HeldTurn.apply(state, player.getMainHandItem().getItem()) : state;
 	}
 
@@ -306,13 +308,17 @@ public final class EffortlessShapes {
 
 	/**
 	 * The block in hand as Minecraft would place it now, before any turn, as the preview shows it: with the hit the
-	 * one ghost block was locked or its row fixed with, the shape's first click, or the aim; aimed at nothing, the
-	 * block's default state. Null without a block in hand.
+	 * one ghost block was locked or its row fixed with, the shape's first click, or the aim; in Disable, as Minecraft's
+	 * own right click would place it ({@link #placedByMinecraft}); aimed at nothing, the block's default state. Null
+	 * without a block in hand.
 	 */
 	private static BlockState unturnedNow() {
 		Minecraft mc = Minecraft.getInstance();
 		if (mc.player == null || !(mc.player.getMainHandItem().getItem() instanceof BlockItem item)) {
 			return null;
+		}
+		if (disableMode()) {
+			return placedByMinecraft(item, mc.player.getMainHandItem());
 		}
 		SingleBlock block = BuildingPlannerClient.shownSingle();
 		BlockHitResult hit = block != null ? block.hit() : BuildPipelineClient.getFirstClickHit();
@@ -324,6 +330,29 @@ public final class EffortlessShapes {
 			hit = aimed.hit();
 		}
 		return placementState(item, mc.player.getMainHandItem(), hit);
+	}
+
+	/**
+	 * The block in hand as Minecraft's own right click would place it now, before any turn: at Minecraft's aim
+	 * ({@code Minecraft.hitResult}, at its reach, from Freecam's camera while it's on) and by the player's facing, through
+	 * the item's own placing ({@code updatePlacementContext}, then {@code getPlacementState}), so a torch aimed at a wall
+	 * is a wall torch. Aimed at nothing, or where it can't go, the block's default state.
+	 */
+	/** In Disable, the block Minecraft's own right click would place now ({@link #placedByMinecraft}), or null. */
+	static Block placedInDisable() {
+		BlockState state = unturnedNow();
+		return state == null ? null : state.getBlock();
+	}
+
+	private static BlockState placedByMinecraft(BlockItem item, ItemStack stack) {
+		Minecraft mc = Minecraft.getInstance();
+		BlockState state = null;
+		if (mc.hitResult instanceof BlockHitResult hit && hit.getType() == HitResult.Type.BLOCK) {
+			BlockPlaceContext context = item.updatePlacementContext(
+				new BlockPlaceContext(mc.player, InteractionHand.MAIN_HAND, stack, hit));
+			state = context == null ? null : ((BlockItemInvoker) item).buildingplanner$placementState(context);
+		}
+		return state != null ? state : item.getBlock().defaultBlockState();
 	}
 
 	/**

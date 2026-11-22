@@ -1,6 +1,8 @@
 package dev.buildingplanner.server;
 
 import dev.buildingplanner.BuildingPlanner;
+import dev.buildingplanner.input.BlockTurn;
+import dev.buildingplanner.input.PlaceTurn;
 import dev.buildingplanner.layer.Layer;
 import dev.buildingplanner.sync.Payloads;
 import dev.buildingplanner.sync.SyncLimits;
@@ -34,9 +36,10 @@ import net.minecraft.world.level.chunk.LevelChunkSection;
 import net.minecraft.world.level.storage.LevelResource;
 
 /**
- * Connects the server's shared layer ({@link LayerSync}, protocol 5) and each player's material lists
- * ({@link MaterialLists}) to the game: one of each per running server, fed by the payload handlers (which Fabric runs on
- * the server thread) and sending only to players who can receive Building Planner's payloads. The layer lives in
+ * Connects the server's shared layer ({@link LayerSync}, protocol 5), each player's material lists
+ * ({@link MaterialLists}) and each player's turn for placing in Disable ({@link PlaceTurns}) to the game: one of each
+ * per running server, fed by the payload handlers (which Fabric runs on the server thread) and sending only to players
+ * who can receive Building Planner's payloads. The layer lives in
  * {@code <world>/building-planner/layer/}; before that folder exists, the server builds it from the plans Syncmatica
  * shared ({@link PlanImport}). The lists live in {@code <world>/building-planner/material-lists/}. Runs only on a
  * dedicated server.
@@ -46,6 +49,7 @@ public final class ServerSync {
 	private static LayerStore layerStore;
 	private static MaterialLists lists;
 	private static ListFiles listFiles;
+	private static PlaceTurns placeTurns;
 
 	private ServerSync() {
 	}
@@ -82,6 +86,8 @@ public final class ServerSync {
 			lists = new MaterialLists(listFiles, (player, payload) -> sendList(server, player, payload),
 				dimension -> server.getLevel(ResourceKey.create(Registries.DIMENSION, dimension)) != null,
 				System.currentTimeMillis());
+			placeTurns = new PlaceTurns();
+			PlaceTurns.serve(placeTurns);
 		});
 		ServerTickEvents.START_SERVER_TICK.register(server -> {
 			if (layer != null) {
@@ -119,6 +125,8 @@ public final class ServerSync {
 			layerStore = null;
 			lists = null;
 			listFiles = null;
+			placeTurns = null;
+			PlaceTurns.serve(null);
 		});
 
 		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
@@ -139,6 +147,9 @@ public final class ServerSync {
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
 			if (layer != null) {
 				layer.disconnect(handler.getPlayer().getUUID());
+			}
+			if (placeTurns != null) {
+				placeTurns.left(handler.getPlayer().getUUID());
 			}
 		});
 		ServerEntityLevelChangeEvents.AFTER_PLAYER_CHANGE_LEVEL.register((player, from, to) -> {
@@ -190,6 +201,15 @@ public final class ServerSync {
 		ServerPlayNetworking.registerGlobalReceiver(Payloads.CurrentList.TYPE, (payload, context) -> {
 			if (lists != null) {
 				lists.current(context.player().getUUID(), playerName(context.player()), payload, System.currentTimeMillis());
+			}
+		});
+		ServerPlayNetworking.registerGlobalReceiver(Payloads.PlaceTurn.TYPE, (payload, context) -> {
+			if (placeTurns != null) {
+				BlockTurn.Held turn = PlaceTurn.accepted(payload.item().orElse(null), payload.properties());
+				placeTurns.set(context.player().getUUID(), turn);
+				// At debug level, so the in-game checks can count the turns that arrive (the dev server's debug.log).
+				BuildingPlanner.LOGGER.debug("Building Planner took {}'s turn for placing: {}", playerName(context.player()),
+					turn.turn() == null ? "none" : turn.turn().values());
 			}
 		});
 		BuildingPlanner.LOGGER.info("Building Planner live sync: {} blocks an edit", limits.maxEditBlocks());

@@ -4,7 +4,9 @@
 	"package": "dev.buildingplanner.mixin",
 	"plugin": "dev.buildingplanner.BuildingPlannerMixinPlugin",
 	"compatibilityLevel": "JAVA_25",
-	"mixins": [],
+	"mixins": [
+		"minecraft.BlockItemMixin"
+	],
 	"server": [
 		"minecraft.LevelChunkMixin"
 	],
@@ -31,9 +33,11 @@
 		"litematica.SchematicUtilsMixin",
 		"litematica.WidgetListSchematicPlacementsMixin",
 		"litematica.WorldUtilsMixin",
+		"minecraft.BlockItemInvoker",
 		"minecraft.MinecraftMouseModeMixin",
 		"minecraft.MinecraftUseItemMixin",
-		"minecraft.MouseHandlerMixin"
+		"minecraft.MouseHandlerMixin",
+		"minecraft.MultiPlayerGameModeMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
