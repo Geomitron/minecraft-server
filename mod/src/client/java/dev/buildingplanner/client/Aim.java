@@ -2,6 +2,7 @@ package dev.buildingplanner.client;
 
 import dev.buildingplanner.BuildingPlanner;
 import dev.buildingplanner.input.AimSource;
+import dev.buildingplanner.input.DisablePreview;
 import dev.buildingplanner.look.MenuKey;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
@@ -20,7 +21,11 @@ import net.minecraft.world.entity.player.Player;
 public final class Aim {
 	/** Freecam's {@code Freecam.isPlayerControlEnabled()}, or null without Freecam. */
 	private static final MethodHandle PLAYER_CONTROL = playerControlHandle();
+	/** Freecam's {@code Freecam.isEnabled()} and its config's {@code shouldPreventInteractions()}, or null without them. */
+	private static final MethodHandle FREECAM_ON = freecamHandle("net.xolt.freecam.Freecam", "isEnabled");
+	private static final MethodHandle PREVENTS_INTERACTIONS = preventsInteractionsHandle();
 	private static boolean warned;
+	private static boolean warnedInteraction;
 
 	private Aim() {
 	}
@@ -83,6 +88,56 @@ public final class Aim {
 				"isPlayerControlEnabled", MethodType.methodType(boolean.class));
 		} catch (ReflectiveOperationException | LinkageError e) {
 			BuildingPlanner.LOGGER.warn("Freecam's Player control wasn't found, so the aim follows the camera", e);
+			return null;
+		}
+	}
+
+	/**
+	 * Whether Freecam keeps a right click from the world now ({@link DisablePreview#interactionBlocked}): its camera
+	 * on, "Player control" off and "Allow interaction" off. Without Freecam, or if it can't be read, false.
+	 */
+	public static boolean interactionBlocked() {
+		if (FREECAM_ON == null || PREVENTS_INTERACTIONS == null) {
+			return false;
+		}
+		try {
+			return DisablePreview.interactionBlocked((boolean) FREECAM_ON.invokeExact(), playerControl(),
+				!(boolean) PREVENTS_INTERACTIONS.invokeExact());
+		} catch (Throwable t) {
+			if (!warnedInteraction) {
+				warnedInteraction = true;
+				BuildingPlanner.LOGGER.warn("Couldn't read Freecam's Allow interaction, so Disable's preview shows", t);
+			}
+			return false;
+		}
+	}
+
+	private static MethodHandle freecamHandle(String owner, String name) {
+		if (!FabricLoader.getInstance().isModLoaded(MenuKey.FREECAM_MOD)) {
+			return null;
+		}
+		try {
+			return MethodHandles.publicLookup().findStatic(Class.forName(owner), name,
+				MethodType.methodType(boolean.class));
+		} catch (ReflectiveOperationException | LinkageError e) {
+			BuildingPlanner.LOGGER.warn("Freecam's {} wasn't found, so Disable's preview ignores it", name, e);
+			return null;
+		}
+	}
+
+	/** {@code ModConfig.get().shouldPreventInteractions()}, as a handle taking nothing. */
+	private static MethodHandle preventsInteractionsHandle() {
+		if (!FabricLoader.getInstance().isModLoaded(MenuKey.FREECAM_MOD)) {
+			return null;
+		}
+		try {
+			Class<?> config = Class.forName("net.xolt.freecam.config.ModConfig");
+			MethodHandle get = MethodHandles.publicLookup().unreflect(config.getMethod("get"));
+			MethodHandle prevents = MethodHandles.publicLookup().unreflect(config.getMethod("shouldPreventInteractions"))
+				.asType(MethodType.methodType(boolean.class, get.type().returnType()));
+			return MethodHandles.filterReturnValue(get, prevents);
+		} catch (ReflectiveOperationException | LinkageError e) {
+			BuildingPlanner.LOGGER.warn("Freecam's Allow interaction wasn't found, so Disable's preview ignores it", e);
 			return null;
 		}
 	}

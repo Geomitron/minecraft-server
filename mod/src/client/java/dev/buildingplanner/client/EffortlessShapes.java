@@ -2,13 +2,16 @@ package dev.buildingplanner.client;
 
 import dev.buildingplanner.input.CopyMode;
 import dev.buildingplanner.input.CopyPlacement;
+import dev.buildingplanner.input.BlockTurn;
 import dev.buildingplanner.input.CopyRow;
+import dev.buildingplanner.input.DisablePreview;
 import dev.buildingplanner.input.MixRule;
 import dev.buildingplanner.input.SingleRule;
 import dev.buildingplanner.layer.GhostErase;
 import dev.buildingplanner.layer.OtherHalf;
 import dev.buildingplanner.mixin.effortless.BuildPipelineClientAccessor;
 import dev.buildingplanner.mixin.minecraft.BlockItemInvoker;
+import dev.buildingplanner.server.PlaceTurns;
 import dev.buildingplanner.sync.EditKind;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -286,9 +289,14 @@ public final class EffortlessShapes {
 	 * The preview's state (hook E28): for the one ghost block locked or in a fixed row, the held block's placement rules
 	 * with the hit it was locked or its row fixed with and the player's facing now, and otherwise the state Effortless
 	 * Building found; then, while the shapes take the turn (every mode but Disable), the turn of the block in hand, so
-	 * the preview shows the blocks a right click places.
+	 * the preview shows the blocks a right click places. In Disable, while its preview shows, the state the right click
+	 * would place ({@link #disableShown}).
 	 */
 	public static BlockState previewState(BlockItem item, ItemStack stack, BlockState aimed) {
+		if (disableMode()) {
+			DisableShown shown = disableShown();
+			return shown == null ? aimed : shown.state();
+		}
 		SingleBlock block = BuildingPlannerClient.shownSingle();
 		BlockState state = block == null ? aimed : placementState(item, stack, block.hit());
 		Player player = Minecraft.getInstance().player;
@@ -332,18 +340,95 @@ public final class EffortlessShapes {
 		return placementState(item, mc.player.getMainHandItem(), hit);
 	}
 
-	/**
-	 * The block in hand as Minecraft's own right click would place it now, before any turn: at Minecraft's aim
-	 * ({@code Minecraft.hitResult}, at its reach, from Freecam's camera while it's on) and by the player's facing, through
-	 * the item's own placing ({@code updatePlacementContext}, then {@code getPlacementState}), so a torch aimed at a wall
-	 * is a wall torch. Aimed at nothing, or where it can't go, the block's default state.
-	 */
 	/** In Disable, the block Minecraft's own right click would place now ({@link #placedByMinecraft}), or null. */
 	static Block placedInDisable() {
 		BlockState state = unturnedNow();
 		return state == null ? null : state.getBlock();
 	}
 
+	/**
+	 * In Disable, whether the block Minecraft's own right click would place now hangs on the block behind it
+	 * ({@link DisablePreview#hangs}), so Disable's line leaves out holding Left Control.
+	 */
+	static boolean placedHangs() {
+		BlockState state = unturnedNow();
+		return state != null && DisablePreview.hangs(state);
+	}
+
+	/**
+	 * Disable's preview (hooks E28, E29 and E30, see "Turning real blocks in Disable": "The preview"): while it shows
+	 * ({@link BuildingPlannerClient#disablePreviewOn}), the block a right click would place, from Minecraft's own aim
+	 * ({@code Minecraft.hitResult}, at its reach), where the item's own placing puts it
+	 * ({@code BlockPlaceContext.getClickedPos}, after {@code updatePlacementContext}), in the state hook S2 would give it
+	 * with the turn of the block in hand ({@link PlaceTurns#place}), and whether it would go in. Null while the preview
+	 * doesn't show, the aim isn't a block, the player is beyond the reach the server places within
+	 * ({@link DisablePreview#withinReach}, from the player, not Freecam's camera), or the block can't go there at all
+	 * ({@code BlockPlaceContext.canPlace}).
+	 */
+	static DisableShown disableShown() {
+		Minecraft mc = Minecraft.getInstance();
+		if (!BuildingPlannerClient.disablePreviewOn() || !(mc.hitResult instanceof BlockHitResult hit)
+			|| hit.getType() != HitResult.Type.BLOCK || !(mc.player.getMainHandItem().getItem() instanceof BlockItem item)
+			|| !DisablePreview.withinReach(mc.player.getEyePosition(), hit.getBlockPos(),
+				mc.player.blockInteractionRange())) {
+			return null;
+		}
+		BlockPlaceContext context = item.updatePlacementContext(
+			new BlockPlaceContext(mc.player, InteractionHand.MAIN_HAND, mc.player.getMainHandItem(), hit));
+		if (context == null || !context.canPlace()) {
+			return null;
+		}
+		BlockItemInvoker invoker = (BlockItemInvoker) item;
+		BlockTurn.Turn turn = HeldTurn.of(item);
+		BlockState placed = invoker.buildingplanner$placementState(context);
+		if (placed == null) {
+			// Minecraft's own right click places nothing here, so neither does the turned one.
+			BlockState block = item.getBlock().defaultBlockState();
+			return new DisableShown(context.getClickedPos(), turn == null ? block : BlockTurn.apply(block, turn), false);
+		}
+		PlaceTurns.Placed turned = PlaceTurns.place(context, placed,
+			turn == null ? BlockTurn.Held.NONE : new BlockTurn.Held(item, turn),
+			state -> invoker.buildingplanner$canPlace(context, state));
+		// BlockItem.place checks a state the turn leaves as it was too (a player standing in its way, say).
+		boolean goes = turned.stays() && invoker.buildingplanner$canPlace(context, turned.state());
+		return new DisableShown(context.getClickedPos(), turned.state(), goes);
+	}
+
+	/** Disable's preview: where the block goes, its state, and whether it goes in, or is drawn red. */
+	record DisableShown(BlockPos pos, BlockState state, boolean goes) {
+	}
+
+	/**
+	 * Hook E29: in Disable, while its preview shows, the preview draws the one block a right click would place
+	 * ({@link #disableShown}), and no copies of the mirror or array, since Disable places only the clicked block; or
+	 * nothing where it wouldn't place. A block that wouldn't go in is marked missing, which the preview draws red, as
+	 * Effortless Building draws a block the player lacks (hook E8 clears the held block's marks, so it's the only one).
+	 */
+	public static BlockSet disablePreview(BlockSet aimed) {
+		if (!BuildingPlannerClient.disablePreviewOn()) {
+			return aimed;
+		}
+		DisableShown shown = disableShown();
+		if (shown == null) {
+			return null;
+		}
+		BlockSet blocks = new BlockSet();
+		blocks.add(new BlockEntry(shown.pos()));
+		blocks.firstPos = shown.pos();
+		blocks.lastPos = shown.pos();
+		BuildPipelineClient.ITEM_USAGE.initialize();
+		if (!shown.goes()) {
+			BuildPipelineClient.ITEM_USAGE.missingPositions.add(shown.pos());
+		}
+		return blocks;
+	}
+
+	/**
+	 * The block in hand as Minecraft's own right click would place it now, before any turn: at Minecraft's aim
+	 * ({@code Minecraft.hitResult}, at its reach, from Freecam's camera while it's on) and by the player's facing, through
+	 * the item's own placing ({@code updatePlacementContext}, then {@code getPlacementState}), so a torch aimed at a wall
+	 * is a wall torch. Aimed at nothing, or where it can't go, the block's default state.
+	 */
 	private static BlockState placedByMinecraft(BlockItem item, ItemStack stack) {
 		Minecraft mc = Minecraft.getInstance();
 		BlockState state = null;
@@ -391,11 +476,13 @@ public final class EffortlessShapes {
 	/**
 	 * Hook E30: the preview skips a set of one block while no shape is under way, so Effortless Building's Single mode
 	 * draws nothing for the block at the aim; the locked block, which may be far from the aim, a row of one, and the
-	 * block following the aim, in Single and in Zoop and Vertical before their first click, are drawn. A set of copies, with the mirror or array on, is already more than
+	 * block following the aim, in Single and in Zoop and Vertical before their first click, are drawn, and so is
+	 * Disable's block while its preview shows. A set of copies, with the mirror or array on, is already more than
 	 * one block and is drawn once.
 	 */
 	public static int previewSize(int size) {
-		boolean drawn = BuildingPlannerClient.shownSingle() != null || size == 1 && BuildingPlannerClient.singleAtAim();
+		boolean drawn = BuildingPlannerClient.shownSingle() != null
+			|| size == 1 && (BuildingPlannerClient.singleAtAim() || BuildingPlannerClient.disablePreviewOn());
 		return size <= 1 && drawn ? 2 : size;
 	}
 

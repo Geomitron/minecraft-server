@@ -12,6 +12,7 @@ import dev.buildingplanner.input.CopyColour.Refusal;
 import dev.buildingplanner.input.CopyMode;
 import dev.buildingplanner.look.ControlsLine.AimState;
 import dev.buildingplanner.look.ControlsLine.CopyState;
+import dev.buildingplanner.look.ControlsLine.DisableState;
 import dev.buildingplanner.look.ControlsLine.Keys;
 import dev.buildingplanner.look.ControlsLine.Line;
 import dev.buildingplanner.look.ControlsLine.Look;
@@ -316,6 +317,56 @@ class ControlsLineTest {
 		assertNull(ControlsLine.turning(new TurnState(false, false, false, false), "Left Control"));
 		assertNull(ControlsLine.turning(new TurnState(false, false, true, true), "Left Control"));
 		assertNull(ControlsLine.turning(new TurnState(true, true, false, false), null));
+	}
+
+	@Test
+	void withoutTheSprintKeyDisablesLineIsTheTurningLineWithNoTurned() {
+		assertEquals("Hold Left Control to turn or flip", disable(new TurnState(true, true, false, true), false, true));
+		assertEquals("Hold Left Control to turn", disable(new TurnState(true, false, false, false), false, true));
+		assertEquals("Hold Left Control to flip", disable(new TurnState(false, true, false, false), false, true));
+		assertEquals("Hold Right Control to turn or flip", read(ControlsLine.disable(
+			new DisableState(new TurnState(true, true, false, false), false, true), "Right Control").text()));
+	}
+
+	@Test
+	void withTheSprintKeyHeldDisablesLinePlacesAndNamesTheWheelAndTheMiddleClick() {
+		assertEquals("Right-click to place, Scroll to turn, Middle-click to flip",
+			disable(new TurnState(true, true, true, false), false, true));
+		assertEquals("Right-click to place, Scroll to turn", disable(new TurnState(true, false, true, false), false, true));
+		assertEquals("Right-click to place, Middle-click to flip",
+			disable(new TurnState(false, true, true, false), false, true));
+		assertEquals("Turned: Right-click to place, Scroll to turn, Middle-click to flip",
+			disable(new TurnState(true, true, true, true), false, true));
+	}
+
+	@Test
+	void disablesLineSaysInRedWhereTheTurnedBlockCantBePlaced() {
+		assertEquals("Turned: Can't place here, Scroll to turn", disable(new TurnState(true, false, true, true), true, false));
+		Line line = ControlsLine.disable(new DisableState(new TurnState(true, true, true, true), false, false),
+			"Left Control");
+		List<String> warnings = new ArrayList<>();
+		collect(line.text(), Look.WARNING, warnings);
+		assertEquals(List.of("Can't place here"), warnings);
+		List<String> actions = new ArrayList<>();
+		collect(ControlsLine.disable(new DisableState(new TurnState(true, true, true, true), false, true),
+			"Left Control").text(), Look.ACTION, actions);
+		assertEquals(List.of("place", "turn", "flip"), actions);
+	}
+
+	@Test
+	void noDisableLineWithoutTheSprintKeyForABlockThatHangsOnTheBlockBehindIt() {
+		assertNull(ControlsLine.disable(new DisableState(new TurnState(true, false, false, false), true, true),
+			"Left Control"));
+		assertEquals("Right-click to place, Scroll to turn", disable(new TurnState(true, false, true, false), true, true));
+		assertNull(ControlsLine.disable(new DisableState(new TurnState(false, false, true, false), false, true),
+			"Left Control"));
+		assertNull(ControlsLine.disable(new DisableState(new TurnState(true, true, true, false), false, true), null));
+	}
+
+	private static String disable(TurnState turn, boolean hangs, boolean stays) {
+		Line line = ControlsLine.disable(new DisableState(turn, hangs, stays), "Left Control");
+		assertNull(line.size());
+		return read(line.text());
 	}
 
 	private static String turning(TurnState state, String sprint) {

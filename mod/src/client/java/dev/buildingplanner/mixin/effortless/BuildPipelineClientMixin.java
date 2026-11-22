@@ -37,7 +37,8 @@ import org.spongepowered.asm.mixin.injection.At;
  * items" tint and a break shape no list of real blocks (E8), shapes can start on ghost blocks (E9), and clicks without
  * a placeable item stay vanilla's and a mouse mode's go to it (E14), as do the one ghost block's while it's locked or
  * in Zoop or Vertical, whose preview draws it where it's locked, or its row (E27). A shape's first click and its
- * preview aim from Freecam's camera while it's on (E24).
+ * preview aim from Freecam's camera while it's on (E24). In Disable, the preview draws the real block a right click
+ * would place while Left Ctrl turns it (E29).
  */
 @Mixin(value = BuildPipelineClient.class, remap = false)
 abstract class BuildPipelineClientMixin {
@@ -108,6 +109,15 @@ abstract class BuildPipelineClientMixin {
 	@ModifyReturnValue(method = "getPreviewBlocks", at = @At("RETURN"))
 	private static BlockSet buildingplanner$shownPreview(BlockSet blocks) {
 		return BuildingPlannerClient.active() ? EffortlessShapes.previewBlocks(blocks) : blocks;
+	}
+
+	/**
+	 * Hook E29: in Disable, while Left Ctrl is held with a block that turns or flips, the preview draws the one block a
+	 * right click would place, red where the turned block can't stay, or nothing where it wouldn't place.
+	 */
+	@ModifyReturnValue(method = "getPreviewBlocks", at = @At("RETURN"))
+	private static BlockSet buildingplanner$disablePreview(BlockSet blocks) {
+		return BuildingPlannerClient.active() ? EffortlessShapes.disablePreview(blocks) : blocks;
 	}
 
 	/** Hook E8: ghost blocks don't use up items, so the preview shows none missing. */

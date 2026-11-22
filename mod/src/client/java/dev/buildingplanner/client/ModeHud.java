@@ -30,7 +30,9 @@ import net.minecraft.util.FormattedCharSequence;
  * show under the crosshair ({@link BoxList}, laid out by {@link BoxListLayout}), in rows that end above the controls,
  * and in Delete by aim, the marked ghost blocks.
  * They show while a mode is on, with no screen open and the HUD shown (not hidden with F1). With no mode on, the
- * turning line shows in the same place ({@link ControlsLine#turning}), and during a shape drawn with the place click,
+ * turning line shows in the same place ({@link ControlsLine#turning}), or in Disable, Disable's line
+ * ({@link ControlsLine#disable}), which names in red why the turned block can't be placed; during a shape drawn with
+ * the place click,
  * while Effortless Building draws its own line there and the shape's block count in the action bar above it, it shows
  * above the action bar.
  */
@@ -67,7 +69,8 @@ final class ModeHud implements HudElement {
 	/**
 	 * {@code mode} is the mouse mode now, or null, {@code box} the box drawn now, or null, {@code copy} the copy at the
 	 * aim's line ({@link ControlsLine#copy}), or null, {@code aim} Delete by aim's lines ({@link ControlsLine#deleteAim}),
-	 * {@code turning} the turning line ({@link ControlsLine#turning}), or null, {@code shape} whether Effortless
+	 * {@code turning} the turning line ({@link ControlsLine#turning}) or Disable's ({@link ControlsLine#disable}), or
+	 * null, {@code shape} whether Effortless
 	 * Building's shape is under way, {@code modeKey} the name of the key that switches a Delete box to Aim, or null
 	 * while it has none, and {@code list} the kinds of block in the box, or the marks.
 	 */
@@ -107,7 +110,7 @@ final class ModeHud implements HudElement {
 			line.size() == null ? null : component(line.size()).withStyle(ChatFormatting.WHITE))).toList();
 	}
 
-	/** The turning line, while it shows, or none. */
+	/** The turning line or Disable's, while it shows, or none. */
 	private List<ControlsLine.Line> turningLines() {
 		ControlsLine.Line line = turning.get();
 		return line == null ? List.of() : List.of(line);

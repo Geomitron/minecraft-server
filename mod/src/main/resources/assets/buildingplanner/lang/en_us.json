@@ -98,6 +98,8 @@
 	"buildingplanner.ui.mode.turn.turn_or_flip": "turn or flip",
 	"buildingplanner.ui.mode.turn.flip": "flip",
 	"buildingplanner.ui.mode.turn.turned": "Turned",
+	"buildingplanner.ui.mode.turn.place": "place",
+	"buildingplanner.ui.mode.turn.cant_place": "Can't place here",
 	"buildingplanner.ui.mode.box.copy": "Copy",
 	"buildingplanner.ui.mode.box.delete": "Delete",
 	"buildingplanner.ui.mode.box.material_list": "Material list",

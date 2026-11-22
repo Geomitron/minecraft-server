@@ -6,6 +6,7 @@ import dev.buildingplanner.ClientConfig;
 import dev.buildingplanner.input.BlockTurn;
 import dev.buildingplanner.input.CopyColour;
 import dev.buildingplanner.input.DeleteMode;
+import dev.buildingplanner.input.DisablePreview;
 import dev.buildingplanner.input.DisableTurn;
 import dev.buildingplanner.input.MouseMode;
 import dev.buildingplanner.input.PlaceTurn;
@@ -511,6 +512,15 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	}
 
 	/**
+	 * Hooks E28 to E30: whether Disable's preview shows ({@link DisablePreview#shows}): Disable's turning controls are
+	 * active, the sprint key is held, and Freecam doesn't keep the right click from the world.
+	 */
+	static boolean disablePreviewOn() {
+		return DisablePreview.shows(disableTurning(), Minecraft.getInstance().options.keySprint.isDown(),
+			Aim.interactionBlocked());
+	}
+
+	/**
 	 * Hook M6, before a right click on a block: sends {@code place_turn} when the turn the click takes
 	 * ({@link DisableTurn#clickTakes}: the turn of the block in hand while the sprint key is held in Disable, and
 	 * otherwise none) differs from the one sent last, and keeps it as the one this computer's guess of the block takes.
@@ -557,16 +567,26 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	/**
 	 * The turning line ({@link ControlsLine#turning}): in Effortless Building's modes other than Single and Disable,
 	 * while the turning controls are active and the block in hand turns or flips, with the sprint key as the player has
-	 * it bound; or null. Single's own line (step 20) and Disable's (step 19) name the same controls.
+	 * it bound; in Disable, while its turning controls are active, Disable's line ({@link ControlsLine#disable}), with
+	 * whether the block a right click would place hangs on the block behind it and whether the turned block can stay;
+	 * or null. Single's own line (step 20) names the same controls.
 	 */
 	private static ControlsLine.Line turningLine() {
-		if (!shapesTakeTurn() || EffortlessShapes.singleMode()) {
+		boolean disable = disableTurning();
+		if (!disable && (!shapesTakeTurn() || EffortlessShapes.singleMode())) {
 			return null;
 		}
 		Minecraft mc = Minecraft.getInstance();
-		return ControlsLine.turning(new ControlsLine.TurnState(heldCan(BlockTurn::turns), heldCan(BlockTurn::flips),
-			mc.options.keySprint.isDown(), HeldTurn.of(mc.player.getMainHandItem().getItem()) != null),
-			CopyKeys.names(mc).sprint());
+		boolean sprint = mc.options.keySprint.isDown();
+		ControlsLine.TurnState turn = new ControlsLine.TurnState(heldCan(BlockTurn::turns), heldCan(BlockTurn::flips),
+			sprint, HeldTurn.of(mc.player.getMainHandItem().getItem()) != null);
+		String sprintKey = CopyKeys.names(mc).sprint();
+		if (!disable) {
+			return ControlsLine.turning(turn, sprintKey);
+		}
+		EffortlessShapes.DisableShown shown = sprint ? EffortlessShapes.disableShown() : null;
+		return ControlsLine.disable(new ControlsLine.DisableState(turn, EffortlessShapes.placedHangs(),
+			shown == null || shown.goes()), sprintKey);
 	}
 
 	/** Hook L11: whether the middle click flips the block in hand, so Litematica picks no block with it. */

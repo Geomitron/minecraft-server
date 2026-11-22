@@ -174,6 +174,40 @@ public final class ControlsLine {
 		return titled(state.turned() ? Translated.of(TURN + ".turned", Look.PLAIN) : null, parts);
 	}
 
+	/**
+	 * The block in hand as Disable's line tells it: the turning line's state ({@link TurnState}), whether the block a
+	 * right click would place hangs on the block behind it, and whether the turned block can stay where it would go.
+	 */
+	public record DisableState(TurnState turn, boolean hangs, boolean stays) {
+	}
+
+	/**
+	 * Disable's line (see "Turning real blocks in Disable": "Controls line"): without the sprint key held, the turning
+	 * line with no "Turned:", since a right click then places as in Minecraft, and no line for a block that hangs on the
+	 * block behind it; with it held, the right click that places the turned block, or in red why it can't, then the
+	 * turning line's parts, after "Turned:" once the block is turned or flipped. Null as for the turning line.
+	 */
+	public static Line disable(DisableState state, String sprint) {
+		TurnState turn = state.turn();
+		if (!turn.held()) {
+			return state.hangs() ? null : turning(new TurnState(turn.turns(), turn.flips(), false, false), sprint);
+		}
+		Line turning = turning(turn, sprint);
+		if (turning == null) {
+			return null;
+		}
+		List<Text> parts = new ArrayList<>(3);
+		parts.add(state.stays() ? Translated.of(COPY + ".right", Look.PLAIN, action(TURN + ".place"))
+			: Translated.of(TURN + ".cant_place", Look.WARNING));
+		if (turn.turns()) {
+			parts.add(Translated.of(COPY + ".scroll", Look.PLAIN, action(COPY + ".turn")));
+		}
+		if (turn.flips()) {
+			parts.add(Translated.of(COPY + ".middle", Look.PLAIN, action(TURN + ".flip")));
+		}
+		return titled(turn.turned() ? Translated.of(TURN + ".turned", Look.PLAIN) : null, parts);
+	}
+
 	/** "R for Aim": the mode key, by its name, and the mode it switches to, as an action. */
 	private static Text modeFor(String key, String mode) {
 		return Translated.of(COPY + ".for", Look.PLAIN, new Literal(key), Translated.of(mode, Look.ACTION));
