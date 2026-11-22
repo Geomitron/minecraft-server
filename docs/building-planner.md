@@ -1314,7 +1314,9 @@ around the locked block or each block of the row (980 Q7 A), drawn as the copy's
 block, and red where part of it is outside the world's build height or its border. A red block or row places nothing
 and sends no edit. The colour reads the row's own blocks; copies Effortless Building's modifiers make outside the world
 are left out by its constraints, as for its shapes. A row of 32 blocks can't pass the server's block cap, so no row is
-red for its size. While the block follows the aim in Single, only Effortless Building's preview draws it.
+red for its size. While the block follows the aim in Single, Effortless Building's preview draws it at the aim, turned
+as it will be placed, even as a set of one block, which Effortless Building's own preview skips (E30; 1108 Q1 A); the
+box still shows only while the block is locked or a row is fixed.
 
 **Controls line.** While the block's controls are active, with no screen open and the HUD shown, a line of them
 shows where the mouse modes' lines show, in the same look and with the same background (`ModeHud`,

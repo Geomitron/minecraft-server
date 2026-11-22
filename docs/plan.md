@@ -378,7 +378,8 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
     wheel turns the block and the middle click steps through the other ways that block can sit, so the player can place
     it facing any way wherever they stand (Q5 and Q6, Geo's answers). Blocks keep the turn until the player switches to
     another block (revision 2, Q1 A). The copy's blue, yellow or red box shows only while the block is locked or a row
-    is fixed (Q7 A), and Single mode's controls line shows whenever a block is in hand (Q8 A). A locked block's left
+    is fixed (Q7 A), and Single mode's controls line shows whenever a block is in hand (Q8 A). Building Planner always
+    draws the unlocked block at the aim in Single, turned as it will be placed (1108 Q1 A). A locked block's left
     click erases the ghost block where it's locked (1009 Q1 A), and with Effortless Building's mirror, radial mirror
     or array on, every block a right click would place (1074 Q1 A). Left Ctrl turns and flips the block in every one of
     Effortless Building's modes, not only Single, and every mode's shapes take the turn (1009 Q2 C). In Disable, where
@@ -528,7 +529,8 @@ the last step, when the server and the pack update together.
     the action bar while Effortless Building's own line shows. In Disable the wheel and the middle click stay
     Minecraft's until steps 18 and 19 add Disable's turning. Needs step 16. Done when `SingleRuleTest` and `ControlsLineTest` pass and the spec's "Turning in every mode
     (step 17)" checks pass, with shots of a Line of turned stairs and of the turning line before a shape and during one
-    (with GUI scale 4).
+    (with GUI scale 4). The step also draws Single's unlocked block at the aim, turned as it will be placed (1108 Q1
+    A), through E30, with a check among its checks and a shot of a turned stair at the aim.
 18. **Turning real blocks in Disable** ("One ghost block": "Turning real blocks in Disable"): the payload
     `place_turn` and each player's turn on the server (`PlaceTurns`), dropped when the player leaves; hook M6 sending
     it before a right click on a block while Left Ctrl is held (`DisableTurn`); hook S2 in `BlockItem.place`, on both
