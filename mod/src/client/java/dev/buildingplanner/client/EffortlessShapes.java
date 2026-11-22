@@ -245,9 +245,10 @@ public final class EffortlessShapes {
 
 	/**
 	 * Hook M1: the left click that's the block's ({@link SingleRule#takesBreak}). With a row fixed, it drops the row and
-	 * erases nothing. Otherwise the block is locked, and it erases the ghost block at the locked position, whatever the
-	 * player aims at, with the other half of a two-block ghost block ({@link GhostErase#of}); with no ghost block there,
-	 * it sends nothing.
+	 * erases nothing. Otherwise the block is locked, and it erases every ghost block a right click would place
+	 * ({@link #shownSet}: the locked position and the copies Effortless Building's mirror, radial mirror and array make
+	 * of it, 1074 Q1 A), whatever the player aims at, with the other half of a two-block ghost block
+	 * ({@link GhostErase#of}); with no ghost block there, it sends nothing.
 	 */
 	static void leftClick(SingleBlock block) {
 		if (block.rowFixed()) {
@@ -255,12 +256,16 @@ public final class EffortlessShapes {
 			return;
 		}
 		ClientSession session = BuildingPlannerClient.session();
-		Minecraft mc = Minecraft.getInstance();
-		BlockState ghost = session.replica().layer().get(block.pos());
-		if (session.sendShape(EditKind.ERASE, GhostErase.of(session.replica().layer(), List.of(block.pos())))) {
-			SoundType sound = ghost.getSoundType();
-			mc.level.playLocalSound(block.pos(), sound.getBreakSound(), SoundSource.BLOCKS, sound.getVolume(),
-				sound.getPitch(), false);
+		Map<BlockPos, BlockState> erased = GhostErase.of(session.replica().layer(), shownSet(block).validPositions());
+		if (erased.isEmpty()) {
+			return;
+		}
+		// The sound of the first ghost block erased, read before the erase empties it.
+		BlockPos first = erased.keySet().iterator().next();
+		SoundType sound = session.replica().layer().get(first).getSoundType();
+		if (session.sendShape(EditKind.ERASE, erased)) {
+			Minecraft.getInstance().level.playLocalSound(first, sound.getBreakSound(), SoundSource.BLOCKS,
+				sound.getVolume(), sound.getPitch(), false);
 		}
 	}
 

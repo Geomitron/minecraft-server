@@ -233,7 +233,7 @@ Minecraft 26.3, read in the client jar Loom maps (`minecraft-clientonly-deobf-26
 
 | # | File, method | Hook | Purpose |
 |---|---|---|---|
-| M1 | `Minecraft.java`, `startAttack()` | `@Inject` at head, cancellable, returning false | While a box is drawn, the left click sets its next corner; while the copy is at the aim, it pastes the copy; in Delete by aim, it starts the one-second hold that erases the marks. With the one ghost block's row fixed, it drops the row, and while the block is locked, it erases the ghost block where it's locked. None attacks or breaks. `handleKeybinds` calls it once for each press of the attack key. |
+| M1 | `Minecraft.java`, `startAttack()` | `@Inject` at head, cancellable, returning false | While a box is drawn, the left click sets its next corner; while the copy is at the aim, it pastes the copy; in Delete by aim, it starts the one-second hold that erases the marks. With the one ghost block's row fixed, it drops the row, and while the block is locked, it erases every ghost block a right click would place: the locked position and the copies Effortless Building's mirror, radial mirror and array make of it (1074 Q1 A). None attacks or breaks. `handleKeybinds` calls it once for each press of the attack key. |
 | M2 | `Minecraft.java`, `startUseItem()` | `@Inject` at head, cancellable | While a box is drawn or the copy is at the aim, the right click leaves that mode and uses nothing; during a zoop, after its first click, it drops the row and leaves the copy at the aim. In Delete by aim it clears the marks, or leaves the mode when there are none. While the one ghost block is locked or in Zoop or Vertical, it places the block where it's locked, fixes the row's start, or places the row. `handleKeybinds` also calls `startUseItem` every 4 ticks while the use key stays down (`rightClickDelay`), so the use key does nothing more until it's let go. |
 | M3 | `Minecraft.java`, `continueAttack(boolean)` | `@Inject` at head, cancellable | Holding the left click breaks nothing while a box is drawn, the copy is at the aim, Delete by aim is on, or the one ghost block is locked or its row is fixed. |
 | M4 | `Minecraft.java`, `pickBlockOrEntity()` | `@Inject` at head, cancellable | While the copy is at the aim, the middle click (the pick block key) mirrors the copy; while a box is drawn or Delete by aim is on, it does nothing. While the turning controls are active (every mode, Disable's as "Turning real blocks in Disable" describes), with a block in hand that flips and Minecraft's sprint key held, it flips the block (see "One ghost block"). |
@@ -1245,7 +1245,7 @@ stays as it was. The second right click places the whole row as one shape edit, 
 click with the row fixed drops it and erases nothing. While the row is fixed, H, R and the nudge keys act on nothing,
 and turning and flipping (below) act on every block in the row. After the row is placed, the block follows the aim
 again for a new row, or stays locked where the row started. Before the first click, the left click erases as in
-Single, at the aim, or at the locked position while the block is locked.
+Single: at the aim, or while the block is locked, every ghost block a right click in Single would place.
 
 Each block in the row faces the same way, as in a Line, and the row goes through the same steps as Effortless
 Building's shapes: Building Planner makes a `BlockSet` of the row's positions, with its first and last positions, and
@@ -2063,13 +2063,14 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   Effortless Building's array of 2 copies one block apart upward, the preview draws all three. Facing north, Up moves it
   one block north and Page Up one up. A right click places one ghost block there, on both clients, and it stays locked;
   holding the right button for a second sends one edit; with Planner1 aiming at another ghost block, a left click erases
-  the ghost block at the locked position, leaves the aimed one, and the block stays locked; holding the left button for
-  a second sends one edit. Locked, an oak stair placed with Planner1 facing east faces east. H unlocks it. With a stick
-  in hand, H and the nudge keys do nothing and Single's clicks act as without the add-on; choosing Line in the radial
-  menu unlocks the block; with the copy at the aim, H locks the copy and not the block. With Freecam's camera on and
-  facing east while Planner1 faces north, Up moves the locked block east. The locked block is shot in open air at 854 by
-  480 and 1920 by 1080, GUI scale 2, and Controls' "Building Planner" heading with the keys' proposed names at GUI scale
-  4.
+  the ghost block at the locked position, leaves the aimed one, and the block stays locked. With the array of 2 copies
+  upward, a right click places three ghost blocks and a left click erases all three (1074 Q1 A). Holding the left
+  button for a second sends one edit. Locked, an oak stair placed with Planner1 facing east faces east. H unlocks it.
+  With a stick in hand, H and the nudge keys do nothing and Single's clicks act as without the add-on; choosing Line
+  in the radial menu unlocks the block; with the copy at the aim, H locks the copy and not the block. With Freecam's
+  camera on and facing east while Planner1 faces north, Up moves the locked block east. The locked block is shot in
+  open air at 854 by 480 and 1920 by 1080, GUI scale 2, and Controls' "Building Planner" heading with the keys'
+  proposed names at GUI scale 4.
 - One ghost block, Zoop and Vertical (step 15): in Single mode with stone bricks, R switches the block to Zoop,
   Vertical and Single (the driver's `singlerow`), and the copy's mode stays Single. In Zoop, a right click fixes the
   row's start and sends no edit, and the preview draws the start alone; aimed 11 blocks east of the start, the row is

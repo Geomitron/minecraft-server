@@ -498,8 +498,8 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	/**
 	 * Hook M1: the left click sets the box's next corner, pastes the copy at the aim, or in Delete by aim starts the hold
 	 * that erases the marks; with the one ghost block's row fixed, it drops the row, and with the block locked, it erases
-	 * the ghost block where it's locked; holding the button then does nothing more. Returns whether the click is taken
-	 * from the game.
+	 * every ghost block a right click would place; holding the button then does nothing more. Returns whether the click
+	 * is taken from the game.
 	 */
 	public static boolean leftClick() {
 		MouseMode mode = mouseMode();

@@ -1728,6 +1728,19 @@ check "aiming at another ghost block, a left click erases the ghost block at the
 check "leaves the aimed one" eval '[[ $(val 1 "layer -60 -60 -41") == minecraft:stone_bricks ]] &&
 	[[ $(val 2 "layer -60 -60 -41") == minecraft:stone_bricks ]]'
 check "and the block stays locked" eval '[[ $(val 1 single) == "locked -61,-60,-41 active" ]]'
+# With Effortless Building's array of 2 copies one block apart upward, a right click places three ghost blocks, and the
+# left click erases every block a right click would place, all three (1074 Q1 A).
+drv 1 "ebarray 2 0 1 0" "wait 5" > /dev/null
+use_click 1
+check "with an array of 2, a right click on the locked block places three ghost blocks" eval \
+	'drv 1 "await block -61 -60 -41 minecraft:stone_bricks" "await block -61 -59 -41 minecraft:stone_bricks" \
+	"await block -61 -58 -41 minecraft:stone_bricks" > /dev/null'
+attack_click 1
+check "and the left click erases all three" eval 'drv 2 "await block -61 -60 -41 minecraft:air" \
+	"await block -61 -59 -41 minecraft:air" "await block -61 -58 -41 minecraft:air" > /dev/null &&
+	drv 1 "await block -61 -58 -41 minecraft:air" > /dev/null &&
+	[[ $(val 1 "layer -60 -60 -41") == minecraft:stone_bricks ]] && [[ $(val 1 single) == "locked -61,-60,-41 active" ]]'
+drv 1 "ebarray 0" > /dev/null
 # Held for a second, aimed at the grass, the left button erases the ghost block placed again there once, and mines no
 # real block.
 use_click 1

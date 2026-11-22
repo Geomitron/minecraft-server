@@ -32,8 +32,8 @@ public final class SingleRule {
 	}
 
 	/**
-	 * Whether the break click is Building Planner's: while the block is locked, which erases the ghost block where it's
-	 * locked, or a row is fixed, which the click drops. Otherwise it's Effortless Building's, erasing at the aim.
+	 * Whether the break click is Building Planner's: while the block is locked, which erases every ghost block a right
+	 * click would place, or a row is fixed, which the click drops. Otherwise it's Effortless Building's, erasing at the aim.
 	 */
 	public static boolean takesBreak(State state) {
 		return state.locked() || state.rowFixed();
