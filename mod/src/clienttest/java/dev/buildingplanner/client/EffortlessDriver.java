@@ -18,6 +18,7 @@ import nl.requios.effortlessbuilding.buildmode.ModeOptions;
 import nl.requios.effortlessbuilding.buildpipeline.BuildPipeline;
 import nl.requios.effortlessbuilding.buildpipeline.BuildPipelineClient;
 import nl.requios.effortlessbuilding.modifier.ArrayModifier;
+import nl.requios.effortlessbuilding.modifier.MirrorModifier;
 import nl.requios.effortlessbuilding.modifier.ModifierSystem;
 import nl.requios.effortlessbuilding.utilities.BreakDisplayTracker;
 
@@ -57,6 +58,20 @@ final class EffortlessDriver {
 			array.offsetZ = dz;
 			ModifierSystem.CLIENT.addModifier(array);
 		}
+	}
+
+	/**
+	 * Effortless Building's mirror modifier alone, east to west across the plane at {@code x} (a block's west edge for a
+	 * whole number), its working area around {@code x y z}.
+	 */
+	static void mirror(double x, double y, double z) {
+		ModifierSystem.CLIENT.clearModifiers();
+		MirrorModifier mirror = new MirrorModifier();
+		mirror.originX = x;
+		mirror.originY = y;
+		mirror.originZ = z;
+		mirror.mirrorX = true;
+		ModifierSystem.CLIENT.addModifier(mirror);
 	}
 
 	/**

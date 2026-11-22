@@ -215,7 +215,7 @@ Effortless Building, under `common/src/main/java/nl/requios/effortlessbuilding/`
 | E22 | `render/BlockPreviewRenderer.java`, `render` | `@Inject` at head, cancellable | No shape preview while a box is drawn or the copy is at the aim: the method draws the current mode's first block at the aim each frame (`BuildPipelineClient.getPreviewBlocks`). |
 | E23 | `utilities/KeyBindings.java`, `<clinit>` | `@ModifyArg` on the category of each of the four `KeyMapping` constructors | Effortless Building's keys go under Building Planner's heading in Controls (see "Keys"). |
 | E27 | `buildpipeline/BuildPipelineClient.java`, public static `getPreviewBlocks` | `@ModifyReturnValue` | While the one ghost block is locked, or a Zoop or Vertical row of it is fixed (after its first click), the preview draws the locked block or the row (`EffortlessShapes.previewBlocks`, run through Effortless Building's modifiers, mix and constraints), not the block at the aim (see "One ghost block"). E30 lets it draw a locked block that's a set of one. |
-| E28 | `render/BlockPreviewRenderer.java`, `getPlacementState(BlockItem, Minecraft, ItemStack)` | `@ModifyReturnValue` | In every mode, the preview's block takes the turn of the block in hand (`BlockTurn.apply`), as E1's states do, so the player sees the block as it will be placed. `BlockPreviewRenderer.render` makes one state through this method for the held block, or one for each of the mix's blocks, and applies each entry's mirror and turn to it after (`BlockEntry.applyTransforms`), so every block of a shape's preview takes the turn. In Disable, while Disable's preview shows, it returns the state a right click would place (`DisablePreview.state`, see "Turning real blocks in Disable"). While the one ghost block is locked, it returns the state a right click places there: the placement rules with the hit it was locked with and the player's facing now (`EffortlessShapes.previewState`, see "One ghost block"). |
+| E28 | `render/BlockPreviewRenderer.java`, `getPlacementState(BlockItem, Minecraft, ItemStack)` | `@ModifyReturnValue` | In every mode, the preview's block takes the turn of the block in hand (`BlockTurn.apply`), as E1's states do, so the player sees the block as it will be placed. `BlockPreviewRenderer.render` makes one state through this method for the held block, or one for each of the mix's blocks, and applies each entry's mirror and turn to it after (`BlockEntry.applyTransforms`), so every block of a shape's preview takes the turn. In Disable, while Disable's preview shows, it returns the state a right click would place (`DisablePreview.state`, see "Turning real blocks in Disable"). While the one ghost block is locked or its row is fixed, it returns the state a right click places there: the placement rules with the hit it was locked or its row fixed with and the player's facing now (`EffortlessShapes.previewState`, see "One ghost block"). |
 
 Effortless Building's limits on its shapes come from its config on the player's computer (`config/ServerConfig.java`),
 which keeps its defaults, since only Effortless Building's server sends other values (`SyncServerConfigS2CPacket`): in
@@ -1255,8 +1255,8 @@ row as to a Line. Each entry then takes its state as E1 makes it (`EffortlessSha
 argument for this): the placement rules with the start's face and hit point, the facing at the second click, then the
 turn. Hook E27 hands the same processed set to Effortless Building's preview, which draws it with the mix and the
 modifiers. A locked block that isn't in a row goes through the same steps, as a row of one; the preview skips a set
-of one block while no shape is under way, so hook E30 lets it draw the locked block, and hook E28 gives it the state
-a right click places.
+of one block while no shape is under way, so hook E30 lets it draw the locked block and a row of one, and hook E28
+gives it the state a right click places.
 
 The block's clicks while it's locked or in Zoop or Vertical are Building Planner's: hook E14 takes them from Effortless
 Building, M2 takes the right click, M1 the left and M3 holding the left (see "Hooks"). Hold to repeat therefore runs
@@ -1422,7 +1422,7 @@ sides apply it at the same step of Minecraft's own placing, so the client's gues
 | M6 | `net/minecraft/client/multiplayer/MultiPlayerGameMode.java`, `useItemOn(LocalPlayer, InteractionHand, BlockHitResult)` | `@Inject` at head | Send `place_turn` when the turn the click takes has changed, before the click's prediction and packet. |
 | S2 | `net/minecraft/world/item/BlockItem.java`, `place(BlockPlaceContext)` | `@ModifyExpressionValue` on the call to `getPlacementState`, on both sides | Turn the state the click places, set its shape from its neighbours, and return null when the turned block can't stay. |
 | E29 | `buildpipeline/BuildPipelineClient.java`, `getPreviewBlocks` | `@ModifyReturnValue` | In Disable, while Disable's preview shows, a set of one block where a right click would place, or null when it wouldn't place. |
-| E30 | `render/BlockPreviewRenderer.java`, `render` | `@ModifyExpressionValue` on the first `BlockSet.size()` | Draw a set of one block, which the method skips while no shape is under way: Disable's, and the locked one ghost block (see "One ghost block"). |
+| E30 | `render/BlockPreviewRenderer.java`, `render` | `@ModifyExpressionValue` on the first `BlockSet.size()` | Draw a set of one block, which the method skips while no shape is under way: Disable's, the locked one ghost block, and a fixed row of one (see "One ghost block"). |
 
 S2 is the server's second hook, after S1 (see "Ghost blocks the real world fills"), in the mixin config's common
 section, since both sides place blocks through `BlockItem.place`. M6 is in the client section, beside M2.
@@ -2070,14 +2070,20 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   facing east while Planner1 faces north, Up moves the locked block east. The locked block is shot in open air at 854 by
   480 and 1920 by 1080, GUI scale 2, and Controls' "Building Planner" heading with the keys' proposed names at GUI scale
   4.
-- One ghost block, Zoop and Vertical (step 15): R switches the block to Zoop, Vertical and Single, and the copy's mode
-  stays Single. In Zoop, a right click fixes the row's start and sends no edit; aimed 12 blocks east, the preview draws
-  12 blocks (the driver's `preview`); a second right click places 12 ghost blocks as one edit, which one Ctrl+Z takes
-  back. Aimed 40 blocks east, the row stops at 32. A left click with the row fixed drops it and erases nothing; the
-  right button held through both clicks places one row. In Vertical, looking up into open air, the row rises 8 blocks.
-  With the block mix of stone and andesite on, the row's blocks are the preview's; with Effortless Building's mirror
-  on, the row is mirrored. A row started while the block is locked starts where it's locked. A Zoop row and a
-  Vertical row are shot before the second click at 854 by 480 and 1920 by 1080, GUI scale 2.
+- One ghost block, Zoop and Vertical (step 15): in Single mode with stone bricks, R switches the block to Zoop,
+  Vertical and Single (the driver's `singlerow`), and the copy's mode stays Single. In Zoop, a right click fixes the
+  row's start and sends no edit, and the preview draws the start alone; aimed 11 blocks east of the start, the row is
+  12 blocks and the preview draws them (the driver's `preview`). While the row is fixed, H, R and the nudge keys act on
+  nothing, and aimed at the sky, the row stays as it was. A second right click places the 12 ghost blocks as one edit,
+  which Planner2 sees and one Ctrl+Z takes back, and the block follows the aim again, still in Zoop. Aimed 40 blocks
+  east of the start, the row stops at 32. A left click aimed at a ghost block with the row fixed drops the row and
+  erases nothing. The right button held a second for each of the two clicks places one row. With the block mix of
+  stone and andesite on, each block of the row is the mix's for its position, as the preview's is, and both kinds
+  show. With Effortless Building's mirror on (the driver's `ebmirror`), the preview draws the row and its mirror image,
+  24 blocks, and the click places both. In Zoop, H locks the block and Up nudges it; a row started then starts where
+  it's locked, and once placed, the block stays locked there. In Vertical, looking up into open air on the line above
+  the start, the row rises 8 blocks and the preview draws them; the second click places them as one edit. A Zoop row
+  and a Vertical row are shot before the second click at 854 by 480 and 1920 by 1080, GUI scale 2.
 - One ghost block, turning and flipping (step 16): with oak stairs, facing north, a notch up with Left Ctrl held turns
   the preview's stair a quarter turn clockwise and the hotbar slot stays; the stair placed then faces that way, and so
   does one placed after Planner1 turns to face south. The middle click with Left Ctrl held makes the stair's top half,
@@ -2301,7 +2307,9 @@ The one ghost block's rules have unit tests as pure functions (steps 14 to 17). 
 controls are active (session, Single mode, no mouse mode, an item that places a block), which clicks are Building
 Planner's in each state, and when the turning controls are active (each mode, Disable by `DisableTurn`'s rule from
 step 18, none during a shape
-drawn with the break click, but during one drawn with the place click). `CopyRowTest` covers a 1×1×1 row up to 32 and the copy's up to 10. `BlockTurnTest` covers a
+drawn with the break click, but during one drawn with the place click). `CopyRowTest` covers a 1×1×1 row (step 15):
+every block to the aim east, north and up, the block alone when aimed at itself, and up to 32 blocks, where the copy's
+row stops at 10. `BlockTurnTest` covers a
 quarter turn each way for stairs, logs, chests and signs; the flips' order for a log, a stair, a slab, a piston, a
 button and a lantern; the turn kept as property values and set on another block of the mix that has them; a block
 that neither turns nor flips; and the turn dropping when the item in hand changes. `CopyColourTest` covers a 1×1×1
@@ -2393,9 +2401,10 @@ other in the game's own copy of the layer, again after a restart, which doesn't 
 - That Ctrl with the middle click in creative mode picks a block with its contents in Minecraft 26.3 (expected, from
   earlier versions; the client's `pickBlockOrEntity` not read for it), which hook M4 stops while it flips the one
   ghost block.
-- That Effortless Building's preview draws a block set Building Planner makes (hook E27) with the mix, and that
-  `processBlocks` over a hand-made set gives the modifiers' output a Line gives. Step 14's checks show it drawing the
-  locked block and an array's copies of it (with hook E30), not the mix.
+- That Effortless Building's preview draws a block set Building Planner makes (hook E27) with the mix's block at each
+  position. Step 14's checks show it drawing the locked block and an array's copies of it (with hook E30), and step
+  15's a row and its mirror image, which the click places too, and a row with the mix on, whose placed blocks are the
+  mix's; no check reads which block the preview draws at a position.
 - Where the action bar draws in the game: `Hud.extractOverlayMessage` pushes the numbers 68 and −4, read in the client
   jar's bytecode, not decompiled, which puts its text from 72 to 63 above the screen's bottom, as in earlier versions.
   The turning line during a shape goes above that (see "One ghost block"); step 17's shots show whether the three

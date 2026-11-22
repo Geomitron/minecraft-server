@@ -9,24 +9,27 @@ import net.minecraft.world.phys.Vec3;
 
 /**
  * A zoop's row, as Satisfactory zoops foundations: copies end to end from the first, each the copy's own length (as
- * it's turned) from the one before, so they touch without overlapping, up to 10 in all. In Zoop the row goes along
- * whichever of the four compass directions from the first copy the aim is farthest along; in Vertical, up or down.
+ * it's turned) from the one before, so they touch without overlapping, up to 10 copies, or 32 for the one ghost block
+ * (a 1×1×1 copy). In Zoop the row goes along whichever of the four compass directions from the first copy the aim is
+ * farthest along; in Vertical, up or down.
  */
 public final class CopyRow {
-	/** The most copies in a row, as Satisfactory zoops up to 10. */
+	/** The most copies in a row of the copy, as Satisfactory zoops up to 10. */
 	public static final int MAX_COPIES = 10;
+	/** The most blocks in a row of the one ghost block (Geo's answer to inbox request 980, Q2). */
+	public static final int MAX_BLOCKS = 32;
 
 	private CopyRow() {
 	}
 
 	/**
 	 * The boxes of the row's copies, the first copy's box {@code first} first, reaching toward the block {@code toward}:
-	 * the row ends with the copy that holds it along the row's direction, or with the tenth. In Zoop the direction is
-	 * the compass direction in which {@code toward} lies farthest from the first copy's middle, east or west on a tie;
-	 * in Vertical it's up or down. In Single, and with {@code toward} within the first copy along the direction, the row
-	 * is the first copy alone.
+	 * the row ends with the copy that holds it along the row's direction, or with copy number {@code longest}. In Zoop
+	 * the direction is the compass direction in which {@code toward} lies farthest from the first copy's middle, east or
+	 * west on a tie; in Vertical it's up or down. In Single, and with {@code toward} within the first copy along the
+	 * direction, the row is the first copy alone.
 	 */
-	public static List<Spot> row(CopyMode mode, Spot first, BlockPos toward) {
+	public static List<Spot> row(CopyMode mode, Spot first, BlockPos toward, int longest) {
 		BlockPos middle = first.middle();
 		Direction direction = switch (mode) {
 			case SINGLE -> null;
@@ -47,7 +50,7 @@ public final class CopyRow {
 		int low = axis.choose(first.min().getX(), first.min().getY(), first.min().getZ());
 		int high = low + length - 1;
 		int beyond = direction.getAxisDirection() == Direction.AxisDirection.POSITIVE ? at - low : high - at;
-		int count = Math.clamp(Math.floorDiv(beyond, length) + 1, 1, MAX_COPIES);
+		int count = Math.clamp(Math.floorDiv(beyond, length) + 1, 1, longest);
 		List<Spot> row = new ArrayList<>(count);
 		for (int i = 0; i < count; i++) {
 			row.add(new Spot(first.min().relative(direction, i * length), first.size()));

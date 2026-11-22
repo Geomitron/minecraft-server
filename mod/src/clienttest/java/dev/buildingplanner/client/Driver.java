@@ -485,6 +485,12 @@ public final class Driver implements ClientModInitializer {
 					count > 0 ? Integer.parseInt(a[4]) : 0);
 				return "ok";
 			}
+			case "ebmirror" -> {
+				// ebmirror <x>: Effortless Building's mirror modifier alone, east to west across the plane at x, around
+				// the player's feet; ebarray 0 clears it.
+				EffortlessDriver.mirror(Double.parseDouble(a[1]), mc.player.getY(), mc.player.getZ());
+				return "ok";
+			}
 			case "ebsent" -> {
 				// ebsent: the kinds of Effortless Building packet this client has sent, comma-separated, or "none".
 				return SentPackets.effortless();
@@ -629,6 +635,11 @@ public final class Driver implements ClientModInitializer {
 				// single: the one ghost block in Single mode: "locked x,y,z" or "unlocked", then whether its controls
 				// are active now; await single <text> waits for it.
 				return single();
+			}
+			case "singlerow" -> {
+				// singlerow: the one ghost block's mode, then its fixed row's length and ends, "<n> x,y,z..x,y,z", or none;
+				// await singlerow <text> waits for it.
+				return singleRow();
 			}
 			case "preview" -> {
 				// preview: the positions Effortless Building's preview drew in the last whole frame, as x,y,z, or none;
@@ -1062,6 +1073,19 @@ public final class Driver implements ClientModInitializer {
 			+ (BuildingPlannerClient.singleActive() ? " active" : " inactive");
 	}
 
+	/** The one ghost block's mode and its fixed row, for the driver's {@code singlerow}. */
+	private static String singleRow() throws Exception {
+		SingleBlock block = session().single();
+		if (!block.rowFixed()) {
+			return SingleBlock.mode() + " none";
+		}
+		List<BlockPos> row = block.row();
+		BlockPos first = row.getFirst();
+		BlockPos last = row.getLast();
+		return SingleBlock.mode() + " " + row.size() + " " + first.getX() + "," + first.getY() + "," + first.getZ() + ".."
+			+ last.getX() + "," + last.getY() + "," + last.getZ();
+	}
+
 	/** The conditions {@code await} takes. */
 	private static boolean holds(String what) throws Exception {
 		String[] a = what.split(" ");
@@ -1085,6 +1109,7 @@ public final class Driver implements ClientModInitializer {
 			case "sprint" -> mc.options.keySprint.isDown() == Boolean.parseBoolean(a[1]);
 			case "preview" -> PreviewProbe.positions().equals(what.substring(8));
 			case "single" -> single().equals(what.substring(7));
+			case "singlerow" -> singleRow().equals(what.substring(10));
 			case "turned" -> FrameProbe.turned();
 			case "framestimed" -> FrameProbe.timed();
 			case "erasing" -> String.valueOf(erasing()).equals(a[1]);

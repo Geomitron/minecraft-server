@@ -24,7 +24,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 /**
  * Hook E6: while the mix applies, the preview draws each position's block from the mix. Hook E22: no preview while a
  * mouse mode is on. Hook E24: the preview's first block aims, and faces, from Freecam's camera while it's on. Hooks
- * E28 and E30: the locked one ghost block is drawn, in the state the hit it was locked with gives it.
+ * E28 and E30: the locked one ghost block, or its fixed row, is drawn, in the state the hit it was locked or fixed with
+ * gives it.
  */
 @Mixin(value = BlockPreviewRenderer.class, remap = false)
 abstract class BlockPreviewRendererMixin {
@@ -44,7 +45,7 @@ abstract class BlockPreviewRendererMixin {
 
 	/**
 	 * Hook E30: the method skips a set of one block while no shape is under way (its first {@code BlockSet.size()}), so
-	 * Single's block at the aim draws nothing; the locked one ghost block is drawn.
+	 * Single's block at the aim draws nothing; the locked one ghost block, and its row of one, are drawn.
 	 */
 	@ModifyExpressionValue(method = "render", at = @At(value = "INVOKE",
 		target = "Lnl/requios/effortlessbuilding/utilities/BlockSet;size()I", ordinal = 0))
@@ -73,8 +74,8 @@ abstract class BlockPreviewRendererMixin {
 	}
 
 	/**
-	 * Hook E28: while the one ghost block is locked, the preview's block takes its state from the hit it was locked
-	 * with, as a right click places it, not from the aim.
+	 * Hook E28: while the one ghost block is locked or its row is fixed, the preview's block takes its state from the hit
+	 * it was locked or fixed with, as a right click places it, not from the aim.
 	 */
 	@ModifyReturnValue(method = PLACEMENT_STATE, at = @At("RETURN"))
 	private static BlockState buildingplanner$lockedState(BlockState state, @Local(argsOnly = true) BlockItem item,

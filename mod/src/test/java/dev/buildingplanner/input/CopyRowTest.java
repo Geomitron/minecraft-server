@@ -29,25 +29,25 @@ class CopyRowTest {
 
 	@Test
 	void singleIsTheFirstCopyAlone() {
-		assertEquals(List.of(FIRST), CopyRow.row(CopyMode.SINGLE, FIRST, new BlockPos(40, 64, 22)));
+		assertEquals(List.of(FIRST), CopyRow.row(CopyMode.SINGLE, FIRST, new BlockPos(40, 64, 22), CopyRow.MAX_COPIES));
 	}
 
 	@Test
 	void zoopGoesEachCompassDirectionTheCopysLengthApart() {
 		// East and west the copy is 3 long, north and south 5.
 		assertEquals(List.of(new BlockPos(10, 64, 20), new BlockPos(13, 64, 20), new BlockPos(16, 64, 20)),
-			mins(CopyRow.row(CopyMode.ZOOP, FIRST, new BlockPos(17, 64, 22))));
+			mins(CopyRow.row(CopyMode.ZOOP, FIRST, new BlockPos(17, 64, 22), CopyRow.MAX_COPIES)));
 		assertEquals(List.of(new BlockPos(10, 64, 20), new BlockPos(7, 64, 20)),
-			mins(CopyRow.row(CopyMode.ZOOP, FIRST, new BlockPos(9, 64, 22))));
+			mins(CopyRow.row(CopyMode.ZOOP, FIRST, new BlockPos(9, 64, 22), CopyRow.MAX_COPIES)));
 		assertEquals(List.of(new BlockPos(10, 64, 20), new BlockPos(10, 64, 25), new BlockPos(10, 64, 30)),
-			mins(CopyRow.row(CopyMode.ZOOP, FIRST, new BlockPos(11, 64, 30))));
+			mins(CopyRow.row(CopyMode.ZOOP, FIRST, new BlockPos(11, 64, 30), CopyRow.MAX_COPIES)));
 		assertEquals(List.of(new BlockPos(10, 64, 20), new BlockPos(10, 64, 15)),
-			mins(CopyRow.row(CopyMode.ZOOP, FIRST, new BlockPos(11, 64, 19))));
+			mins(CopyRow.row(CopyMode.ZOOP, FIRST, new BlockPos(11, 64, 19), CopyRow.MAX_COPIES)));
 	}
 
 	@Test
 	void theCopiesTouchWithoutOverlapping() {
-		List<Spot> row = CopyRow.row(CopyMode.ZOOP, FIRST, new BlockPos(30, 64, 22));
+		List<Spot> row = CopyRow.row(CopyMode.ZOOP, FIRST, new BlockPos(30, 64, 22), CopyRow.MAX_COPIES);
 		for (int i = 1; i < row.size(); i++) {
 			assertEquals(row.get(i - 1).max().getX() + 1, row.get(i).min().getX());
 			assertEquals(FIRST.size(), row.get(i).size());
@@ -57,30 +57,58 @@ class CopyRowTest {
 	@Test
 	void zoopTakesTheDirectionTheAimIsFarthestAlong() {
 		// 6 east and 4 south of the middle: east.
-		assertEquals(new BlockPos(16, 64, 20), CopyRow.row(CopyMode.ZOOP, FIRST, new BlockPos(17, 70, 26)).getLast().min());
+		assertEquals(new BlockPos(16, 64, 20), CopyRow.row(CopyMode.ZOOP, FIRST, new BlockPos(17, 70, 26), CopyRow.MAX_COPIES).getLast().min());
 		// 4 east and 6 north: north.
-		assertEquals(new BlockPos(10, 64, 15), CopyRow.row(CopyMode.ZOOP, FIRST, new BlockPos(15, 64, 16)).getLast().min());
+		assertEquals(new BlockPos(10, 64, 15), CopyRow.row(CopyMode.ZOOP, FIRST, new BlockPos(15, 64, 16), CopyRow.MAX_COPIES).getLast().min());
 		// A tie goes east or west.
-		assertEquals(new BlockPos(13, 64, 20), CopyRow.row(CopyMode.ZOOP, FIRST, new BlockPos(14, 64, 25)).getLast().min());
+		assertEquals(new BlockPos(13, 64, 20), CopyRow.row(CopyMode.ZOOP, FIRST, new BlockPos(14, 64, 25), CopyRow.MAX_COPIES).getLast().min());
 	}
 
 	@Test
 	void theRowEndsWithTheCopyThatHoldsTheAim() {
 		// The first copy holds x 10 to 12, the second 13 to 15.
-		assertEquals(1, CopyRow.row(CopyMode.ZOOP, FIRST, new BlockPos(12, 64, 22)).size());
-		assertEquals(2, CopyRow.row(CopyMode.ZOOP, FIRST, new BlockPos(13, 64, 22)).size());
-		assertEquals(2, CopyRow.row(CopyMode.ZOOP, FIRST, new BlockPos(15, 64, 22)).size());
-		assertEquals(3, CopyRow.row(CopyMode.ZOOP, FIRST, new BlockPos(16, 64, 22)).size());
+		assertEquals(1, CopyRow.row(CopyMode.ZOOP, FIRST, new BlockPos(12, 64, 22), CopyRow.MAX_COPIES).size());
+		assertEquals(2, CopyRow.row(CopyMode.ZOOP, FIRST, new BlockPos(13, 64, 22), CopyRow.MAX_COPIES).size());
+		assertEquals(2, CopyRow.row(CopyMode.ZOOP, FIRST, new BlockPos(15, 64, 22), CopyRow.MAX_COPIES).size());
+		assertEquals(3, CopyRow.row(CopyMode.ZOOP, FIRST, new BlockPos(16, 64, 22), CopyRow.MAX_COPIES).size());
 		// Aimed at the first copy's middle, the row is the first copy alone.
-		assertEquals(List.of(FIRST), CopyRow.row(CopyMode.ZOOP, FIRST, FIRST.middle()));
+		assertEquals(List.of(FIRST), CopyRow.row(CopyMode.ZOOP, FIRST, FIRST.middle(), CopyRow.MAX_COPIES));
 	}
 
 	@Test
 	void theRowStopsAtTenCopies() {
-		List<Spot> row = CopyRow.row(CopyMode.ZOOP, FIRST, new BlockPos(500, 64, 22));
+		List<Spot> row = CopyRow.row(CopyMode.ZOOP, FIRST, new BlockPos(500, 64, 22), CopyRow.MAX_COPIES);
 		assertEquals(CopyRow.MAX_COPIES, row.size());
 		assertEquals(new BlockPos(37, 64, 20), row.getLast().min());
-		assertEquals(10, CopyRow.row(CopyMode.VERTICAL, FIRST, new BlockPos(11, -500, 22)).size());
+		assertEquals(10, CopyRow.row(CopyMode.VERTICAL, FIRST, new BlockPos(11, -500, 22), CopyRow.MAX_COPIES).size());
+	}
+
+	/** The one ghost block, as a copy of one block at 5 64 5. */
+	private static final Spot BLOCK = new Spot(new BlockPos(5, 64, 5), new Vec3i(1, 1, 1));
+
+	@Test
+	void aBlocksRowIsEveryBlockToTheAim() {
+		assertEquals(List.of(new BlockPos(5, 64, 5), new BlockPos(6, 64, 5), new BlockPos(7, 64, 5), new BlockPos(8, 64, 5)),
+			mins(CopyRow.row(CopyMode.ZOOP, BLOCK, new BlockPos(8, 64, 6), CopyRow.MAX_BLOCKS)));
+		assertEquals(List.of(new BlockPos(5, 64, 5), new BlockPos(5, 64, 4), new BlockPos(5, 64, 3)),
+			mins(CopyRow.row(CopyMode.ZOOP, BLOCK, new BlockPos(6, 64, 3), CopyRow.MAX_BLOCKS)));
+		assertEquals(List.of(new BlockPos(5, 64, 5), new BlockPos(5, 65, 5), new BlockPos(5, 66, 5)),
+			mins(CopyRow.row(CopyMode.VERTICAL, BLOCK, new BlockPos(5, 66, 5), CopyRow.MAX_BLOCKS)));
+		// Aimed at the block itself, the row is the block alone.
+		assertEquals(List.of(BLOCK), CopyRow.row(CopyMode.ZOOP, BLOCK, BLOCK.min(), CopyRow.MAX_BLOCKS));
+	}
+
+	@Test
+	void aBlocksRowStopsAt32AndTheCopysAt10() {
+		List<Spot> row = CopyRow.row(CopyMode.ZOOP, BLOCK, new BlockPos(5, 64, 500), CopyRow.MAX_BLOCKS);
+		assertEquals(32, row.size());
+		assertEquals(new BlockPos(5, 64, 36), row.getLast().min());
+		assertEquals(32, CopyRow.row(CopyMode.VERTICAL, BLOCK, new BlockPos(5, 300, 5), CopyRow.MAX_BLOCKS).size());
+		assertEquals(10, CopyRow.row(CopyMode.ZOOP, BLOCK, new BlockPos(5, 64, 500), CopyRow.MAX_COPIES).size());
+		// 31 blocks beyond the first is 32 in all; 32 beyond is still 32.
+		assertEquals(32, CopyRow.row(CopyMode.ZOOP, BLOCK, new BlockPos(36, 64, 5), CopyRow.MAX_BLOCKS).size());
+		assertEquals(32, CopyRow.row(CopyMode.ZOOP, BLOCK, new BlockPos(37, 64, 5), CopyRow.MAX_BLOCKS).size());
+		assertEquals(31, CopyRow.row(CopyMode.ZOOP, BLOCK, new BlockPos(35, 64, 5), CopyRow.MAX_BLOCKS).size());
 	}
 
 	@Test
@@ -90,19 +118,19 @@ class CopyRowTest {
 			CopyPlacement.turnedSize(FIRST.size(), new Turn(Mirror.NONE, Rotation.CLOCKWISE_90)));
 		assertEquals(new Vec3i(5, 2, 3), turned.size());
 		assertEquals(List.of(new BlockPos(9, 64, 21), new BlockPos(14, 64, 21), new BlockPos(19, 64, 21)),
-			mins(CopyRow.row(CopyMode.ZOOP, turned, new BlockPos(20, 64, 22))));
+			mins(CopyRow.row(CopyMode.ZOOP, turned, new BlockPos(20, 64, 22), CopyRow.MAX_COPIES)));
 	}
 
 	@Test
 	void verticalGoesUpOrDownTheCopysHeightApart() {
 		assertEquals(List.of(new BlockPos(10, 64, 20), new BlockPos(10, 66, 20), new BlockPos(10, 68, 20)),
-			mins(CopyRow.row(CopyMode.VERTICAL, FIRST, new BlockPos(11, 69, 22))));
+			mins(CopyRow.row(CopyMode.VERTICAL, FIRST, new BlockPos(11, 69, 22), CopyRow.MAX_COPIES)));
 		assertEquals(List.of(new BlockPos(10, 64, 20), new BlockPos(10, 62, 20)),
-			mins(CopyRow.row(CopyMode.VERTICAL, FIRST, new BlockPos(11, 62, 22))));
+			mins(CopyRow.row(CopyMode.VERTICAL, FIRST, new BlockPos(11, 62, 22), CopyRow.MAX_COPIES)));
 		// Far to the side, Vertical still goes only up or down.
 		assertEquals(List.of(new BlockPos(10, 64, 20), new BlockPos(10, 66, 20)),
-			mins(CopyRow.row(CopyMode.VERTICAL, FIRST, new BlockPos(40, 66, 50))));
-		assertEquals(1, CopyRow.row(CopyMode.VERTICAL, FIRST, new BlockPos(11, 65, 22)).size());
+			mins(CopyRow.row(CopyMode.VERTICAL, FIRST, new BlockPos(40, 66, 50), CopyRow.MAX_COPIES)));
+		assertEquals(1, CopyRow.row(CopyMode.VERTICAL, FIRST, new BlockPos(11, 65, 22), CopyRow.MAX_COPIES).size());
 	}
 
 	@Test
@@ -122,7 +150,7 @@ class CopyRowTest {
 
 	@Test
 	void theRowsBoxHoldsEveryCopy() {
-		List<Spot> row = CopyRow.row(CopyMode.ZOOP, FIRST, new BlockPos(9, 64, 22));
+		List<Spot> row = CopyRow.row(CopyMode.ZOOP, FIRST, new BlockPos(9, 64, 22), CopyRow.MAX_COPIES);
 		assertEquals(Spot.between(new BlockPos(7, 64, 20), new BlockPos(12, 65, 24)), CopyRow.box(row));
 	}
 }

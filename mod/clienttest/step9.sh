@@ -1807,6 +1807,161 @@ shots single-unlocked
 drv 1 "edit -70 -60 -50 -50 -55 -30 minecraft:air" > /dev/null
 check "erasing the ghost blocks reaches both games" eval 'drv 2 "await block -60 -60 -41 minecraft:air" > /dev/null &&
 	drv 1 "await block -60 -60 -41 minecraft:air" > /dev/null'
+
+# One ghost block, Zoop and Vertical, on the same grass, with stone bricks in Single mode. Each row starts on a line of
+# its own at x -64 or -62, from Planner1 at -58.5 -58 -34.5 facing north.
+# row_east <x1> <x2> <y> <z> and row_up <x> <y1> <y2> <z>: a row's positions as the driver's preview gives them.
+row_east() {
+	local x out=()
+	for ((x = $1; x <= $2; x++)); do out+=("$x,$3,$4"); done
+	echo "${out[*]}"
+}
+row_up() {
+	local y out=()
+	for ((y = $2; y <= $3; y++)); do out+=("$1,$y,$4"); done
+	echo "${out[*]}"
+}
+drv 1 "cmd item replace entity @s weapon.mainhand with minecraft:stone_bricks" "ebmode SINGLE" "ebarray 0" \
+	"cmd tp @s -58.5 -58 -34.5 180 30" "wait 40" > /dev/null
+check "the one ghost block's mode starts as Single, with no row" eval '[[ $(val 1 singlerow) == "SINGLE none" ]]'
+press 1 r
+check "R switches the block to Zoop" eval '[[ $(val 1 singlerow) == "ZOOP none" ]]'
+press 1 r
+check "then to Vertical" eval '[[ $(val 1 singlerow) == "VERTICAL none" ]]'
+press 1 r
+check "then back to Single" eval '[[ $(val 1 singlerow) == "SINGLE none" ]]'
+check "and the copy's mode stays Single" eval '[[ $(val 1 copymode) == SINGLE ]]'
+press 1 r
+aim 1 -64 -60 -40
+use_click 1
+check "in Zoop, a right click fixes the row's start and sends no edit" eval 'drv 1 "wait 10" > /dev/null &&
+	[[ $(val 1 holdlog) == *" edits=0 "* ]] && [[ $(val 1 singlerow) == "ZOOP 1 -64,-60,-40..-64,-60,-40" ]] &&
+	[[ $(val 1 "layer -64 -60 -40") == minecraft:air ]]'
+check "and the preview draws the start alone" drv 1 "await preview -64,-60,-40"
+aim 1 -53 -60 -40
+check "aimed 11 blocks east of the start, the row is 12 blocks" \
+	drv 1 "await singlerow ZOOP 12 -64,-60,-40..-53,-60,-40"
+check "and the preview draws the 12" drv 1 "await preview $(row_east -64 -53 -60 -40)"
+check "H, R and the nudge keys act on nothing while the row is fixed" eval 'press 1 h && press 1 r && press 1 Up &&
+	[[ $(val 1 single) == "unlocked active" ]] && [[ $(val 1 singlerow) == "ZOOP 12 -64,-60,-40..-53,-60,-40" ]]'
+drv 1 "lookat -58.5 -20 -60" "wait 5" > /dev/null
+check "aimed at nothing, the row stays as it was" eval 'drv 1 "wait 5" > /dev/null &&
+	[[ $(val 1 singlerow) == "ZOOP 12 -64,-60,-40..-53,-60,-40" ]]'
+aim 1 -53 -60 -40
+drv 1 "await preview $(row_east -64 -53 -60 -40)" > /dev/null
+shots single-zoop
+use_click 1
+check "a second right click places the 12 ghost blocks as one edit" eval \
+	'drv 1 "await block -64 -60 -40 minecraft:stone_bricks" "await block -53 -60 -40 minecraft:stone_bricks" > /dev/null &&
+	[[ $(val 1 holdlog) == *" edits=1 "* ]] && (($(val 1 "countblocks -70 -45 -60 -40 minecraft:stone_bricks") == 12))'
+check "which the other player sees" drv 2 "await block -64 -60 -40 minecraft:stone_bricks" \
+	"await block -53 -60 -40 minecraft:stone_bricks"
+check "and the block follows the aim again, still in Zoop" eval '[[ $(val 1 singlerow) == "ZOOP none" ]] &&
+	[[ $(val 1 single) == "unlocked active" ]]'
+drv 1 "close" > /dev/null
+keys 1 keydown ctrl key z sleep 0.3 keyup ctrl
+check "one Ctrl+Z takes the row back" drv 2 "await block -64 -60 -40 minecraft:air" \
+	"await block -58 -60 -40 minecraft:air" "await block -53 -60 -40 minecraft:air"
+# Aimed 40 blocks east of the start, from beside the far end, the row stops at 32.
+aim 1 -64 -60 -40
+use_click 1
+drv 1 "cmd tp @s -26.5 -58 -34.5 180 30" "wait 40" > /dev/null
+aim 1 -24 -60 -40
+check "aimed 40 blocks east, the row stops at 32" drv 1 "await singlerow ZOOP 32 -64,-60,-40..-33,-60,-40"
+# A left click aimed at a ghost block drops the row and erases nothing.
+drv 1 "edit -30 -60 -40 -30 -60 -40 minecraft:stone_bricks" "await block -30 -60 -40 minecraft:stone_bricks" \
+	"lookat -29.5 -59.5 -39.0" "wait 5" > /dev/null
+attack_click 1
+check "a left click with the row fixed drops it and erases nothing" eval 'drv 1 "wait 10" > /dev/null &&
+	[[ $(val 1 singlerow) == "ZOOP none" ]] && [[ $(val 1 holdlog) == *" edits=0 "* ]] &&
+	[[ $(val 1 "layer -30 -60 -40") == minecraft:stone_bricks ]] && [[ $(val 1 "real -30 -61 -40") == minecraft:grass_block ]]'
+# The next rows go on lines from the farthest north to the nearest, so a row placed earlier doesn't stand between
+# Planner1 and the next line. The right button held a second for each of the two clicks places one row, at z -48.
+drv 1 "cmd tp @s -58.5 -58 -34.5 180 30" "wait 40" > /dev/null
+aim 1 -64 -60 -48
+drv 1 "holdreset" > /dev/null
+xdo 1 mousedown 3
+drv 1 "wait 20" > /dev/null
+xdo 1 mouseup 3
+check "held a second, the first right click fixes the row and sends no edit" eval 'drv 1 "wait 10" > /dev/null &&
+	[[ $(val 1 holdlog) == *" edits=0 "* ]] && [[ $(val 1 singlerow) == "ZOOP 1 -64,-60,-48..-64,-60,-48" ]]'
+aim 1 -60 -60 -48
+drv 1 "await singlerow ZOOP 5 -64,-60,-48..-60,-60,-48" > /dev/null
+xdo 1 mousedown 3
+drv 1 "wait 20" > /dev/null
+xdo 1 mouseup 3
+check "held through the second click too, the right button places one row" eval 'drv 1 "wait 10" > /dev/null &&
+	[[ $(val 1 holdlog) == *" edits=1 "* ]] && drv 2 "await block -60 -60 -48 minecraft:stone_bricks" > /dev/null &&
+	[[ $(val 1 singlerow) == "ZOOP none" ]] && (($(val 1 "countblocks -70 -45 -60 -48 minecraft:stone_bricks") == 5))'
+# With the mix of stone and andesite, at z -46, each block of the row is the mix's for its position, which a fixed hash
+# of the position chooses for the preview and the placed block alike.
+drv 1 "setmix minecraft:stone:50,minecraft:andesite:50" > /dev/null
+aim 1 -64 -60 -46
+use_click 1
+aim 1 -53 -60 -46
+drv 1 "await singlerow ZOOP 12 -64,-60,-46..-53,-60,-46" > /dev/null
+check "with the block mix on, the preview draws the row" drv 1 "await preview $(row_east -64 -53 -60 -46)"
+use_click 1
+mix_row_matches() {
+	local x kinds=""
+	drv 1 "await block -53 -60 -46 $(val 1 "mixat -53 -60 -46")" > /dev/null || return 1
+	for ((x = -64; x <= -53; x++)); do
+		[[ $(val 1 "layer $x -60 -46") == "$(val 1 "mixat $x -60 -46")" ]] || return 1
+		kinds+=" $(val 1 "layer $x -60 -46")"
+	done
+	[[ "$kinds " == *" minecraft:stone "* && $kinds == *minecraft:andesite* ]]
+}
+check "and the row's blocks are the mix's at each position, as the preview's are, stone and andesite both" \
+	mix_row_matches
+drv 1 "setmix" > /dev/null
+# With Effortless Building's mirror across x -66, at z -44, the row and its mirror image, x -80 to -69.
+drv 1 "ebmirror -66" > /dev/null
+aim 1 -64 -60 -44
+use_click 1
+aim 1 -53 -60 -44
+drv 1 "await singlerow ZOOP 12 -64,-60,-44..-53,-60,-44" > /dev/null
+check "with Effortless Building's mirror on, the preview draws the row and its mirror image" eval \
+	'drv 1 "wait 10" > /dev/null && (($(val 1 preview | wc -w) == 24))'
+use_click 1
+check "and the row is placed mirrored" eval 'drv 1 "await block -80 -60 -44 minecraft:stone_bricks" > /dev/null &&
+	(($(val 1 "countblocks -85 -45 -60 -44 minecraft:stone_bricks") == 24)) &&
+	[[ $(val 1 "layer -69 -60 -44") == minecraft:stone_bricks ]] && [[ $(val 1 "layer -68 -60 -44") == minecraft:air ]]'
+drv 1 "ebarray 0" > /dev/null
+# Locked at -64 -60 -42 and nudged north, the row starts where it's locked, at -64 -60 -43.
+aim 1 -64 -60 -42
+press 1 h
+press 1 Up
+check "in Zoop, H locks the block and Up nudges it north" eval '[[ $(val 1 single) == "locked -64,-60,-43 active" ]]'
+aim 1 -58 -60 -42
+use_click 1
+check "a row started while the block is locked starts where it's locked" eval 'drv 1 "wait 10" > /dev/null &&
+	[[ $(val 1 holdlog) == *" edits=0 "* ]] && [[ $(val 1 singlerow) == "ZOOP 7 -64,-60,-43..-58,-60,-43" ]]'
+use_click 1
+check "the second click places it, and the block stays locked where the row started" eval \
+	'drv 1 "await block -58 -60 -43 minecraft:stone_bricks" > /dev/null &&
+	(($(val 1 "countblocks -70 -45 -60 -43 minecraft:stone_bricks") == 7)) &&
+	[[ $(val 1 single) == "locked -64,-60,-43 active" ]] && [[ $(val 1 singlerow) == "ZOOP none" ]]'
+press 1 h
+# Vertical, from farther off: fixed on -62 -61 -38's top and looking up into open air at -61.5 -52.5 -37.5, on the
+# vertical line through the start, the row rises 8 blocks, to -53.
+press 1 r
+drv 1 "cmd tp @s -54.5 -58 -30.5 135 20" "wait 40" > /dev/null
+aim 1 -62 -60 -38
+use_click 1
+drv 1 "lookat -61.5 -52.5 -37.5" "wait 5" > /dev/null
+check "in Vertical, looking up into open air, the row rises 8 blocks" \
+	drv 1 "await singlerow VERTICAL 8 -62,-60,-38..-62,-53,-38"
+check "and the preview draws the 8" drv 1 "await preview $(row_up -62 -60 -53 -38)"
+shots single-vertical
+use_click 1
+check "the second click places the 8 as one edit" eval 'drv 1 "await block -62 -53 -38 minecraft:stone_bricks" \
+	"await block -62 -60 -38 minecraft:stone_bricks" > /dev/null && [[ $(val 1 holdlog) == *" edits=1 "* ]]'
+press 1 r
+check "R then switches the block back to Single" eval '[[ $(val 1 singlerow) == "SINGLE none" ]]'
+drv 1 "edit -85 -60 -50 -20 -50 -30 minecraft:air" > /dev/null
+check "erasing the rows reaches both games" eval 'drv 2 "await block -64 -60 -44 minecraft:air" \
+	"await block -62 -53 -38 minecraft:air" > /dev/null && drv 1 "await block -64 -60 -44 minecraft:air" \
+	"await block -80 -60 -44 minecraft:air" "await block -30 -60 -40 minecraft:air" > /dev/null'
 drv 1 "cmd item replace entity @s weapon.mainhand with $main_hand" "cmd tp @s 8.5 -56 9.5 0 30" \
 	"cmd tp Planner2 101.5 0 26.5 0 30" "wait 40" > /dev/null
 

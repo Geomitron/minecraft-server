@@ -171,7 +171,7 @@ final class ClientSession {
 		box.end();
 		endAim();
 		clipboard.clear();
-		single.unlock();
+		single.clear();
 		pastes.clear();
 		glow.clear();
 	}
@@ -180,8 +180,8 @@ final class ClientSession {
 	 * Once a client tick: removes old plans' placements when due, asks for the columns that loaded and lets go of those
 	 * that unloaded, runs the self-check's comparisons that are due, counts Delete by aim's hold of the left button
 	 * ({@code attackDown}) and erases the marks once it's held a second, moves the box being drawn and the copy at the
-	 * aim to where the player aims, unlocks the one ghost block once a mouse mode is on, and sends the current material
-	 * list when it changed.
+	 * aim to where the player aims, unlocks the one ghost block and drops its row once a mouse mode is on, and sends the
+	 * current material list when it changed.
 	 */
 	void tick(boolean attackDown) {
 		if (removeOldPlans && Minecraft.getInstance().level != null) {
@@ -205,7 +205,7 @@ final class ClientSession {
 		}
 		followAim();
 		if (mouseMode() != null) {
-			single.unlock();
+			single.clear();
 		}
 		lists.tick(System.currentTimeMillis());
 	}
@@ -250,7 +250,7 @@ final class ClientSession {
 			}
 		}
 		if (toward != null) {
-			clipboard.showRow(CopyRow.row(copyMode, first, toward));
+			clipboard.showRow(CopyRow.row(copyMode, first, toward, CopyRow.MAX_COPIES));
 		}
 	}
 
@@ -285,11 +285,11 @@ final class ClientSession {
 
 	/**
 	 * The player did something that may end the mouse mode ({@link MouseMode#endedBy}): ending it ends the box, or puts
-	 * the copy away. Choosing a build mode also unlocks the one ghost block.
+	 * the copy away. Choosing a build mode also unlocks the one ghost block and drops its row.
 	 */
 	void modeAction(MouseMode.Action action) {
 		if (action == MouseMode.Action.CHOOSE_BUILD_MODE) {
-			single.unlock();
+			single.clear();
 		}
 		MouseMode mode = mouseMode();
 		if (mode != null && mode.endedBy(action)) {
@@ -496,7 +496,7 @@ final class ClientSession {
 		box.end();
 		endAim();
 		clipboard.clear();
-		single.unlock();
+		single.clear();
 		tiles.clear();
 		check.clear();
 		glow.clear();

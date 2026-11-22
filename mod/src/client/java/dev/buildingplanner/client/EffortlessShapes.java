@@ -1,6 +1,10 @@
 package dev.buildingplanner.client;
 
+import dev.buildingplanner.input.CopyMode;
+import dev.buildingplanner.input.CopyPlacement;
+import dev.buildingplanner.input.CopyRow;
 import dev.buildingplanner.input.MixRule;
+import dev.buildingplanner.input.SingleRule;
 import dev.buildingplanner.layer.GhostErase;
 import dev.buildingplanner.layer.OtherHalf;
 import dev.buildingplanner.mixin.effortless.BuildPipelineClientAccessor;
@@ -11,6 +15,7 @@ import java.util.Map;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.Vec3i;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
@@ -118,16 +123,15 @@ public final class EffortlessShapes {
 	}
 
 	/**
-	 * H: locks the one ghost block where a right click would place it now, beside the aimed face, at the position
-	 * Effortless Building's preview draws its first block (its {@code resolveFirstClickPos}), aimed as its preview aims:
-	 * with Single's reach, at ghost blocks too (E9) and from Freecam's camera while it's on (E24). Returns whether
-	 * anything was aimed at; with nothing, the block stays unlocked.
+	 * Where a right click would place the one ghost block now: beside the aimed face, at the position Effortless
+	 * Building's preview draws its first block (its {@code resolveFirstClickPos}), aimed as its preview aims: with
+	 * Single's reach, at ghost blocks too (E9) and from Freecam's camera while it's on (E24). Null with nothing aimed at.
 	 */
-	static boolean lock(SingleBlock block) {
+	private static Aimed aimed() {
 		Minecraft mc = Minecraft.getInstance();
 		Player player = mc.player;
 		if (player == null || mc.level == null) {
-			return false;
+			return null;
 		}
 		Entity aim = Aim.forEffortless(player);
 		Vec3 start = aim.getEyePosition();
@@ -135,49 +139,121 @@ public final class EffortlessShapes {
 		ClipContext context = new ClipContext(start, end, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player);
 		BlockHitResult hit = nearerHit(mc.level.clip(context), context);
 		if (hit.getType() != HitResult.Type.BLOCK) {
+			return null;
+		}
+		return new Aimed(BuildPipelineClientAccessor.buildingplanner$resolveFirstClickPos(hit,
+			BuildPipeline.BuildState.PLACING, mc.level), hit);
+	}
+
+	/** The position a right click would place at, and the hit that aims there. */
+	private record Aimed(BlockPos pos, BlockHitResult hit) {
+	}
+
+	/**
+	 * H: locks the one ghost block where a right click would place it now ({@link #aimed}). Returns whether anything was
+	 * aimed at; with nothing, the block stays unlocked.
+	 */
+	static boolean lock(SingleBlock block) {
+		Aimed aimed = aimed();
+		if (aimed == null) {
 			return false;
 		}
-		block.lock(BuildPipelineClientAccessor.buildingplanner$resolveFirstClickPos(hit,
-			BuildPipeline.BuildState.PLACING, mc.level), hit);
+		block.lock(aimed.pos(), aimed.hit());
 		return true;
 	}
 
 	/**
-	 * The locked block as a set of one, run through Effortless Building's modifiers, the block mix and its constraints
-	 * ({@code processBlocks}), as its shapes are: what its preview draws (hook E27) and a right click places.
+	 * The block as Building Planner shows it, while it's locked or its row is fixed: the row's positions, or the locked
+	 * block alone, as a set whose first and last positions are the row's ends, run through Effortless Building's
+	 * modifiers, the block mix and its constraints ({@code processBlocks}), as its shapes are: what its preview draws
+	 * (hook E27) and a right click places.
 	 */
-	static BlockSet lockedSet(SingleBlock block) {
+	static BlockSet shownSet(SingleBlock block) {
+		List<BlockPos> positions = block.rowFixed() ? block.row() : List.of(block.pos());
 		BlockSet blocks = new BlockSet();
-		BlockPos pos = block.pos();
-		blocks.add(new BlockEntry(pos));
-		blocks.firstPos = pos;
-		blocks.lastPos = pos;
+		positions.forEach(pos -> blocks.add(new BlockEntry(pos)));
+		blocks.firstPos = positions.getFirst();
+		blocks.lastPos = positions.getLast();
 		BuildPipelineClient.CLIENT.processBlocks(blocks, Minecraft.getInstance().player,
 			BuildPipeline.BuildState.PLACING);
 		return blocks;
 	}
 
 	/**
-	 * Hook M2: the right click while the block is locked places it where it's locked, as one shape edit, with the hit it
-	 * was locked with and the player's facing now, as a Single click would place it there.
+	 * Hook M2: the right click that's the block's ({@link SingleRule#takesPlace}). In Single, locked, it places the block
+	 * where it's locked. In Zoop and Vertical the first click fixes the row's start where the block is (where it's
+	 * locked, if it is, or where a right click would place it) and sends nothing; with nothing aimed at and the block
+	 * unlocked, it does nothing. The second places the whole row as one shape edit and drops the row, and the block
+	 * follows the aim again, or stays locked where it was.
 	 */
-	static void placeLocked(SingleBlock block) {
-		BlockSet blocks = lockedSet(block);
+	static void rightClick(SingleBlock block) {
+		if (SingleBlock.mode() == CopyMode.SINGLE || block.rowFixed()) {
+			placeShown(block);
+			block.dropRow();
+		} else if (block.locked()) {
+			block.fixRow(block.pos(), block.hit());
+		} else {
+			Aimed aimed = aimed();
+			if (aimed != null) {
+				block.fixRow(aimed.pos(), aimed.hit());
+			}
+		}
+	}
+
+	/**
+	 * Once a client tick while the block's row is fixed and its controls are active: lays the row from its start toward
+	 * the aim ({@link CopyRow#row}, up to {@link CopyRow#MAX_BLOCKS}): in Zoop toward where a right click would place,
+	 * leaving the row as it was while the player aims at nothing; in Vertical toward the view's height above or below the
+	 * start ({@link CopyRow#verticalAim}), within Single's reach.
+	 */
+	static void followRow(SingleBlock block) {
+		Player player = Minecraft.getInstance().player;
+		if (player == null) {
+			return;
+		}
+		CopyPlacement.Spot start = new CopyPlacement.Spot(block.rowStart(), new Vec3i(1, 1, 1));
+		BlockPos toward;
+		if (SingleBlock.mode() == CopyMode.VERTICAL) {
+			Entity view = Aim.forEffortless(player);
+			toward = CopyRow.verticalAim(start, view.getEyePosition(), view.getLookAngle(),
+				ServerConfig.INSTANCE.getReach(player));
+		} else {
+			Aimed aimed = aimed();
+			if (aimed == null) {
+				return;
+			}
+			toward = aimed.pos();
+		}
+		block.showRow(CopyRow.row(SingleBlock.mode(), start, toward, CopyRow.MAX_BLOCKS).stream()
+			.map(CopyPlacement.Spot::min).toList());
+	}
+
+	/**
+	 * Places the block where it's locked, or its fixed row, as one shape edit, with the hit it was locked or fixed with
+	 * and the player's facing now, as a Single click would place it there.
+	 */
+	private static void placeShown(SingleBlock block) {
+		BlockSet blocks = shownSet(block);
 		place(blocks, block.hit());
 		Minecraft mc = Minecraft.getInstance();
 		if (!blocks.validEntries().isEmpty() && mc.player.getMainHandItem().getItem() instanceof BlockItem item) {
 			SoundType sound = item.getBlock().defaultBlockState().getSoundType();
-			mc.level.playLocalSound(block.pos(), sound.getPlaceSound(), SoundSource.BLOCKS, sound.getVolume(),
+			mc.level.playLocalSound(blocks.firstPos, sound.getPlaceSound(), SoundSource.BLOCKS, sound.getVolume(),
 				sound.getPitch(), false);
 		}
 	}
 
 	/**
-	 * Hook M1: the left click while the block is locked erases the ghost block at the locked position, whatever the
-	 * player aims at, with the other half of a two-block ghost block ({@link GhostErase#of}). With no ghost block there,
+	 * Hook M1: the left click that's the block's ({@link SingleRule#takesBreak}). With a row fixed, it drops the row and
+	 * erases nothing. Otherwise the block is locked, and it erases the ghost block at the locked position, whatever the
+	 * player aims at, with the other half of a two-block ghost block ({@link GhostErase#of}); with no ghost block there,
 	 * it sends nothing.
 	 */
-	static void eraseLocked(SingleBlock block) {
+	static void leftClick(SingleBlock block) {
+		if (block.rowFixed()) {
+			block.dropRow();
+			return;
+		}
 		ClientSession session = BuildingPlannerClient.session();
 		Minecraft mc = Minecraft.getInstance();
 		BlockState ghost = session.replica().layer().get(block.pos());
@@ -189,12 +265,12 @@ public final class EffortlessShapes {
 	}
 
 	/**
-	 * The locked block's state for the preview (hook E28): the held block's placement rules with the hit it was locked
-	 * with and the player's facing now, as {@link #placeLocked} places it, so the preview shows the block a right click
-	 * places. Otherwise the state Effortless Building found for the aim.
+	 * The shown block's state for the preview (hook E28): the held block's placement rules with the hit it was locked or
+	 * its row fixed with and the player's facing now, as a right click places it, so the preview shows the blocks a
+	 * right click places. Otherwise the state Effortless Building found for the aim.
 	 */
 	public static BlockState previewState(BlockItem item, ItemStack stack, BlockState aimed) {
-		SingleBlock block = BuildingPlannerClient.lockedSingle();
+		SingleBlock block = BuildingPlannerClient.shownSingle();
 		if (block == null) {
 			return aimed;
 		}
@@ -204,20 +280,21 @@ public final class EffortlessShapes {
 	}
 
 	/**
-	 * Hook E27: while the one ghost block is locked and its controls are active, the preview draws the locked block
-	 * ({@link #lockedSet}) in place of the block at the aim.
+	 * Hook E27: while the one ghost block is locked or its row is fixed, and its controls are active, the preview draws
+	 * the locked block or the row ({@link #shownSet}) in place of the block at the aim.
 	 */
 	public static BlockSet previewBlocks(BlockSet aimed) {
-		SingleBlock block = BuildingPlannerClient.lockedSingle();
-		return block == null ? aimed : lockedSet(block);
+		SingleBlock block = BuildingPlannerClient.shownSingle();
+		return block == null ? aimed : shownSet(block);
 	}
 
 	/**
 	 * Hook E30: the preview skips a set of one block while no shape is under way, so Effortless Building's Single mode
-	 * draws nothing for the block at the aim; the locked block, which may be far from the aim, is drawn.
+	 * draws nothing for the block at the aim; the locked block, which may be far from the aim, and a row of one are
+	 * drawn.
 	 */
 	public static int previewSize(int size) {
-		return size <= 1 && BuildingPlannerClient.lockedSingle() != null ? 2 : size;
+		return size <= 1 && BuildingPlannerClient.shownSingle() != null ? 2 : size;
 	}
 
 	/**

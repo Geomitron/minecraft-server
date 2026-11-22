@@ -228,6 +228,9 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 					}
 					heldClicks.tick(client);
 				}
+				if (singleActive() && session.single().rowFixed()) {
+					EffortlessShapes.followRow(session.single());
+				}
 			}
 			copyKeys.tick(client, session);
 		});
@@ -433,7 +436,8 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 
 	/**
 	 * Hook M3: whether holding the attack button breaks nothing: while a mouse mode is on, while the one ghost block is
-	 * locked, and while the button stays down after the click that finished a box or erased at the locked block.
+	 * locked or its row is fixed, and while the button stays down after the click that finished a box, erased at the
+	 * locked block or dropped the block's row.
 	 */
 	public static boolean holdingAttackTaken() {
 		return session != null && (attackHeld || session.mouseMode() != null || singleTakesBreak());
@@ -448,9 +452,12 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 			ClickRule.holdsPlaceable());
 	}
 
-	/** The one ghost block while it's locked and its controls are active (hooks E27, E28 and E30), or null. */
-	static SingleBlock lockedSingle() {
-		return singleActive() && session.single().locked() ? session.single() : null;
+	/**
+	 * The one ghost block while it's locked or its row is fixed and its controls are active (hooks E27, E28 and E30), or
+	 * null.
+	 */
+	static SingleBlock shownSingle() {
+		return singleActive() && (session.single().locked() || session.single().rowFixed()) ? session.single() : null;
 	}
 
 	/** Hooks E14 and M2: whether the place click is the one ghost block's ({@link SingleRule#takesPlace}). */
@@ -490,8 +497,9 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 
 	/**
 	 * Hook M1: the left click sets the box's next corner, pastes the copy at the aim, or in Delete by aim starts the hold
-	 * that erases the marks; with the one ghost block locked, it erases the ghost block where it's locked, and holding
-	 * the button erases nothing more. Returns whether the click is taken from the game.
+	 * that erases the marks; with the one ghost block's row fixed, it drops the row, and with the block locked, it erases
+	 * the ghost block where it's locked; holding the button then does nothing more. Returns whether the click is taken
+	 * from the game.
 	 */
 	public static boolean leftClick() {
 		MouseMode mode = mouseMode();
@@ -499,7 +507,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 			if (!singleTakesBreak()) {
 				return false;
 			}
-			EffortlessShapes.eraseLocked(session.single());
+			EffortlessShapes.leftClick(session.single());
 			attackHeld = Minecraft.getInstance().options.keyAttack.isDown();
 			return true;
 		}
@@ -519,9 +527,10 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 
 	/**
 	 * Hook M2: the right click puts the copy away, or during a zoop, after its first click, drops the row and leaves the
-	 * copy at the aim; in Delete by aim it clears the marks, or with none ends the mode. With the one ghost block locked,
-	 * it places the block where it's locked. Returns whether the game's use is skipped, which it is too while the button
-	 * stays down after a mode started or ended or the locked block was placed, so holding it places no more.
+	 * copy at the aim; in Delete by aim it clears the marks, or with none ends the mode. With the one ghost block locked
+	 * or in Zoop or Vertical, it places the block where it's locked, fixes the row's start, or places the row
+	 * ({@link EffortlessShapes#rightClick}). Returns whether the game's use is skipped, which it is too while the button
+	 * stays down after a mode started or ended or the block's click acted, so holding it does no more.
 	 */
 	public static boolean rightClick() {
 		if (session == null) {
@@ -535,7 +544,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 			return true;
 		}
 		if (!useHeld && singleTakesPlace()) {
-			EffortlessShapes.placeLocked(session.single());
+			EffortlessShapes.rightClick(session.single());
 			useHeld = true;
 			return true;
 		}
