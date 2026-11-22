@@ -467,6 +467,11 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		return singleActive() && (session.single().locked() || session.single().rowFixed()) ? session.single() : null;
 	}
 
+	/** Whether the one ghost block follows the aim in Single with its controls active, so hook E30 draws it there. */
+	static boolean singleAtAim() {
+		return singleActive() && SingleRule.drawnAtAim(session.single().state());
+	}
+
 	/**
 	 * Whether the turning controls are active (Left Ctrl with the wheel and the middle click, see "One ghost block":
 	 * "Turning and flipping"), and hooks E1 and E28 give the blocks placed the turn ({@link SingleRule#turning}): a

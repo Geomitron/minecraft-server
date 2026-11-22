@@ -361,11 +361,13 @@ public final class EffortlessShapes {
 
 	/**
 	 * Hook E30: the preview skips a set of one block while no shape is under way, so Effortless Building's Single mode
-	 * draws nothing for the block at the aim; the locked block, which may be far from the aim, and a row of one are
-	 * drawn.
+	 * draws nothing for the block at the aim; the locked block, which may be far from the aim, a row of one, and the
+	 * block following the aim in Single are drawn. A set of copies, with the mirror or array on, is already more than
+	 * one block and is drawn once.
 	 */
 	public static int previewSize(int size) {
-		return size <= 1 && BuildingPlannerClient.shownSingle() != null ? 2 : size;
+		boolean drawn = BuildingPlannerClient.shownSingle() != null || size == 1 && BuildingPlannerClient.singleAtAim();
+		return size <= 1 && drawn ? 2 : size;
 	}
 
 	/**

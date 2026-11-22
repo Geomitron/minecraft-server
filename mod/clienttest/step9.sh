@@ -2005,8 +2005,17 @@ check "facing north, a notch up with Left Ctrl held turns the stair a quarter tu
 	turn_is "facing=east,half=bottom"
 check "and the hotbar slot stays" eval '[[ $(val 1 slot) == "4 minecraft:oak_stairs" ]]'
 let_go_ctrl
-# Effortless Building's preview draws no block of one at the aim in Single, so the preview is read with the block
-# locked, which hook E30 draws.
+# Unlocked, following the aim in Single, hook E30 makes Effortless Building's preview draw the one block at the aim, once,
+# turned as it will be placed; with its array of 2 copies one block apart upward, the stair and its copies, once each.
+check "unlocked, the preview draws the stair at the aim alone, turned to face east" eval 'drv 1 "wait 10" > /dev/null &&
+	echo "  unlocked preview: $(val 1 preview)" >> /out/checks.log && [[ $(val 1 preview) == "-60,-60,-40" ]] &&
+	[[ $(val 1 "previewstate -60 -60 -40") == "minecraft:oak_stairs["*"facing=east,half=bottom,"* ]]'
+check "with the array of 2 copies, it draws the stair and its 2 copies once each" eval \
+	'drv 1 "ebarray 2 0 1 0" "wait 10" "await preview -60,-60,-40 -60,-59,-40 -60,-58,-40" "wait 5" > /dev/null &&
+	[[ $(val 1 preview) == "-60,-60,-40 -60,-59,-40 -60,-58,-40" ]] &&
+	[[ $(val 1 "previewstate -60 -58 -40") == "minecraft:oak_stairs["*"facing=east,half=bottom,"* ]]'
+drv 1 "ebarray 0" "wait 10" > /dev/null
+shots stair-at-aim
 press 1 h
 check "locked, the preview draws the stair turned to face east" eval 'drv 1 "wait 10" > /dev/null &&
 	[[ $(val 1 "previewstate -60 -60 -40") == "minecraft:oak_stairs["*"facing=east,half=bottom,"* ]]'
@@ -2041,7 +2050,9 @@ check "placed, the stair faces east with its top half, on both clients" eval \
 	[[ $(val 1 "layerstate -56 -60 -40") == *"facing=east,half=top,"* ]] &&
 	drv 2 "await block -56 -60 -40 minecraft:oak_stairs" > /dev/null'
 press 1 h
-check "unlocked, the preview draws nothing over it" eval 'drv 1 "wait 10" > /dev/null && [[ $(val 1 preview) == none ]]'
+check "unlocked, the preview draws the block at the aim, and not the locked position's as well" eval \
+	'drv 1 "wait 10" > /dev/null && echo "  unlocked preview over the placed stair: $(val 1 preview)" >> /out/checks.log &&
+	(($(val 1 preview | wc -w) == 1))'
 shots stairs-turned-after
 press 1 r
 # With the mix of oak and spruce stairs, a row of 12 at z -46, from close enough to reach it: both kinds take the turn.

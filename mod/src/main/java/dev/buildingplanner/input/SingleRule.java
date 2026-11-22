@@ -35,6 +35,14 @@ public final class SingleRule {
 	}
 
 	/**
+	 * Whether the block is drawn at the aim (hook E30): it follows the aim in Single, neither locked nor in a Zoop or
+	 * Vertical row, so the preview draws it where a right click would place it, even as a set of one block.
+	 */
+	public static boolean drawnAtAim(State state) {
+		return state.mode() == CopyMode.SINGLE && !state.locked() && !state.rowFixed();
+	}
+
+	/**
 	 * Whether the place click is Building Planner's: while the block is locked, which places it where it's locked, or in
 	 * Zoop or Vertical, whose clicks fix and place a row. Following the aim in Single, it's Effortless Building's.
 	 */
