@@ -2016,6 +2016,22 @@ check "with the array of 2 copies, it draws the stair and its 2 copies once each
 	[[ $(val 1 "previewstate -60 -58 -40") == "minecraft:oak_stairs["*"facing=east,half=bottom,"* ]]'
 drv 1 "ebarray 0" "wait 10" > /dev/null
 shots stair-at-aim
+# In Zoop and Vertical before the first click, the block at the aim is drawn as in Single (1128 Q1 A), where the row
+# would start. The Zoop block is shot at 1920 by 1080, GUI scale 2, with its box in the window logged for outlining.
+for mode in ZOOP VERTICAL; do
+	press 1 r
+	check "in $mode before the first click, the preview draws the stair at the aim alone, facing east" eval \
+		'drv 1 "wait 10" > /dev/null && [[ $(val 1 singlerow) == "$mode none" ]] &&
+		[[ $(val 1 preview) == "-60,-60,-40" ]] &&
+		[[ $(val 1 "previewstate -60 -60 -40") == "minecraft:oak_stairs["*"facing=east,half=bottom,"* ]]'
+	if [[ $mode == ZOOP ]]; then
+		drv 1 "wait 210" "window 1920 1080 2" "wait 20" "notoasts" "wait 5" "shot zoop-at-aim-1920x1080" > /dev/null
+		echo "  zoop-at-aim-1920x1080: stair $(val 1 "screenbox -60 -60 -40 -60 -60 -40")" >> /out/checks.log
+		drv 1 "window 854 480 2" "wait 20" > /dev/null
+	fi
+done
+press 1 r
+check "R then switches the block back to Single" eval '[[ $(val 1 singlerow) == "SINGLE none" ]]'
 press 1 h
 check "locked, the preview draws the stair turned to face east" eval 'drv 1 "wait 10" > /dev/null &&
 	[[ $(val 1 "previewstate -60 -60 -40") == "minecraft:oak_stairs["*"facing=east,half=bottom,"* ]]'

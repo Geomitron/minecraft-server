@@ -46,7 +46,7 @@ abstract class BlockPreviewRendererMixin {
 	/**
 	 * Hook E30: the method skips a set of one block while no shape is under way (its first {@code BlockSet.size()}), so
 	 * Single's block at the aim would draw nothing; the one ghost block is drawn locked, in a row of one, or following the
-	 * aim in Single.
+	 * aim in Single and in Zoop and Vertical before their first click.
 	 */
 	@ModifyExpressionValue(method = "render", at = @At(value = "INVOKE",
 		target = "Lnl/requios/effortlessbuilding/utilities/BlockSet;size()I", ordinal = 0))

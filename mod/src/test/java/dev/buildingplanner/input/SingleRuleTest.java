@@ -57,10 +57,13 @@ class SingleRuleTest {
 	}
 
 	@Test
-	void onlyTheBlockFollowingTheAimInSingleIsDrawnAtTheAim() {
+	void theBlockFollowingTheAimIsDrawnAtTheAimBeforeARowStarts() {
 		assertTrue(SingleRule.drawnAtAim(new SingleRule.State(CopyMode.SINGLE, false, false)));
+		assertTrue(SingleRule.drawnAtAim(new SingleRule.State(CopyMode.ZOOP, false, false)));
+		assertTrue(SingleRule.drawnAtAim(new SingleRule.State(CopyMode.VERTICAL, false, false)));
 		assertFalse(SingleRule.drawnAtAim(new SingleRule.State(CopyMode.SINGLE, true, false)));
-		assertFalse(SingleRule.drawnAtAim(new SingleRule.State(CopyMode.ZOOP, false, false)));
+		assertFalse(SingleRule.drawnAtAim(new SingleRule.State(CopyMode.ZOOP, true, false)));
+		assertFalse(SingleRule.drawnAtAim(new SingleRule.State(CopyMode.ZOOP, false, true)));
 		assertFalse(SingleRule.drawnAtAim(new SingleRule.State(CopyMode.VERTICAL, false, true)));
 	}
 

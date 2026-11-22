@@ -391,7 +391,7 @@ public final class EffortlessShapes {
 	/**
 	 * Hook E30: the preview skips a set of one block while no shape is under way, so Effortless Building's Single mode
 	 * draws nothing for the block at the aim; the locked block, which may be far from the aim, a row of one, and the
-	 * block following the aim in Single are drawn. A set of copies, with the mirror or array on, is already more than
+	 * block following the aim, in Single and in Zoop and Vertical before their first click, are drawn. A set of copies, with the mirror or array on, is already more than
 	 * one block and is drawn once.
 	 */
 	public static int previewSize(int size) {

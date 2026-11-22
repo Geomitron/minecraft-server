@@ -35,11 +35,12 @@ public final class SingleRule {
 	}
 
 	/**
-	 * Whether the block is drawn at the aim (hook E30): it follows the aim in Single, neither locked nor in a Zoop or
-	 * Vertical row, so the preview draws it where a right click would place it, even as a set of one block.
+	 * Whether the block is drawn at the aim (hook E30): it follows the aim, unlocked, in Single, and in Zoop and Vertical
+	 * before their first click (1128 Q1 A), so the preview draws it where a right click would place it, or where the
+	 * row would start, even as a set of one block.
 	 */
 	public static boolean drawnAtAim(State state) {
-		return state.mode() == CopyMode.SINGLE && !state.locked() && !state.rowFixed();
+		return !state.locked() && !state.rowFixed();
 	}
 
 	/**

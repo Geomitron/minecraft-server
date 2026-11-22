@@ -474,7 +474,10 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		return singleActive() && (session.single().locked() || session.single().rowFixed()) ? session.single() : null;
 	}
 
-	/** Whether the one ghost block follows the aim in Single with its controls active, so hook E30 draws it there. */
+	/**
+	 * Whether the one ghost block follows the aim with its controls active, in Single or in Zoop or Vertical before the
+	 * first click ({@link SingleRule#drawnAtAim}), so hook E30 draws it there.
+	 */
 	static boolean singleAtAim() {
 		return singleActive() && SingleRule.drawnAtAim(session.single().state());
 	}
