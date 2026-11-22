@@ -29,10 +29,11 @@ import net.minecraft.util.FormattedCharSequence;
  * line too wide for the screen wraps onto lines above it, keeping the size whole. While a box is drawn, the blocks in it
  * show under the crosshair ({@link BoxList}, laid out by {@link BoxListLayout}), in rows that end above the controls,
  * and in Delete by aim, the marked ghost blocks.
- * They show while a mode is on, with no screen open and the HUD shown (not hidden with F1). With no mode on, the
- * turning line shows in the same place ({@link ControlsLine#turning}), or in Disable, Disable's line
- * ({@link ControlsLine#disable}), which names in red why the turned block can't be placed; during a shape drawn with
- * the place click,
+ * They show while a mode is on, with no screen open and the HUD shown (not hidden with F1). With no mode on, Single's
+ * line shows in the same place while the one ghost block's controls are active ({@link ControlsLine#single}), naming
+ * in red why the block can't be placed, or the turning line ({@link ControlsLine#turning}), or in Disable, Disable's
+ * line ({@link ControlsLine#disable}), which names in red why the turned block can't be placed; during a shape drawn
+ * with the place click,
  * while Effortless Building draws its own line there and the shape's block count in the action bar above it, it shows
  * above the action bar.
  */
@@ -61,7 +62,7 @@ final class ModeHud implements HudElement {
 	private final Supplier<BoxDraw.Shown> box;
 	private final Supplier<ControlsLine.Line> copy;
 	private final Supplier<List<ControlsLine.Line>> aim;
-	private final Supplier<ControlsLine.Line> turning;
+	private final Supplier<ControlsLine.Line> modeless;
 	private final Supplier<Boolean> shape;
 	private final Supplier<String> modeKey;
 	private final Supplier<List<BoxList.Entry>> list;
@@ -69,19 +70,19 @@ final class ModeHud implements HudElement {
 	/**
 	 * {@code mode} is the mouse mode now, or null, {@code box} the box drawn now, or null, {@code copy} the copy at the
 	 * aim's line ({@link ControlsLine#copy}), or null, {@code aim} Delete by aim's lines ({@link ControlsLine#deleteAim}),
-	 * {@code turning} the turning line ({@link ControlsLine#turning}) or Disable's ({@link ControlsLine#disable}), or
-	 * null, {@code shape} whether Effortless
+	 * {@code modeless} the line with no mouse mode on, Single's ({@link ControlsLine#single}), the turning line
+	 * ({@link ControlsLine#turning}) or Disable's ({@link ControlsLine#disable}), or null, {@code shape} whether Effortless
 	 * Building's shape is under way, {@code modeKey} the name of the key that switches a Delete box to Aim, or null
 	 * while it has none, and {@code list} the kinds of block in the box, or the marks.
 	 */
 	ModeHud(Supplier<MouseMode> mode, Supplier<BoxDraw.Shown> box, Supplier<ControlsLine.Line> copy,
-		Supplier<List<ControlsLine.Line>> aim, Supplier<ControlsLine.Line> turning, Supplier<Boolean> shape,
+		Supplier<List<ControlsLine.Line>> aim, Supplier<ControlsLine.Line> modeless, Supplier<Boolean> shape,
 		Supplier<String> modeKey, Supplier<List<BoxList.Entry>> list) {
 		this.mode = mode;
 		this.box = box;
 		this.copy = copy;
 		this.aim = aim;
-		this.turning = turning;
+		this.modeless = modeless;
 		this.shape = shape;
 		this.modeKey = modeKey;
 		this.list = list;
@@ -93,7 +94,7 @@ final class ModeHud implements HudElement {
 		if (!shown()) {
 			return List.of();
 		}
-		List<ControlsLine.Line> lines = now == null ? turningLines() : switch (now) {
+		List<ControlsLine.Line> lines = now == null ? modelessLines() : switch (now) {
 			case BOX -> {
 				BoxDraw.Shown shown = box.get();
 				yield shown == null ? List.of() : ControlsLine.box(shown.purpose().name(), shown.corners(),
@@ -110,9 +111,9 @@ final class ModeHud implements HudElement {
 			line.size() == null ? null : component(line.size()).withStyle(ChatFormatting.WHITE))).toList();
 	}
 
-	/** The turning line or Disable's, while it shows, or none. */
-	private List<ControlsLine.Line> turningLines() {
-		ControlsLine.Line line = turning.get();
+	/** The line with no mouse mode on, Single's, the turning line or Disable's, while it shows, or none. */
+	private List<ControlsLine.Line> modelessLines() {
+		ControlsLine.Line line = modeless.get();
 		return line == null ? List.of() : List.of(line);
 	}
 

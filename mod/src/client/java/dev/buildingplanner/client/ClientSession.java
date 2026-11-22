@@ -685,17 +685,7 @@ final class ClientSession {
 		List<CopyPlacement.Spot> row = clipboard.rowSpots();
 		Map<BlockPos, BlockState> blocks = clipboard.blocksFromCorner();
 		Layer layer = replica.layer();
-		return CopyColour.of(row, blocks.size(), new CopyColour.World() {
-			@Override
-			public boolean inBuildHeight(int y) {
-				return !level.isOutsideBuildHeight(y);
-			}
-
-			@Override
-			public boolean insideBorder(BlockPos pos) {
-				return level.getWorldBorder().isWithinBounds(pos);
-			}
-		}, maxEditBlocks, () -> {
+		return CopyColour.of(row, blocks.size(), world(level), maxEditBlocks, () -> {
 			if (!row.equals(ghostsRow) || blocks != ghostsBlocks || layer != ghostsLayer
 				|| layer.version() != ghostsVersion) {
 				overGhosts = CopyColour.overGhosts(row, blocks, layer);
@@ -706,6 +696,30 @@ final class ClientSession {
 			}
 			return overGhosts;
 		});
+	}
+
+	/**
+	 * The one ghost block's colour ({@link CopyColour#ofBlocks}): its own positions {@code row} and the blocks a right
+	 * click would place there, against the world's build height and border, the server's block cap, and the player's
+	 * copy of the layer whether or not ghost blocks show.
+	 */
+	CopyColour.Shown singleColour(List<BlockPos> row, Map<BlockPos, BlockState> placed) {
+		return CopyColour.ofBlocks(row, placed, world(Minecraft.getInstance().level), maxEditBlocks, replica.layer());
+	}
+
+	/** The world's limits on where a block may go, as the server checks an edit's positions. */
+	private static CopyColour.World world(ClientLevel level) {
+		return new CopyColour.World() {
+			@Override
+			public boolean inBuildHeight(int y) {
+				return !level.isOutsideBuildHeight(y);
+			}
+
+			@Override
+			public boolean insideBorder(BlockPos pos) {
+				return level.getWorldBorder().isWithinBounds(pos);
+			}
+		};
 	}
 
 	/**

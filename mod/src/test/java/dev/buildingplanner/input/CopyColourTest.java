@@ -141,6 +141,38 @@ class CopyColourTest {
 	}
 
 	@Test
+	void theOneGhostBlockIsBlueYellowOrRedAsA1x1x1Spot() {
+		BlockPos at = new BlockPos(5, 0, 5);
+		Layer layer = new Layer();
+		assertEquals(Shown.BLUE, CopyColour.ofBlocks(List.of(at), Map.of(at, stone), WORLD, 100, layer));
+		layer.set(at, stone);
+		assertEquals(Shown.BLUE, CopyColour.ofBlocks(List.of(at), Map.of(at, stone), WORLD, 100, layer));
+		layer.set(at, dirt);
+		assertEquals(Shown.YELLOW, CopyColour.ofBlocks(List.of(at), Map.of(at, stone), WORLD, 100, layer));
+		BlockPos below = new BlockPos(5, -65, 5);
+		assertEquals(Shown.red(Refusal.BUILD_HEIGHT),
+			CopyColour.ofBlocks(List.of(below), Map.of(below, stone), WORLD, 100, new Layer()));
+		BlockPos outside = new BlockPos(100, 0, 5);
+		assertEquals(Shown.red(Refusal.WORLD_BORDER),
+			CopyColour.ofBlocks(List.of(outside), Map.of(outside, stone), WORLD, 100, new Layer()));
+	}
+
+	@Test
+	void aRowOfOneBlocksIsYellowWhereAnyOfItsBlocksWouldReplaceADifferentGhostBlockAndRedWherePartIsOutside() {
+		List<BlockPos> row = List.of(new BlockPos(0, 0, 0), new BlockPos(1, 0, 0), new BlockPos(2, 0, 0));
+		// A mix's blocks along the row: the ghost glass at the middle is the glass placed there, the dirt at the end isn't.
+		Map<BlockPos, BlockState> placed = Map.of(row.get(0), stone, row.get(1), glass, row.get(2), stone);
+		Layer layer = new Layer();
+		layer.set(row.get(1), glass);
+		assertEquals(Shown.BLUE, CopyColour.ofBlocks(row, placed, WORLD, 100, layer));
+		layer.set(row.get(2), dirt);
+		assertEquals(Shown.YELLOW, CopyColour.ofBlocks(row, placed, WORLD, 100, layer));
+		List<BlockPos> crossing = List.of(new BlockPos(98, 0, 0), new BlockPos(99, 0, 0), new BlockPos(100, 0, 0));
+		assertEquals(Shown.red(Refusal.WORLD_BORDER), CopyColour.ofBlocks(crossing,
+			Map.of(crossing.get(0), stone, crossing.get(1), stone), WORLD, 100, new Layer()));
+	}
+
+	@Test
 	void ghostBlocksAreReadOnlyWhileARedCheckPasses() {
 		boolean[] asked = new boolean[1];
 		CopyColour.of(at(0, 319, 0), 2, WORLD, 100, () -> asked[0] = true);

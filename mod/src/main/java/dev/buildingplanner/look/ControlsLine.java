@@ -18,6 +18,7 @@ public final class ControlsLine {
 	private static final String COPY = "buildingplanner.ui.mode.copy";
 	private static final String DELETE = "buildingplanner.ui.mode.delete";
 	private static final String TURN = "buildingplanner.ui.mode.turn";
+	private static final String SINGLE = "buildingplanner.ui.mode.single";
 
 	private ControlsLine() {
 	}
@@ -156,8 +157,18 @@ public final class ControlsLine {
 	 * while the sprint key has no key bound.
 	 */
 	public static Line turning(TurnState state, String sprint) {
+		List<Text> parts = turnParts(state, sprint);
+		return parts.isEmpty() ? null : titled(state.turned() ? Translated.of(TURN + ".turned", Look.PLAIN) : null, parts);
+	}
+
+	/**
+	 * The turning line's parts: with the sprint key held, the wheel that turns and the middle click that flips, otherwise
+	 * the sprint key held to turn or flip, each only for a block that turns or flips; none for a block that does neither
+	 * or while the sprint key has no key bound.
+	 */
+	private static List<Text> turnParts(TurnState state, String sprint) {
 		if (!state.turns() && !state.flips() || sprint == null) {
-			return null;
+			return List.of();
 		}
 		List<Text> parts = new ArrayList<>(2);
 		if (state.held()) {
@@ -171,7 +182,80 @@ public final class ControlsLine {
 			String verb = !state.flips() ? COPY + ".turn" : !state.turns() ? TURN + ".flip" : TURN + ".turn_or_flip";
 			parts.add(Translated.of(COPY + ".hold", Look.PLAIN, new Literal(sprint), action(verb)));
 		}
-		return titled(state.turned() ? Translated.of(TURN + ".turned", Look.PLAIN) : null, parts);
+		return parts;
+	}
+
+	/**
+	 * The one ghost block as its line tells it: its own mode, whether it's locked, the number of blocks in a Zoop or
+	 * Vertical row fixed by its first click (0 before it), whether the block or the row is red (outside the world's build
+	 * height or its border), and the block in hand as the turning line tells it.
+	 */
+	public record SingleState(CopyMode mode, boolean locked, int row, boolean red, TurnState turn) {
+	}
+
+	/**
+	 * Single's line (see "One ghost block": "Controls line"). With a row fixed: the mode, the right click that places the
+	 * row with its count (or in red why it can't), the turning parts, and the left click that cancels the row, locked or
+	 * not. Otherwise: the mode, "Locked" or both, the right click (placing, or in red why it can't; in Zoop and Vertical
+	 * the reason if there is one, then setting the row's start), the nudge keys while it's locked, the left click that
+	 * erases, the turning parts, the lock key and the mode key. ", turned" follows the mode and the lock once the block
+	 * is turned or flipped, or "Turned" alone in Single. A key with no key bound is left out.
+	 */
+	public static Line single(SingleState state, Keys keys) {
+		List<Text> turning = turnParts(state.turn(), keys.sprint());
+		List<Text> parts = new ArrayList<>();
+		Text title;
+		if (state.row() > 0) {
+			title = modeName(state.mode());
+			parts.add(state.red() ? Translated.of(SINGLE + ".outside", Look.WARNING)
+				: Translated.of(COPY + ".right", Look.PLAIN, state.row() == 1
+					? Translated.of(SINGLE + ".place_row_one", Look.ACTION)
+					: Translated.of(SINGLE + ".place_row", Look.ACTION, new Literal(String.valueOf(state.row())))));
+			parts.addAll(turning);
+			parts.add(click(action(COPY + ".cancel")));
+			return titled(turned(title, state.turn().turned()), parts);
+		}
+		if (state.locked()) {
+			Text locked = Translated.of(COPY + ".locked", Look.PLAIN);
+			title = state.mode() == CopyMode.SINGLE ? locked
+				: Translated.of(COPY + ".mode_locked", Look.PLAIN, modeName(state.mode()));
+		} else {
+			title = state.mode() == CopyMode.SINGLE ? null : modeName(state.mode());
+		}
+		if (state.mode() != CopyMode.SINGLE) {
+			// The first click still fixes the row's start while the block is red, so it stays, after the reason.
+			if (state.red()) {
+				parts.add(Translated.of(SINGLE + ".outside", Look.WARNING));
+			}
+			parts.add(Translated.of(COPY + ".right", Look.PLAIN, action(COPY + ".start")));
+		} else {
+			parts.add(state.red() ? Translated.of(SINGLE + ".outside", Look.WARNING)
+				: Translated.of(COPY + ".right", Look.PLAIN, action(TURN + ".place")));
+		}
+		if (state.locked()) {
+			Text nudge = nudge(keys);
+			if (nudge != null) {
+				parts.add(key(nudge, COPY + ".nudge"));
+			}
+		}
+		parts.add(click(action(DELETE + ".erase")));
+		parts.addAll(turning);
+		if (keys.lock() != null) {
+			parts.add(key(new Literal(keys.lock()), state.locked() ? COPY + ".unlock" : COPY + ".lock"));
+		}
+		if (keys.mode() != null) {
+			parts.add(modeFor(keys.mode(), modeKey(state.mode().next())));
+		}
+		return titled(turned(title, state.turn().turned()), parts);
+	}
+
+	/** The line's start with ", turned" after it once the block is turned or flipped, or "Turned" alone with none. */
+	private static Text turned(Text title, boolean turned) {
+		if (!turned) {
+			return title;
+		}
+		return title == null ? Translated.of(TURN + ".turned", Look.PLAIN)
+			: Translated.of(SINGLE + ".turned_title", Look.PLAIN, title);
 	}
 
 	/**

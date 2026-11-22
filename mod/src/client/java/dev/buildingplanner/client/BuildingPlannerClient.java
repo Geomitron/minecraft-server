@@ -5,6 +5,7 @@ import dev.buildingplanner.BuildingPlanner;
 import dev.buildingplanner.ClientConfig;
 import dev.buildingplanner.input.BlockTurn;
 import dev.buildingplanner.input.CopyColour;
+import dev.buildingplanner.input.CopyPlacement;
 import dev.buildingplanner.input.DeleteMode;
 import dev.buildingplanner.input.DisablePreview;
 import dev.buildingplanner.input.DisableTurn;
@@ -40,6 +41,7 @@ import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Vec3i;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
@@ -134,12 +136,12 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		copyKeys = new CopyKeys();
 		glow = EditGlow.registered();
 		BoxOutline.registered(BuildingPlannerClient::boxShown);
-		CopyOutline.registered(BuildingPlannerClient::copyShown);
+		CopyOutline.registered(BuildingPlannerClient::outlineShown);
 		// The sweep runs before the marks' outline, which then draws the marks as they stand.
 		DeleteAim.registered(() -> session);
 		MarksOutline.registered(() -> session != null && session.aimOn() ? session.marks() : null);
 		modeHud = new ModeHud(BuildingPlannerClient::mouseMode, BuildingPlannerClient::boxShown,
-			BuildingPlannerClient::copyLine, BuildingPlannerClient::aimLines, BuildingPlannerClient::turningLine,
+			BuildingPlannerClient::copyLine, BuildingPlannerClient::aimLines, BuildingPlannerClient::modelessLine,
 			() -> effortless && EffortlessShapes.shapeUnderWay(),
 			() -> CopyKeys.names(Minecraft.getInstance()).mode(),
 			() -> session == null ? List.of() : session.boxList());
@@ -394,13 +396,26 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		return state == null ? List.of() : ControlsLine.deleteAim(state, CopyKeys.names(Minecraft.getInstance()));
 	}
 
-	/** The copy at the aim as it's drawn, in its colour, with its row's boxes, or null. */
-	private static CopyOutline.Shown copyShown() {
+	/**
+	 * The box {@link CopyOutline} draws, in its colour: the copy at the aim's, with its row's boxes; or the one ghost
+	 * block's while it's locked or its row is fixed and its controls are active, around the locked block or each block
+	 * of the row; or null.
+	 */
+	static CopyOutline.Shown outlineShown() {
 		if (session == null) {
 			return null;
 		}
 		CopyColour.Shown colour = session.copyShown();
-		return colour == null ? null : new CopyOutline.Shown(colour, session.clipboard().rowSpots());
+		if (colour != null) {
+			return new CopyOutline.Shown(colour, session.clipboard().rowSpots());
+		}
+		SingleBlock block = shownSingle();
+		if (block == null) {
+			return null;
+		}
+		List<BlockPos> own = block.rowFixed() ? block.row() : List.of(block.pos());
+		return new CopyOutline.Shown(EffortlessShapes.singleColour(block),
+			own.stream().map(pos -> new CopyPlacement.Spot(pos, new Vec3i(1, 1, 1))).toList());
 	}
 
 	/**
@@ -565,22 +580,31 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	}
 
 	/**
-	 * The turning line ({@link ControlsLine#turning}): in Effortless Building's modes other than Single and Disable,
-	 * while the turning controls are active and the block in hand turns or flips, with the sprint key as the player has
-	 * it bound; in Disable, while its turning controls are active, Disable's line ({@link ControlsLine#disable}), with
-	 * whether the block a right click would place hangs on the block behind it and whether the turned block can stay;
-	 * or null. Single's own line (step 20) names the same controls.
+	 * The line that shows with no mouse mode on, with the keys as the player has them bound: while the one ghost block's
+	 * controls are active, Single's line ({@link ControlsLine#single}), red while the locked block or its row is; in
+	 * Effortless Building's modes other than Single and Disable, while the turning controls are active and the block in
+	 * hand turns or flips, the turning line ({@link ControlsLine#turning}); in Disable, while its turning controls are
+	 * active, Disable's line ({@link ControlsLine#disable}), with whether the block a right click would place hangs on
+	 * the block behind it and whether the turned block can stay; or null.
 	 */
-	private static ControlsLine.Line turningLine() {
+	private static ControlsLine.Line modelessLine() {
+		boolean single = singleActive();
 		boolean disable = disableTurning();
-		if (!disable && (!shapesTakeTurn() || EffortlessShapes.singleMode())) {
+		if (!single && !disable && (!shapesTakeTurn() || EffortlessShapes.singleMode())) {
 			return null;
 		}
 		Minecraft mc = Minecraft.getInstance();
 		boolean sprint = mc.options.keySprint.isDown();
 		ControlsLine.TurnState turn = new ControlsLine.TurnState(heldCan(BlockTurn::turns), heldCan(BlockTurn::flips),
 			sprint, HeldTurn.of(mc.player.getMainHandItem().getItem()) != null);
-		String sprintKey = CopyKeys.names(mc).sprint();
+		ControlsLine.Keys keys = CopyKeys.names(mc);
+		if (single) {
+			SingleBlock block = session.single();
+			boolean boxed = block.locked() || block.rowFixed();
+			return ControlsLine.single(new ControlsLine.SingleState(SingleBlock.mode(), block.locked(),
+				block.rowFixed() ? block.row().size() : 0, boxed && EffortlessShapes.singleColour(block).red(), turn), keys);
+		}
+		String sprintKey = keys.sprint();
 		if (!disable) {
 			return ControlsLine.turning(turn, sprintKey);
 		}

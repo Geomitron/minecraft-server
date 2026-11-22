@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.BooleanSupplier;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Vec3i;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
@@ -16,6 +17,8 @@ import net.minecraft.world.level.block.state.BlockState;
  * shows. With a zoop's row fixed, the whole row has one colour, since it pastes as one edit.
  */
 public final class CopyColour {
+	private static final Vec3i ONE = new Vec3i(1, 1, 1);
+
 	private CopyColour() {
 	}
 
@@ -109,6 +112,22 @@ public final class CopyColour {
 		}
 		return false;
 	}
+
+	/**
+	 * The one ghost block's colour (see "One ghost block": "Colours"), the locked block or its fixed row as copies of
+	 * one block: {@code row} its positions, and {@code placed} the blocks a right click would place at them, by their
+	 * positions in the world, which may differ along the row, as the block mix's do. Red while {@link #refusal} finds a
+	 * reason, otherwise yellow where a block would replace a different ghost block, otherwise blue.
+	 */
+	public static Shown ofBlocks(List<BlockPos> row, Map<BlockPos, BlockState> placed, World world, int maxEditBlocks,
+		Layer layer) {
+		List<Spot> spots = row.stream().map(pos -> new Spot(pos, ONE)).toList();
+		return of(spots, 1, world, maxEditBlocks, () -> placed.entrySet().stream().anyMatch(block -> {
+			BlockState ghost = layer.get(block.getKey());
+			return !ghost.isAir() && ghost != block.getValue();
+		}));
+	}
+
 
 	private static boolean anyColumn(Layer layer, Spot box) {
 		BlockPos min = box.min();

@@ -3,6 +3,7 @@ package dev.buildingplanner.client;
 import dev.buildingplanner.input.CopyMode;
 import dev.buildingplanner.input.CopyPlacement;
 import dev.buildingplanner.input.BlockTurn;
+import dev.buildingplanner.input.CopyColour;
 import dev.buildingplanner.input.CopyRow;
 import dev.buildingplanner.input.DisablePreview;
 import dev.buildingplanner.input.MixRule;
@@ -75,6 +76,14 @@ public final class EffortlessShapes {
 	 * ({@link SingleBlock#hit}); with none, the top face at the middle of the shape's first position.
 	 */
 	public static void place(BlockSet blocks, BlockHitResult first) {
+		BuildingPlannerClient.captureShape(EditKind.SHAPE, states(blocks, first));
+	}
+
+	/**
+	 * The blocks a shape's valid entries get ({@link #place}), with the other half of each two-block one, by their
+	 * positions in the world.
+	 */
+	private static Map<BlockPos, BlockState> states(BlockSet blocks, BlockHitResult first) {
 		Minecraft mc = Minecraft.getInstance();
 		Player player = mc.player;
 		Player placer = Aim.placer();
@@ -107,7 +116,7 @@ public final class EffortlessShapes {
 			}
 		});
 		otherHalves.forEach(states::putIfAbsent);
-		BuildingPlannerClient.captureShape(EditKind.SHAPE, states);
+		return states;
 	}
 
 	/**
@@ -196,14 +205,44 @@ public final class EffortlessShapes {
 	}
 
 	/**
+	 * The one ghost block's colour while it's locked or its row is fixed (see "One ghost block": "Colours",
+	 * {@link ClientSession#singleColour}): its own positions, the row's or the locked one, and the blocks a right click
+	 * would place there, with the other half of a two-block one. The copies Effortless Building's modifiers make are left
+	 * out, as its constraints leave out those outside the world.
+	 */
+	static CopyColour.Shown singleColour(SingleBlock block) {
+		List<BlockPos> own = block.rowFixed() ? block.row() : List.of(block.pos());
+		Map<BlockPos, BlockState> all = states(shownSet(block), block.hit());
+		Map<BlockPos, BlockState> placed = new LinkedHashMap<>();
+		for (BlockPos pos : own) {
+			BlockState state = all.get(pos);
+			if (state == null) {
+				continue;
+			}
+			placed.put(pos, state);
+			BlockPos other = OtherHalf.of(pos, state);
+			if (other != null && all.containsKey(other)) {
+				placed.put(other, all.get(other));
+			}
+		}
+		return BuildingPlannerClient.session().singleColour(own, placed);
+	}
+
+	/**
 	 * Hook M2: the right click that's the block's ({@link SingleRule#takesPlace}). In Single, locked, it places the block
 	 * where it's locked. In Zoop and Vertical the first click fixes the row's start where the block is (where it's
 	 * locked, if it is, or where a right click would place it) and sends nothing; with nothing aimed at and the block
 	 * unlocked, it does nothing. The second places the whole row as one shape edit and drops the row, and the block
-	 * follows the aim again, or stays locked where it was.
+	 * follows the aim again, or stays locked where it was. While the block or the row is red ({@link #singleColour}), a
+	 * click that would place places nothing and sends no edit; the first click, which places nothing anyway, still fixes
+	 * the row.
 	 */
 	static void rightClick(SingleBlock block) {
 		if (SingleBlock.mode() == CopyMode.SINGLE || block.rowFixed()) {
+			if (singleColour(block).red()) {
+				// A red block or row places nothing and sends no edit; the row stays fixed.
+				return;
+			}
 			placeShown(block);
 			block.dropRow();
 		} else if (block.locked()) {

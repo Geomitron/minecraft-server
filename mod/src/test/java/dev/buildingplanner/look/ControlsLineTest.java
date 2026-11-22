@@ -16,6 +16,7 @@ import dev.buildingplanner.look.ControlsLine.DisableState;
 import dev.buildingplanner.look.ControlsLine.Keys;
 import dev.buildingplanner.look.ControlsLine.Line;
 import dev.buildingplanner.look.ControlsLine.Look;
+import dev.buildingplanner.look.ControlsLine.SingleState;
 import dev.buildingplanner.look.ControlsLine.Text;
 import dev.buildingplanner.look.ControlsLine.TurnState;
 import java.io.InputStreamReader;
@@ -361,6 +362,112 @@ class ControlsLineTest {
 		assertNull(ControlsLine.disable(new DisableState(new TurnState(false, false, true, false), false, true),
 			"Left Control"));
 		assertNull(ControlsLine.disable(new DisableState(new TurnState(true, true, true, false), false, true), null));
+	}
+
+	/** Stairs, which turn and flip, without the sprint key held and not turned. */
+	private static final TurnState STAIRS = new TurnState(true, true, false, false);
+	private static final String HOLD = "Hold Left Control to turn or flip";
+
+	@Test
+	void singleFollowingTheAimPlacesErasesTurnsLocksAndSwitchesToZoop() {
+		assertEquals("Right-click to place, Left-click to erase, " + HOLD + ", H to lock, R for Zoop",
+			single(new SingleState(CopyMode.SINGLE, false, 0, false, STAIRS), DEFAULT));
+	}
+
+	@Test
+	void singleWithTheSprintKeyHeldNamesTheWheelAndTheMiddleClickForTheBlocksTurnPhrases() {
+		assertEquals("Right-click to place, Left-click to erase, Scroll to turn, Middle-click to flip, H to lock, R for Zoop",
+			single(new SingleState(CopyMode.SINGLE, false, 0, false, new TurnState(true, true, true, false)), DEFAULT));
+		assertEquals("Right-click to place, Left-click to erase, Hold Left Control to turn, H to lock, R for Zoop",
+			single(new SingleState(CopyMode.SINGLE, false, 0, false, new TurnState(true, false, false, false)), DEFAULT));
+		assertEquals("Right-click to place, Left-click to erase, Scroll to turn, H to lock, R for Zoop",
+			single(new SingleState(CopyMode.SINGLE, false, 0, false, new TurnState(true, false, true, false)), DEFAULT));
+		assertEquals("Right-click to place, Left-click to erase, Hold Left Control to flip, H to lock, R for Zoop",
+			single(new SingleState(CopyMode.SINGLE, false, 0, false, new TurnState(false, true, false, false)), DEFAULT));
+		assertEquals("Right-click to place, Left-click to erase, Middle-click to flip, H to lock, R for Zoop",
+			single(new SingleState(CopyMode.SINGLE, false, 0, false, new TurnState(false, true, true, false)), DEFAULT));
+		assertEquals("Right-click to place, Left-click to erase, H to lock, R for Zoop",
+			single(new SingleState(CopyMode.SINGLE, false, 0, false, new TurnState(false, false, true, false)), DEFAULT));
+	}
+
+	@Test
+	void singleLockedNamesTheNudgesAndUnlocks() {
+		assertEquals("Locked: Right-click to place, " + NUDGES + ", Left-click to erase, " + HOLD + ", H to unlock, R for Zoop",
+			single(new SingleState(CopyMode.SINGLE, true, 0, false, STAIRS), DEFAULT));
+	}
+
+	@Test
+	void singlesZoopAndVerticalBeforeTheFirstClickSetTheStart() {
+		assertEquals("Zoop: Right-click to set the start, Left-click to erase, " + HOLD + ", H to lock, R for Vertical",
+			single(new SingleState(CopyMode.ZOOP, false, 0, false, STAIRS), DEFAULT));
+		assertEquals("Vertical: Right-click to set the start, Left-click to erase, " + HOLD + ", H to lock, R for Single",
+			single(new SingleState(CopyMode.VERTICAL, false, 0, false, STAIRS), DEFAULT));
+		assertEquals("Zoop, locked: Right-click to set the start, " + NUDGES + ", Left-click to erase, " + HOLD
+			+ ", H to unlock, R for Vertical", single(new SingleState(CopyMode.ZOOP, true, 0, false, STAIRS), DEFAULT));
+	}
+
+	@Test
+	void singlesRowPlacesWithItsCountLockedOrNot() {
+		assertEquals("Zoop: Right-click to place 12 blocks, " + HOLD + ", Left-click to cancel",
+			single(new SingleState(CopyMode.ZOOP, false, 12, false, STAIRS), DEFAULT));
+		assertEquals("Zoop: Right-click to place 12 blocks, " + HOLD + ", Left-click to cancel",
+			single(new SingleState(CopyMode.ZOOP, true, 12, false, STAIRS), DEFAULT));
+		assertEquals("Vertical: Right-click to place 1 block, " + HOLD + ", Left-click to cancel",
+			single(new SingleState(CopyMode.VERTICAL, false, 1, false, STAIRS), DEFAULT));
+	}
+
+	@Test
+	void onceTurnedSinglesLineSaysSoAfterTheModeAndTheLock() {
+		TurnState turned = new TurnState(true, true, false, true);
+		assertEquals("Turned: Right-click to place, Left-click to erase, " + HOLD + ", H to lock, R for Zoop",
+			single(new SingleState(CopyMode.SINGLE, false, 0, false, turned), DEFAULT));
+		assertEquals("Locked, turned: Right-click to place, " + NUDGES + ", Left-click to erase, " + HOLD
+			+ ", H to unlock, R for Zoop", single(new SingleState(CopyMode.SINGLE, true, 0, false, turned), DEFAULT));
+		assertEquals("Zoop, locked, turned: Right-click to set the start, " + NUDGES + ", Left-click to erase, " + HOLD
+			+ ", H to unlock, R for Vertical", single(new SingleState(CopyMode.ZOOP, true, 0, false, turned), DEFAULT));
+		assertEquals("Zoop, turned: Right-click to place 3 blocks, " + HOLD + ", Left-click to cancel",
+			single(new SingleState(CopyMode.ZOOP, false, 3, false, turned), DEFAULT));
+	}
+
+	@Test
+	void whileRedSinglesReasonTakesThePlacesPlaceOrGoesBeforeSettingTheStart() {
+		assertEquals("Locked: Can't place: outside the world, " + NUDGES + ", Left-click to erase, " + HOLD
+			+ ", H to unlock, R for Zoop", single(new SingleState(CopyMode.SINGLE, true, 0, true, STAIRS), DEFAULT));
+		assertEquals("Zoop, locked: Can't place: outside the world, Right-click to set the start, " + NUDGES
+			+ ", Left-click to erase, " + HOLD + ", H to unlock, R for Vertical",
+			single(new SingleState(CopyMode.ZOOP, true, 0, true, STAIRS), DEFAULT));
+		assertEquals("Zoop: Can't place: outside the world, " + HOLD + ", Left-click to cancel",
+			single(new SingleState(CopyMode.ZOOP, false, 12, true, STAIRS), DEFAULT));
+		List<String> warnings = new ArrayList<>();
+		collect(ControlsLine.single(new SingleState(CopyMode.SINGLE, true, 0, true, STAIRS), DEFAULT).text(), Look.WARNING,
+			warnings);
+		assertEquals(List.of("Can't place: outside the world"), warnings);
+	}
+
+	@Test
+	void singlesActionsAreActions() {
+		List<String> actions = new ArrayList<>();
+		collect(ControlsLine.single(new SingleState(CopyMode.SINGLE, true, 0, false, new TurnState(true, true, true, true)),
+			DEFAULT).text(), Look.ACTION, actions);
+		assertEquals(List.of("place", "nudge", "erase", "turn", "flip", "unlock", "Zoop"), actions);
+		actions.clear();
+		collect(ControlsLine.single(new SingleState(CopyMode.ZOOP, false, 12, false, STAIRS), DEFAULT).text(), Look.ACTION,
+			actions);
+		assertEquals(List.of("place 12 blocks", "turn or flip", "cancel"), actions);
+	}
+
+	@Test
+	void singleNamesTheKeysAsBoundAndLeavesOutUnboundOnes() {
+		assertEquals("Locked: Right-click to place, I/J/U/O + Y/N to nudge, Left-click to erase, Hold Left Alt to turn or "
+			+ "flip, K to unlock, G for Zoop", single(new SingleState(CopyMode.SINGLE, true, 0, false, STAIRS), REBOUND));
+		assertEquals("Locked: Right-click to place, Left-click to erase",
+			single(new SingleState(CopyMode.SINGLE, true, 0, false, STAIRS), UNBOUND));
+	}
+
+	private static String single(SingleState state, Keys keys) {
+		Line line = ControlsLine.single(state, keys);
+		assertNull(line.size());
+		return read(line.text());
 	}
 
 	private static String disable(TurnState turn, boolean hangs, boolean stays) {
