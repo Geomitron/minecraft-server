@@ -392,7 +392,8 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
     second erases the marked ones (Q2 A, Q3 A). A sweep that starts on a marked block unmarks what it passes over,
     until the player lets go (Q4 A). Up to 200,000 can be marked, the server's limit for one edit, as for the Delete
     box (Q5 A). Each marked ghost block has a red outline and see-through red sides, with their count and kinds under
-    the crosshair (Q6 A). The mode stays on after an erase (Q7 A).
+    the crosshair (Q6 A); together they show as one red shape, outlined at its outer edges (1060 Q1 A). The mode
+    stays on after an erase (Q7 A).
 - The shared layer replaces the decisions above that concern separate plans: named plans that move and turn as a whole
   (411 Q1), plan growth (411 Q2), who deletes a plan (411 Q3, 420 Q9), starting a plan with N (420 Q1, 469 Q1), hiding
   a plan with Litematica or Syncmatica (420 Q2, 469 Q2), the paste's target plan (485 Q3), Litematica's Edit Schematic

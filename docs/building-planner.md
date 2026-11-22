@@ -817,7 +817,7 @@ the server, changing dimension, and anything else that ends Delete clear the mar
 **Look.** Each marked ghost block has a red outline and see-through red sides (981 Q6 A), in the red of the copy's box
 (#FF7070, sides at 0.2 alpha), drawn through MaLiLib's renderer as the copy's box is (`MarksOutline`). Only the faces
 that don't touch another marked block are drawn, and only the edges where the shape turns, so a marked wall shows as
-one red shape. The shape is built in sections of 16 blocks a side, as the game builds its terrain, and a section is
+one red shape (1060 Q1 A). The shape is built in sections of 16 blocks a side, as the game builds its terrain, and a section is
 built again only when a mark in or beside it changes (`DeleteMarks.takeChanged`), so a frame of a sweep builds only the
 few sections it touches; each frame draws each section where it is from the camera. The marked ghost blocks show
 under the crosshair as the Delete box's do (`BoxList`): each kind of block with its count, most numerous first.
