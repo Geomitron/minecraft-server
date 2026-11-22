@@ -3,15 +3,10 @@ package dev.buildingplanner.mixin.minecraft;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import dev.buildingplanner.input.BlockTurn;
-import dev.buildingplanner.input.PlaceTurn;
 import dev.buildingplanner.server.PlaceTurns;
-import net.minecraft.core.BlockPos;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.context.BlockPlaceContext;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -38,25 +33,8 @@ abstract class BlockItemMixin {
 		if (placed == null || player == null) {
 			return placed;
 		}
-		Level level = context.getLevel();
-		BlockTurn.Held turn = level.isClientSide() ? PlaceTurns.local() : PlaceTurns.of(player.getUUID());
-		BlockState turned = PlaceTurn.turned(placed, turn, context.getItemInHand().getItem(),
-			context.getHand() == InteractionHand.MAIN_HAND);
-		if (turned == placed) {
-			return placed;
-		}
-		BlockPos pos = context.getClickedPos();
-		if (PlaceTurn.reshapes(turned)) {
-			BlockState shaped = Block.updateFromNeighbourShapes(turned, level, pos);
-			// A block its neighbours remove (a torch turned away from its wall turns to air) can't stay.
-			if (shaped.getBlock() != turned.getBlock()) {
-				return null;
-			}
-			turned = shaped;
-		}
-		return PlaceTurn.canStay(turned, canPlace(context, turned), (state, toward) -> {
-			BlockPos other = pos.relative(toward);
-			return level.getBlockState(other).canBeReplaced(context) && level.getWorldBorder().isWithinBounds(other);
-		}) ? turned : null;
+		BlockTurn.Held turn = context.getLevel().isClientSide() ? PlaceTurns.local() : PlaceTurns.of(player.getUUID());
+		PlaceTurns.Placed turned = PlaceTurns.place(context, placed, turn, state -> canPlace(context, state));
+		return turned.stays() ? turned.state() : null;
 	}
 }
