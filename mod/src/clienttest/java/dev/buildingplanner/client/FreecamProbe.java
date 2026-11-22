@@ -8,7 +8,8 @@ import net.minecraft.world.phys.Vec3;
 
 /**
  * Freecam for the in-game checks, read and worked by reflection, as Freecam is on the dev clients' classpath only at
- * run time: its camera switched on and off as its key does, moved and turned, and its "Allow interaction" option read.
+ * run time: its camera switched on and off as its key does, moved and turned, and its "Allow interaction" option read
+ * and set.
  */
 final class FreecamProbe {
 	private FreecamProbe() {
@@ -39,6 +40,17 @@ final class FreecamProbe {
 		Class<?> modConfig = Class.forName("net.xolt.freecam.config.ModConfig");
 		Object config = modConfig.getMethod("get").invoke(null);
 		return String.valueOf(!(boolean) modConfig.getMethod("shouldPreventInteractions").invoke(config));
+	}
+
+	/**
+	 * Sets Freecam's "Allow interaction" option for this run, as its config screen does, in the config it reads
+	 * ({@code ModConfigImpl.getData().utility.allowInteract}); its file is left as it is.
+	 */
+	static void setAllowInteraction(boolean on) throws Exception {
+		Object config = Class.forName("net.xolt.freecam.config.ModConfig").getMethod("get").invoke(null);
+		Object data = config.getClass().getMethod("getData").invoke(config);
+		Object utility = data.getClass().getField("utility").get(data);
+		utility.getClass().getField("allowInteract").setBoolean(utility, on);
 	}
 
 	/** The game's camera entity: its class's simple name, its eye position to a tenth, and the way it faces. */

@@ -2291,17 +2291,17 @@ check "with the mix of oak and spruce stairs, a Wall's stairs all face west" tur
 check "of both kinds" eval '(($(val 1 "boxstates -49 -61 -50 -44 -54 -46 spruce_stairs[" | cut -d" " -f2) > 0)) &&
 	(($(val 1 "boxstates -49 -61 -50 -44 -54 -46 oak_stairs[" | cut -d" " -f2) > 0))'
 drv 1 "setmix" > /dev/null
-# In Disable, Left Ctrl with the wheel changes the hotbar slot, to the second stairs, which keep the turn; back in Line,
-# they keep it. Switching to stone and back to the stairs drops it.
+# In Disable, Left Ctrl with a notch down turns the stairs a quarter counterclockwise, to face south, and the hotbar
+# slot stays; back in Line, they keep the turn. Switching to stone and back to the stairs drops it.
 drv 1 "ebmode DISABLED" "cmd tp @s -58.5 -58 -34.5 180 30" "wait 20" > /dev/null
 hold_ctrl
 xdo 1 click 5
-check "in Disable, Left Ctrl with the wheel changes the hotbar slot" eval \
-	'drv 1 "wait 5" > /dev/null && [[ $(val 1 slot) == "5 minecraft:oak_stairs" ]]'
+check "in Disable, Left Ctrl with a notch down turns the stairs to face south, and the hotbar slot stays" eval \
+	'turn_is "facing=south,half=bottom" && [[ $(val 1 slot) == "4 minecraft:oak_stairs" ]]'
 check "and no turning line shows there" eval '[[ $(val 1 modehud) == hidden ]]'
 let_go_ctrl
 drv 1 "ebmode LINE" "wait 5" > /dev/null
-check "back in Line, the stairs keep the turn" turn_is "facing=west,half=bottom"
+check "back in Line, the stairs keep the turn made in Disable" turn_is "facing=south,half=bottom"
 press 1 7
 press 1 6
 check "switching to stone and back to the stairs drops it" turn_is none
@@ -2373,24 +2373,248 @@ use_click 1
 check "a right click cancels the shape, erasing nothing, and the turning line shows again" eval \
 	'drv 1 "wait 10" > /dev/null && [[ $(val 1 "layer -62 -60 -40") == minecraft:oak_stairs ]] &&
 	[[ $(val 1 modehud) == "Hold Left Control to turn or flip" ]]'
-# In Disable, the middle click with Left Ctrl held picks the aimed block, here the grass below Planner1, within the
-# game's own reach, since Effortless Building's longer reach is left out in Disable.
+# In Disable, the middle click with Left Ctrl held flips the stairs, from the way Minecraft would place them on the
+# grass below Planner1, within the game's own reach (Effortless Building's longer reach is left out in Disable), and
+# picks no block; with stone, which neither turns nor flips, it picks the aimed block. The grass is due north, so the
+# stairs would face north.
 drv 1 "ebmode DISABLED" "wait 5" > /dev/null
-aim 1 -58 -60 -36
+aim 1 -59 -60 -36
 hold_ctrl
 xdo 1 click 2
-check "in Disable, the middle click with Left Ctrl held picks the aimed block" eval 'drv 1 "wait 20" > /dev/null &&
+check "in Disable, the middle click with Left Ctrl held flips the stairs to their top half and picks no block" eval \
+	'turn_is "facing=north,half=top" && [[ $(val 1 slot) == "4 minecraft:oak_stairs" ]]'
+let_go_ctrl
+press 1 7
+hold_ctrl
+xdo 1 click 2
+check "with stone in hand, it picks the aimed block" eval 'drv 1 "wait 20" > /dev/null &&
 	[[ $(val 1 slot) == *" minecraft:grass_block" ]]'
 let_go_ctrl
 drv 1 "ebmode SINGLE" "edit -85 -63 -60 -40 -50 -36 minecraft:air" > /dev/null
 check "erasing the shapes reaches both games" eval 'drv 2 "await block -58 -60 -40 minecraft:air" \
 	"await block -47 -60 -38 minecraft:air" > /dev/null && drv 1 "await block -82 -60 -48 minecraft:air" > /dev/null'
+
+# Turning real blocks in Disable (step 18): a right click with Left Ctrl held places the real block with the turn of
+# the block in hand, and the server's world, Planner2 and Planner1's own guess of the block show it turned. Each block
+# goes on the grass's top, at y -60, with Planner1 standing 3 blocks south of it, facing north, so Minecraft would place
+# a stair facing north, within survival's reach too. Hotbar slots 5 to 9 hold oak stairs, oak logs, torches, oak doors
+# and a red bed.
+# stand <x> <z> [blocks]: Planner1 on the grass 3 blocks south of x z, or that many, facing north, looking at the
+# middle of the grass's top there.
+stand() {
+	drv 1 "cmd tp @s $(half "$1") -60 $(half $(($2 + ${3:-3}))) 180 30" "wait 10" > /dev/null
+	aim 1 "$1" -60 "$2"
+}
+# real_has <client> <x y z> <block> <text>: that client's world has that block there, with the text in its state.
+real_has() {
+	drv "$1" "await real $2 $3" > /dev/null && [[ $(val "$1" "realstate $2") == *"$4"* ]]
+}
+# server_has <x y z> <block state> <tag> [seconds]: the server's own world has that block there, as /execute if block
+# finds it; run by Planner1, who then says the tag, which the server's log shows within the seconds (20 unless given).
+server_has() {
+	drv 1 "cmd execute if block $1 $2 run say $3" > /dev/null && wait_for /out/server.log "$3" "${4:-20}"
+}
+# no_flicker <block> <text>: Planner1's own block, read at every tick from just before the click (the driver's
+# watchblock), was air until the click and from then on that block with the text in its state, with nothing between.
+no_flicker() {
+	local runs re="^([0-9]+x Block\{minecraft:air\} \| )?[0-9]+x Block\{$1\}\[[^|]*$2[^|]*\$"
+	runs=$(val 1 watched)
+	echo "  watched: $runs" >> /out/checks.log
+	[[ $runs =~ $re ]]
+}
+# ctrl_click: a right click with Left Ctrl held, which hold_ctrl put down, and Left Ctrl let go after it.
+ctrl_click() {
+	use_click 1
+	let_go_ctrl
+}
+# disable_round <game mode> <z>: the checks along the row at z, in that game mode.
+disable_round() {
+	local mode=$1 z=$2 count
+	drv 1 "cmd gamemode $mode" "cmd item replace entity @s hotbar.4 with minecraft:oak_stairs 64" \
+		"cmd item replace entity @s hotbar.5 with minecraft:oak_log 64" \
+		"cmd item replace entity @s hotbar.6 with minecraft:torch 64" \
+		"cmd item replace entity @s hotbar.7 with minecraft:oak_door 64" \
+		"cmd item replace entity @s hotbar.8 with minecraft:red_bed" "cmd setblock -42 -60 $((z - 1)) minecraft:stone" \
+		"cmd setblock -38 -60 $z minecraft:stone" "ebmode DISABLED" "wait 20" > /dev/null
+	press 1 7
+	press 1 5
+	stand -54 "$z"
+	hold_ctrl
+	xdo 1 click 4
+	check "in $mode, in Disable, Left Ctrl and a notch up turn the oak stairs to face east" \
+		turn_is "facing=east,half=bottom"
+	drv 1 "watchblock -54 -60 $z" > /dev/null
+	ctrl_click
+	check "a right click with Left Ctrl held places a real stair facing east" \
+		real_has 1 "-54 -60 $z" minecraft:oak_stairs "facing=east,"
+	check "the server's world has it facing east" server_has "-54 -60 $z" "minecraft:oak_stairs[facing=east]" \
+		"turned-stair-$mode"
+	check "Planner2 sees it facing east" real_has 2 "-54 -60 $z" minecraft:oak_stairs "facing=east,"
+	check "Planner1's own block faces east at every tick from the click, with no flicker" no_flicker \
+		minecraft:oak_stairs "facing=east,"
+	stand -52 "$z"
+	use_click 1
+	check "without Left Ctrl, the stair faces north, as Minecraft places it, and the stairs keep the turn" eval \
+		'real_has 1 "-52 -60 $z" minecraft:oak_stairs "facing=north," && turn_is "facing=east,half=bottom" &&
+		server_has "-52 -60 $z" "minecraft:oak_stairs[facing=north]" "plain-stair-$mode"'
+	press 1 6
+	stand -50 "$z"
+	hold_ctrl
+	xdo 1 click 2
+	xdo 1 click 4
+	check "an oak log flipped onto its side and turned a quarter lies east to west" turn_is "axis=x"
+	ctrl_click
+	check "placed on the grass's top with Left Ctrl held, it lies east to west" eval \
+		'real_has 1 "-50 -60 $z" minecraft:oak_log "axis=x" &&
+		server_has "-50 -60 $z" "minecraft:oak_log[axis=x]" "turned-log-$mode"'
+	stand -48 "$z"
+	use_click 1
+	check "where Minecraft, without Left Ctrl, stands it up" real_has 1 "-48 -60 $z" minecraft:oak_log "axis=y"
+	press 1 5
+	# 4 blocks south, so the stairs the held button adds toward Planner1 have room.
+	stand -46 "$z" 4
+	hold_ctrl
+	xdo 1 click 4
+	drv 1 "wait 5" "holdreset" > /dev/null
+	xdo 1 mousedown 3
+	drv 1 "wait 20" > /dev/null
+	xdo 1 mouseup 3
+	let_go_ctrl
+	check "the right button held with Left Ctrl for a second places 4 turned stairs or more, all facing east" eval \
+		'drv 1 "wait 10" > /dev/null && count=$(val 1 "realstates -47 -60 $((z - 2)) -45 -56 $((z + 3)) facing=east,") &&
+		echo "  held right button in $mode: $count" >> /out/checks.log && ((${count% *} >= 4)) &&
+		[[ ${count% *} == "${count#* }" ]]'
+	press 1 7
+	drv 1 "cmd tp @s -41.5 -60 $(half $((z + 2))) 180 30" "wait 10" "lookat -41.5 -59.5 $(half $((z - 1)))" \
+		"wait 5" > /dev/null
+	count=$(val 1 handcount)
+	hold_ctrl
+	xdo 1 click 4
+	check "a torch aimed at a wall turns as the wall torch it places, away from the wall" turn_is "facing=west"
+	ctrl_click
+	check "it places nothing, on both sides, and the player keeps the torch" eval 'drv 1 "wait 20" > /dev/null &&
+		[[ $(val 1 "real -42 -60 $z") == minecraft:air && $(val 1 "real -42 -60 $((z - 1))") == minecraft:stone ]] &&
+		! server_has "-42 -60 $z" minecraft:wall_torch "torch-placed-$mode" 5 &&
+		[[ $(val 1 handcount) == "$count" && $(val 1 slot) == *" minecraft:torch" ]]'
+	press 1 9
+	stand -39 "$z"
+	hold_ctrl
+	xdo 1 click 4
+	check "a red bed turns to face east" turn_is "facing=east"
+	ctrl_click
+	check "turned toward a stone wall, it places nothing and leaves the wall, and the player keeps the bed" eval \
+		'drv 1 "wait 20" > /dev/null && [[ $(val 1 "real -39 -60 $z") == minecraft:air ]] &&
+		[[ $(val 1 "real -39 -60 $((z - 1))") == minecraft:air && $(val 1 "real -38 -60 $z") == minecraft:stone ]] &&
+		! server_has "-39 -60 $z" minecraft:red_bed "bed-placed-$mode" 5 && [[ $(val 1 slot) == *" minecraft:red_bed" ]]'
+}
+disable_round creative -31
+# The turned stair at -54 and the log at -50, shot from 4 blocks south of the point between them, with each one's box in
+# the window logged for its outline.
+drv 1 "cmd weather clear" "cmd tp @s -51.5 -60 -26.5 180 25" "wait 210" > /dev/null
+for size in "854 480" "1920 1080"; do
+	read -r w h <<< "$size"
+	drv 1 "window $w $h 2" "wait 20" "notoasts" "wait 5" "shot disable-turned-${w}x$h" "wait 20" > /dev/null
+	echo "  disable-turned-${w}x$h: stair $(val 1 "screenbox -54 -60 -31 -54 -60 -31") |" \
+		"log $(val 1 "screenbox -50 -60 -31 -50 -60 -31")" >> /out/checks.log
+done
+drv 1 "window 854 480 2" "wait 20" > /dev/null
+# Along z -37: a turned stair placed in front of a stair facing north joins it as Minecraft's own does: the same shapes
+# as a stair Minecraft places facing east, with Planner1 facing east, in front of another stair facing north.
+drv 1 "cmd setblock -54 -60 -37 minecraft:oak_stairs[facing=north]" \
+	"cmd setblock -57 -60 -37 minecraft:oak_stairs[facing=north]" > /dev/null
+press 1 5
+stand -55 -37
+hold_ctrl
+xdo 1 click 4
+drv 1 "wait 5" > /dev/null
+ctrl_click
+drv 1 "await real -55 -60 -37 minecraft:oak_stairs" "cmd tp @s -60.5 -60 -36.5 -90 30" "wait 10" > /dev/null
+aim 1 -58 -60 -37
+use_click 1
+check "a turned stair placed in front of a stair facing north takes the shapes Minecraft's own stair facing east does" eval \
+	'drv 1 "await real -58 -60 -37 minecraft:oak_stairs" "wait 10" > /dev/null &&
+	turned="$(val 1 "realstate -55 -60 -37") $(val 1 "realstate -54 -60 -37")" &&
+	own="$(val 1 "realstate -58 -60 -37") $(val 1 "realstate -57 -60 -37")" &&
+	echo "  turned: $turned; own: $own" >> /out/checks.log &&
+	[[ $turned == "$own" && $turned == *facing=east,* && $turned != *facing=east,half=bottom,shape=straight* ]]'
+# An oak door turned to face east has both halves facing east.
+press 1 8
+stand -51 -37
+hold_ctrl
+xdo 1 click 4
+check "an oak door turns to face east" turn_is "facing=east"
+ctrl_click
+check "placed, both its halves face east, on both sides" eval \
+	'real_has 1 "-51 -60 -37" minecraft:oak_door "facing=east," && real_has 1 "-51 -59 -37" minecraft:oak_door "facing=east," &&
+	server_has "-51 -59 -37" "minecraft:oak_door[facing=east,half=upper]" "turned-door"'
+# A ghost stair facing east is filled by the turned real stair.
+drv 1 "edit -48 -60 -37 -48 -60 -37 minecraft:oak_stairs[facing=east]" "await block -48 -60 -37 minecraft:oak_stairs" \
+	> /dev/null
+press 1 5
+stand -48 -37
+hold_ctrl
+xdo 1 click 4
+drv 1 "wait 5" > /dev/null
+ctrl_click
+check "a ghost stair facing east is filled by the turned real stair, on both clients" eval \
+	'real_has 1 "-48 -60 -37" minecraft:oak_stairs "facing=east," && drv 1 "await block -48 -60 -37 minecraft:air" > /dev/null &&
+	drv 2 "await block -48 -60 -37 minecraft:air" > /dev/null'
+# A turn made in Line: Disable without Left Ctrl places as Minecraft does, and with it places turned. Switching to stone
+# and back to the stairs drops the turn, and Left Ctrl then places as Minecraft does.
+press 1 7
+press 1 5
+drv 1 "ebmode LINE" "wait 5" > /dev/null
+stand -45 -37
+hold_ctrl
+xdo 1 click 4
+check "with a turn made in Line" turn_is "facing=east,half=bottom"
+let_go_ctrl
+drv 1 "ebmode DISABLED" "wait 5" > /dev/null
+use_click 1
+check "Disable without Left Ctrl places as Minecraft does" real_has 1 "-45 -60 -37" minecraft:oak_stairs "facing=north,"
+stand -43 -37
+hold_ctrl
+ctrl_click
+check "and with it places turned" real_has 1 "-43 -60 -37" minecraft:oak_stairs "facing=east,"
+press 1 7
+press 1 5
+check "switching to stone and back drops the turn" turn_is none
+stand -41 -37
+hold_ctrl
+ctrl_click
+check "and Left Ctrl then places the stair as Minecraft does" eval \
+	'real_has 1 "-41 -60 -37" minecraft:oak_stairs "facing=north," &&
+	server_has "-41 -60 -37" "minecraft:oak_stairs[facing=north]" "unturned-stair"'
+# Along z -43: with Freecam's camera on, "Allow interaction" on and the camera 3 blocks east of Planner1, the turned
+# stair goes where the camera aims and faces east.
+press 1 5
+stand -50 -43
+hold_ctrl
+xdo 1 click 4
+check "with the stairs turned to face east" turn_is "facing=east,half=bottom"
+let_go_ctrl
+drv 1 "allowinteraction true" "freecam true" "wait 10" "camtp -46.5 -58.4 -39.5 90 30" "camlookat -49.5 -60 -42.5" \
+	"wait 5" > /dev/null
+hold_ctrl
+ctrl_click
+check "with Freecam's camera on and \"Allow interaction\" on, the turned stair goes where the camera aims, facing east" \
+	eval 'real_has 1 "-50 -60 -43" minecraft:oak_stairs "facing=east," &&
+	server_has "-50 -60 -43" "minecraft:oak_stairs[facing=east]" "freecam-stair"'
+check "Freecam's camera and \"Allow interaction\" go off again" eval \
+	'[[ $(val 1 "freecam false") == false && $(val 1 "allowinteraction false") == false ]] && drv 1 "wait 10" > /dev/null'
+disable_round survival -24
+# Survival stopped Planner1's flight, which the checks after these rely on; it starts again off the ground, as the game
+# stops a flight that touches the ground.
+drv 1 "cmd gamemode creative" "cmd fill -61 -60 -45 -36 -56 -19 minecraft:air" "ebmode SINGLE" "wait 10" \
+	"cmd tp @s ~ ~10 ~" "wait 5" "fly true" "wait 5" > /dev/null
+check "the blocks placed in Disable are cleared" eval '[[ $(val 1 "realstates -61 -60 -45 -36 -56 -19 x") == "0 0" ]]'
 drv 1 "cmd item replace entity @s hotbar.4 with minecraft:air" "cmd item replace entity @s hotbar.5 with minecraft:air" \
 	"cmd item replace entity @s hotbar.6 with minecraft:air" "cmd item replace entity @s hotbar.7 with minecraft:air" \
 	"cmd item replace entity @s hotbar.8 with minecraft:air" > /dev/null
 press 1 $((first_slot + 1))
 drv 1 "cmd item replace entity @s weapon.mainhand with $main_hand" "cmd tp @s 8.5 -56 9.5 0 30" \
 	"cmd tp Planner2 101.5 0 26.5 0 30" "wait 40" > /dev/null
+check "Planner1 flies again" eval '[[ $(val 1 flying) == true ]]'
 
 # The list under the crosshair for a box of 144 by 3 by 144 over a real floor of 40 kinds of block, at 854 by 480,
 # GUI scale 2: strips 3 wide from the box's west side, the first 144 long and each next one 1 shorter, so the kinds

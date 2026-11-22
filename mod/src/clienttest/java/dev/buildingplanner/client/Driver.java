@@ -85,6 +85,9 @@ public final class Driver implements ClientModInitializer {
 	/** The key {@code keyticks} counts, and the client ticks it has been down, with no screen open, since. */
 	private KeyMapping countedKey;
 	private int countedKeyTicks;
+	/** The real block {@code watchblock} reads at the end of every client tick, and the states it read, in order. */
+	private BlockPos watchedPos;
+	private final List<String> watchedStates = new ArrayList<>();
 
 	@Override
 	public void onInitializeClient() {
@@ -104,6 +107,9 @@ public final class Driver implements ClientModInitializer {
 			mc.options.keyAttack.isDown() && mc.gui.screen() == null);
 		if (countedKey != null && countedKey.isDown() && mc.gui.screen() == null) {
 			countedKeyTicks++;
+		}
+		if (watchedPos != null && mc.level != null) {
+			watchedStates.add(mc.level.getBlockState(watchedPos).toString());
 		}
 		if (quickClick != null) {
 			if (quickClick.isDown() && mc.gui.screen() == null) {
@@ -256,6 +262,10 @@ public final class Driver implements ClientModInitializer {
 				mc.player.getAbilities().flying = Boolean.parseBoolean(a[1]);
 				mc.player.onUpdateAbilities();
 				return "ok";
+			}
+			case "flying" -> {
+				// flying: whether the player flies.
+				return String.valueOf(mc.player.getAbilities().flying);
 			}
 			case "drawbox" -> {
 				// drawbox: the box for Copy or the material list as it shows: what it's for, how many corners are set,
@@ -701,7 +711,11 @@ public final class Driver implements ClientModInitializer {
 				return FreecamProbe.setPlayerControl(Boolean.parseBoolean(a[1]));
 			}
 			case "allowinteraction" -> {
-				// allowinteraction: whether Freecam's "Allow interaction" option is on.
+				// allowinteraction [true|false]: whether Freecam's "Allow interaction" option is on, after setting it, as
+				// its config screen does, when given.
+				if (a.length > 1) {
+					FreecamProbe.setAllowInteraction(Boolean.parseBoolean(a[1]));
+				}
 				return FreecamProbe.allowInteraction();
 			}
 			case "camera" -> {
@@ -728,6 +742,49 @@ public final class Driver implements ClientModInitializer {
 			case "realstate" -> {
 				// realstate x y z: the full state of the real block there, such as a door's open property.
 				return mc.level.getBlockState(pos(a, 1)).toString();
+			}
+			case "watchblock" -> {
+				// watchblock x y z: from now on, reads this game's real block there at the end of every client tick, for
+				// watched.
+				watchedPos = pos(a, 1);
+				watchedStates.clear();
+				return "ok";
+			}
+			case "watched" -> {
+				// watched: the states watchblock read, each run of ticks with one state as "<ticks>x <state>", separated by
+				// " | ", and stops watching.
+				List<String> runs = new ArrayList<>();
+				for (int i = 0; i < watchedStates.size();) {
+					int end = i;
+					while (end < watchedStates.size() && watchedStates.get(end).equals(watchedStates.get(i))) {
+						end++;
+					}
+					runs.add((end - i) + "x " + watchedStates.get(i));
+					i = end;
+				}
+				watchedPos = null;
+				watchedStates.clear();
+				return runs.isEmpty() ? "none" : String.join(" | ", runs);
+			}
+			case "screenbox" -> {
+				// screenbox x1 y1 z1 x2 y2 z2: the window's pixels the blocks of that box cover, as "left top right
+				// bottom", from the camera's position and field of view and the player's facing, for outlining them in
+				// a screenshot taken while the player stands still.
+				return screenBox(mc, pos(a, 1), pos(a, 4));
+			}
+			case "realstates" -> {
+				// realstates x1 y1 z1 x2 y2 z2 <text>: how many real blocks other than air the box holds in this game's
+				// world, and how many of them have the text in their state as realstate gives it, as "N M".
+				int all = 0;
+				int with = 0;
+				for (BlockPos pos : BlockPos.betweenClosed(pos(a, 1), pos(a, 4))) {
+					BlockState state = mc.level.getBlockState(pos);
+					if (!state.isAir()) {
+						all++;
+						with += state.toString().contains(a[7]) ? 1 : 0;
+					}
+				}
+				return all + " " + with;
 			}
 			case "mix" -> {
 				// The player's mix: on or off, then each block and its weight.
@@ -924,6 +981,10 @@ public final class Driver implements ClientModInitializer {
 				// slot: the hotbar slot selected, from 0, and the item in the main hand, e.g. "0 minecraft:stone_bricks".
 				return mc.player.getInventory().getSelectedSlot() + " "
 					+ BuiltInRegistries.ITEM.getKey(mc.player.getMainHandItem().getItem());
+			}
+			case "handcount" -> {
+				// handcount: how many items the main hand's stack holds.
+				return String.valueOf(mc.player.getMainHandItem().getCount());
 			}
 			case "radialclear" -> {
 				// radialclear: "clear" when Building Planner's buttons in the open radial menu meet nothing of the menu's,
@@ -1222,6 +1283,36 @@ public final class Driver implements ClientModInitializer {
 	private static String blockId(BlockPos pos) {
 		BlockState state = SchematicWorldHandler.getSchematicWorld().getBlockState(pos);
 		return BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString();
+	}
+
+	/** The window's pixels the box from {@code a} to {@code b} covers, its 8 corners seen through a perspective view. */
+	private static String screenBox(Minecraft mc, BlockPos a, BlockPos b) {
+		// The camera's own field of view, which the sprint and other effects widen beyond the option's.
+		Vec3 eye = mc.gameRenderer.mainCamera().position();
+		Vec3 forward = mc.player.getLookAngle();
+		Vec3 right = forward.cross(new Vec3(0, 1, 0)).normalize();
+		Vec3 up = right.cross(forward);
+		double tan = Math.tan(Math.toRadians(mc.gameRenderer.mainCamera().getFov()) / 2);
+		int width = mc.getWindow().getWidth();
+		int height = mc.getWindow().getHeight();
+		double aspect = (double) width / height;
+		double left = Double.MAX_VALUE;
+		double top = Double.MAX_VALUE;
+		double rightEdge = -Double.MAX_VALUE;
+		double bottom = -Double.MAX_VALUE;
+		for (int i = 0; i < 8; i++) {
+			Vec3 corner = new Vec3((i & 1) == 0 ? Math.min(a.getX(), b.getX()) : Math.max(a.getX(), b.getX()) + 1,
+				(i & 2) == 0 ? Math.min(a.getY(), b.getY()) : Math.max(a.getY(), b.getY()) + 1,
+				(i & 4) == 0 ? Math.min(a.getZ(), b.getZ()) : Math.max(a.getZ(), b.getZ()) + 1).subtract(eye);
+			double depth = corner.dot(forward);
+			double x = (corner.dot(right) / (depth * tan * aspect) + 1) / 2 * width;
+			double y = (1 - corner.dot(up) / (depth * tan)) / 2 * height;
+			left = Math.min(left, x);
+			top = Math.min(top, y);
+			rightEdge = Math.max(rightEdge, x);
+			bottom = Math.max(bottom, y);
+		}
+		return Math.round(left) + " " + Math.round(top) + " " + Math.round(rightEdge) + " " + Math.round(bottom);
 	}
 
 	private static String realBlockId(BlockPos pos) {

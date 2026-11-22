@@ -1,6 +1,6 @@
 # Step 8's in-game checks: clients without the add-on, or without Litematica and MaLiLib, on a server with it; clients
 # with the add-on on the same server with Building Planner left out; and a hello with protocol version 4, as Building
-# Planner 0.5.0 sends. Sourced by inside.sh, which provides drv, val, check, xdo, keys, use_click, attack_click, wait_for, start_server, stop_server,
+# Planner 0.5.0 sends, after which Left Ctrl doesn't turn the block in hand. Sourced by inside.sh, which provides drv, val, check, xdo, keys, use_click, attack_click, wait_for, start_server, stop_server,
 # start_client, stop_client, no_planner_message, $ADDON and $DRIVER.
 
 # said_since <line> <text>: returns when the server log, after that line, has a line containing the text.
@@ -117,6 +117,28 @@ drv 1 "cmd tp @s 5 -60 -3 0 10" "wait 20" "hello 4" > /dev/null
 check "a hello with protocol version 4 starts no session" drv 1 "wait 20" "await nosession"
 # The screenshot is written after the command returns; wait for it before inside.sh copies it.
 drv 1 "notoasts" "wait 5" "shot off-other-version" "wait 20" > /dev/null
+# Without a session, Left Ctrl doesn't turn the block in hand (step 18): in Effortless Building's Disable, with oak
+# stairs in hand, Left Ctrl with a notch up changes the hotbar slot, and a right click with Left Ctrl held places the
+# stair as Minecraft places it, facing south, the way Planner1 faces.
+drv 1 "ebmode DISABLED" "cmd item replace entity @s hotbar.4 with minecraft:oak_stairs" "cmd tp @s 5.5 -60 -2.5 0 30" \
+	"wait 20" > /dev/null
+keys 1 key 5
+drv 1 "lookat 5.5 -60 0.5" "wait 5" > /dev/null
+xdo 1 keydown Control_L
+drv 1 "await sprint true" "wait 5" > /dev/null
+xdo 1 click 4
+check "after that hello, Left Ctrl with the wheel changes the hotbar slot" eval \
+	'drv 1 "wait 5" > /dev/null && [[ $(val 1 slot) == "3 "* ]]'
+xdo 1 keyup Control_L
+keys 1 key 5
+drv 1 "await sprint false" "wait 5" > /dev/null
+check "and the stairs are in hand again" eval '[[ $(val 1 slot) == "4 minecraft:oak_stairs" ]]'
+xdo 1 keydown Control_L
+drv 1 "await sprint true" "wait 5" > /dev/null
+use_click 1
+xdo 1 keyup Control_L
+check "and a right click with Left Ctrl held places the stair as Minecraft places it" eval \
+	'drv 1 "await real 5 -60 0 minecraft:oak_stairs" > /dev/null && [[ $(val 1 "realstate 5 -60 0") == *"facing=south,"* ]]'
 
 check "neither client showed a Building Planner message on the server without it" \
 	eval 'no_planner_message 1 && no_planner_message 2'
