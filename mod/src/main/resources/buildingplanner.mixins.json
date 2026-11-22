@@ -12,6 +12,7 @@
 		"effortless.BlockPreviewRendererMixin",
 		"effortless.BuildModeEyeMixin",
 		"effortless.BuildModesMixin",
+		"effortless.BuildPipelineClientAccessor",
 		"effortless.BuildPipelineClientMixin",
 		"effortless.BuildPipelineMixin",
 		"effortless.ConstraintSystemMixin",

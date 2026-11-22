@@ -625,6 +625,16 @@ public final class Driver implements ClientModInitializer {
 				return !clipboard.exists() ? "none" : !clipboard.atAim() ? "away"
 					: clipboard.locked() ? "locked" : "unlocked";
 			}
+			case "single" -> {
+				// single: the one ghost block in Single mode: "locked x,y,z" or "unlocked", then whether its controls
+				// are active now; await single <text> waits for it.
+				return single();
+			}
+			case "preview" -> {
+				// preview: the positions Effortless Building's preview drew in the last whole frame, as x,y,z, or none;
+				// await preview <positions> waits for them.
+				return PreviewProbe.positions();
+			}
 			case "keyticks" -> {
 				// keyticks <nudge|lock> [reset]: the client ticks that key of the copy's (a CopyNudge name, or lock) has
 				// been down, with no screen open, since reset, which starts counting it.
@@ -1044,6 +1054,14 @@ public final class Driver implements ClientModInitializer {
 		return "none";
 	}
 
+	/** The one ghost block, for the driver's {@code single}. */
+	private static String single() throws Exception {
+		SingleBlock block = session().single();
+		BlockPos pos = block.locked() ? block.pos() : null;
+		return (pos == null ? "unlocked" : "locked " + pos.getX() + "," + pos.getY() + "," + pos.getZ())
+			+ (BuildingPlannerClient.singleActive() ? " active" : " inactive");
+	}
+
 	/** The conditions {@code await} takes. */
 	private static boolean holds(String what) throws Exception {
 		String[] a = what.split(" ");
@@ -1065,6 +1083,8 @@ public final class Driver implements ClientModInitializer {
 			case "row" -> row().startsWith(what.substring(4));
 			case "copycolour" -> copyColour().equals(what.substring(11));
 			case "sprint" -> mc.options.keySprint.isDown() == Boolean.parseBoolean(a[1]);
+			case "preview" -> PreviewProbe.positions().equals(what.substring(8));
+			case "single" -> single().equals(what.substring(7));
 			case "turned" -> FrameProbe.turned();
 			case "framestimed" -> FrameProbe.timed();
 			case "erasing" -> String.valueOf(erasing()).equals(a[1]);

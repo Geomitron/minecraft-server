@@ -470,19 +470,19 @@ the last step, when the server and the pack update together.
    a column), and `step9.sh`'s copy checks, rewritten for the new placement, pass: the copy rests on the aimed top,
    side and bottom faces; a notch up turns it clockwise in place; aimed at a recent paste it sits flush beside it;
    with Left Ctrl held it stays in line with the latest paste. Shots of the copy on a floor and against a wall.
-7. **Locking and nudging** ("Copy and paste": the controls, and "Keys"): the seven keys "Lock or unlock the copy" and
-   the six "Nudge the copy" keys under the "Building Planner" heading, acting only while the copy is at the aim. Needs
-   steps 5 and 6. Done when unit tests cover the nudge's direction from the view's facing and a held key's repeat
-   (after 0.2 seconds, then every 4 ticks), and new `step9.sh` checks pass: H locks the copy and walking away leaves
-   it; each arrow key and Page Up and Page Down move it one block the right way; a held key moves it about 5 blocks a
-   second; H unlocks it; a paste keeps it locked; with Freecam's camera on, Up moves it away from the camera. Shots of
-   the locked copy and of Controls' "Building Planner" heading (with GUI scale 4).
-8. **Zoop and Vertical** ("Build modes and zoop"): the eighth key, "Change copy mode" (R), the row's placements, and
-   the row pasted as one edit. Done when unit tests cover the row as a pure function (its direction from the aim, up
-   to 10 copies, each the turned copy's length apart, up or down for Vertical), and new `step9.sh` checks pass: R
-   cycles Single, Zoop and Vertical; a Zoop row of 4 pastes as one edit, which one undo takes back; a right click after
-   the first click drops the row and leaves the copy; the wheel turns every copy in the row; the mode stays across
-   copies until the game restarts. Shots of a Zoop row and a Vertical row before the second click.
+7. **Locking and nudging** ("Copy and paste": the controls, and "Keys"): the seven keys "Lock or unlock" and the six
+   nudge keys ("Nudge forward" and the rest) under the "Building Planner" heading, acting only while the copy is at the
+   aim. Needs steps 5 and 6. Done when unit tests cover the nudge's direction from the view's facing and a held key's
+   repeat (after 0.2 seconds, then every 4 ticks), and new `step9.sh` checks pass: H locks the copy and walking away
+   leaves it; each arrow key and Page Up and Page Down move it one block the right way; a held key moves it about 5
+   blocks a second; H unlocks it; a paste keeps it locked; with Freecam's camera on, Up moves it away from the camera.
+   Shots of the locked copy and of Controls' "Building Planner" heading (with GUI scale 4).
+8. **Zoop and Vertical** ("Build modes and zoop"): the eighth key, "Change Zoop or Delete mode" (R), the row's
+   placements, and the row pasted as one edit. Done when unit tests cover the row as a pure function (its direction from
+   the aim, up to 10 copies, each the turned copy's length apart, up or down for Vertical), and new `step9.sh` checks
+   pass: R cycles Single, Zoop and Vertical; a Zoop row of 4 pastes as one edit, which one undo takes back; a right
+   click after the first click drops the row and leaves the copy; the wheel turns every copy in the row; the mode stays
+   across copies until the game restarts. Shots of a Zoop row and a Vertical row before the second click.
 9. **The copy's colours** ("Colours"): the copy's box drawn by Building Planner in blue, yellow and red, hook L6
    leaving the copy and its row out of Litematica's boxes, and a red copy's click pasting nothing. Needs step 8. Done
    when unit tests cover the colour as a pure function (clear, over ghost blocks, outside the build height or the
@@ -507,10 +507,11 @@ the last step, when the server and the pack update together.
     (`ControlsLine.deleteAim`). Needs step 12. Done when `EraseHoldTest` and `ControlsLineTest` pass and the spec's
     "Delete by aim, erasing and its line (step 13)" checks pass, with shots of each line (with GUI scale 4).
 14. **One ghost block: locking and nudging** ("One ghost block"): `SingleBlock` and when its controls are active
-    (`SingleRule`), H and the nudge keys acting for it in `CopyKeys`, hooks E14, M1 and M2 taking its clicks while
-    it's locked (a left click erasing at the locked position), E27 drawing the locked block, and the eight keys'
-    proposed names. Done when `SingleRuleTest` passes and the spec's "One ghost block, locking and nudging (step
-    14)" checks pass, with shots of the locked block and of Controls' "Building Planner" heading (with GUI scale 4).
+    (`SingleRule`), H and the nudge keys acting for it in `CopyKeys`, hooks E14, M1, M2 and M3 taking its clicks while
+    it's locked (a left click erasing at the locked position), E27 and E30 drawing the locked block and E28 its state,
+    and the eight keys' proposed names. Done when `SingleRuleTest` passes and the spec's "One ghost block, locking and
+    nudging (step 14)" checks pass, with shots of the locked block and of Controls' "Building Planner" heading (with GUI
+    scale 4).
 15. **One ghost block: Zoop and Vertical** ("One ghost block"): R cycling the block's own mode, `CopyRow` with a
     longest row of 32 for a block and 10 for the copy, the row through Effortless Building's `processBlocks` and
     `EffortlessShapes.place`, and its preview through E27. Needs step 14. Done when `CopyRowTest` passes and the spec's

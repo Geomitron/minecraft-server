@@ -2,6 +2,7 @@ package dev.buildingplanner.client.mixin;
 
 import dev.buildingplanner.client.FrameProbe;
 import dev.buildingplanner.client.MenuFrames;
+import dev.buildingplanner.client.PreviewProbe;
 import dev.buildingplanner.client.ScreenProbe;
 import net.minecraft.client.Minecraft;
 import org.spongepowered.asm.mixin.Mixin;
@@ -11,7 +12,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
  * Tells the driver where each pass of the game's loop begins and ends, for shots of single frames, turning the view
- * frame by frame and timing frames.
+ * frame by frame, timing frames and what Effortless Building's preview drew in a whole frame.
  */
 @Mixin(Minecraft.class)
 abstract class MinecraftFrameMixin {
@@ -19,6 +20,7 @@ abstract class MinecraftFrameMixin {
 	private void buildingplanner_clienttest$beforeFrame(boolean advanceGameTime, CallbackInfo ci) {
 		MenuFrames.beforeFrame((Minecraft) (Object) this);
 		FrameProbe.beforeFrame((Minecraft) (Object) this);
+		PreviewProbe.beforeFrame();
 	}
 
 	@Inject(method = "runTick", at = @At("RETURN"))

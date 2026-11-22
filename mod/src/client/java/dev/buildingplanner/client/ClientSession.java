@@ -66,6 +66,8 @@ final class ClientSession {
 	private final SelfCheck check;
 	private final LayerReplica replica;
 	private final Clipboard clipboard = new Clipboard();
+	/** The one ghost block's controls in Effortless Building's Single mode. */
+	private final SingleBlock single = new SingleBlock();
 	/** The player's recent pastes in this dimension, which the copy snaps to. */
 	private final PasteBoxes pastes = new PasteBoxes();
 	/** Whether the copy was over ghost blocks, for these row boxes, these blocks and this layer at this version. */
@@ -143,6 +145,11 @@ final class ClientSession {
 		return clipboard;
 	}
 
+	/** The one ghost block, locked or following the aim (see "One ghost block"). */
+	SingleBlock single() {
+		return single;
+	}
+
 	/** The material lists the server keeps for the player. */
 	ListSync lists() {
 		return lists;
@@ -164,6 +171,7 @@ final class ClientSession {
 		box.end();
 		endAim();
 		clipboard.clear();
+		single.unlock();
 		pastes.clear();
 		glow.clear();
 	}
@@ -172,7 +180,8 @@ final class ClientSession {
 	 * Once a client tick: removes old plans' placements when due, asks for the columns that loaded and lets go of those
 	 * that unloaded, runs the self-check's comparisons that are due, counts Delete by aim's hold of the left button
 	 * ({@code attackDown}) and erases the marks once it's held a second, moves the box being drawn and the copy at the
-	 * aim to where the player aims, and sends the current material list when it changed.
+	 * aim to where the player aims, unlocks the one ghost block once a mouse mode is on, and sends the current material
+	 * list when it changed.
 	 */
 	void tick(boolean attackDown) {
 		if (removeOldPlans && Minecraft.getInstance().level != null) {
@@ -195,6 +204,9 @@ final class ClientSession {
 			list.update(box.shown(), replica.layer(), tiles.shown());
 		}
 		followAim();
+		if (mouseMode() != null) {
+			single.unlock();
+		}
 		lists.tick(System.currentTimeMillis());
 	}
 
@@ -247,7 +259,7 @@ final class ClientSession {
 		return copyMode;
 	}
 
-	/** "Change copy mode": Single, Zoop and Vertical, in that order. */
+	/** "Change Zoop or Delete mode" with the copy at the aim: Single, Zoop and Vertical, in that order. */
 	void cycleCopyMode() {
 		copyMode = copyMode.next();
 	}
@@ -273,9 +285,12 @@ final class ClientSession {
 
 	/**
 	 * The player did something that may end the mouse mode ({@link MouseMode#endedBy}): ending it ends the box, or puts
-	 * the copy away.
+	 * the copy away. Choosing a build mode also unlocks the one ghost block.
 	 */
 	void modeAction(MouseMode.Action action) {
+		if (action == MouseMode.Action.CHOOSE_BUILD_MODE) {
+			single.unlock();
+		}
 		MouseMode mode = mouseMode();
 		if (mode != null && mode.endedBy(action)) {
 			switch (mode) {
@@ -481,6 +496,7 @@ final class ClientSession {
 		box.end();
 		endAim();
 		clipboard.clear();
+		single.unlock();
 		tiles.clear();
 		check.clear();
 		glow.clear();
@@ -740,13 +756,13 @@ final class ClientSession {
 		}
 	}
 
-	/** "Lock or unlock the copy": the copy at the aim stops following the aim, or follows it again. */
+	/** "Lock or unlock" with the copy at the aim: the copy stops following the aim, or follows it again. */
 	void toggleCopyLock() {
 		clipboard.toggleLock();
 		followAim();
 	}
 
-	/** A "Nudge the copy" key: moves the locked copy one block that way. */
+	/** A "Nudge" key with the copy at the aim: moves the locked copy one block that way. */
 	void nudgeCopy(Direction direction) {
 		if (clipboard.locked()) {
 			clipboard.nudge(direction);

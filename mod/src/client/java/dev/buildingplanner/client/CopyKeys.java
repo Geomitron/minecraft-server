@@ -14,11 +14,12 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.Entity;
 
 /**
- * The copy's own keys (see "Keys"): "Lock or unlock the copy" (H), the six "Nudge the copy" keys (the arrow keys, Page
- * Up and Page Down) and "Change copy mode" (R), Satisfactory's keys for its hologram. They need no hook: the client
- * tick reads them, with no screen open, while the copy is at the aim and no zoop's row is fixed, and otherwise empties
- * their presses, so a press made before the copy came to the aim doesn't act once it does. A nudge key acts only while
- * the copy is locked, and held down it acts again ({@link KeyRepeat}). R also acts while Delete is on, switching a
+ * The copy's eight keys (see "Keys"): "Lock or unlock" (H), the six "Nudge" keys (the arrow keys, Page Up and Page
+ * Down) and "Change Zoop or Delete mode" (R), Satisfactory's keys for its hologram. They need no hook: the client tick
+ * reads them, with no screen open, while the copy is at the aim and no zoop's row is fixed, and otherwise empties their
+ * presses, so a press made before the copy came to the aim doesn't act once it does. A nudge key acts only while the
+ * copy is locked, and held down it acts again ({@link KeyRepeat}). H and the nudge keys act the same way for the one
+ * ghost block while its controls are active (see "One ghost block"). R also acts while Delete is on, switching a
  * Delete box and Delete by aim into each other.
  */
 final class CopyKeys {
@@ -74,10 +75,14 @@ final class CopyKeys {
 		return key.isUnbound() ? null : key.getTranslatedKeyMessage().getString();
 	}
 
-	/** Once a client tick, after the session's: acts on the keys for the copy at the aim, or empties their presses. */
+	/**
+	 * Once a client tick, after the session's: acts on the keys for the copy at the aim or the one ghost block, or
+	 * empties their presses.
+	 */
 	void tick(Minecraft mc, ClientSession session) {
 		boolean acting = session != null && session.clipboard().atAim() && !session.clipboard().rowFixed()
 			&& mc.gui.screen() == null;
+		boolean single = !acting && session != null && mc.gui.screen() == null && BuildingPlannerClient.singleActive();
 		int lockPresses = presses(LOCK);
 		int modePresses = presses(MODE);
 		if (acting) {
@@ -87,13 +92,18 @@ final class CopyKeys {
 			for (int i = 0; i < modePresses; i++) {
 				session.cycleCopyMode();
 			}
+		} else if (single) {
+			for (int i = 0; i < lockPresses; i++) {
+				BuildingPlannerClient.toggleSingleLock();
+			}
 		} else if (session != null && session.deleteOn() && mc.gui.screen() == null) {
 			for (int i = 0; i < modePresses; i++) {
 				session.switchDeleteMode();
 			}
 		}
 		Entity view = Aim.entity();
-		boolean nudging = acting && session.clipboard().locked() && view != null;
+		boolean nudging = view != null
+			&& (acting && session.clipboard().locked() || single && session.single().locked());
 		for (CopyNudge nudge : CopyNudge.values()) {
 			KeyMapping key = NUDGES.get(nudge);
 			int presses = presses(key);
@@ -103,7 +113,11 @@ final class CopyKeys {
 				continue;
 			}
 			for (int i = repeat.tick(presses, key.isDown()); i > 0; i--) {
-				session.nudgeCopy(nudge.direction(view.getYRot()));
+				if (acting) {
+					session.nudgeCopy(nudge.direction(view.getYRot()));
+				} else {
+					session.single().nudge(nudge.direction(view.getYRot()));
+				}
 			}
 		}
 	}

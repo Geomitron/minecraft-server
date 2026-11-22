@@ -6,6 +6,7 @@ import dev.buildingplanner.ClientConfig;
 import dev.buildingplanner.input.CopyColour;
 import dev.buildingplanner.input.DeleteMode;
 import dev.buildingplanner.input.MouseMode;
+import dev.buildingplanner.input.SingleRule;
 import dev.buildingplanner.layer.Layer;
 import dev.buildingplanner.look.ControlsLine;
 import dev.buildingplanner.look.GhostsShown;
@@ -431,11 +432,48 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	}
 
 	/**
-	 * Hook M3: whether holding the attack button breaks nothing: while a mouse mode is on, and while the button stays
-	 * down after the click that finished a box.
+	 * Hook M3: whether holding the attack button breaks nothing: while a mouse mode is on, while the one ghost block is
+	 * locked, and while the button stays down after the click that finished a box or erased at the locked block.
 	 */
 	public static boolean holdingAttackTaken() {
-		return session != null && (attackHeld || session.mouseMode() != null);
+		return session != null && (attackHeld || session.mouseMode() != null || singleTakesBreak());
+	}
+
+	/**
+	 * Whether the one ghost block's controls are active ({@link SingleRule#active}): a session, Effortless Building's
+	 * Single mode, no mouse mode, and an item that places a block in the main hand.
+	 */
+	static boolean singleActive() {
+		return effortless && SingleRule.active(session != null, EffortlessShapes.singleMode(), mouseModeOn(),
+			ClickRule.holdsPlaceable());
+	}
+
+	/** The one ghost block while it's locked and its controls are active (hooks E27, E28 and E30), or null. */
+	static SingleBlock lockedSingle() {
+		return singleActive() && session.single().locked() ? session.single() : null;
+	}
+
+	/** Hooks E14 and M2: whether the place click is the one ghost block's ({@link SingleRule#takesPlace}). */
+	public static boolean singleTakesPlace() {
+		return singleActive() && SingleRule.takesPlace(session.single().state());
+	}
+
+	/** Hooks E14, M1 and M3: whether the break click is the one ghost block's ({@link SingleRule#takesBreak}). */
+	public static boolean singleTakesBreak() {
+		return singleActive() && SingleRule.takesBreak(session.single().state());
+	}
+
+	/**
+	 * "Lock or unlock" while the one ghost block's controls are active: locks it where a right click would place it now,
+	 * or with nothing aimed at does nothing; locked, unlocks it, and it follows the aim again.
+	 */
+	static void toggleSingleLock() {
+		SingleBlock block = session.single();
+		if (block.locked()) {
+			block.unlock();
+		} else {
+			EffortlessShapes.lock(block);
+		}
 	}
 
 	/** A mouse mode started, perhaps within a click of the use button, whose hold mustn't end it. */
@@ -452,12 +490,18 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 
 	/**
 	 * Hook M1: the left click sets the box's next corner, pastes the copy at the aim, or in Delete by aim starts the hold
-	 * that erases the marks; returns whether the click is taken from the game.
+	 * that erases the marks; with the one ghost block locked, it erases the ghost block where it's locked, and holding
+	 * the button erases nothing more. Returns whether the click is taken from the game.
 	 */
 	public static boolean leftClick() {
 		MouseMode mode = mouseMode();
 		if (mode == null) {
-			return false;
+			if (!singleTakesBreak()) {
+				return false;
+			}
+			EffortlessShapes.eraseLocked(session.single());
+			attackHeld = Minecraft.getInstance().options.keyAttack.isDown();
+			return true;
 		}
 		switch (mode) {
 			case BOX -> {
@@ -475,8 +519,9 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 
 	/**
 	 * Hook M2: the right click puts the copy away, or during a zoop, after its first click, drops the row and leaves the
-	 * copy at the aim; in Delete by aim it clears the marks, or with none ends the mode. Returns whether the game's use is
-	 * skipped, which it is too while the button stays down after a mode started or ended.
+	 * copy at the aim; in Delete by aim it clears the marks, or with none ends the mode. With the one ghost block locked,
+	 * it places the block where it's locked. Returns whether the game's use is skipped, which it is too while the button
+	 * stays down after a mode started or ended or the locked block was placed, so holding it places no more.
 	 */
 	public static boolean rightClick() {
 		if (session == null) {
@@ -486,6 +531,11 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 			if (!session.dropRow() && !session.clearMarks()) {
 				session.modeAction(MouseMode.Action.RIGHT_CLICK);
 			}
+			useHeld = true;
+			return true;
+		}
+		if (!useHeld && singleTakesPlace()) {
+			EffortlessShapes.placeLocked(session.single());
 			useHeld = true;
 			return true;
 		}

@@ -6,7 +6,7 @@ import net.minecraft.client.KeyMapping;
 import net.minecraft.resources.Identifier;
 
 /**
- * A key mapping of the driver's own, bound to Page Up as the copy's "Nudge the copy up" is, which counts the Page Up
+ * A key mapping of the driver's own, bound to Page Up as the copy's "Nudge up" is, which counts the Page Up
  * presses that reach Minecraft's key mappings (step10.sh); Minecraft gives a press to every key mapping bound to its
  * key. It is in a class of its own, with no reference to Litematica, so it also counts on a client without it, and under
  * a heading of its own in Controls, so the "Building Planner" heading shows only the add-on's keys.

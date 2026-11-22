@@ -117,12 +117,12 @@
 	"key.category.buildingplanner.main": "Building Planner",
 	"key.buildingplanner.block_mix": "Block mix",
 	"key.buildingplanner.show_hide": "Show or hide ghost blocks",
-	"key.buildingplanner.lock_copy": "Lock or unlock the copy",
-	"key.buildingplanner.nudge_forward": "Nudge the copy forward",
-	"key.buildingplanner.nudge_back": "Nudge the copy back",
-	"key.buildingplanner.nudge_left": "Nudge the copy left",
-	"key.buildingplanner.nudge_right": "Nudge the copy right",
-	"key.buildingplanner.nudge_up": "Nudge the copy up",
-	"key.buildingplanner.nudge_down": "Nudge the copy down",
-	"key.buildingplanner.copy_mode": "Change copy mode"
+	"key.buildingplanner.lock_copy": "Lock or unlock",
+	"key.buildingplanner.nudge_forward": "Nudge forward",
+	"key.buildingplanner.nudge_back": "Nudge back",
+	"key.buildingplanner.nudge_left": "Nudge left",
+	"key.buildingplanner.nudge_right": "Nudge right",
+	"key.buildingplanner.nudge_up": "Nudge up",
+	"key.buildingplanner.nudge_down": "Nudge down",
+	"key.buildingplanner.copy_mode": "Change Zoop or Delete mode"
 }

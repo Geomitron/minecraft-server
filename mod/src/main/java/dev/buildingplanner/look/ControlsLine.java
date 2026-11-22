@@ -50,8 +50,8 @@ public final class ControlsLine {
 	}
 
 	/**
-	 * The copy's keys, each by its name as the game gives it, or null while it has no key: "Lock or unlock the copy",
-	 * "Change copy mode", the four nudges along the ground (forward, back, left and right), whether those four are on
+	 * The copy's keys, each by its name as the game gives it, or null while it has no key: "Lock or unlock", "Change
+	 * Zoop or Delete mode", the four nudges along the ground (forward, back, left and right), whether those four are on
 	 * the arrow keys (Up, Down, Left and Right in that order), the nudges up and down, and Minecraft's sprint key, which
 	 * lines the copy up.
 	 */

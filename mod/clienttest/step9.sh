@@ -300,17 +300,16 @@ xdo 1 mousemove --window %w 5 5
 drv 1 "wait 5" > /dev/null
 check "letting the key go with the pointer moved off Block mix closes the menu and opens nothing" radial_let_go
 
-# Controls: Building Planner's keys, the copy's eight among them, and Effortless Building's four show under the
-# "Building Planner" heading, in the order Controls sorts them, and no raw key name. The driver's own Page Up key, under
-# a heading of its own, is unbound first, so Controls shows no clash with "Nudge the copy up". The list is scrolled to
-# the heading and shot at 854 by 480 and 1920 by 1080, GUI scale 2, and at 1920 by 1080, GUI scale 4, with the
-# heading's, the keys' and each key row's window boxes (left top right bottom) in the log.
+# Controls: Building Planner's keys, the eight of the copy and the one ghost block among them, and Effortless Building's
+# four show under the "Building Planner" heading, in the order Controls sorts them, and no raw key name. The driver's
+# own Page Up key, under a heading of its own, is unbound first, so Controls shows no clash with "Nudge up". The list is
+# scrolled to the heading and shot at 854 by 480 and 1920 by 1080, GUI scale 2, and at 1920 by 1080, GUI scale 4, with
+# the heading's, the keys' and each key row's window boxes (left top right bottom) in the log.
 drv 1 "unbindprobe" "keybinds" "wait 10" > /dev/null
 echo "  controls: $(val 1 keybindlist)" >> /out/checks.log
-planner_keys="Block mix, Change copy mode, Lock or unlock the copy, Nudge the copy back, Nudge the copy down, Nudge the copy forward, \
-Nudge the copy left, Nudge the copy right, Nudge the copy up, Open Modifier Settings, Open Radial Menu, Redo, \
-Show or hide ghost blocks, Undo"
-check "Controls shows the copy's eight keys and Effortless Building's four under \"Building Planner\", with its own" \
+planner_keys="Block mix, Change Zoop or Delete mode, Lock or unlock, Nudge back, Nudge down, Nudge forward, Nudge left, \
+Nudge right, Nudge up, Open Modifier Settings, Open Radial Menu, Redo, Show or hide ghost blocks, Undo"
+check "Controls shows the eight keys of the copy and the one ghost block, and Effortless Building's four under \"Building Planner\", with its own" \
 	eval '[[ $(val 1 keybindlist) == *"Building Planner: $planner_keys ; "* ]]'
 check "under one heading" eval '(($(val 1 keybindlist | grep -o "Building Planner: " | wc -l) == 1))'
 check "with no raw key name" eval '[[ $(val 1 keybindlist) != *"key."* ]]'
@@ -1681,6 +1680,135 @@ drv 1 "edit 60 -60 2 139 -11 51 minecraft:air" > /dev/null
 check "erasing the bricks reaches both games" eval 'drv 2 "await block 60 -60 2 minecraft:air" \
 	"await block 139 -11 51 minecraft:air" > /dev/null && drv 1 "await block 139 -11 51 minecraft:air" > /dev/null'
 drv 1 "cmd tp @s 8.5 -56 9.5 0 30" "wait 40" > /dev/null
+
+# One ghost block, locking and nudging, on the grass north-west of the rest, with stone bricks in Single mode. Facing
+# north from -59.5 -58 -36.5 and aimed at -60 -61 -40's top, a right click would place at -60 -60 -40. Planner2 flies
+# beside it, since a game gets the layer's changes only where it has the world loaded.
+main_hand=$(val 1 slot | cut -d' ' -f2)
+drv 1 "cmd item replace entity @s weapon.mainhand with minecraft:stone_bricks" "ebmode SINGLE" "ebarray 0" \
+	"cmd tp @s -59.5 -58 -36.5 180 30" "cmd tp Planner2 -66.5 -55 -34.5 180 30" "wait 60" > /dev/null
+aim 1 -60 -60 -40
+check "in Single mode with stone bricks, the one ghost block's controls are active, unlocked" eval \
+	'[[ $(val 1 single) == "unlocked active" ]]'
+press 1 h
+check "H locks the block beside the aimed face" eval '[[ $(val 1 single) == "locked -60,-60,-40 active" ]]'
+drv 1 "cmd tp @s -54.5 -58 -36.5 180 30" "wait 40" > /dev/null
+aim 1 -52 -60 -44
+check "flown 5 blocks away and aiming elsewhere, Effortless Building's preview draws it there" eval \
+	'drv 1 "wait 10" "await preview -60,-60,-40" > /dev/null && [[ $(val 1 single) == "locked -60,-60,-40 active" ]]'
+check "with Effortless Building's array of 2 copies one block apart upward, the preview draws all three" \
+	drv 1 "ebarray 2 0 1 0" "wait 10" "await preview -60,-60,-40 -60,-59,-40 -60,-58,-40" "ebarray 0"
+drv 1 "cmd tp @s -59.5 -58 -35.5 180 30" "wait 40" > /dev/null
+# single_nudge <xdotool key> <what it does> <the block's position after>: presses the key and checks it moved there.
+single_nudge() {
+	press 1 "$1"
+	check "$2" eval "[[ \$(val 1 single) == 'locked $3 active' ]]"
+}
+single_nudge Up "facing north, Up moves it one block north" -60,-60,-41
+single_nudge Prior "Page Up one block up" -60,-59,-41
+single_nudge Next "and Page Down one down" -60,-60,-41
+use_click 1
+check "a right click places one ghost block there, on both clients" eval \
+	'drv 1 "await block -60 -60 -41 minecraft:stone_bricks" > /dev/null &&
+	drv 2 "await block -60 -60 -41 minecraft:stone_bricks" > /dev/null && [[ $(val 1 holdlog) == *" edits=1 "* ]]'
+check "and it stays locked" eval '[[ $(val 1 single) == "locked -60,-60,-41 active" ]]'
+# Held for a second, the right button places once, at a position nudged to first, west of the first block.
+single_nudge Left "Left moves it one block west" -61,-60,-41
+drv 1 "holdreset" > /dev/null
+xdo 1 mousedown 3
+drv 1 "wait 20" > /dev/null
+xdo 1 mouseup 3
+check "holding the right button for a second sends one edit" eval 'drv 1 "wait 10" > /dev/null &&
+	[[ $(val 1 holdlog) == *" edits=1 "* ]] && drv 2 "await block -61 -60 -41 minecraft:stone_bricks" > /dev/null'
+# Aimed at the first ghost block's south face, a left click erases the one at the locked position, west of it.
+drv 1 "lookat -59.5 -59.5 -40.5" "wait 5" > /dev/null
+attack_click 1
+check "aiming at another ghost block, a left click erases the ghost block at the locked position" eval \
+	'drv 2 "await block -61 -60 -41 minecraft:air" > /dev/null && drv 1 "await block -61 -60 -41 minecraft:air" > /dev/null'
+check "leaves the aimed one" eval '[[ $(val 1 "layer -60 -60 -41") == minecraft:stone_bricks ]] &&
+	[[ $(val 2 "layer -60 -60 -41") == minecraft:stone_bricks ]]'
+check "and the block stays locked" eval '[[ $(val 1 single) == "locked -61,-60,-41 active" ]]'
+# Held for a second, aimed at the grass, the left button erases the ghost block placed again there once, and mines no
+# real block.
+use_click 1
+drv 1 "await block -61 -60 -41 minecraft:stone_bricks" "lookat -57.5 -61 -38.5" "wait 5" "holdreset" > /dev/null
+xdo 1 mousedown 1
+drv 1 "wait 20" > /dev/null
+xdo 1 mouseup 1
+check "holding the left button for a second sends one edit" eval 'drv 1 "wait 10" > /dev/null &&
+	[[ $(val 1 holdlog) == *" edits=1 "* ]] && drv 1 "await block -61 -60 -41 minecraft:air" > /dev/null'
+check "and mines no real block" eval '[[ $(val 1 "real -58 -61 -39") == minecraft:grass_block ]]'
+# Locked, an oak stair placed facing east faces east.
+drv 1 "cmd item replace entity @s weapon.mainhand with minecraft:oak_stairs" \
+	"cmd tp @s -64.5 -58 -40.5 -90 30" "wait 40" > /dev/null
+use_click 1
+check "locked, an oak stair placed facing east faces east" eval \
+	'drv 1 "await block -61 -60 -41 minecraft:oak_stairs" > /dev/null &&
+	[[ $(val 1 "layerstate -61 -60 -41") == *"facing=east"* ]]'
+press 1 h
+check "H unlocks it" eval '[[ $(val 1 single) == "unlocked active" ]]'
+# With a stick in hand, the controls aren't active: H and the nudge keys do nothing, and the clicks are Minecraft's: a
+# right click sends nothing, and a left click breaks a real stone and leaves the ghost block at the locked position.
+drv 1 "cmd item replace entity @s weapon.mainhand with minecraft:stone_bricks" \
+	"cmd tp @s -59.5 -58 -35.5 180 30" "wait 40" > /dev/null
+aim 1 -60 -60 -40
+press 1 h
+drv 1 "cmd item replace entity @s weapon.mainhand with minecraft:stick" "cmd setblock -58 -60 -39 minecraft:stone" \
+	"wait 10" > /dev/null
+check "with a stick in hand, the block's controls aren't active" eval \
+	'[[ $(val 1 single) == "locked -60,-60,-40 inactive" ]]'
+press 1 h
+press 1 Up
+check "and H and the nudge keys do nothing" eval '[[ $(val 1 single) == "locked -60,-60,-40 inactive" ]]'
+use_click 1
+check "a right click with a stick sends nothing" eval 'drv 1 "wait 10" > /dev/null &&
+	[[ $(val 1 holdlog) == *" edits=0 "* ]] && [[ $(val 1 "layer -60 -60 -40") == minecraft:air ]]'
+drv 1 "lookat -57.5 -59.5 -38.5" "wait 5" > /dev/null
+attack_click 1
+check "and a left click breaks the real stone, as without the add-on" eval 'drv 1 "wait 10" > /dev/null &&
+	[[ $(val 1 "real -58 -60 -39") == minecraft:air ]] && [[ $(val 1 holdlog) == *" edits=0 "* ]] &&
+	[[ $(val 1 "layer -60 -60 -41") == minecraft:stone_bricks ]]'
+drv 1 "cmd item replace entity @s weapon.mainhand with minecraft:stone_bricks" "wait 5" > /dev/null
+drv 1 "ebmode LINE" "wait 5" > /dev/null
+check "choosing Line in the radial menu unlocks the block" eval '[[ $(val 1 single) == "unlocked inactive" ]]'
+drv 1 "ebmode SINGLE" "wait 5" > /dev/null
+# With the copy at the aim, H locks the copy and not the block.
+aim 1 -60 -60 -40
+press 1 h
+paste_button
+press 1 h
+check "with the copy at the aim, H locks the copy and not the block" eval '[[ $(val 1 copylock) == locked ]] &&
+	[[ $(val 1 single) == "unlocked inactive" ]]'
+press 1 h
+use_click 1
+check "the copy goes away" eval 'drv 1 "wait 10" > /dev/null && copy_is 1 "^away "'
+# With Freecam's camera on, facing east while Planner1 faces north, Up moves the locked block east, away from the
+# camera.
+aim 1 -60 -60 -40
+press 1 h
+check "Freecam's camera comes on, facing east, with the block locked" eval \
+	'[[ $(val 1 single) == "locked -60,-60,-40 active" ]] && [[ $(val 1 "freecam true") == true ]] &&
+	drv 1 "wait 10" > /dev/null && [[ $(val 1 "camtp -66.5 -57.5 -39.5 -90 30") == "FreeCamera -66.5,-57.5,-39.5 east" ]]'
+press 1 Up
+check "with Freecam's camera on, Up moves the locked block away from the camera, east" eval \
+	'[[ $(val 1 single) == "locked -59,-60,-40 active" ]]'
+check "Freecam's camera goes off" eval '[[ $(val 1 "freecam false") == false ]] && drv 1 "wait 10" > /dev/null'
+# The locked block in open air, 3 blocks up, with the crosshair on the grass, shot locked and then unlocked in the same
+# view, for the shots' outline.
+press 1 Prior
+press 1 Prior
+press 1 Prior
+drv 1 "lookat -50.5 -61 -50.5" "wait 5" > /dev/null
+check "the block floats in open air, locked" eval '[[ $(val 1 single) == "locked -59,-57,-40 active" ]] &&
+	drv 1 "await preview -59,-57,-40" > /dev/null'
+shots single-locked
+press 1 h
+shots single-unlocked
+drv 1 "edit -70 -60 -50 -50 -55 -30 minecraft:air" > /dev/null
+check "erasing the ghost blocks reaches both games" eval 'drv 2 "await block -60 -60 -41 minecraft:air" > /dev/null &&
+	drv 1 "await block -60 -60 -41 minecraft:air" > /dev/null'
+drv 1 "cmd item replace entity @s weapon.mainhand with $main_hand" "cmd tp @s 8.5 -56 9.5 0 30" \
+	"cmd tp Planner2 101.5 0 26.5 0 30" "wait 40" > /dev/null
 
 # The list under the crosshair for a box of 144 by 3 by 144 over a real floor of 40 kinds of block, at 854 by 480,
 # GUI scale 2: strips 3 wide from the box's west side, the first 144 long and each next one 1 shorter, so the kinds

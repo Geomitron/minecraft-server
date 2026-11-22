@@ -3,9 +3,9 @@ package dev.buildingplanner.input;
 import net.minecraft.core.Direction;
 
 /**
- * The six "Nudge the copy" keys, which move the locked copy one block, as Satisfactory's nudge keys move a locked
- * hologram: forward away from the view, back toward it, left and right to the view's sides, along the compass
- * direction nearest the way the view faces, and up and down.
+ * The six "Nudge" keys, which move the locked copy, or the locked one ghost block, one block, as Satisfactory's nudge
+ * keys move a locked hologram: forward away from the view, back toward it, left and right to the view's sides, along
+ * the compass direction nearest the way the view faces, and up and down.
  */
 public enum CopyNudge {
 	FORWARD("forward"),
