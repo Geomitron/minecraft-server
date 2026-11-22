@@ -546,7 +546,7 @@ the last step, when the server and the pack update together.
     game on another protocol version places as Minecraft does. Shots of the turned stair and log, placed.
 19. **Disable's preview and its line** ("One ghost block": "Turning real blocks in Disable"): hooks E29 and E30,
     and E28's Disable state,
-    drawing in Effortless Building's preview the block a right click would place (`DisablePreview`), red through E8
+    drawing in Effortless Building's preview the block a right click would place (`DisablePreview`), red through E29
     when it can't stay, and none while Freecam's "Allow interaction" is off or the player is beyond reach; and
     Disable's controls line (`ControlsLine.disable`), drawn by `ModeHud`, showing without Left Control except for a
     block that hangs on the block behind it (1033 Q2 A, 1037 Q1 B). Needs step 18. Done when `DisablePreviewTest` and
