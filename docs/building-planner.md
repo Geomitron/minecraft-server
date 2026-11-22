@@ -1277,7 +1277,9 @@ they stand (980 Q5 and Q6, Geo's answers), in each of Effortless Building's mode
   slab's top or bottom (never double); a piston, an observer or a dispenser facing up, down and back to its turn; a
   button or a lever on the floor, a wall or the ceiling; a lantern hanging or standing.
 
-The first turn or flip starts from the block as Minecraft would place it at that moment, as the preview shows it. From
+The first turn or flip starts from the block as Minecraft would place it at that moment: by its placement rules with
+the hit the locked block or its row was fixed with, the shape's first click, or the aim, as the preview shows it where
+it draws the block (see "Colours" for Single's block at the aim). From
 then on, the block keeps that orientation whichever way the player faces and whichever face they aim at, until they
 switch to another block (980 revision 2, Q1 A): the main hand's item becoming another item, by the hotbar or by picking
 a block, drops the turn, and so does switching to another block and back; the same block in another hotbar slot
@@ -2085,15 +2087,18 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   it's locked, and once placed, the block stays locked there. In Vertical, looking up into open air on the line above
   the start, the row rises 8 blocks and the preview draws them; the second click places them as one edit. A Zoop row
   and a Vertical row are shot before the second click at 854 by 480 and 1920 by 1080, GUI scale 2.
-- One ghost block, turning and flipping (step 16): with oak stairs, facing north, a notch up with Left Ctrl held turns
-  the preview's stair a quarter turn clockwise and the hotbar slot stays; the stair placed then faces that way, and so
-  does one placed after Planner1 turns to face south. The middle click with Left Ctrl held makes the stair's top half,
-  with no block picked, from the game or Litematica, even aimed at a ghost block. An oak log flips to standing and
-  back. Switching to another hotbar slot's block and back drops the turn; the same stairs in a second slot keep it.
-  Without Left Ctrl, the wheel changes the hotbar slot and the middle click picks the aimed block; with stone in hand,
-  Left Ctrl and the wheel change the hotbar slot. With the mix of oak and spruce stairs, both take the turn. A Zoop
-  row of turned stairs faces one way. Turned and flipped stairs are shot before and after placing at 854 by 480 and
-  1920 by 1080, GUI scale 2.
+- One ghost block, turning and flipping (step 16): with oak stairs in Single mode, facing north, a notch up with Left
+  Ctrl held turns the stair a quarter turn clockwise, to face east (the driver's `heldturn`), and the hotbar slot
+  stays; locked, the preview draws the stair facing east (the driver's `previewstate`); the stair placed then faces
+  east, and so does one placed after Planner1 turns to face south. The middle click with Left Ctrl held, aimed at a
+  ghost block, makes the stair's top half, with no block picked, from the game or Litematica; locked, the preview
+  draws it so, and placed, it is so on both clients; unlocked, no preview draws it. A Zoop row of 8 turned stairs
+  faces one way, as its preview drew it. With the mix of oak and spruce stairs, a row's stairs of both kinds take the
+  turn. The same stairs in a second slot keep the turn; with stone in hand, Left Ctrl and the wheel change the hotbar
+  slot, and back on the stairs, the turn is gone. An oak log aimed at a side flips to standing and back. Without Left
+  Ctrl, the wheel changes the hotbar slot and the middle click picks the aimed block. The checks log what an unlocked
+  left click erases with Effortless Building's array and mirror on. Turned and flipped stairs are shot before placing,
+  locked, and after, at 854 by 480 and 1920 by 1080, GUI scale 2.
 - Turning in every mode (step 17): with oak stairs turned a quarter turn in Single, the turn stays after choosing Line
   in the radial menu, and a Line of 5 places 5 stairs facing the turned way, on both clients, as its preview showed
   (the driver's `preview`, with each block's state). In Line, a notch up with Left Ctrl held before the first click,
@@ -2310,10 +2315,13 @@ Planner's in each state, and when the turning controls are active (each mode, Di
 step 18, none during a shape
 drawn with the break click, but during one drawn with the place click). `CopyRowTest` covers a 1×1×1 row (step 15):
 every block to the aim east, north and up, the block alone when aimed at itself, and up to 32 blocks, where the copy's
-row stops at 10. `BlockTurnTest` covers a
-quarter turn each way for stairs, logs, chests and signs; the flips' order for a log, a stair, a slab, a piston, a
-button and a lantern; the turn kept as property values and set on another block of the mix that has them; a block
-that neither turns nor flips; and the turn dropping when the item in hand changes. `CopyColourTest` covers a 1×1×1
+row stops at 10. `BlockTurnTest` (step 16) covers a
+quarter turn each way for stairs, logs, chests and signs, and two turns adding up; the flips' order for a log, a
+stair, a slab (a double slab flipping to bottom), a piston (one placed facing up flipping to the way it would face on
+its side, and a turn while flipped up turning the way it goes back to), a button and a lantern; the turn kept as
+property values and set on another block of the mix that has them, leaving a door's upper or lower half and
+waterlogging; which blocks turn and which flip; a block that neither turns nor flips; and the turn dropping when the
+item in hand changes. `CopyColourTest` covers a 1×1×1
 spot blue, yellow and red.
 
 Disable's turn has unit tests as pure functions (steps 18 and 19). `DisableTurnTest` covers the turn M6 sends: the

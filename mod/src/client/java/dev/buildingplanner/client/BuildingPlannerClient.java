@@ -3,6 +3,7 @@ package dev.buildingplanner.client;
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.buildingplanner.BuildingPlanner;
 import dev.buildingplanner.ClientConfig;
+import dev.buildingplanner.input.BlockTurn;
 import dev.buildingplanner.input.CopyColour;
 import dev.buildingplanner.input.DeleteMode;
 import dev.buildingplanner.input.MouseMode;
@@ -20,6 +21,7 @@ import it.unimi.dsi.fastutil.longs.LongSet;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientChunkEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLevelEvents;
@@ -36,6 +38,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
@@ -209,6 +212,9 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 			}
 			if (!client.options.keyUse.isDown()) {
 				useHeld = false;
+			}
+			if (client.player != null) {
+				HeldTurn.follow(client.player.getMainHandItem().getItem());
 			}
 			if (!client.options.keyAttack.isDown()) {
 				attackHeld = false;
@@ -460,6 +466,34 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		return singleActive() && (session.single().locked() || session.single().rowFixed()) ? session.single() : null;
 	}
 
+	/**
+	 * Whether the turning controls are active (Left Ctrl with the wheel and the middle click, see "One ghost block":
+	 * "Turning and flipping"), and hooks E1 and E28 give the blocks placed the turn: under the one ghost block's
+	 * conditions, in Single mode.
+	 */
+	static boolean turningActive() {
+		return singleActive();
+	}
+
+	/**
+	 * Hooks M4, M5 and L11: whether the turning controls take the wheel or the middle click now: they're active, the
+	 * sprint key is held, and the block in hand, or a block of the mix while it applies, turns or flips as asked.
+	 */
+	private static boolean turnTakes(Predicate<Block> can) {
+		Minecraft mc = Minecraft.getInstance();
+		if (!turningActive() || !mc.options.keySprint.isDown()
+			|| !(mc.player.getMainHandItem().getItem() instanceof BlockItem item)) {
+			return false;
+		}
+		return can.test(item.getBlock())
+			|| EffortlessShapes.mixApplies() && MIX.parts().stream().anyMatch(part -> can.test(part.block()));
+	}
+
+	/** Hook L11: whether the middle click flips the block in hand, so Litematica picks no block with it. */
+	public static boolean flipTakesMiddle() {
+		return effortless && turnTakes(BlockTurn::flips);
+	}
+
 	/** Hooks E14 and M2: whether the place click is the one ghost block's ({@link SingleRule#takesPlace}). */
 	public static boolean singleTakesPlace() {
 		return singleActive() && SingleRule.takesPlace(session.single().state());
@@ -559,6 +593,10 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	public static boolean middleClick() {
 		MouseMode mode = mouseMode();
 		Entity aimer = Aim.entity();
+		if (mode == null && turnTakes(BlockTurn::flips)) {
+			EffortlessShapes.flipHeld();
+			return true;
+		}
 		if (mode == null || aimer == null) {
 			return false;
 		}
@@ -574,6 +612,12 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	 * returns whether the hotbar slot changes as without the add-on.
 	 */
 	public static boolean scroll(int wheel) {
+		if (mouseMode() == null && turnTakes(BlockTurn::turns)) {
+			for (int notch = 0; notch < Math.abs(wheel); notch++) {
+				EffortlessShapes.turnHeld(wheel > 0);
+			}
+			return false;
+		}
 		if (mouseMode() != MouseMode.COPY_AT_AIM) {
 			return true;
 		}

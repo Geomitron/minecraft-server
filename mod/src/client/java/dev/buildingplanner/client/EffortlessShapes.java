@@ -64,8 +64,9 @@ public final class EffortlessShapes {
 	/**
 	 * Hook E1: the player finished a shape with the place click. Each valid entry gets the block Effortless Building
 	 * would place: the mix's (set by hook E5) or the held block, by its placement rules with the first click's face and
-	 * the facing of the player at the aim (Freecam's camera while it's on, see {@link Aim}), then the shape's mirror and
-	 * turn. {@code first} is the hit the states come from: the shape's first click (E1), or the locked block's
+	 * the facing of the player at the aim (Freecam's camera while it's on, see {@link Aim}), then the turn of the block in
+	 * hand while the turning controls are active ({@link HeldTurn}), then the shape's mirror and turn from the modifiers.
+	 * {@code first} is the hit the states come from: the shape's first click (E1), or the locked block's
 	 * ({@link SingleBlock#hit}); with none, the top face at the middle of the shape's first position.
 	 */
 	public static void place(BlockSet blocks, BlockHitResult first) {
@@ -77,6 +78,7 @@ public final class EffortlessShapes {
 		double yFraction = hit.y - Math.floor(hit.y);
 		ItemStack held = player.getMainHandItem();
 		boolean mix = mixApplies();
+		boolean turning = BuildingPlannerClient.turningActive();
 		Map<BlockPos, BlockState> states = new LinkedHashMap<>();
 		for (Map.Entry<BlockPos, BlockEntry> e : blocks.validEntries()) {
 			BlockPos pos = e.getKey();
@@ -87,9 +89,8 @@ public final class EffortlessShapes {
 			}
 			BlockHitResult blockHit = new BlockHitResult(new Vec3(hit.x, pos.getY() + yFraction, hit.z), face, pos,
 				false);
-			BlockState state = item.getBlock().getStateForPlacement(
-				new BlockPlaceContext(placer, InteractionHand.MAIN_HAND, stack, blockHit));
-			states.put(pos, entry.applyTransforms(state != null ? state : item.getBlock().defaultBlockState()));
+			BlockState state = placementState(item, stack, blockHit);
+			states.put(pos, entry.applyTransforms(turning ? HeldTurn.apply(state, held.getItem()) : state));
 		}
 		Map<BlockPos, BlockState> otherHalves = new LinkedHashMap<>();
 		states.forEach((pos, state) -> {
@@ -270,18 +271,73 @@ public final class EffortlessShapes {
 	}
 
 	/**
-	 * The shown block's state for the preview (hook E28): the held block's placement rules with the hit it was locked or
-	 * its row fixed with and the player's facing now, as a right click places it, so the preview shows the blocks a
-	 * right click places. Otherwise the state Effortless Building found for the aim.
+	 * The preview's state (hook E28): for the one ghost block locked or in a fixed row, the held block's placement rules
+	 * with the hit it was locked or its row fixed with and the player's facing now, and otherwise the state Effortless
+	 * Building found; then, while the turning controls are active, the turn of the block in hand, so the preview shows
+	 * the blocks a right click places.
 	 */
 	public static BlockState previewState(BlockItem item, ItemStack stack, BlockState aimed) {
 		SingleBlock block = BuildingPlannerClient.shownSingle();
-		if (block == null) {
-			return aimed;
-		}
+		BlockState state = block == null ? aimed : placementState(item, stack, block.hit());
+		Player player = Minecraft.getInstance().player;
+		return BuildingPlannerClient.turningActive() && player != null
+			? HeldTurn.apply(state, player.getMainHandItem().getItem()) : state;
+	}
+
+	/**
+	 * The block's state by its placement rules for {@code hit}, as the player at the aim would place it (Freecam's camera
+	 * while it's on, see {@link Aim}), before any turn.
+	 */
+	private static BlockState placementState(BlockItem item, ItemStack stack, BlockHitResult hit) {
 		BlockState state = item.getBlock().getStateForPlacement(
-			new BlockPlaceContext(Aim.placer(), InteractionHand.MAIN_HAND, stack, block.hit()));
+			new BlockPlaceContext(Aim.placer(), InteractionHand.MAIN_HAND, stack, hit));
 		return state != null ? state : item.getBlock().defaultBlockState();
+	}
+
+	/**
+	 * The block in hand as Minecraft would place it now, before any turn, as the preview shows it: with the hit the
+	 * one ghost block was locked or its row fixed with, the shape's first click, or the aim; aimed at nothing, the
+	 * block's default state. Null without a block in hand.
+	 */
+	private static BlockState unturnedNow() {
+		Minecraft mc = Minecraft.getInstance();
+		if (mc.player == null || !(mc.player.getMainHandItem().getItem() instanceof BlockItem item)) {
+			return null;
+		}
+		SingleBlock block = BuildingPlannerClient.shownSingle();
+		BlockHitResult hit = block != null ? block.hit() : BuildPipelineClient.getFirstClickHit();
+		if (hit == null) {
+			Aimed aimed = aimed();
+			if (aimed == null) {
+				return item.getBlock().defaultBlockState();
+			}
+			hit = aimed.hit();
+		}
+		return placementState(item, mc.player.getMainHandItem(), hit);
+	}
+
+	/**
+	 * Hook M5, with the sprint key held: a quarter turn of the block in hand, clockwise seen from above for a notch up
+	 * ({@link HeldTurn#turn}).
+	 */
+	static void turnHeld(boolean clockwise) {
+		BlockState now = unturnedNow();
+		if (now != null) {
+			HeldTurn.turn(Minecraft.getInstance().player.getMainHandItem().getItem(), now, toward(), clockwise);
+		}
+	}
+
+	/** Hook M4, with the sprint key held: flips the block in hand to the next way it can sit ({@link HeldTurn#flip}). */
+	static void flipHeld() {
+		BlockState now = unturnedNow();
+		if (now != null) {
+			HeldTurn.flip(Minecraft.getInstance().player.getMainHandItem().getItem(), now, toward());
+		}
+	}
+
+	/** The way a block set on its side faces when placed: toward the player at the aim, as a piston placed sideways. */
+	private static Direction toward() {
+		return Aim.placer().getDirection().getOpposite();
 	}
 
 	/**

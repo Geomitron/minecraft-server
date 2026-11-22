@@ -37,7 +37,10 @@ abstract class MinecraftMouseModeMixin {
 		}
 	}
 
-	/** Hook M4: the middle click mirrors the copy, or does nothing while a box is drawn, and picks no block. */
+	/**
+	 * Hook M4: the middle click mirrors the copy, does nothing while a box is drawn, or with the sprint key held flips the
+	 * block in hand, and then picks no block.
+	 */
 	@Inject(method = "pickBlockOrEntity", at = @At("HEAD"), cancellable = true)
 	private void buildingplanner$middleClick(CallbackInfo ci) {
 		if (BuildingPlannerClient.middleClick()) {

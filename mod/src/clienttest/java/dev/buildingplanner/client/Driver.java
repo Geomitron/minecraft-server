@@ -1,6 +1,7 @@
 package dev.buildingplanner.client;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import dev.buildingplanner.input.BlockTurn;
 import dev.buildingplanner.input.CopyColour;
 import dev.buildingplanner.input.CopyNudge;
 import dev.buildingplanner.input.CopyPlacement;
@@ -645,6 +646,17 @@ public final class Driver implements ClientModInitializer {
 				// preview: the positions Effortless Building's preview drew in the last whole frame, as x,y,z, or none;
 				// await preview <positions> waits for them.
 				return PreviewProbe.positions();
+			}
+			case "previewstate" -> {
+				// previewstate x y z: the state Effortless Building's preview drew there in the last whole frame, with its
+				// properties, such as minecraft:oak_stairs[facing=east,...], or none.
+				return PreviewProbe.state(pos(a, 1));
+			}
+			case "heldturn" -> {
+				// heldturn: the turn of the block in hand, its properties' values as name=value, or none.
+				BlockTurn.Turn turn = HeldTurn.of(mc.player.getMainHandItem().getItem());
+				return turn == null ? "none" : String.join(",", turn.values().entrySet().stream()
+					.map(e -> e.getKey() + "=" + e.getValue()).sorted().toList());
 			}
 			case "keyticks" -> {
 				// keyticks <nudge|lock> [reset]: the client ticks that key of the copy's (a CopyNudge name, or lock) has

@@ -1975,6 +1975,159 @@ drv 1 "edit -85 -60 -50 -20 -50 -30 minecraft:air" > /dev/null
 check "erasing the rows reaches both games" eval 'drv 2 "await block -64 -60 -44 minecraft:air" \
 	"await block -62 -53 -38 minecraft:air" > /dev/null && drv 1 "await block -64 -60 -44 minecraft:air" \
 	"await block -80 -60 -44 minecraft:air" "await block -30 -60 -40 minecraft:air" > /dev/null'
+
+# One ghost block, turning and flipping, on the same grass in Single mode, from Planner1 at -58.5 -58 -34.5 facing
+# north. Hotbar slots 5 to 8 hold oak stairs, oak stairs again, stone and an oak log; a stair placed facing north
+# faces north. A ghost glowstone at -66 -60 -40 is the ghost block the middle click aims at.
+# turn_is <turn>: the turn of the block in hand, as the driver's heldturn gives it, after a few ticks.
+turn_is() {
+	drv 1 "wait 5" > /dev/null && [[ $(val 1 heldturn) == "$1" ]]
+}
+# stairs_face <x1> <x2> <y> <z> <turn>: every ghost block along that row is a stair with that turn's values.
+stairs_face() {
+	local x
+	for ((x = $1; x <= $2; x++)); do
+		[[ $(val 1 "layerstate $x $3 $4") == *"_stairs["*"$5,"* ]] || return 1
+	done
+}
+first_slot=$(val 1 slot | cut -d' ' -f1)
+drv 1 "cmd item replace entity @s hotbar.4 with minecraft:oak_stairs" \
+	"cmd item replace entity @s hotbar.5 with minecraft:oak_stairs" "cmd item replace entity @s hotbar.6 with minecraft:stone" \
+	"cmd item replace entity @s hotbar.7 with minecraft:oak_log" "ebmode SINGLE" "ebarray 0" \
+	"edit -66 -60 -40 -66 -60 -40 minecraft:glowstone" "cmd tp @s -58.5 -58 -34.5 180 30" "wait 40" > /dev/null
+press 1 5
+aim 1 -60 -60 -40
+check "with oak stairs in hand, the block has no turn" eval '[[ $(val 1 heldturn) == none ]] &&
+	[[ $(val 1 slot) == "4 minecraft:oak_stairs" ]]'
+hold_ctrl
+xdo 1 click 4
+check "facing north, a notch up with Left Ctrl held turns the stair a quarter turn clockwise, to face east" \
+	turn_is "facing=east,half=bottom"
+check "and the hotbar slot stays" eval '[[ $(val 1 slot) == "4 minecraft:oak_stairs" ]]'
+let_go_ctrl
+# Effortless Building's preview draws no block of one at the aim in Single, so the preview is read with the block
+# locked, which hook E30 draws.
+press 1 h
+check "locked, the preview draws the stair turned to face east" eval 'drv 1 "wait 10" > /dev/null &&
+	[[ $(val 1 "previewstate -60 -60 -40") == "minecraft:oak_stairs["*"facing=east,half=bottom,"* ]]'
+press 1 h
+use_click 1
+check "a stair placed then faces east" eval 'drv 1 "await block -60 -60 -40 minecraft:oak_stairs" > /dev/null &&
+	[[ $(val 1 "layerstate -60 -60 -40") == *"facing=east,half=bottom,"* ]]'
+drv 1 "cmd tp @s -61.5 -58 -47.5 0 30" "wait 40" > /dev/null
+aim 1 -62 -60 -44
+use_click 1
+check "and so does one placed after Planner1 turns to face south" eval \
+	'drv 1 "await block -62 -60 -44 minecraft:oak_stairs" > /dev/null &&
+	[[ $(val 1 "layerstate -62 -60 -44") == *"facing=east,half=bottom,"* ]]'
+drv 1 "edit -62 -60 -44 -62 -60 -44 minecraft:air" "cmd tp @s -58.5 -58 -34.5 180 30" "wait 40" \
+	"lookat -65.5 -59.5 -39.5" "wait 5" > /dev/null
+hold_ctrl
+xdo 1 click 2
+check "the middle click with Left Ctrl held, aimed at a ghost block, makes the stair's top half" \
+	turn_is "facing=east,half=top"
+check "with no block picked, from the game or Litematica" eval '[[ $(val 1 slot) == "4 minecraft:oak_stairs" ]]'
+let_go_ctrl
+# Turned and flipped stairs before placing, locked at -56 -60 -40 so the preview draws them, and after.
+aim 1 -56 -60 -40
+press 1 h
+drv 1 "lookat -50.5 -61 -50.5" "wait 5" > /dev/null
+check "locked, the preview draws the turned and flipped stair" eval 'drv 1 "wait 10" > /dev/null &&
+	[[ $(val 1 "previewstate -56 -60 -40") == "minecraft:oak_stairs["*"facing=east,half=top,"* ]]'
+shots stairs-turned-before
+use_click 1
+check "placed, the stair faces east with its top half, on both clients" eval \
+	'drv 1 "await block -56 -60 -40 minecraft:oak_stairs" > /dev/null &&
+	[[ $(val 1 "layerstate -56 -60 -40") == *"facing=east,half=top,"* ]] &&
+	drv 2 "await block -56 -60 -40 minecraft:oak_stairs" > /dev/null'
+press 1 h
+check "unlocked, the preview draws nothing over it" eval 'drv 1 "wait 10" > /dev/null && [[ $(val 1 preview) == none ]]'
+shots stairs-turned-after
+press 1 r
+# With the mix of oak and spruce stairs, a row of 12 at z -46, from close enough to reach it: both kinds take the turn.
+drv 1 "cmd tp @s -58.5 -58 -38.5 180 30" "wait 20" "setmix minecraft:oak_stairs:50,minecraft:spruce_stairs:50" > /dev/null
+aim 1 -64 -60 -46
+use_click 1
+aim 1 -53 -60 -46
+drv 1 "await singlerow ZOOP 12 -64,-60,-46..-53,-60,-46" > /dev/null
+use_click 1
+check "with the mix of oak and spruce stairs, both take the turn" eval \
+	'drv 1 "await block -53 -60 -46 minecraft:oak_stairs|minecraft:spruce_stairs" > /dev/null &&
+	stairs_face -64 -53 -60 -46 "facing=east,half=top" &&
+	(($(val 1 "countblocks -64 -53 -60 -46 minecraft:oak_stairs") > 0)) &&
+	(($(val 1 "countblocks -64 -53 -60 -46 minecraft:spruce_stairs") > 0))'
+drv 1 "setmix" > /dev/null
+# A Zoop row of 8 turned stairs, at z -44, and the preview of its blocks.
+aim 1 -64 -60 -44
+use_click 1
+aim 1 -57 -60 -44
+drv 1 "await singlerow ZOOP 8 -64,-60,-44..-57,-60,-44" > /dev/null
+check "a Zoop row's preview draws its stairs turned" eval 'drv 1 "wait 10" > /dev/null &&
+	[[ $(val 1 "previewstate -57 -60 -44") == *"facing=east,half=top,"* ]] &&
+	[[ $(val 1 "previewstate -64 -60 -44") == *"facing=east,half=top,"* ]]'
+use_click 1
+check "a Zoop row of turned stairs faces one way" eval \
+	'drv 1 "await block -57 -60 -44 minecraft:oak_stairs" > /dev/null && stairs_face -64 -57 -60 -44 "facing=east,half=top"'
+drv 1 "cmd tp @s -58.5 -58 -34.5 180 30" "wait 20" > /dev/null
+press 1 r
+press 1 r
+check "R then switches the block back to Single" eval '[[ $(val 1 singlerow) == "SINGLE none" ]]'
+# The same stairs in another slot keep the turn; stone drops it, and Left Ctrl with the wheel changes the hotbar slot
+# with stone in hand, back to the second stairs, whose turn is gone.
+press 1 6
+check "the same stairs in a second slot keep the turn" turn_is "facing=east,half=top"
+press 1 7
+hold_ctrl
+xdo 1 click 4
+check "with stone in hand, Left Ctrl and the wheel change the hotbar slot" eval \
+	'drv 1 "wait 5" > /dev/null && [[ $(val 1 slot) == "5 minecraft:oak_stairs" ]]'
+let_go_ctrl
+check "switching to another block and back drops the turn" turn_is none
+# An oak log aimed at the ghost glowstone's south face lies north to south; it flips to standing and back.
+press 1 8
+drv 1 "lookat -65.5 -59.5 -39.0" "wait 5" > /dev/null
+hold_ctrl
+xdo 1 click 2
+check "an oak log flips to standing" turn_is "axis=y"
+xdo 1 click 2
+check "and back" turn_is "axis=z"
+let_go_ctrl
+# Without Left Ctrl, the wheel changes the hotbar slot and the middle click picks the aimed block.
+xdo 1 click 5
+check "without Left Ctrl, the wheel changes the hotbar slot" eval 'drv 1 "wait 5" > /dev/null &&
+	[[ $(val 1 slot) == "8 "* ]]'
+press 1 5
+aim 1 -54 -60 -36
+xdo 1 click 2
+check "and the middle click picks the aimed block" eval 'drv 1 "wait 20" > /dev/null &&
+	[[ $(val 1 slot) == *" minecraft:grass_block" ]]'
+# What an unlocked left click in Single erases with Effortless Building's array and mirror on, logged for Geo: a right
+# click aimed at -52 -61 -42's top places stone there with its copies, and a left click aims at the block placed.
+press 1 7
+drv 1 "ebarray 2 0 1 0" "wait 5" > /dev/null
+aim 1 -52 -60 -42
+use_click 1
+drv 1 "await block -52 -58 -42 minecraft:stone" "lookat -51.5 -59.5 -41.5" "wait 5" > /dev/null
+attack_click 1
+drv 1 "wait 20" > /dev/null
+echo "  an unlocked left click with the array of 2 upward: $(val 1 "layer -52 -60 -42") $(val 1 "layer -52 -59 -42")" \
+	"$(val 1 "layer -52 -58 -42") at -52 -60..-58 -42" >> /out/checks.log
+drv 1 "ebmirror -66" "wait 5" > /dev/null
+aim 1 -60 -60 -37
+use_click 1
+drv 1 "await block -73 -60 -37 minecraft:stone" "lookat -59.5 -59.5 -36.5" "wait 5" > /dev/null
+attack_click 1
+drv 1 "wait 20" > /dev/null
+echo "  an unlocked left click with the mirror across x -66: $(val 1 "layer -60 -60 -37") at -60 -60 -37," \
+	"$(val 1 "layer -73 -60 -37") at -73 -60 -37" >> /out/checks.log
+drv 1 "ebarray 0" "edit -85 -60 -50 -20 -50 -30 minecraft:air" > /dev/null
+check "erasing the turned stairs reaches both games" eval 'drv 2 "await block -56 -60 -40 minecraft:air" \
+	"await block -64 -60 -46 minecraft:air" > /dev/null && drv 1 "await block -66 -60 -40 minecraft:air" \
+	"await block -53 -60 -46 minecraft:air" > /dev/null'
+drv 1 "cmd item replace entity @s hotbar.4 with minecraft:air" "cmd item replace entity @s hotbar.5 with minecraft:air" \
+	"cmd item replace entity @s hotbar.6 with minecraft:air" "cmd item replace entity @s hotbar.7 with minecraft:air" \
+	"cmd item replace entity @s hotbar.8 with minecraft:air" > /dev/null
+press 1 $((first_slot + 1))
 drv 1 "cmd item replace entity @s weapon.mainhand with $main_hand" "cmd tp @s 8.5 -56 9.5 0 30" \
 	"cmd tp Planner2 101.5 0 26.5 0 30" "wait 40" > /dev/null
 

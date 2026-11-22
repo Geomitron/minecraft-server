@@ -9,7 +9,8 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 
 /**
- * Hook M5: while the copy is at the aim, the scroll wheel turns it instead of changing the hotbar slot. The method
+ * Hook M5: while the copy is at the aim, the scroll wheel turns it instead of changing the hotbar slot, and with the
+ * sprint key held, it turns the block in hand (see "One ghost block": "Turning and flipping"). The method
  * reaches the slot change only with no screen open and the player not a spectator; {@code wheel}, the method's only int
  * local there, is the notches scrolled, above 0 for up.
  */
