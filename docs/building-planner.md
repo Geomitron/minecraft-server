@@ -1383,7 +1383,8 @@ Minecraft 26.3 reads the Control key for the drop key (Ctrl+Q drops the stack) a
 block with its contents), and not for a right click (`Minecraft.startUseItem`, `MultiPlayerGameMode.useItemOn`).
 
 Disable's turning controls are active while the turning controls would be in another mode (see the start of "One
-ghost block"), with a block in hand that turns or flips:
+ghost block"), with a block in hand that turns or flips, or one whose right click places a block that does (a torch
+aimed at a wall, which places a wall torch):
 
 - Holding Left Ctrl shows the block where a right click would place it, in the state it would place, drawn as
   Effortless Building's preview draws a block in the other modes (below). The wheel turns it and the middle click
@@ -1406,12 +1407,14 @@ sides apply it at the same step of Minecraft's own placing, so the client's gues
   turn of the block in hand while Left Ctrl is held in Disable, and none otherwise (`DisableTurn`). Messages on one
   connection keep their order, so the server has the turn before it handles the click. It stores the last one for
   each player (`PlaceTurns`) until the player leaves, and accepts only the orientation properties `BlockTurn` sets.
-- Hook S2, `@ModifyExpressionValue` on `BlockItem.place`'s call to `getPlacementState(BlockPlaceContext)`, which
+- Hook S2, `@WrapOperation` on `BlockItem.place`'s call to `getPlacementState(BlockPlaceContext)`, which
   every block item's right click goes through, including the items that override `getPlacementState` (a torch's, a
   sign's, a bed's): when the context's player has a turn for the item in the main hand, S2 sets the turn's properties
   on the state (`BlockTurn.apply`), lets the neighbouring blocks set its shape again
   (`Block.updateFromNeighbourShapes`, so a turned stair joins the stairs beside it as Minecraft's would), and checks
-  that the turned block can stay (below). On the server it reads `PlaceTurns`, and on the player's computer the turn
+  that the turned block can stay (below). A block of two parts (a door, a tall plant, a bed) keeps its shape, since
+  its other part isn't placed yet and the shape update would take it for gone; a block the shape update changes into
+  another, such as air, can't stay. On the server it reads `PlaceTurns`, and on the player's computer the turn
   M6 sent last. The rule is one pure function (`PlaceTurn`), beside `BlockTurn`.
 - Minecraft's client runs the same `BlockItem.place` on its own copy of the world to predict the block
   (`MultiPlayerGameMode.performUseItemOn`, inside `startPrediction`), so S2 turns its guess the same way. The server's
@@ -1425,7 +1428,7 @@ sides apply it at the same step of Minecraft's own placing, so the client's gues
 | # | File, method | Hook | Purpose |
 |---|---|---|---|
 | M6 | `net/minecraft/client/multiplayer/MultiPlayerGameMode.java`, `useItemOn(LocalPlayer, InteractionHand, BlockHitResult)` | `@Inject` at head | Send `place_turn` when the turn the click takes has changed, before the click's prediction and packet. |
-| S2 | `net/minecraft/world/item/BlockItem.java`, `place(BlockPlaceContext)` | `@ModifyExpressionValue` on the call to `getPlacementState`, on both sides | Turn the state the click places, set its shape from its neighbours, and return null when the turned block can't stay. |
+| S2 | `net/minecraft/world/item/BlockItem.java`, `place(BlockPlaceContext)` | `@WrapOperation` on the call to `getPlacementState`, on both sides | Turn the state the click places, set its shape from its neighbours, and return null when the turned block can't stay. |
 | E29 | `buildpipeline/BuildPipelineClient.java`, `getPreviewBlocks` | `@ModifyReturnValue` | In Disable, while Disable's preview shows, a set of one block where a right click would place, or null when it wouldn't place. |
 | E30 | `render/BlockPreviewRenderer.java`, `render` | `@ModifyExpressionValue` on the first `BlockSet.size()` | Draw a set of one block, which the method skips while no shape is under way: Disable's, the locked one ghost block, a fixed row of one, and the block at the aim while the one ghost block follows it in Single (`SingleRule.drawnAtAim`), not in Zoop or Vertical before the first click (see "One ghost block"). A set of more than one block, such as the copies of the mirror, radial mirror and array, is drawn by the method as it is, so nothing is drawn twice. |
 
@@ -1866,7 +1869,9 @@ add-on's classes off the classpath) and checks:
   `clienttest` source set), no place, break, undo or redo packet of Effortless Building is sent after a shape, Ctrl+Z,
   Ctrl+Y and the break click.
 - A `hello` with protocol version 4, as Building Planner 0.5.0 sends, which the driver hands to the client, starts no
-  session and shows no message.
+  session and shows no message. Then Left Ctrl doesn't turn the block in hand (step 18): in Disable, with oak stairs in hand, Left
+  Ctrl with the wheel changes the hotbar slot, and a right click with Left Ctrl held places the stair as Minecraft
+  places it.
 - A client without the add-on joins the server with it, and the server sends it no list message and logs no error.
 
 `step9.sh`, show or hide, the radial menu's buttons, the mouse modes, boxes, copy and paste and the material list.
@@ -2112,9 +2117,9 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   shape's count in the log); a Floor of oak slabs flipped to the top half has every slab's top half. With Effortless
   Building's mirror across x −52, a Line of 4 turned stairs has its mirror image's stairs facing east, in the preview
   and once placed; with the mix of oak and spruce stairs, a Wall's stairs of both kinds all face west. In Disable, Left
-  Ctrl with the wheel changes the hotbar slot, to the same stairs in the next slot, and back in Line the stairs keep
-  the turn; switching to stone and back to the stairs drops it; and at the end, the middle click with Left Ctrl held
-  picks the aimed block. In Single, unlocked, with the turned stairs in hand, the preview draws one stair at the aim,
+  Ctrl with a notch down turns the stairs to face south and the hotbar slot stays, and back in Line the stairs keep
+  the turn; switching to stone and back to the stairs drops it; and at the end, in Disable, the middle click with Left
+  Ctrl held flips the stairs to their top half and picks no block, and with stone in hand it picks the aimed block. In Single, unlocked, with the turned stairs in hand, the preview draws one stair at the aim,
   facing east, and nothing else (the driver's `preview` and `previewstate`); with Effortless Building's array of 2
   copies one block apart upward, it draws the stair and its 2 copies once each; a turned stair at the aim is shot at 854
   by 480 and 1920 by 1080, GUI scale 2, with the stair outlined in red. During a Line drawn with the break click, no turning line shows and Left Ctrl with the wheel
@@ -2126,24 +2131,30 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   line ends 2 GUI pixels above the action bar's text, which shows the shape's block count (the driver's `modebox` and
   `actionbar`), at 854 by 480, GUI scale 2, and at 1920 by 1080, GUI scale 2 and 4, each shot. The turning line is
   shot in Line before a shape at 1920 by 1080, GUI scale 4, and 854 by 480, GUI scale 2, and a placed Line of turned
-  stairs at 854 by 480 and 1920 by 1080, GUI scale 2. Steps 18 and 19 replace this check's Disable parts with their
-  own.
-- Turning real blocks in Disable (step 18), in creative and in survival, with Planner1 facing north: oak stairs
-  turned a quarter turn with Left Ctrl and a notch up, and a right click with Left Ctrl held, place a real stair facing
-  east, which the server's world (read with `/execute if block` from the server's console) and Planner2 show facing
-  east. The driver reads Planner1's own block at that position every tick from the click on, and it faces east at
-  every tick, with no flicker. An oak log flipped to lie east to west and placed on top of a block lies east to west,
-  where Minecraft would stand it up. Without Left Ctrl, the stair faces north, as Minecraft places it. The right
-  button held with Left Ctrl for a second places a turned stair every 4 ticks. A turned stair placed beside a stair
-  joins it as Minecraft's would (the same shape as a stair Minecraft places facing east there). An oak door turned to
-  face east has both halves facing east; a red bed turned toward a stone wall places nothing and leaves the wall; a
-  torch aimed at a wall and turned away from it places nothing, and the player keeps the torch. A ghost stair facing
-  east is filled by the turned real stair. With a turn made in Line, Disable without Left Ctrl places as Minecraft
-  does, and with Left Ctrl places turned. Switching to stone and back drops the turn. With the server handing the
-  client a `hello` of another protocol version (as `step8.sh` does), Left Ctrl with the wheel changes the hotbar slot,
-  and the stair places as Minecraft places it. With Freecam's camera on, "Allow interaction" on and the camera 3
-  blocks from Planner1, the turned stair goes where the camera aims and faces east. A turned stair and log are shot
-  placed, at 854 by 480 and 1920 by 1080, GUI scale 2.
+  stairs at 854 by 480 and 1920 by 1080, GUI scale 2. Step 19 replaces the check that no turning line shows in Disable
+  with its own.
+- Turning real blocks in Disable (step 18), with Planner1 3 blocks south of each block, facing north, first in
+  creative and then in survival: oak stairs turned a quarter turn with Left Ctrl and a notch up, and a right click with
+  Left Ctrl held, place a real stair facing east, which the server's world (read with `/execute if block … run say`,
+  run by Planner1, whose words the server's log shows) and Planner2 show facing east. The driver reads Planner1's own
+  block at that position every tick from just before the click (`watchblock`), and it is air and then the stair facing
+  east, with no flicker. An oak log flipped onto its side and turned a quarter, to lie east to west, and placed on the
+  grass's top lies east to west, where Minecraft stands it up. Without Left Ctrl, the stair faces north, as Minecraft
+  places it, and the stairs keep the turn. The right button held with Left Ctrl for a second places 4 turned stairs or
+  more, all facing east. A torch aimed at a wall turns as the wall torch it places; turned away from the wall, it
+  places nothing, on either side, and the player keeps the torch (the driver's `handcount`). A red bed turned toward a
+  stone wall places nothing and leaves the wall, and the player keeps the bed. Then, in creative: a turned stair placed
+  in front of a stair facing north takes the same shapes, its own and its neighbour's, as a stair Minecraft places
+  facing east, with Planner1 facing east, in front of another stair facing north. An oak door turned to face east has
+  both halves facing east. A ghost stair facing east is filled by the turned real stair, on both clients. With a turn
+  made in Line, Disable without Left Ctrl places as Minecraft does, and with Left Ctrl places turned. Switching to
+  stone and back drops the turn, and Left Ctrl then places as Minecraft does. `step8.sh` checks a game handed a
+  `hello` of another protocol version: Left Ctrl with the wheel changes the hotbar slot, and the stair places with Left
+  Ctrl as Minecraft places it (a `hello` in `step9.sh` would start a session without the lists, which the server sends
+  only at joining). With Freecam's
+  camera on, "Allow interaction" on and the camera 3 blocks east of Planner1, the turned stair goes where the camera
+  aims and faces east. A turned stair and log are shot placed, at 854 by 480 and 1920 by 1080, GUI scale 2, with each
+  one's box in the window logged (the driver's `screenbox`) for outlining them in red.
 - Disable's preview and its line (step 19): with Left Ctrl held and turned oak stairs, the preview draws one stair
   where a right click would place it, facing east (the driver's `preview`, with each block's state), and the stair
   placed matches it; aimed at grass, which a block replaces, the preview takes the grass's place. Without Left Ctrl,
@@ -2338,12 +2349,15 @@ waterlogging; which blocks turn and which flip; a block that neither turns nor f
 item in hand changes. `CopyColourTest` covers a 1×1×1
 spot blue, yellow and red.
 
-Disable's turn has unit tests as pure functions (steps 18 and 19). `DisableTurnTest` covers the turn M6 sends: the
-turn while Left Ctrl is held in Disable, none without Left Ctrl, in another mode, with no session, with a mouse mode
-on, or with a block that neither turns nor flips, and a payload only when the turn differs from the last one sent.
-`PlaceTurnTest` covers the turn S2 applies: only for the turn's item, in the main hand; property names outside
-`BlockTurn`'s and values the block doesn't have refused; a bed's head space toward the turned facing, which must take
-a block; and no turn for a player without one. `DisablePreviewTest` covers where the preview goes: the aimed block
+Disable's turn has unit tests as pure functions (steps 18 and 19). `DisableTurnTest` covers when Disable's turning
+controls are active (a session, Disable, no mouse mode, a block that turns or flips) and when not; the turn M6 sends:
+the turn while Left Ctrl is held and the controls are active, and none without Left Ctrl, with the controls inactive
+or with no turn; and a payload only when the item or the turn's values differ from the last one sent.
+`PlaceTurnTest` covers the turn S2 applies: only for the turn's item, in the main hand; no turn for a player without
+one, and no item clearing it; property names outside `BlockTurn`'s and values the block doesn't have refused; the
+shape set again from the neighbours for a stair but not for a door, a bed or a tall plant; a bed's head toward the
+turned facing, and the bed staying only where that space takes a block; and another block staying where Minecraft's
+own check lets it. `DisablePreviewTest` covers where the preview goes: the aimed block
 when it can be replaced, the space beside the aimed face otherwise, and none beyond the player's reach while Freecam's
 camera is on.
 
