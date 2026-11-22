@@ -234,8 +234,9 @@ public final class Driver implements ClientModInitializer {
 				return ClientSession.copyMode().name();
 			}
 			case "copycolour" -> {
-				// copycolour: the colour Building Planner draws the copy at the aim's box in, BLUE, YELLOW or RED with
-				// the server's reason (RED BUILD_HEIGHT, say), or none.
+				// copycolour: the colour Building Planner draws the box of the copy at the aim, or of the one ghost block
+				// locked or in a fixed row, in: BLUE, YELLOW or RED with the server's reason (RED BUILD_HEIGHT, say), or
+				// none.
 				return copyColour();
 			}
 			case "copyrow" -> {
@@ -1451,12 +1452,16 @@ public final class Driver implements ClientModInitializer {
 			+ clipboard.worldBlocks().size() + " blocks";
 	}
 
-	/** The copy at the aim's colour, as {@code copycolour} gives it. */
+	/**
+	 * The colour of the box Building Planner draws for the copy at the aim or the one ghost block, as
+	 * {@code copycolour} gives it.
+	 */
 	private static String copyColour() throws Exception {
 		if (session() == null) {
 			return "nosession";
 		}
-		CopyColour.Shown shown = session().copyShown();
+		CopyOutline.Shown outline = BuildingPlannerClient.outlineShown();
+		CopyColour.Shown shown = outline == null ? null : outline.colour();
 		return shown == null ? "none" : shown.colour() + (shown.refusal() == null ? "" : " " + shown.refusal());
 	}
 
