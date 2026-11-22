@@ -129,7 +129,9 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		DeleteAim.registered(() -> session);
 		MarksOutline.registered(() -> session != null && session.aimOn() ? session.marks() : null);
 		modeHud = new ModeHud(BuildingPlannerClient::mouseMode, BuildingPlannerClient::boxShown,
-			BuildingPlannerClient::copyLine, () -> session == null ? List.of() : session.boxList());
+			BuildingPlannerClient::copyLine, BuildingPlannerClient::aimLines,
+			() -> CopyKeys.names(Minecraft.getInstance()).mode(),
+			() -> session == null ? List.of() : session.boxList());
 		HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(BuildingPlanner.MOD_ID, "mode_controls"),
 			modeHud);
 		HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(BuildingPlanner.MOD_ID, "material_panel"),
@@ -216,7 +218,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 				LitematicaLook.setOnce(config);
 			}
 			if (session != null) {
-				session.tick();
+				session.tick(client.options.keyAttack.isDown());
 				if (heldClicks != null) {
 					// A shape started while ghost blocks are hidden shows them, so the player sees what it joins; a box
 					// for Copy or the material list, which isn't a shape, leaves them hidden.
@@ -367,6 +369,12 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		return state == null ? null : ControlsLine.copy(state, CopyKeys.names(Minecraft.getInstance()));
 	}
 
+	/** Delete by aim's controls lines, with its keys as the player has them bound, or none while it's off. */
+	private static List<ControlsLine.Line> aimLines() {
+		ControlsLine.AimState state = session == null ? null : session.aimState();
+		return state == null ? List.of() : ControlsLine.deleteAim(state, CopyKeys.names(Minecraft.getInstance()));
+	}
+
 	/** The copy at the aim as it's drawn, in its colour, with its row's boxes, or null. */
 	private static CopyOutline.Shown copyShown() {
 		if (session == null) {
@@ -443,8 +451,8 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	}
 
 	/**
-	 * Hook M1: the left click sets the box's next corner, or pastes the copy at the aim; returns whether the click is
-	 * taken from the game.
+	 * Hook M1: the left click sets the box's next corner, pastes the copy at the aim, or in Delete by aim starts the hold
+	 * that erases the marks; returns whether the click is taken from the game.
 	 */
 	public static boolean leftClick() {
 		MouseMode mode = mouseMode();
@@ -459,9 +467,8 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 				}
 			}
 			case COPY_AT_AIM -> session.paste();
-			case DELETE_AIM -> {
-				// Delete by aim's left click attacks and breaks nothing.
-			}
+			// Delete by aim's left click attacks and breaks nothing; held a second, it erases the marks.
+			case DELETE_AIM -> session.pressErase();
 		}
 		return true;
 	}

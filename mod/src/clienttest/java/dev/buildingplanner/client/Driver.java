@@ -5,6 +5,7 @@ import dev.buildingplanner.input.CopyColour;
 import dev.buildingplanner.input.CopyNudge;
 import dev.buildingplanner.input.CopyPlacement;
 import dev.buildingplanner.input.RepeatSpeed;
+import dev.buildingplanner.look.ControlsLine;
 import dev.buildingplanner.sync.EditKind;
 import dev.buildingplanner.sync.Payloads;
 import dev.buildingplanner.sync.SyncLimits;
@@ -502,6 +503,12 @@ public final class Driver implements ClientModInitializer {
 				quickClickTicks = 0;
 				return "ok";
 			}
+			case "release" -> {
+				// release <use|attack>: lets go of that button in the game at the start of the next client tick, however
+				// late the real button comes up.
+				release = a[1].equals("use") ? mc.options.keyUse : mc.options.keyAttack;
+				return "ok";
+			}
 			case "holdlog" -> {
 				// holdlog: ticks each mouse button was down, and the edits Building Planner sent since holdreset.
 				return SentPackets.holdLog();
@@ -817,6 +824,16 @@ public final class Driver implements ClientModInitializer {
 				// hidden; for the shots' outlines.
 				return modeHud().windowBox();
 			}
+			case "modepart" -> {
+				// modepart <text>: the window box (left top right bottom, in the window's pixels) of that text in the
+				// controls as they wrap and are drawn now, or none; for the shots' outlines.
+				return modePart(line.substring("modepart ".length()));
+			}
+			case "erasing" -> {
+				// erasing: Delete by aim's hold toward the erase, in percent, or -1 while the left button isn't held to
+				// erase or Aim is off; await erasing <percent> waits for it.
+				return String.valueOf(erasing());
+			}
 			case "bindkey" -> {
 				// bindkey <key mapping> <key>: binds the key mapping (key.buildingplanner.lock_copy, say) to the key
 				// (key.keyboard.k, say), as Controls does, and gives the key as Minecraft saves it.
@@ -995,6 +1012,38 @@ public final class Driver implements ClientModInitializer {
 		return screen == null ? "none" : screen.getClass().getName();
 	}
 
+	/** Delete by aim's hold toward the erase, in percent, or -1 while it isn't counting or Aim is off. */
+	private static int erasing() throws Exception {
+		ControlsLine.AimState state = session() == null ? null : session().aimState();
+		return state == null ? -1 : state.erasing();
+	}
+
+	/**
+	 * The window box of {@code text} in the controls as they wrap now, found in the first wrapped line holding it: each
+	 * line is centred, the last 58 above the screen's bottom, as {@link ModeHud} draws them.
+	 */
+	private static String modePart(String text) throws Exception {
+		String wrapped = modeHud().wrappedText();
+		if (wrapped.equals("hidden")) {
+			return "none";
+		}
+		Minecraft mc = Minecraft.getInstance();
+		String[] lines = wrapped.split(" / ");
+		int width = mc.getWindow().getGuiScaledWidth();
+		int top = mc.getWindow().getGuiScaledHeight() - 58 - (lines.length - 1) * mc.font.lineHeight;
+		int scale = (int) mc.getWindow().getGuiScale();
+		for (int i = 0; i < lines.length; i++) {
+			int at = lines[i].indexOf(text);
+			if (at >= 0) {
+				int left = (width - mc.font.width(lines[i])) / 2 + mc.font.width(lines[i].substring(0, at));
+				int y = top + i * mc.font.lineHeight;
+				return left * scale + " " + y * scale + " " + (left + mc.font.width(text)) * scale + " "
+					+ (y + mc.font.lineHeight) * scale;
+			}
+		}
+		return "none";
+	}
+
 	/** The conditions {@code await} takes. */
 	private static boolean holds(String what) throws Exception {
 		String[] a = what.split(" ");
@@ -1018,6 +1067,7 @@ public final class Driver implements ClientModInitializer {
 			case "sprint" -> mc.options.keySprint.isDown() == Boolean.parseBoolean(a[1]);
 			case "turned" -> FrameProbe.turned();
 			case "framestimed" -> FrameProbe.timed();
+			case "erasing" -> String.valueOf(erasing()).equals(a[1]);
 			case "noglow" -> glows().isEmpty();
 			case "held" -> SentPackets.held(a[1].equals("use"));
 			case "pressedafter" -> SentPackets.presses() > Integer.parseInt(a[1]);
@@ -1038,6 +1088,7 @@ public final class Driver implements ClientModInitializer {
 				case "real" -> realBlockId(pos(a, 2));
 				case "tile" -> tile(Integer.parseInt(a[2]), Integer.parseInt(a[3]));
 				case "glow" -> glows();
+				case "erasing" -> String.valueOf(erasing());
 				case "copy" -> copy();
 				case "row" -> row();
 				case "copycolour" -> copyColour();

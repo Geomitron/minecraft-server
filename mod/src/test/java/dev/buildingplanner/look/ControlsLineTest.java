@@ -10,6 +10,7 @@ import com.google.gson.JsonParser;
 import dev.buildingplanner.input.BoxCorners;
 import dev.buildingplanner.input.CopyColour.Refusal;
 import dev.buildingplanner.input.CopyMode;
+import dev.buildingplanner.look.ControlsLine.AimState;
 import dev.buildingplanner.look.ControlsLine.CopyState;
 import dev.buildingplanner.look.ControlsLine.Keys;
 import dev.buildingplanner.look.ControlsLine.Line;
@@ -183,13 +184,14 @@ class ControlsLineTest {
 
 	@Test
 	void theDeleteBoxsLines() {
-		assertEquals(List.of("Delete: Left-click to set the first corner, Right-click to cancel"),
+		assertEquals(List.of("Delete: Left-click to set the first corner, R for Aim, Right-click to cancel"),
 			box("DELETE", 0, null, null));
-		assertEquals(List.of("Delete: Left-click to set the opposite corner, Right-click to cancel (3 × 1 × 2)"),
+		assertEquals(List.of("Delete: Left-click to set the opposite corner, R for Aim, Right-click to cancel (3 × 1 × 2)"),
 			box("DELETE", 1, new int[] {3, 1, 2}, null));
-		assertEquals(List.of("Delete: Left-click to set the height, Right-click to cancel (40 × 10 × 40)"),
+		assertEquals(List.of("Delete: Left-click to set the height, R for Aim, Right-click to cancel (40 × 10 × 40)"),
 			box("DELETE", 2, new int[] {40, 10, 40}, null));
-		assertEquals(List.of("Too many blocks", "Delete: Left-click to set the height, Right-click to cancel (80 × 53 × 50)"),
+		assertEquals(List.of("Too many blocks",
+			"Delete: Left-click to set the height, R for Aim, Right-click to cancel (80 × 53 × 50)"),
 			box("DELETE", 2, new int[] {80, 53, 50}, BoxCorners.Limit.TOO_MANY_BLOCKS));
 	}
 
@@ -200,7 +202,89 @@ class ControlsLineTest {
 		assertEquals(List.of("Part of the box is too far away to read. Move closer.",
 			"Material list: Left-click to set the opposite corner, Right-click to cancel (3 × 1 × 2)"),
 			box("MATERIAL_LIST", 1, new int[] {3, 1, 2}, BoxCorners.Limit.NOT_LOADED));
-		assertNull(ControlsLine.box("COPY", 0, null, null).getFirst().size());
+		assertNull(ControlsLine.box("COPY", 0, null, null, "R").getFirst().size());
+	}
+
+	@Test
+	void theDeleteBoxNamesTheModeKeyAsBoundAndLeavesItOutUnbound() {
+		assertEquals(List.of("Delete: Left-click to set the first corner, G for Aim, Right-click to cancel"),
+			box("DELETE", 0, null, null, "G"));
+		assertEquals(List.of("Delete: Left-click to set the first corner, Right-click to cancel"),
+			box("DELETE", 0, null, null, null));
+		assertEquals(List.of("Copy: Left-click to set the first corner, Right-click to cancel"),
+			box("COPY", 0, null, null, "R"));
+		Line line = ControlsLine.box("DELETE", 0, null, null, "R").getFirst();
+		List<String> actions = new ArrayList<>();
+		collect(line.text(), Look.ACTION, actions);
+		assertEquals(List.of("set the first corner", "Aim", "cancel"), actions);
+	}
+
+	@Test
+	void aimWithNoMarks() {
+		assertEquals(List.of("Delete, Aim: Hold Left Control to mark, R for Box, Right-click to close"),
+			aim(new AimState(false, false, -1, false), DEFAULT));
+	}
+
+	@Test
+	void aimWithMarks() {
+		assertEquals(List.of("Delete, Aim: Hold Left-click to erase, Hold Left Control to mark, R for Box, Right-click to "
+			+ "clear"), aim(new AimState(true, false, -1, false), DEFAULT));
+	}
+
+	@Test
+	void aSweepThatUnmarksSaysUnmark() {
+		assertEquals(List.of("Delete, Aim: Hold Left-click to erase, Hold Left Control to unmark, R for Box, Right-click "
+			+ "to clear"), aim(new AimState(true, true, -1, false), DEFAULT));
+		// A sweep that has unmarked every mark still unmarks until the key is let go.
+		assertEquals(List.of("Delete, Aim: Hold Left Control to unmark, R for Box, Right-click to close"),
+			aim(new AimState(false, true, -1, false), DEFAULT));
+	}
+
+	@Test
+	void theHoldsProgressTakesTheErasesPlace() {
+		assertEquals(List.of("Delete, Aim: Erasing 0%, Hold Left Control to mark, R for Box, Right-click to clear"),
+			aim(new AimState(true, false, 0, false), DEFAULT));
+		assertEquals(List.of("Delete, Aim: Erasing 50%, Hold Left Control to mark, R for Box, Right-click to clear"),
+			aim(new AimState(true, false, 50, false), DEFAULT));
+		assertEquals(List.of("Delete, Aim: Erasing 95%, Hold Left Control to mark, R for Box, Right-click to clear"),
+			aim(new AimState(true, false, 95, false), DEFAULT));
+	}
+
+	@Test
+	void atTheCapAWarningGoesAbove() {
+		assertEquals(List.of("Too many blocks", "Delete, Aim: Hold Left-click to erase, Hold Left Control to mark, R for "
+			+ "Box, Right-click to clear"), aim(new AimState(true, false, -1, true), DEFAULT));
+		List<String> warnings = new ArrayList<>();
+		collect(ControlsLine.deleteAim(new AimState(true, false, -1, true), DEFAULT).getFirst().text(), Look.WARNING,
+			warnings);
+		assertEquals(List.of("Too many blocks"), warnings);
+	}
+
+	@Test
+	void aimsActionsAreActions() {
+		List<String> actions = new ArrayList<>();
+		collect(ControlsLine.deleteAim(new AimState(true, false, -1, false), DEFAULT).getFirst().text(), Look.ACTION,
+			actions);
+		assertEquals(List.of("erase", "mark", "Box", "clear"), actions);
+		actions.clear();
+		collect(ControlsLine.deleteAim(new AimState(true, false, 60, false), DEFAULT).getFirst().text(), Look.ACTION,
+			actions);
+		assertEquals(List.of("Erasing 60%", "mark", "Box", "clear"), actions);
+	}
+
+	@Test
+	void aimNamesTheKeysAsBoundAndLeavesOutUnboundOnes() {
+		assertEquals(List.of("Delete, Aim: Hold Left-click to erase, Hold Left Alt to mark, G for Box, Right-click to "
+			+ "clear"), aim(new AimState(true, false, -1, false), REBOUND));
+		assertEquals(List.of("Delete, Aim: Hold Left-click to erase, Right-click to clear"),
+			aim(new AimState(true, false, -1, false), UNBOUND));
+	}
+
+	private static List<String> aim(AimState state, Keys keys) {
+		return ControlsLine.deleteAim(state, keys).stream().map(line -> {
+			assertNull(line.size());
+			return read(line.text());
+		}).toList();
 	}
 
 	private static CopyState state(CopyMode mode, boolean locked, int row, boolean pasted, Refusal refusal) {
@@ -214,7 +298,11 @@ class ControlsLineTest {
 	}
 
 	private static List<String> box(String purpose, int corners, int[] size, BoxCorners.Limit limit) {
-		return ControlsLine.box(purpose, corners, size, limit).stream()
+		return box(purpose, corners, size, limit, "R");
+	}
+
+	private static List<String> box(String purpose, int corners, int[] size, BoxCorners.Limit limit, String mode) {
+		return ControlsLine.box(purpose, corners, size, limit, mode).stream()
 			.map(line -> line.size() == null ? read(line.text()) : read(line.text()) + " " + read(line.size()))
 			.toList();
 	}

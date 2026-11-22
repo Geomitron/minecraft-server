@@ -50,17 +50,23 @@ final class ModeHud implements HudElement {
 	private final Supplier<MouseMode> mode;
 	private final Supplier<BoxDraw.Shown> box;
 	private final Supplier<ControlsLine.Line> copy;
+	private final Supplier<List<ControlsLine.Line>> aim;
+	private final Supplier<String> modeKey;
 	private final Supplier<List<BoxList.Entry>> list;
 
 	/**
 	 * {@code mode} is the mouse mode now, or null, {@code box} the box drawn now, or null, {@code copy} the copy at the
-	 * aim's line ({@link ControlsLine#copy}), or null, and {@code list} the kinds of block in the box.
+	 * aim's line ({@link ControlsLine#copy}), or null, {@code aim} Delete by aim's lines ({@link ControlsLine#deleteAim}),
+	 * {@code modeKey} the name of the key that switches a Delete box to Aim, or null while it has none, and {@code list}
+	 * the kinds of block in the box, or the marks.
 	 */
 	ModeHud(Supplier<MouseMode> mode, Supplier<BoxDraw.Shown> box, Supplier<ControlsLine.Line> copy,
-		Supplier<List<BoxList.Entry>> list) {
+		Supplier<List<ControlsLine.Line>> aim, Supplier<String> modeKey, Supplier<List<BoxList.Entry>> list) {
 		this.mode = mode;
 		this.box = box;
 		this.copy = copy;
+		this.aim = aim;
+		this.modeKey = modeKey;
 		this.list = list;
 	}
 
@@ -75,13 +81,13 @@ final class ModeHud implements HudElement {
 				BoxDraw.Shown shown = box.get();
 				yield shown == null ? List.of() : ControlsLine.box(shown.purpose().name(), shown.corners(),
 					shown.corners() > 0 && shown.min() != null ? BoxCorners.size(shown.min(), shown.max()) : null,
-					shown.limit());
+					shown.limit(), modeKey.get());
 			}
 			case COPY_AT_AIM -> {
 				ControlsLine.Line line = copy.get();
 				yield line == null ? List.of() : List.of(line);
 			}
-			case DELETE_AIM -> List.of();
+			case DELETE_AIM -> aim.get();
 		};
 		return lines.stream().map(line -> new Line(component(line.text()).withStyle(ChatFormatting.WHITE),
 			line.size() == null ? null : component(line.size()).withStyle(ChatFormatting.WHITE))).toList();

@@ -668,7 +668,8 @@ white, with each action in dark aqua. The texts, as Geo approved them:
   "the height", followed by the box's size ("12 × 5 × 8");
 - a box for the material list: the same, starting "Material list:".
 
-A box for Delete has the same line as Copy's, starting "Delete:". The copy at the aim's line names its mode and its
+A box for Delete has the same line as Copy's, starting "Delete:", with "R for Aim" before the right click (see
+"Delete by aim"). The copy at the aim's line names its mode and its
 keys, as the player has them bound. Geo approved these lines as written (inbox request 972, revisions 1 and 2).
 
 The game's texts use the fewest words that stay clear, and one name for each action, as in Geo's edits: "Too many blocks", the panel's column headings "All", "Hold" and "Need", and "Arrow keys + Page Up/Down to nudge", where "nudge" names what all six keys do.
@@ -824,23 +825,25 @@ under the crosshair as the Delete box's do (`BoxList`): each kind of block with 
 **Erasing.** Holding the left button for one second (20 ticks) erases the marked ghost blocks (981 Q2 A), as holding
 the left button for a second dismantles in Satisfactory: M1 starts the count when the button goes down, the client
 tick counts each tick it stays down, and letting go before the 20th tick erases nothing and starts the count again at
-the next press. Holding on past the erase erases nothing more until the button is let go and pressed again. With no
-marks, the left button does nothing. The erase sends one erase edit (`GhostErase.of` over the marks), so one undo
+the next press (`EraseHold`). Holding on past the erase erases nothing more until the button is let go and pressed
+again. With no marks, the left button does nothing, and a hold whose marks all go before its 20th tick (a right click,
+another player's edit) erases nothing. The erase sends one erase edit (`GhostErase.of` over the marks), so one undo
 brings them all back, other players see them glow as they go, and the player sees the Delete box's message ("Erased
-120 ghost blocks.", "Erased 1 ghost block."). The marks go with their ghost blocks, and Aim stays on to mark more (981
+120 ghost blocks.", "Erased 1 ghost block."). The marks go as the edit is sent, and Aim stays on to mark more (981
 Q7 A); an undo brings the ghost blocks back unmarked. A right click clears the marks; with no marks, it ends Aim.
 
 **Controls line.** Aim's line shows as the other mouse modes' lines do (see "Building Planner's mouse modes"), with
-the keys as the player has them bound, and names only the controls that work at that moment (`ControlsLine.deleteAim`).
-These texts are proposed, for Geo's review with the build's screenshots:
+the keys as the player has them bound, and names only the controls that work at that moment (`ControlsLine.deleteAim`);
+a key with no key bound is left out, as in the copy's lines. These texts are proposed, for Geo's review with the
+build's screenshots:
 
 - a Delete box's lines name R before the right click: "Delete: Left-click to set the first corner, R for Aim,
   Right-click to cancel", then "the opposite corner" and "the height", as Copy's box goes on;
 - Aim with no marks: "Delete, Aim: Hold Left Control to mark, R for Box, Right-click to close";
 - Aim with marks: "Delete, Aim: Hold Left-click to erase, Hold Left Control to mark, R for Box, Right-click to clear";
 - during a sweep that unmarks, "Hold Left Control to unmark" in place of "Hold Left Control to mark";
-- while the left button is held to erase, its progress in place of "Hold Left-click to erase": "Erasing 60%", in
-  steps of 5%;
+- while the left button is held to erase, its progress in place of "Hold Left-click to erase", as an action: "Erasing
+  60%", in steps of 5%, from "Erasing 0%" at the press to "Erasing 95%" at the 19th tick;
 - once the marks reach the cap, the warning line "Too many blocks" above the controls, as for a box.
 
 Satisfactory's dismantle, from the official wiki's [Build Gun](https://satisfactory.wiki.gg/wiki/Build_Gun) and
@@ -2043,11 +2046,13 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   whole and after one mark changes (`timeoutline`), and a frame's sweep of 65 aims (`timeaims`).
 - Delete by aim, erasing and its line (step 13): with 9 marks and the ghost door marked, a left click held 10 ticks
   erases nothing; held 20 ticks it sends one edit, which takes the door's upper half too and which Planner2 sees glow
-  with Planner1's name, and says "Erased 11 ghost blocks."; holding on erases nothing more. Aim stays on with no marks,
-  and one Ctrl+Z brings the blocks back unmarked. The lines, each checked word for word (the driver's `modehud`): a
-  Delete box's three lines with "R for Aim", Aim with no marks and with marks, an unmarking sweep, and "Erasing 50%" at
-  the hold's 10th tick; with the mode key bound to G and the sprint key to Right Control, the lines name G and Right
-  Control. Each line is shot at 1920 by 1080, GUI scale 4.
+  with Planner1's name, and says "Erased 11 ghost blocks."; holding on erases nothing more, though a sweep marks the
+  top row meanwhile. Aim stays on with no marks, and one Ctrl+Z brings the blocks back unmarked. The lines, each checked
+  word for word (the driver's `modehud`): a Delete box's three lines with "R for Aim", Aim with no marks and with marks,
+  an unmarking sweep, "Erasing 50%" at the hold's 10th tick (`await erasing`), and the cap's "Too many blocks" with
+  200,000 marks; with the mode key bound to G and the sprint key to Right Control, the lines name G and Right Control.
+  Each line is shot at 1920 by 1080, GUI scale 4, the erase's message with it, and the marked wall with Aim's line at
+  854 by 480 and 1920 by 1080, GUI scale 2.
 - One ghost block, locking and nudging (step 14): in Single mode with stone bricks, H locks the block beside the aimed
   face, and with Planner1 flown 5 blocks away and aiming elsewhere, Effortless Building's preview draws it there.
   Facing north, Up moves it one block north and Page Up one up. A right click places one ghost block there, on both
@@ -2281,8 +2286,9 @@ half turn; an aim at nothing or at a real block marking nothing; a sweep that st
 ends; a door marked by its lower half as one mark and two positions to erase; the cap, with the other halves counted;
 marks dropping when their ghost blocks leave the layer, and staying as they were when none did; and the changes the
 outline rebuilds from, each mark, unmark and dropped mark, and all of them after a clear. `MouseModeTest` covers which
-actions end Delete by aim. `EraseHoldTest` (step 13) covers the hold: 19 ticks erase nothing, the 20th erases once, a release starts the
-count again, and the progress shown.
+actions end Delete by aim. `EraseHoldTest` (step 13) covers the hold: 19 ticks erase nothing, the 20th erases once, holding on erases
+nothing more, a release starts the count again, a hold cancelled when its marks go erases nothing, and the progress
+shown in steps of 5%.
 
 The one ghost block's rules have unit tests as pure functions (steps 14 to 17). `SingleRuleTest` covers when its
 controls are active (session, Single mode, no mouse mode, an item that places a block), which clicks are Building

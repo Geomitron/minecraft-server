@@ -18,7 +18,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  */
 @Mixin(value = Minecraft.class, priority = 900)
 abstract class MinecraftMouseModeMixin {
-	/** Hook M1: the left click sets the box's next corner or pastes the copy, and attacks and breaks nothing. */
+	/**
+	 * Hook M1: the left click sets the box's next corner, pastes the copy or starts Delete by aim's hold to erase, and
+	 * attacks and breaks nothing.
+	 */
 	@Inject(method = "startAttack", at = @At("HEAD"), cancellable = true)
 	private void buildingplanner$leftClick(CallbackInfoReturnable<Boolean> cir) {
 		if (BuildingPlannerClient.leftClick()) {

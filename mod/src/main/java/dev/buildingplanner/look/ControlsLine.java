@@ -16,6 +16,7 @@ import java.util.Locale;
 public final class ControlsLine {
 	private static final String BOX = "buildingplanner.ui.mode.box";
 	private static final String COPY = "buildingplanner.ui.mode.copy";
+	private static final String DELETE = "buildingplanner.ui.mode.delete";
 
 	private ControlsLine() {
 	}
@@ -67,18 +68,33 @@ public final class ControlsLine {
 	}
 
 	/**
+	 * Delete by aim as its line tells it: whether any ghost block is marked, whether the sweep under way unmarks, the
+	 * hold's progress toward the erase in percent ({@code erasing}, -1 while the left button isn't held to erase), and
+	 * whether the marks have reached the cap.
+	 */
+	public record AimState(boolean marked, boolean unmarking, int erasing, boolean full) {
+	}
+
+	/**
 	 * A box's lines: a warning naming the limit the aimed corner breaks, if one does, then its controls for the next
 	 * click, with its size once a corner is set ({@code size} is null before). {@code purpose} is the box's purpose's
-	 * name (COPY, DELETE or MATERIAL_LIST).
+	 * name (COPY, DELETE or MATERIAL_LIST); a Delete box names the mode key, {@code mode}, which switches it to Aim,
+	 * unless it has no key (null).
 	 */
-	public static List<Line> box(String purpose, int corners, int[] size, BoxCorners.Limit limit) {
+	public static List<Line> box(String purpose, int corners, int[] size, BoxCorners.Limit limit, String mode) {
 		String next = switch (corners) {
 			case 0 -> BOX + ".first";
 			case 1 -> BOX + ".second";
 			default -> BOX + ".height";
 		};
-		Text controls = Translated.of(BOX, Look.PLAIN, Translated.of(BOX + "." + purpose.toLowerCase(Locale.ROOT),
-			Look.PLAIN), action(next), action(BOX + ".cancel"));
+		List<Text> parts = new ArrayList<>(3);
+		parts.add(click(action(next)));
+		if (purpose.equals("DELETE") && mode != null) {
+			parts.add(modeFor(mode, DELETE + ".aim"));
+		}
+		parts.add(Translated.of(COPY + ".right", Look.PLAIN, action(BOX + ".cancel")));
+		Text controls = Translated.of(COPY + ".titled", Look.PLAIN,
+			Translated.of(BOX + "." + purpose.toLowerCase(Locale.ROOT), Look.PLAIN), new Joined(List.copyOf(parts)));
 		Text sides = size == null ? null : Translated.of(BOX + ".size", Look.PLAIN, new Literal(String.valueOf(size[0])),
 			new Literal(String.valueOf(size[1])), new Literal(String.valueOf(size[2])));
 		List<Line> lines = new ArrayList<>(2);
@@ -91,6 +107,43 @@ public final class ControlsLine {
 		}
 		lines.add(new Line(controls, sides));
 		return lines;
+	}
+
+	/**
+	 * Delete by aim's lines: "Too many blocks" once the marks reach the cap, then its controls: with marks, the hold that
+	 * erases them, or its progress while the left button is held; the sprint key that marks, or unmarks during a sweep
+	 * that unmarks; the mode key, which switches to a Delete box; and the right click, which clears the marks, or with
+	 * none closes Aim. A key with no key bound is left out.
+	 */
+	public static List<Line> deleteAim(AimState state, Keys keys) {
+		List<Text> parts = new ArrayList<>();
+		if (state.marked()) {
+			parts.add(state.erasing() >= 0
+				? Translated.of(DELETE + ".erasing", Look.ACTION, new Literal(String.valueOf(state.erasing())))
+				: Translated.of(DELETE + ".hold_click", Look.PLAIN, action(DELETE + ".erase")));
+		}
+		if (keys.sprint() != null) {
+			parts.add(Translated.of(COPY + ".hold", Look.PLAIN, new Literal(keys.sprint()),
+				action(state.unmarking() ? DELETE + ".unmark" : DELETE + ".mark")));
+		}
+		if (keys.mode() != null) {
+			parts.add(modeFor(keys.mode(), DELETE + ".box"));
+		}
+		parts.add(Translated.of(COPY + ".right", Look.PLAIN,
+			action(state.marked() ? DELETE + ".clear" : COPY + ".put_away")));
+		List<Line> lines = new ArrayList<>(2);
+		if (state.full()) {
+			lines.add(new Line(Translated.of(BOX + ".too_large", Look.WARNING), null));
+		}
+		lines.add(new Line(Translated.of(COPY + ".titled", Look.PLAIN,
+			Translated.of(DELETE + ".titled", Look.PLAIN, Translated.of(DELETE + ".aim", Look.PLAIN)),
+			new Joined(List.copyOf(parts))), null));
+		return lines;
+	}
+
+	/** "R for Aim": the mode key, by its name, and the mode it switches to, as an action. */
+	private static Text modeFor(String key, String mode) {
+		return Translated.of(COPY + ".for", Look.PLAIN, new Literal(key), Translated.of(mode, Look.ACTION));
 	}
 
 	/**
@@ -143,8 +196,7 @@ public final class ControlsLine {
 			parts.add(key(new Literal(keys.lock()), state.locked() ? COPY + ".unlock" : COPY + ".lock"));
 		}
 		if (keys.mode() != null) {
-			parts.add(Translated.of(COPY + ".for", Look.PLAIN, new Literal(keys.mode()),
-				Translated.of(modeKey(state.mode().next()), Look.ACTION)));
+			parts.add(modeFor(keys.mode(), modeKey(state.mode().next())));
 		}
 		parts.add(Translated.of(COPY + ".right", Look.PLAIN, action(COPY + ".put_away")));
 		return titled(title, parts);

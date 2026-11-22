@@ -7,6 +7,7 @@ import dev.buildingplanner.input.CopyMode;
 import dev.buildingplanner.input.CopyPlacement;
 import dev.buildingplanner.input.CopyRow;
 import dev.buildingplanner.input.DeleteMode;
+import dev.buildingplanner.input.EraseHold;
 import dev.buildingplanner.input.MouseMode;
 import dev.buildingplanner.input.PasteBoxes;
 import dev.buildingplanner.layer.BoxCount;
@@ -82,6 +83,8 @@ final class ClientSession {
 	/** The layer, and its version, the marks were last checked against. */
 	private Layer marksLayer;
 	private long marksVersion;
+	/** Delete by aim's hold of the left button that erases the marks. */
+	private final EraseHold hold = new EraseHold();
 	private final ListSync lists = new ListSync();
 	private int clientSeq;
 	/**
@@ -167,10 +170,11 @@ final class ClientSession {
 
 	/**
 	 * Once a client tick: removes old plans' placements when due, asks for the columns that loaded and lets go of those
-	 * that unloaded, runs the self-check's comparisons that are due, moves the box being drawn and the copy at the aim
-	 * to where the player aims, and sends the current material list when it changed.
+	 * that unloaded, runs the self-check's comparisons that are due, counts Delete by aim's hold of the left button
+	 * ({@code attackDown}) and erases the marks once it's held a second, moves the box being drawn and the copy at the
+	 * aim to where the player aims, and sends the current material list when it changed.
 	 */
-	void tick() {
+	void tick(boolean attackDown) {
 		if (removeOldPlans && Minecraft.getInstance().level != null) {
 			removeOldPlans = false;
 			OldPlans.remove();
@@ -182,6 +186,9 @@ final class ClientSession {
 			box.update(replica.layer(), tiles.shown());
 		}
 		keepMarks();
+		if (hold.tick(attackDown) && aimOn) {
+			eraseMarks();
+		}
 		if (aimOn) {
 			list.update(marks, replica.layer());
 		} else {
@@ -318,6 +325,7 @@ final class ClientSession {
 		if (aimOn) {
 			aimOn = false;
 			marks.endSweep();
+			hold.cancel();
 			box.start(BoxDraw.Purpose.DELETE);
 			box.update(replica.layer(), tiles.shown());
 			deleteMode = DeleteMode.BOX;
@@ -335,13 +343,49 @@ final class ClientSession {
 			return false;
 		}
 		marks.clear();
+		hold.cancel();
 		return true;
+	}
+
+	/**
+	 * The left click in Delete by aim (hook M1): with marks, starts the hold that erases them once the button has stayed
+	 * down a second; with none, does nothing.
+	 */
+	void pressErase() {
+		if (aimOn && marks.size() > 0) {
+			hold.press();
+		}
+	}
+
+	/**
+	 * The hold's erase: one erase edit of the marked ghost blocks, with the other half of each two-block ghost block
+	 * ({@link GhostErase#of}), so one undo brings them all back, saying how many as the Delete box does. The marks go
+	 * with it, so an undo brings the ghost blocks back unmarked, and Aim stays on to mark more.
+	 */
+	private void eraseMarks() {
+		List<BlockPos> marked = new ArrayList<>(marks.size());
+		marks.positions().forEach((long key) -> marked.add(BlockPos.of(key)));
+		Map<BlockPos, BlockState> erase = GhostErase.of(replica.layer(), marked);
+		if (sendShape(EditKind.ERASE, erase)) {
+			show(PlayerMessage.erased(erase.size()));
+			marks.clear();
+		}
+	}
+
+	/** Delete by aim as its controls line tells it ({@link ControlsLine#deleteAim}), or null while it's off. */
+	ControlsLine.AimState aimState() {
+		if (!aimOn) {
+			return null;
+		}
+		return new ControlsLine.AimState(marks.size() > 0, marks.sweeping() && marks.unmarking(), hold.percent(),
+			marks.full());
 	}
 
 	private void endAim() {
 		aimOn = false;
 		marks.endSweep();
 		marks.clear();
+		hold.cancel();
 	}
 
 	/**
@@ -358,6 +402,9 @@ final class ClientSession {
 		}
 		marksLayer = layer;
 		marksVersion = layer.version();
+		if (!aimOn || marks.size() == 0) {
+			hold.cancel();
+		}
 	}
 
 	/** The box being drawn now, as it shows, or null. */
