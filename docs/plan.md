@@ -401,7 +401,11 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
     box's line: "Delete: [Left-click: set the first corner][R: Delete mode][Right-click: cancel]". Geo's comment: "I
     want all control hints to be formatted like this. If possible, instead of brackets separating them, they should be
     different adjacent text rectangles across the bottom above the hotbar, with a gap between each one." Geo approved
-    the eight keys' new names and "Too many blocks" as proposed.
+    the eight keys' new names and "Too many blocks" as proposed, and then every controls line in that form as
+    revision 2 showed it: each control its own rectangle, the label its own first rectangle, a reason its own red
+    rectangle, a box's size its own last rectangle, and "R: Delete mode" in Delete and "R: Zoop mode" in the copy's and the one
+    ghost block's lines (1155 revision 2). Effortless Building's own line during a shape is drawn in the same
+    rectangles: "[Left-click: cancel][Right-click: place]" (1155 revision 2, Q1 A).
 - The shared layer replaces the decisions above that concern separate plans: named plans that move and turn as a whole
   (411 Q1), plan growth (411 Q2), who deletes a plan (411 Q3, 420 Q9), starting a plan with N (420 Q1, 469 Q1), hiding
   a plan with Litematica or Syncmatica (420 Q2, 469 Q2), the paste's target plan (485 Q3), Litematica's Edit Schematic
@@ -568,8 +572,9 @@ the last step, when the server and the pack update together.
     ghost block's controls lines and its red reason, the turning line, Disable's lines and their red reason, and the
     eight keys' proposed names) goes to Geo
     as editable text with its step's screenshots, each following the rule Geo approved for the game's texts (985 Q1
-    A), and Geo's version is built in, with `ControlsLineTest` and `step9.sh` checking each text exactly. The same
-    step sets the version 0.6.0.
+    A), and Geo's version is built in, with `ControlsLineTest` and `step9.sh` checking each text exactly. Every
+    controls line is drawn as separate rectangles, and so is Effortless Building's own line during a shape (1155).
+    The same step sets the version 0.6.0.
 22. **The release**: after Geo's approval, released as 0.5.0 was: the GitHub release, then the server and the pack in
     one sitting, since protocol version 5 turns Building Planner off for a game and a server on different versions. On
     the server: a backup of the world named for 0.6.0, the jar in `mods/` in place of 0.5.0's, and a
