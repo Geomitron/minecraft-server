@@ -37,8 +37,11 @@ public final class ControlsLine {
 		}
 	}
 
-	/** A key's name as the game gives it, or a number. */
-	public record Literal(String text) implements Text {
+	/** A key's name as the game gives it, a number, or a word of Effortless Building's own line, in its look. */
+	public record Literal(String text, Look look) implements Text {
+		public Literal(String text) {
+			this(text, Look.PLAIN);
+		}
 	}
 
 	private static final Text LEFT = Translated.of(MODE + ".left_click", Look.PLAIN);
@@ -336,6 +339,54 @@ public final class ControlsLine {
 		}
 		rects.add(hint(RIGHT, COPY + ".put_away"));
 		return labelled(title(state.mode(), state.locked()), rects);
+	}
+
+	/** A run of Effortless Building's line in one colour: its text and the colour's name ("dark_aqua"), or null. */
+	public record Part(String text, String colour) {
+	}
+
+	/**
+	 * Effortless Building's own line during a shape (hook E31), as Building Planner's rectangles: each of its clauses,
+	 * "key to action", separated by ", ", becomes the control "[key: action]", in Effortless Building's own words and
+	 * colours: "Left-click to cancel, Right-click to place" is "[Left-click: cancel][Right-click: place]". The key and
+	 * the colon are white; the action stays dark aqua, or red as Effortless Building draws a shape that breaks blocks.
+	 * Null for a text of another form, or in other colours (a key not white, an action neither dark aqua nor red, or in
+	 * more than one colour), which Effortless Building then draws as it is.
+	 */
+	public static Line effortless(List<Part> parts) {
+		StringBuilder text = new StringBuilder();
+		List<String> colours = new ArrayList<>();
+		for (Part part : parts) {
+			text.append(part.text());
+			for (int i = 0; i < part.text().length(); i++) {
+				colours.add(part.colour());
+			}
+		}
+		List<Text> rects = new ArrayList<>(2);
+		int start = 0;
+		while (start < text.length()) {
+			int end = text.indexOf(", ", start);
+			if (end < 0) {
+				end = text.length();
+			}
+			int to = text.indexOf(" to ", start);
+			if (to <= start || to + 4 >= end) {
+				return null;
+			}
+			int action = to + 4;
+			Look look = switch (String.valueOf(colours.get(action))) {
+				case "dark_aqua" -> Look.ACTION;
+				case "red" -> Look.WARNING;
+				default -> null;
+			};
+			if (look == null || !colours.subList(start, to).stream().allMatch(c -> c == null || c.equals("white"))
+				|| !colours.subList(action, end).stream().allMatch(colours.get(action)::equals)) {
+				return null;
+			}
+			rects.add(hint(new Literal(text.substring(start, to)), new Literal(text.substring(action, end), look)));
+			start = end + 2;
+		}
+		return rects.isEmpty() ? null : new Line(null, List.copyOf(rects));
 	}
 
 	/** The label of a line that follows the aim: the mode outside Single, "Locked" or both, or none. */

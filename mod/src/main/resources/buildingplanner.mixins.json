@@ -23,6 +23,7 @@
 		"effortless.PacketHandlerMixin",
 		"effortless.RadialMenuMixin",
 		"effortless.RandomizerSystemMixin",
+		"effortless.RenderHandlerMixin",
 		"litematica.ChunkRendererSchematicVboMixin",
 		"litematica.GuiMaterialListMixin",
 		"litematica.OverlayRendererMixin",

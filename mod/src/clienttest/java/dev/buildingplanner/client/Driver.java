@@ -931,6 +931,21 @@ public final class Driver implements ClientModInitializer {
 				// under that heading, as scrolled now.
 				return ScreenProbe.keyRows(mc, line.substring("keybindrows ".length()));
 			}
+			case "ebline" -> {
+				// ebline: the components the last frame drew 58 above the screen's bottom, where Effortless Building draws
+				// its own line during a shape, left first, each in [ ], or none.
+				return ScreenProbe.shapeLine(mc);
+			}
+			case "eblinecolours" -> {
+				// eblinecolours: the colours of each of those components, its runs of one colour joined by "+"
+				// ("white+dark_aqua"), the components separated by spaces, or none.
+				return ScreenProbe.shapeLineColours(mc);
+			}
+			case "eblinerects" -> {
+				// eblinerects: each of those components as a rectangle, as moderects gives the controls': its window box
+				// (left top right bottom, in the window's pixels) and its text in [ ], separated by " | ", or none.
+				return ScreenProbe.shapeLineRects(mc);
+			}
 			case "modehud" -> {
 				// modehud: the line of the mouse mode's controls as the player reads it, or hidden.
 				return modeHud().text();

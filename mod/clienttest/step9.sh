@@ -427,11 +427,11 @@ paste_button() {
 copy_kept() {
 	val 1 copy | sed -E 's/^(at [^ ]+|away) //'
 }
-# rects_ok <window width> <gui scale>: Planner1's controls as drawn now (the driver's moderects) are rows of rectangles,
-# each one line (9) high, 4 apart in its row, the rows 2 apart; each row is centred and inside the screen less 4 at each
-# side, unless it's one rectangle wider than that.
+# rects_ok <window width> <gui scale> [<driver command>]: Planner1's controls as drawn now (the driver's moderects, or
+# the command given) are rows of rectangles, each one line (9) high, 4 apart in its row, the rows 2 apart; each row is
+# centred and inside the screen less 4 at each side, unless it's one rectangle wider than that.
 rects_ok() {
-	val 1 moderects | awk -v W="$1" -v S="$2" '
+	val 1 "${3:-moderects}" | awk -v W="$1" -v S="$2" '
 		BEGIN { RS = " / "; bad = 0; last = "" }
 		{
 			sub(/\n$/, "")
@@ -2429,6 +2429,56 @@ use_click 1
 check "a right click cancels the shape, erasing nothing, and the turning line shows again" eval \
 	'drv 1 "wait 10" > /dev/null && [[ $(val 1 "layer -62 -60 -40") == minecraft:oak_stairs ]] &&
 	[[ $(val 1 modehud) == "[Hold Left Control: turn or flip]" ]]'
+# Effortless Building's own line during a shape (hook E31) is drawn in Building Planner's rectangles where Effortless
+# Building draws it, 58 above the screen's bottom (the driver's ebline reads what the last frame drew there), in its
+# words and colours: during a Line drawn with the place click "[Left-click: cancel][Right-click: place]", each action in
+# dark aqua; with a pickaxe, a tool, in hand during that shape, "interact" in place of "place"; during a Line drawn with
+# the break click "[Left-click: break][Right-click: cancel]", each action in red. Each is shot at noon, once the chat
+# has faded.
+# ebline_shots <name>: Planner1's view as <name>-1920x1080-gui4 and <name>-854x480-gui2, each with the line's
+# rectangles' window boxes in the log for the shots' outlines, and a check that they're laid out as the controls' are,
+# in a centred row starting 58 above the screen's bottom.
+ebline_shots() {
+	local size
+	for size in "1920 1080 4" "854 480 2"; do
+		read -r ew eh es <<< "$size"
+		drv 1 "window $ew $eh $es" "wait 20" "notoasts" "wait 5" "shot $1-${ew}x$eh-gui$es" "wait 5" > /dev/null
+		echo "  $1-${ew}x$eh-gui$es: $(val 1 eblinerects)" >> /out/checks.log
+		check "$1 at $ew by $eh, GUI scale $es: a rectangle a control, in a centred row starting 58 above the bottom" \
+			eval 'rects_ok $ew $es eblinerects && [[ $(val 1 eblinerects | cut -d" " -f2) == $((eh - 58 * es)) ]]'
+	done
+	drv 1 "window 854 480 2" "wait 20" > /dev/null
+}
+drv 1 "cmd time set noon" "cmd item replace entity @s hotbar.6 with minecraft:iron_pickaxe" > /dev/null
+aim 1 -54 -60 -36
+use_click 1
+aim 1 -51 -60 -36
+drv 1 "wait 210" > /dev/null
+check "during a Line drawn with the place click, Effortless Building's line reads [Left-click: cancel][Right-click: place]" \
+	eval '[[ $(val 1 ebline) == "[Left-click: cancel][Right-click: place]" ]]'
+check "each rectangle white, with its action in dark aqua" eval \
+	'[[ $(val 1 eblinecolours) == "white+dark_aqua white+dark_aqua" ]]'
+ebline_shots effortless-line-place
+press 1 7
+check "with a pickaxe in hand during that shape, it reads [Left-click: cancel][Right-click: interact]" eval \
+	'drv 1 "wait 5" > /dev/null && [[ $(val 1 ebline) == "[Left-click: cancel][Right-click: interact]" ]] &&
+	[[ $(val 1 eblinecolours) == "white+dark_aqua white+dark_aqua" ]]'
+ebline_shots effortless-line-interact
+press 1 5
+attack_click 1
+check "a left click cancels the shape, and only the turning line shows there again" eval \
+	'drv 1 "wait 5" > /dev/null && [[ $(val 1 ebline) == "[Hold Left Control: turn or flip]" ]]'
+aim 1 -54 -60 -36
+attack_click 1
+aim 1 -51 -60 -36
+check "during a Line drawn with the break click, it reads [Left-click: break][Right-click: cancel]" eval \
+	'[[ $(val 1 ebline) == "[Left-click: break][Right-click: cancel]" ]]'
+check "each rectangle white, with its action in red" eval '[[ $(val 1 eblinecolours) == "white+red white+red" ]]'
+ebline_shots effortless-line-break
+use_click 1
+check "a right click cancels it, and the turning line shows there again" eval \
+	'drv 1 "wait 5" > /dev/null && [[ $(val 1 ebline) == "[Hold Left Control: turn or flip]" ]]'
+drv 1 "cmd item replace entity @s hotbar.6 with minecraft:stone" > /dev/null
 # In Disable, the middle click with Left Ctrl held flips the stairs, from the way Minecraft would place them on the
 # grass below Planner1, within the game's own reach (Effortless Building's longer reach is left out in Disable), and
 # picks no block; with stone, which neither turns nor flips, it picks the aimed block. The grass is due north, so the

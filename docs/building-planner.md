@@ -216,6 +216,7 @@ Effortless Building, under `common/src/main/java/nl/requios/effortlessbuilding/`
 | E23 | `utilities/KeyBindings.java`, `<clinit>` | `@ModifyArg` on the category of each of the four `KeyMapping` constructors | Effortless Building's keys go under Building Planner's heading in Controls (see "Keys"). |
 | E27 | `buildpipeline/BuildPipelineClient.java`, public static `getPreviewBlocks` | `@ModifyReturnValue` | While the one ghost block is locked, or a Zoop or Vertical row of it is fixed (after its first click), the preview draws the locked block or the row (`EffortlessShapes.previewBlocks`, run through Effortless Building's modifiers, mix and constraints), not the block at the aim (see "One ghost block"). E30 lets it draw a locked block that's a set of one, and, with the block following the aim in Single, or in Zoop or Vertical before the first click, the block at the aim, which Effortless Building's `getPreviewBlocks` gives and E27 leaves as it is. |
 | E28 | `render/BlockPreviewRenderer.java`, `getPlacementState(BlockItem, Minecraft, ItemStack)` | `@ModifyReturnValue` | In every mode, the preview's block takes the turn of the block in hand (`BlockTurn.apply`), as E1's states do, so the player sees the block as it will be placed. `BlockPreviewRenderer.render` makes one state through this method for the held block, or one for each of the mix's blocks, and applies each entry's mirror and turn to it after (`BlockEntry.applyTransforms`), so every block of a shape's preview takes the turn. In Disable, while Disable's preview shows, it returns the state a right click would place (`DisablePreview.state`, see "Turning real blocks in Disable"). While the one ghost block is locked or its row is fixed, it returns the state a right click places there: the placement rules with the hit it was locked or its row fixed with and the player's facing now (`EffortlessShapes.previewState`, see "One ghost block"). |
+| E31 | `render/RenderHandler.java`, private static `renderSubtitle` | `@WrapOperation` on `GuiGraphicsExtractor.text(Font, Component, int, int, int, boolean)`, with `require = 0` | During a session, draw Effortless Building's line during a shape in Building Planner's rectangles instead, where it draws it (`EffortlessLine`, see "Building Planner's mouse modes"); a text of another form goes to the original call. It's the one hook that requires no match, since it changes only how the line looks: an Effortless Building whose method no longer makes that call keeps its own line, and Building Planner loads and works as before. The other mixin hooks require their match (`defaultRequire` 1 in `buildingplanner.mixins.json`), so a change under one of them stops the game as it loads. |
 
 Effortless Building's limits on its shapes come from its config on the player's computer (`config/ServerConfig.java`),
 which keeps its defaults, since only Effortless Building's server sends other values (`SyncServerConfigS2CPacket`): in
@@ -711,8 +712,25 @@ Each rectangle is its text with 2 pixels more at each side, one line high, on a 
 0.5 opacity, the game's chat background at its default opacity, so white words stay readable over light ghost blocks
 (white wool, glowstone, snow); a gap of 4 separates the rectangles in a row (`ControlsRows`). Each row is centred. A
 line too wide for the screen, less 4 at each side, goes on in a row below, 2 below the row above, moving whole
-rectangles, never splitting one; the last row starts 58 above the screen's bottom. Effortless Building's own line during
-its shapes stays as it is. `ModeHud` fills every background with `GuiGraphicsExtractor.fill` before drawing the text.
+rectangles, never splitting one; the last row starts 58 above the screen's bottom. `ModeHud` fills every background
+with `GuiGraphicsExtractor.fill` before drawing the text.
+
+Effortless Building's own line during a shape, which it draws there as plain text, is drawn in the same rectangles
+during a session (hook E31; Geo's choice, inbox request 1155, Q1 A), so both lines above the hotbar look alike. It draws
+one of three texts (`RenderHandler`'s `PLACING_TEXT`, `INTERACTING_TEXT` and `BREAKING_TEXT`), and each clause "key to
+action" becomes the control "[key: action]", in Effortless Building's own words, so a line it adds or rewords in that
+form shows too (`ControlsLine.effortless`):
+
+- during a shape drawn with the place click: "[Left-click: cancel][Right-click: place]";
+- with a tool in hand during that shape (an item with Minecraft's `TOOL` component, such as a pickaxe):
+  "[Left-click: cancel][Right-click: interact]";
+- during a shape drawn with the break click: "[Left-click: break][Right-click: cancel]".
+
+The key and its colon are white, and each action keeps Effortless Building's colour: dark aqua, and red during a shape
+drawn with the break click, where Effortless Building draws both actions red and the keys white. The rectangles are
+laid out as the controls' are, with the same background, padding and gap of 4, in a centred row starting 58 above the
+screen's bottom, where Effortless Building draws its line. A text of another form, or in other colours, is drawn by
+Effortless Building as it is, and so is the line in a singleplayer world or on a server without Building Planner.
 The game's "Text Background" accessibility setting ("Chat" or "Everywhere") doesn't change it: the setting works only
 through `Options.getBackgroundColor`, which the game's own text (the action bar, subtitles, the player list) calls and
 the controls line doesn't, so the background is always there at that opacity.
@@ -2153,6 +2171,15 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   `actionbar`), at 854 by 480, GUI scale 2, and at 1920 by 1080, GUI scale 2 and 4, each shot. The turning line is
   shot in Line before a shape at 1920 by 1080, GUI scale 4, and 854 by 480, GUI scale 2, and a placed Line of turned
   stairs at 854 by 480 and 1920 by 1080, GUI scale 2.
+- Effortless Building's own line during a shape (hook E31), word for word and colour by colour as the last frame drew
+  it 58 above the screen's bottom (the driver's `ebline`, `eblinecolours` and `eblinerects`, from every component the
+  frame drew there): during a Line drawn with the place click, "[Left-click: cancel][Right-click: place]", each
+  rectangle white with its action in dark aqua; with an iron pickaxe, a tool, in hand during that shape, "[Left-click:
+  cancel][Right-click: interact]", in the same colours; during a Line drawn with the break click, "[Left-click:
+  break][Right-click: cancel]", each rectangle white with its action in red; and once a click cancels the shape, only
+  the turning line shows there. Each is shot at noon at 1920 by 1080, GUI scale 4, and at 854 by 480, GUI scale 2,
+  with every rectangle's window box in the log for the shots' outlines, and in each the rectangles are laid out as the
+  controls' are, in a centred row starting 58 GUI pixels above the bottom.
 - Turning real blocks in Disable (step 18), with Planner1 3 blocks south of each block, facing north, first in
   creative and then in survival: oak stairs turned a quarter turn with Left Ctrl and a notch up, and a right click with
   Left Ctrl held, place a real stair facing east, which the server's world (read with `/execute if block … run say`,

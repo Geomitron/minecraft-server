@@ -16,6 +16,7 @@ import dev.buildingplanner.look.ControlsLine.DisableState;
 import dev.buildingplanner.look.ControlsLine.Keys;
 import dev.buildingplanner.look.ControlsLine.Line;
 import dev.buildingplanner.look.ControlsLine.Look;
+import dev.buildingplanner.look.ControlsLine.Part;
 import dev.buildingplanner.look.ControlsLine.SingleState;
 import dev.buildingplanner.look.ControlsLine.Text;
 import dev.buildingplanner.look.ControlsLine.TurnState;
@@ -473,6 +474,44 @@ class ControlsLineTest {
 			single(new SingleState(CopyMode.SINGLE, true, 0, false, STAIRS), UNBOUND));
 	}
 
+	/** Effortless Building's line while placing, as {@code RenderHandler.PLACING_TEXT} holds it. */
+	private static final List<Part> PLACING = List.of(new Part("Left-click to ", "white"), new Part("cancel", "dark_aqua"),
+		new Part(", Right-click to ", "white"), new Part("place", "dark_aqua"));
+
+	@Test
+	void effortlessBuildingsLineIsAControlForEachClauseInItsOwnWords() {
+		assertEquals("[Left-click: cancel][Right-click: place]", read(ControlsLine.effortless(PLACING)));
+		assertEquals("[Left-click: cancel][Right-click: interact]", read(ControlsLine.effortless(List.of(
+			new Part("Left-click to ", "white"), new Part("cancel", "dark_aqua"), new Part(", Right-click to ", "white"),
+			new Part("interact", "dark_aqua")))));
+		assertNull(ControlsLine.effortless(PLACING).label());
+	}
+
+	@Test
+	void effortlessBuildingsActionsKeepTheirColoursAndItsKeysAreWhite() {
+		assertEquals(List.of("cancel", "place"), collect(ControlsLine.effortless(PLACING), Look.ACTION));
+		Line breaking = ControlsLine.effortless(List.of(new Part("Left-click to ", "white"), new Part("break", "red"),
+			new Part(", Right-click to ", "white"), new Part("cancel", "red")));
+		assertEquals("[Left-click: break][Right-click: cancel]", read(breaking));
+		assertEquals(List.of("break", "cancel"), collect(breaking, Look.WARNING));
+		assertEquals(List.of(), collect(breaking, Look.ACTION));
+		// A key with no colour of its own is drawn white, as Effortless Building draws it.
+		assertEquals("[Left-click: cancel]", read(ControlsLine.effortless(List.of(new Part("Left-click to ", null),
+			new Part("cancel", "dark_aqua")))));
+	}
+
+	@Test
+	void effortlessBuildingKeepsALineOfAnotherFormOrInOtherColours() {
+		assertNull(ControlsLine.effortless(List.of()));
+		assertNull(ControlsLine.effortless(List.of(new Part("Building...", "white"))));
+		assertNull(ControlsLine.effortless(List.of(new Part("Left-click to ", "white"), new Part("cancel", "dark_aqua"),
+			new Part(", Right-click", "white"))));
+		assertNull(ControlsLine.effortless(List.of(new Part("Left-click to ", "white"), new Part("cancel", "gold"))));
+		assertNull(ControlsLine.effortless(List.of(new Part("Left-click to ", "red"), new Part("cancel", "dark_aqua"))));
+		assertNull(ControlsLine.effortless(List.of(new Part("Left-click to ", "white"), new Part("can", "dark_aqua"),
+			new Part("cel", "red"))));
+	}
+
 	private static String single(SingleState state, Keys keys) {
 		return read(ControlsLine.single(state, keys));
 	}
@@ -535,11 +574,18 @@ class ControlsLineTest {
 	}
 
 	private static void collect(Text text, Look look, List<String> found) {
-		if (text instanceof ControlsLine.Translated translated) {
-			if (translated.look() == look) {
-				found.add(read(translated));
+		switch (text) {
+			case ControlsLine.Translated translated -> {
+				if (translated.look() == look) {
+					found.add(read(translated));
+				}
+				translated.args().forEach(arg -> collect(arg, look, found));
 			}
-			translated.args().forEach(arg -> collect(arg, look, found));
+			case ControlsLine.Literal literal -> {
+				if (literal.look() == look && look != Look.PLAIN) {
+					found.add(literal.text());
+				}
+			}
 		}
 	}
 }

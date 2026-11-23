@@ -2,7 +2,9 @@ package dev.buildingplanner.client;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -11,11 +13,12 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsList;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsScreen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
 
 /**
- * What a screen shows, for the driver's reading of the radial menu's corner text and of Controls (step9.sh): the plain
- * text drawn in the last frame (recorded by {@code GuiTextMixin}), and the headings and keys of the key binds screen,
- * with where they are in the window.
+ * What a screen shows, for the driver's reading of the radial menu's corner text, of Controls and of Effortless
+ * Building's line during a shape (step9.sh): the plain text and the components drawn in the last frame (recorded by
+ * {@code GuiTextMixin}), and the headings and keys of the key binds screen, with where they are in the window.
  */
 public final class ScreenProbe {
 	/** The height of a line of the game's text, in GUI pixels. */
@@ -25,9 +28,16 @@ public final class ScreenProbe {
 	private record Drawn(String text, int x, int y, int width) {
 	}
 
+	/** A component drawn at {@code x}, {@code y}, in GUI pixels, with its width. */
+	private record DrawnComponent(Component text, int x, int y, int width) {
+	}
+
 	/** The strings of the frame being drawn, and of the last frame drawn. Only the game's render thread touches them. */
 	private static List<Drawn> current = new ArrayList<>();
 	private static List<Drawn> last = List.of();
+	/** The same for the components. */
+	private static List<DrawnComponent> currentComponents = new ArrayList<>();
+	private static List<DrawnComponent> lastComponents = List.of();
 
 	private ScreenProbe() {
 	}
@@ -37,10 +47,65 @@ public final class ScreenProbe {
 		current.add(new Drawn(text, x, y, font.width(text)));
 	}
 
+	/** A component is being drawn. */
+	public static void drawn(Font font, Component text, int x, int y) {
+		currentComponents.add(new DrawnComponent(text, x, y, font.width(text)));
+	}
+
 	/** A frame has been drawn. */
 	public static void frameDrawn() {
 		last = current;
 		current = new ArrayList<>();
+		lastComponents = currentComponents;
+		currentComponents = new ArrayList<>();
+	}
+
+	/**
+	 * The components the last frame drew with their top 58 GUI pixels above the screen's bottom, where Effortless
+	 * Building draws its own line during a shape (hook E31 draws it there in rectangles), left first.
+	 */
+	private static List<DrawnComponent> shapeRow(Minecraft mc) {
+		int top = mc.getWindow().getGuiScaledHeight() - 58;
+		return lastComponents.stream().filter(d -> d.y() == top).sorted(Comparator.comparingInt(DrawnComponent::x))
+			.toList();
+	}
+
+	/** The components of Effortless Building's line as the last frame drew them, each in [ ], or none. */
+	static String shapeLine(Minecraft mc) {
+		List<DrawnComponent> row = shapeRow(mc);
+		return row.isEmpty() ? "none"
+			: row.stream().map(d -> "[" + d.text().getString() + "]").collect(Collectors.joining());
+	}
+
+	/**
+	 * The colours of each component of Effortless Building's line as the last frame drew them, its runs of one colour
+	 * joined by "+" ("white+dark_aqua"), the components separated by spaces, or none.
+	 */
+	static String shapeLineColours(Minecraft mc) {
+		List<DrawnComponent> row = shapeRow(mc);
+		return row.isEmpty() ? "none" : row.stream().map(d -> {
+			List<String> runs = new ArrayList<>();
+			d.text().visit((style, string) -> {
+				String colour = style.getColor() == null ? "none" : style.getColor().serialize();
+				if (!string.isEmpty() && (runs.isEmpty() || !runs.getLast().equals(colour))) {
+					runs.add(colour);
+				}
+				return Optional.empty();
+			}, Style.EMPTY);
+			return String.join("+", runs);
+		}).collect(Collectors.joining(" "));
+	}
+
+	/**
+	 * Each rectangle of Effortless Building's line as the last frame drew it, as the driver's moderects gives the
+	 * controls': its window box (its text with 2 GUI pixels more at each side, one line high) and its text in [ ],
+	 * separated by " | ", or none.
+	 */
+	static String shapeLineRects(Minecraft mc) {
+		List<DrawnComponent> row = shapeRow(mc);
+		double scale = mc.getWindow().getGuiScale();
+		return row.isEmpty() ? "none" : row.stream().map(d -> box(scale, d.x() - 2, d.y(), d.x() + d.width() + 2,
+			d.y() + FONT_HEIGHT) + " [" + d.text().getString() + "]").collect(Collectors.joining(" | "));
 	}
 
 	/** Each string drawn in the last frame, separated by " | ". */

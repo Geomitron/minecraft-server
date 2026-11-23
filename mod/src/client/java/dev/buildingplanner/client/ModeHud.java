@@ -119,9 +119,7 @@ final class ModeHud implements HudElement {
 			}
 			case DELETE_AIM -> aim.get();
 		};
-		return lines.stream().map(line -> new Line(line.all().stream()
-			.map(rect -> (Component) component(rect).withStyle(ModeHud::white)).toList(),
-			line.label() != null)).toList();
+		return lines.stream().map(line -> new Line(components(line), line.label() != null)).toList();
 	}
 
 	/** The line with no mouse mode on, Single's, the turning line or Disable's, while it shows, or none. */
@@ -161,35 +159,78 @@ final class ModeHud implements HudElement {
 	/** The game's component for a part of a line, in its look: an action in dark aqua and a warning in red. */
 	private static MutableComponent component(ControlsLine.Text text) {
 		return switch (text) {
-			case ControlsLine.Translated translated -> {
-				Object[] args = translated.args().stream().map(ModeHud::component).toArray();
-				MutableComponent made = Component.translatable(translated.key(), args);
-				yield switch (translated.look()) {
-					case PLAIN -> made;
-					case ACTION -> made.withStyle(ChatFormatting.DARK_AQUA);
-					case WARNING -> made.withStyle(ChatFormatting.RED);
-				};
-			}
-			case ControlsLine.Literal literal -> Component.literal(literal.text());
+			case ControlsLine.Translated translated -> looked(Component.translatable(translated.key(),
+				translated.args().stream().map(ModeHud::component).toArray()), translated.look());
+			case ControlsLine.Literal literal -> looked(Component.literal(literal.text()), literal.look());
 		};
+	}
+
+	private static MutableComponent looked(MutableComponent made, ControlsLine.Look look) {
+		return switch (look) {
+			case PLAIN -> made;
+			case ACTION -> made.withStyle(ChatFormatting.DARK_AQUA);
+			case WARNING -> made.withStyle(ChatFormatting.RED);
+		};
+	}
+
+	/** A line's rectangles as the game's components, its label first, white where they have no colour of their own. */
+	private static List<Component> components(ControlsLine.Line line) {
+		return line.all().stream().map(rect -> (Component) component(rect).withStyle(ModeHud::white)).toList();
 	}
 
 	/** The rectangles as they're drawn on a screen {@code width} by {@code height}, row by row, top first. */
 	private List<List<Placed>> placed(List<Line> lines, Font font, int width, int height) {
-		List<List<Integer>> widths = lines.stream().map(line -> line.rects().stream().map(font::width).toList()).toList();
+		return placed(lines.stream().map(Line::rects).toList(), font, width, height, raised());
+	}
+
+	/**
+	 * The rectangles of lines whose rectangles are {@code lines} as they're drawn on a screen {@code width} by
+	 * {@code height}, row by row, top first, ending above the action bar while {@code raised}.
+	 */
+	private static List<List<Placed>> placed(List<List<Component>> lines, Font font, int width, int height,
+		boolean raised) {
+		List<List<Integer>> widths = lines.stream().map(line -> line.stream().map(font::width).toList()).toList();
 		List<List<ControlsRows.Rect>> rows = ControlsRows.of(widths, width);
-		int y = top(rows.size(), font, height, raised());
+		int y = top(rows.size(), font, height, raised);
 		List<List<Placed>> placed = new ArrayList<>(rows.size());
 		for (List<ControlsRows.Rect> row : rows) {
 			List<Placed> rects = new ArrayList<>(row.size());
 			for (ControlsRows.Rect rect : row) {
-				rects.add(new Placed(lines.get(rect.line()).rects().get(rect.index()), rect.left(), y,
-					rect.left() + rect.width(), y + font.lineHeight));
+				rects.add(new Placed(lines.get(rect.line()).get(rect.index()), rect.left(), y, rect.left() + rect.width(),
+					y + font.lineHeight));
 			}
 			placed.add(rects);
 			y += ControlsRows.pitch(font.lineHeight);
 		}
 		return placed;
+	}
+
+	/**
+	 * Draws Effortless Building's own line during a shape in Building Planner's rectangles (hook E31,
+	 * {@link ControlsLine#effortless}), where Effortless Building draws it, as the controls lines are drawn; false,
+	 * drawing nothing, for a text of another form, which Effortless Building then draws itself.
+	 */
+	static boolean drawEffortless(GuiGraphicsExtractor graphics, Font font, List<ControlsLine.Part> parts) {
+		ControlsLine.Line line = ControlsLine.effortless(parts);
+		if (line == null) {
+			return false;
+		}
+		draw(graphics, font, placed(List.of(components(line)), font, graphics.guiWidth(), graphics.guiHeight(), false));
+		return true;
+	}
+
+	/** Draws the rectangles: every background first, so no rectangle covers the shadow of the text in another. */
+	private static void draw(GuiGraphicsExtractor graphics, Font font, List<List<Placed>> rows) {
+		for (List<Placed> row : rows) {
+			for (Placed rect : row) {
+				graphics.fill(rect.left(), rect.top(), rect.right(), rect.bottom(), BACKGROUND);
+			}
+		}
+		for (List<Placed> row : rows) {
+			for (Placed rect : row) {
+				graphics.text(font, rect.text(), rect.left() + ControlsRows.PADDING, rect.top(), WHITE, true);
+			}
+		}
 	}
 
 	/** The rectangles as they're drawn now, row by row, top first. */
@@ -332,17 +373,7 @@ final class ModeHud implements HudElement {
 		}
 		Font font = Minecraft.getInstance().font;
 		List<List<Placed>> rows = placed(lines, font, graphics.guiWidth(), graphics.guiHeight());
-		// The backgrounds first, so no rectangle covers the shadow of the text in another.
-		for (List<Placed> row : rows) {
-			for (Placed rect : row) {
-				graphics.fill(rect.left(), rect.top(), rect.right(), rect.bottom(), BACKGROUND);
-			}
-		}
-		for (List<Placed> row : rows) {
-			for (Placed rect : row) {
-				graphics.text(font, rect.text(), rect.left() + ControlsRows.PADDING, rect.top(), WHITE, true);
-			}
-		}
+		draw(graphics, font, rows);
 		if (listed()) {
 			drawList(graphics, font, top(rows.size(), font, graphics.guiHeight(), raised()));
 		}
