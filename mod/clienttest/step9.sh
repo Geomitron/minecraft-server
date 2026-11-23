@@ -2835,7 +2835,9 @@ single_shot() {
 	echo "  $1-$2x$3: blocks $(val 1 "screenbox $4 $5") | line $(val 1 modebox)" >> /out/checks.log
 	drv 1 "window 854 480 2" "wait 20" > /dev/null
 }
-drv 1 "edit -62 -60 -33 -48 -59 -29 minecraft:air" "cmd item replace entity @s hotbar.3 with minecraft:stone 64" \
+# The flat world's animals would push Planner1 off the aim during the shots' waits, so they're killed first.
+drv 1 "$area_clear" "edit -62 -60 -33 -48 -59 -29 minecraft:air" \
+	"cmd item replace entity @s hotbar.3 with minecraft:stone 64" \
 	"cmd item replace entity @s hotbar.4 with minecraft:oak_stairs 64" \
 	"cmd item replace entity @s hotbar.5 with minecraft:chest 64" \
 	"cmd item replace entity @s hotbar.6 with minecraft:oak_slab 64" \
