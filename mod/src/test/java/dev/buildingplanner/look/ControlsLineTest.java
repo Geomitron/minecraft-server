@@ -96,6 +96,8 @@ class ControlsLineTest {
 	void afterTheFirstClickTheRowsPasteWithItsCount() {
 		assertEquals("Zoop: [Left-click: paste 4 copies][Right-click: cancel]",
 			copy(state(CopyMode.ZOOP, false, 4, true, null), DEFAULT));
+		assertEquals("Zoop: [Left-click: paste 1 copy][Right-click: cancel]",
+			copy(state(CopyMode.ZOOP, false, 1, true, null), DEFAULT));
 		assertEquals("Vertical: [Left-click: paste 1 copy][Right-click: cancel]",
 			copy(state(CopyMode.VERTICAL, true, 1, false, null), DEFAULT));
 	}
@@ -111,6 +113,10 @@ class ControlsLineTest {
 		// A zoop's first click still fixes the row while the copy is red, so it stays, after the reason.
 		assertEquals("Zoop: [Can't paste: part of the copy is outside the world][Left-click: set the start]" + COPY_END,
 			copy(state(CopyMode.ZOOP, false, 0, false, Refusal.BUILD_HEIGHT), DEFAULT));
+		assertEquals("Zoop, locked: [Can't paste: part of the copy is outside the world][Left-click: set the start]"
+			+ NUDGES + LOCKED_END, copy(state(CopyMode.ZOOP, true, 0, false, Refusal.WORLD_BORDER), DEFAULT));
+		assertEquals("Vertical: [Can't paste: too many blocks][Right-click: cancel]",
+			copy(state(CopyMode.VERTICAL, true, 6, false, Refusal.TOO_MANY_BLOCKS), DEFAULT));
 		assertEquals("Vertical, locked: [Can't paste: too many blocks][Left-click: set the start]" + NUDGES + LOCKED_END,
 			copy(state(CopyMode.VERTICAL, true, 0, false, Refusal.TOO_MANY_BLOCKS), DEFAULT));
 	}
@@ -204,6 +210,12 @@ class ControlsLineTest {
 	void theOtherBoxesLines() {
 		assertEquals(List.of("Copy: [Left-click: set the first corner][Right-click: cancel]"),
 			box("COPY", 0, null, null));
+		assertEquals(List.of("Copy: [Left-click: set the opposite corner][Right-click: cancel][12 × 1 × 8]"),
+			box("COPY", 1, new int[] {12, 1, 8}, null));
+		assertEquals(List.of("Copy: [Left-click: set the height][Right-click: cancel][12 × 5 × 8]"),
+			box("COPY", 2, new int[] {12, 5, 8}, null));
+		assertEquals(List.of("Material list: [Left-click: set the first corner][Right-click: cancel]"),
+			box("MATERIAL_LIST", 0, null, null));
 		assertEquals(List.of("Part of the box is too far away to read. Move closer.",
 			"Material list: [Left-click: set the opposite corner][Right-click: cancel][3 × 1 × 2]"),
 			box("MATERIAL_LIST", 1, new int[] {3, 1, 2}, BoxCorners.Limit.NOT_LOADED));
@@ -256,6 +268,8 @@ class ControlsLineTest {
 			+ "[Right-click: clear]"), aim(new AimState(true, false, 0, false), DEFAULT));
 		assertEquals(List.of("Delete, Aim: [Hold Left-click: erasing 50%][Hold Left Control: mark][R: Delete mode]"
 			+ "[Right-click: clear]"), aim(new AimState(true, false, 50, false), DEFAULT));
+		assertEquals(List.of("Delete, Aim: [Hold Left-click: erasing 60%][Hold Left Control: mark][R: Delete mode]"
+			+ "[Right-click: clear]"), aim(new AimState(true, false, 60, false), DEFAULT));
 		assertEquals(List.of("Delete, Aim: [Hold Left-click: erasing 95%][Hold Left Control: mark][R: Delete mode]"
 			+ "[Right-click: clear]"), aim(new AimState(true, false, 95, false), DEFAULT));
 	}
@@ -411,6 +425,8 @@ class ControlsLineTest {
 			single(new SingleState(CopyMode.ZOOP, false, 12, false, STAIRS), DEFAULT));
 		assertEquals("Zoop: [Right-click: place 12 blocks]" + HOLD + "[Left-click: cancel]",
 			single(new SingleState(CopyMode.ZOOP, true, 12, false, STAIRS), DEFAULT));
+		assertEquals("Zoop: [Right-click: place 1 block]" + HOLD + "[Left-click: cancel]",
+			single(new SingleState(CopyMode.ZOOP, false, 1, false, STAIRS), DEFAULT));
 		assertEquals("Vertical: [Right-click: place 1 block]" + HOLD + "[Left-click: cancel]",
 			single(new SingleState(CopyMode.VERTICAL, false, 1, false, STAIRS), DEFAULT));
 	}
