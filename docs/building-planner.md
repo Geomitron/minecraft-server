@@ -661,55 +661,61 @@ since the hooks act only on the game's own clicks and wheel.
 
 While a mode is on, with no screen open and the HUD shown (not hidden with F1), a line of its controls shows on screen
 (`ModeHud`, drawn through `HudElementRegistry`), centred 58 above the screen's bottom, where Effortless Building draws
-its own line during a shape (`RenderHandler.renderSubtitle`), in the same words for the clicks and the same colours:
-white, with each action in dark aqua. The texts, as Geo approved them:
+its own line during a shape (`RenderHandler.renderSubtitle`), above the hotbar. Each control is a rectangle of its
+own, "key: action", with the key in white and the action in dark aqua, Effortless Building's colours (Geo's choice,
+inbox request 1155). The line's label, its mode and state ("Delete:", "Locked:", "Zoop, locked:"), goes first in a
+rectangle of its own, in white; a reason a control can't act ("Can't paste: too many blocks") is a rectangle of its
+own in red, in that control's place; and a box's size ("12 × 5 × 8") is the last rectangle, in white. A warning above
+the line ("Too many blocks") is a line of one rectangle, in red. Below, each line is written with its label first and
+each other rectangle in [ ], as Geo wrote the Delete box's line: "Delete: [Left-click: set the first corner][R: Delete
+mode][Right-click: cancel]". These texts follow that form, for Geo's review with the build's screenshots:
 
-- a box for Copy: "Copy: Left-click to set the first corner, Right-click to cancel", then "the opposite corner", then
-  "the height", followed by the box's size ("12 × 5 × 8");
+- a box for Copy: "Copy: [Left-click: set the first corner][Right-click: cancel]", then "set the opposite corner", then
+  "set the height", each followed by the box's size: "Copy: [Left-click: set the opposite corner][Right-click:
+  cancel][12 × 1 × 8]";
 - a box for the material list: the same, starting "Material list:".
 
-A box for Delete has the same line as Copy's, starting "Delete:", with "R for Aim" before the right click (see
-"Delete by aim"). The copy at the aim's line names its mode and its
-keys, as the player has them bound. Geo approved these lines as written (inbox request 972, revisions 1 and 2).
+A box for Delete has the same line as Copy's, starting "Delete:", with "[R: Delete mode]" before the right click (see
+"Delete by aim"). The copy at the aim's line names its mode and its keys, as the player has them bound.
 
-The game's texts use the fewest words that stay clear, and one name for each action, as in Geo's edits: "Too many blocks", the panel's column headings "All", "Hold" and "Need", and "Arrow keys + Page Up/Down to nudge", where "nudge" names what all six keys do.
+The game's texts use the fewest words that stay clear, and one name for each action, as in Geo's edits: "Too many blocks", the panel's column headings "All", "Hold" and "Need", and "[Arrow keys + Page Up/Down: nudge]", where "nudge" names what all six keys do. R's control names the mode it changes, "Zoop mode", the key's name being "Change Zoop or Delete mode".
 
-- Single, following the aim: "Left-click to paste, Scroll to turn, Middle-click to mirror, H to lock, R for Zoop,
-  Right-click to close";
-- locked: "Locked: Left-click to paste, Arrow keys + Page Up/Down to nudge, Scroll to turn, Middle-click to mirror, H to
-  unlock, R for Zoop, Right-click to close", since R still changes a locked copy's mode;
-- Zoop before its first click: "Zoop: Left-click to set the start, Scroll to turn, Middle-click to mirror, H to lock,
-  R for Vertical, Right-click to close", and Vertical the same, starting "Vertical:" and with "R for Single"; locked,
-  it starts "Zoop, locked:" and goes on as the locked line, with "Left-click to set the start" and "R for Vertical";
-- Zoop or Vertical after its first click: "Zoop: Left-click to paste 4 copies, Right-click to cancel", with the row's
-  count ("1 copy" for one), locked or not; R does nothing with the row fixed, so it has no "R for";
-- after the player's first paste in the dimension, "Hold Left Control to line up" goes after "Middle-click to mirror"
+- Single, following the aim: "[Left-click: paste][Scroll: turn][Middle-click: mirror][H: lock][R: Zoop
+  mode][Right-click: close]";
+- locked: "Locked: [Left-click: paste][Arrow keys + Page Up/Down: nudge][Scroll: turn][Middle-click: mirror][H:
+  unlock][R: Zoop mode][Right-click: close]", since R still changes a locked copy's mode;
+- Zoop before its first click: "Zoop: [Left-click: set the start][Scroll: turn][Middle-click: mirror][H: lock][R: Zoop
+  mode][Right-click: close]", and Vertical the same, starting "Vertical:"; locked, it starts "Zoop, locked:" and goes
+  on as the locked line, with "[Left-click: set the start]";
+- Zoop or Vertical after its first click: "Zoop: [Left-click: paste 4 copies][Right-click: cancel]", with the row's
+  count ("paste 1 copy" for one), locked or not; R does nothing with the row fixed, so it has no "[R: Zoop mode]";
+- after the player's first paste in the dimension, "[Hold Left Control: line up]" goes after "[Middle-click: mirror]"
   in the lines of a copy that follows the aim. A locked copy doesn't line up, so no locked line has it;
-- while the copy is red, "Left-click to paste" (or the row's paste) gives way to the reason, in red: "Can't paste: part
-  of the copy is outside the world" (the build height or the border) or "Can't paste: too many blocks". In Zoop and
-  Vertical before the first click the reason goes in the same place, before "Left-click to set the start", which stays
-  since that click still fixes the row: "Zoop: Can't paste: too many blocks, Left-click to set the start, Scroll to
-  turn, ...".
+- while the copy is red, "[Left-click: paste]" (or the row's paste) gives way to the reason, in red: "[Can't paste:
+  part of the copy is outside the world]" (the build height or the border) or "[Can't paste: too many blocks]". In Zoop
+  and Vertical before the first click the reason goes in the same place, before "[Left-click: set the start]", which
+  stays since that click still fixes the row: "Zoop: [Can't paste: too many blocks][Left-click: set the start][Scroll:
+  turn]...".
 
-Each key goes by its name as Controls shows it ("H", "Page Up", "Left Control"). The six nudge keys make one phrase,
-"<keys> to nudge": the four along the ground show as "Arrow keys" while they're on Up, Down, Left and Right in that
-order, and otherwise by their names one by one, forward, back, left and right ("I/Down Arrow/Left Arrow/Right Arrow");
-the two up and down show as one name and the second name, which drops the first word the two names share ("Page
-Up/Down", "Keypad 8/2"), or both names in full when they share none ("U/J"). The two parts are joined with " + "
-("Arrow keys + Page Up/Down to nudge", "I/J/U/O + Y/N to nudge"). A key with no key bound leaves its part out, and the
-phrase goes when all six are unbound. The clicks and the wheel keep Effortless Building's words. The line is a pure function of the copy's state and the keys'
-names (`ControlsLine`), as a box's lines are.
+Each key goes by its name as Controls shows it ("H", "Page Up", "Left Control"), and a key held down as "Hold" and its
+name ("Hold Left Control"). The six nudge keys make one control, "<keys>: nudge": the four along the ground show as
+"Arrow keys" while they're on Up, Down, Left and Right in that order, and otherwise by their names one by one, forward,
+back, left and right ("I/Down Arrow/Left Arrow/Right Arrow"); the two up and down show as one name and the second
+name, which drops the first word the two names share ("Page Up/Down", "Keypad 8/2"), or both names in full when they
+share none ("U/J"). The two parts are joined with " + " ("[Arrow keys + Page Up/Down: nudge]", "[I/J/U/O + Y/N:
+nudge]"). A key with no key bound leaves its control out, and the nudges' control goes when all six are unbound. The
+clicks and the wheel keep Effortless Building's names for them. The line is a pure function of the copy's state and the
+keys' names (`ControlsLine`), as a box's lines are.
 
-A line too wide for the screen wraps onto a second line above it, breaking only at spaces outside the box's size, which
-goes after the last word that leaves it room, or alone on the line below. Effortless Building's own line during its
-shapes stays as it is.
-
-Each wrapped line sits on a dark see-through background, black at 0.5 opacity, the game's chat background at its default
-opacity, as wide as that line's text plus 2 pixels at each side and one line high, so white words stay readable over
-light ghost blocks (white wool, glowstone, snow). `ModeHud` fills it with `GuiGraphicsExtractor.fill` before drawing the
-text. The game's "Text Background" accessibility setting ("Chat" or "Everywhere") doesn't change it: the setting works
-only through `Options.getBackgroundColor`, which the game's own text (the action bar, subtitles, the player list) calls
-and the controls line doesn't, so the background is always there at that opacity.
+Each rectangle is its text with 2 pixels more at each side, one line high, on a dark see-through background, black at
+0.5 opacity, the game's chat background at its default opacity, so white words stay readable over light ghost blocks
+(white wool, glowstone, snow); a gap of 4 separates the rectangles in a row (`ControlsRows`). Each row is centred. A
+line too wide for the screen, less 4 at each side, goes on in a row below, 2 below the row above, moving whole
+rectangles, never splitting one; the last row starts 58 above the screen's bottom. Effortless Building's own line during
+its shapes stays as it is. `ModeHud` fills every background with `GuiGraphicsExtractor.fill` before drawing the text.
+The game's "Text Background" accessibility setting ("Chat" or "Everywhere") doesn't change it: the setting works only
+through `Options.getBackgroundColor`, which the game's own text (the action bar, subtitles, the player list) calls and
+the controls line doesn't, so the background is always there at that opacity.
 
 ### Boxes for Copy and the material list
 
@@ -834,16 +840,18 @@ Q7 A); an undo brings the ghost blocks back unmarked. A right click clears the m
 
 **Controls line.** Aim's line shows as the other mouse modes' lines do (see "Building Planner's mouse modes"), with
 the keys as the player has them bound, and names only the controls that work at that moment (`ControlsLine.deleteAim`);
-a key with no key bound is left out, as in the copy's lines. These texts are proposed, for Geo's review with the
-build's screenshots:
+a key with no key bound is left out, as in the copy's lines. R's control names the mode it changes, "Delete mode". A
+Delete box's line is Geo's wording (inbox request 1155); the others follow it, for Geo's review with the build's
+screenshots:
 
-- a Delete box's lines name R before the right click: "Delete: Left-click to set the first corner, R for Aim,
-  Right-click to cancel", then "the opposite corner" and "the height", as Copy's box goes on;
-- Aim with no marks: "Delete, Aim: Hold Left Control to mark, R for Box, Right-click to close";
-- Aim with marks: "Delete, Aim: Hold Left-click to erase, Hold Left Control to mark, R for Box, Right-click to clear";
-- during a sweep that unmarks, "Hold Left Control to unmark" in place of "Hold Left Control to mark";
-- while the left button is held to erase, its progress in place of "Hold Left-click to erase", as an action: "Erasing
-  60%", in steps of 5%, from "Erasing 0%" at the press to "Erasing 95%" at the 19th tick;
+- a Delete box's lines name R before the right click: "Delete: [Left-click: set the first corner][R: Delete
+  mode][Right-click: cancel]", then "set the opposite corner" and "set the height", each followed by the box's size, as
+  Copy's box goes on;
+- Aim with no marks: "Delete, Aim: [Hold Left Control: mark][R: Delete mode][Right-click: close]";
+- Aim with marks: "Delete, Aim: [Hold Left-click: erase][Hold Left Control: mark][R: Delete mode][Right-click: clear]";
+- during a sweep that unmarks, "[Hold Left Control: unmark]" in place of "[Hold Left Control: mark]";
+- while the left button is held to erase, its progress as the action of "[Hold Left-click: erase]": "[Hold Left-click:
+  erasing 60%]", in steps of 5%, from "erasing 0%" at the press to "erasing 95%" at the 19th tick;
 - once the marks reach the cap, the warning line "Too many blocks" above the controls, as for a box.
 
 Satisfactory's dismantle, from the official wiki's [Build Gun](https://satisfactory.wiki.gg/wiki/Build_Gun) and
@@ -1328,44 +1336,44 @@ Effortless Building's own preview skips (E30; 1108 Q1 A); the box still shows on
 is fixed.
 
 **Controls line.** While the block's controls are active, with no screen open and the HUD shown, a line of them
-shows where the mouse modes' lines show, in the same look and with the same background (`ModeHud`,
-`ControlsLine.single`), with the keys as the player has them bound (980 Q8 A). It names only the controls that work at
-that moment. These texts are proposed, for Geo's review with the build's screenshots:
+shows where the mouse modes' lines show, in the same rectangles (`ModeHud`, `ControlsLine.single`), with the keys as
+the player has them bound (980 Q8 A). It names only the controls that work at that moment. These texts follow Geo's
+form for the controls lines (inbox request 1155), for Geo's review with the build's screenshots:
 
-- following the aim: "Right-click to place, Left-click to erase, Hold Left Control to turn or flip, H to lock, R for
-  Zoop";
-- while Left Control is held, "Scroll to turn, Middle-click to flip" in place of "Hold Left Control to turn or flip";
-  for a block that only turns, "Hold Left Control to turn" and "Scroll to turn"; for one that only flips, "Hold Left
-  Control to flip" and "Middle-click to flip"; for one that does neither, no part;
-- locked: "Locked: Right-click to place, Arrow keys + Page Up/Down to nudge, Left-click to erase, Hold Left Control to
-  turn or flip, H to unlock, R for Zoop";
-- Zoop before its first click: "Zoop: Right-click to set the start, Left-click to erase, Hold Left Control to turn or
-  flip, H to lock, R for Vertical", and Vertical the same, starting "Vertical:" and with "R for Single"; locked, it
-  starts "Zoop, locked:" and has the nudges and "H to unlock", as the locked line does;
-- a row after its first click: "Zoop: Right-click to place 12 blocks, Hold Left Control to turn or flip, Left-click
-  to cancel", with the row's count ("place 1 block" for one), locked or not;
-- once the block is turned or flipped, ", turned" after the mode and the lock in the line's start, or "Turned:" alone
-  in Single: "Turned: Right-click to place, ...", "Zoop, locked, turned: Right-click to set the start, ...";
-- while the block or the row is red, the reason in red, "Can't place: outside the world", in place of "Right-click to
-  place" or the row's place; in Zoop and Vertical before the first click, before "Right-click to set the start".
+- following the aim: "[Right-click: place][Left-click: erase][Hold Left Control: turn or flip][H: lock][R: Zoop
+  mode]";
+- while Left Control is held, "[Scroll: turn][Middle-click: flip]" in place of "[Hold Left Control: turn or flip]";
+  for a block that only turns, "[Hold Left Control: turn]" and "[Scroll: turn]"; for one that only flips, "[Hold Left
+  Control: flip]" and "[Middle-click: flip]"; for one that does neither, no control;
+- locked: "Locked: [Right-click: place][Arrow keys + Page Up/Down: nudge][Left-click: erase][Hold Left Control: turn
+  or flip][H: unlock][R: Zoop mode]";
+- Zoop before its first click: "Zoop: [Right-click: set the start][Left-click: erase][Hold Left Control: turn or
+  flip][H: lock][R: Zoop mode]", and Vertical the same, starting "Vertical:"; locked, it starts "Zoop, locked:" and has
+  the nudges and "[H: unlock]", as the locked line does;
+- a row after its first click: "Zoop: [Right-click: place 12 blocks][Hold Left Control: turn or flip][Left-click:
+  cancel]", with the row's count ("place 1 block" for one), locked or not;
+- once the block is turned or flipped, ", turned" after the mode and the lock in the line's label, or "Turned:" alone
+  in Single: "Turned: [Right-click: place]...", "Zoop, locked, turned: [Right-click: set the start]...";
+- while the block or the row is red, the reason in red, "[Can't place: outside the world]", in place of
+  "[Right-click: place]" or the row's place; in Zoop and Vertical before the first click, before "[Right-click: set the
+  start]".
 
 In Effortless Building's other modes but Disable (whose line is below), while the turning controls are active and
-the block in hand turns or flips, a
-line of the turning controls, the turning line, shows in the same place, look and background (`ControlsLine.turning`),
-with the sprint key as the player has it bound, in Single's line's phrases for the same actions. It names only the
-turning controls, since Effortless Building's clicks in those modes are its own. These texts are proposed, for Geo's
-review with the build's screenshots:
+the block in hand turns or flips, a line of the turning controls, the turning line, shows in the same place and
+rectangles (`ControlsLine.turning`), with the sprint key as the player has it bound, in Single's line's words for the
+same controls. It names only the turning controls, since Effortless Building's clicks in those modes are its own.
+These texts follow Geo's form, for Geo's review with the build's screenshots:
 
-- "Hold Left Control to turn or flip", or "Hold Left Control to turn" or "Hold Left Control to flip" as in Single, and
+- "[Hold Left Control: turn or flip]", or "[Hold Left Control: turn]" or "[Hold Left Control: flip]" as in Single, and
   no line for a block that does neither or while the sprint key has no key;
-- while Left Control is held, "Scroll to turn, Middle-click to flip", or the one of them the block has;
-- once the block is turned or flipped, "Turned:" before either: "Turned: Hold Left Control to turn or flip".
+- while Left Control is held, "[Scroll: turn][Middle-click: flip]", or the one of them the block has;
+- once the block is turned or flipped, "Turned:" before either: "Turned: [Hold Left Control: turn or flip]".
 
 During a shape drawn with the place click, Effortless Building draws its own line, "Left-click to cancel, Right-click
 to place", 58 above the screen's bottom (`RenderHandler.renderSubtitle`), and the shape's block count in the action
 bar just above it (`RenderHandler.updateFeedback`, which calls `sendOverlayMessage`). The game draws the action bar's
 text from 72 to 63 above the screen's bottom (`Hud.extractOverlayMessage`), so while Effortless Building's line shows,
-`ModeHud` draws the turning line above the action bar, its last line ending 2 pixels above it, and both of Effortless
+`ModeHud` draws the turning line above the action bar, its last row ending 2 pixels above it, and both of Effortless
 Building's texts stay readable. A shape drawn with the break click has no turning line, since its turning controls
 aren't active.
 
@@ -1464,19 +1472,19 @@ shows no block count and plays no sound (`RenderHandler.updateFeedback`). Nothin
 or where the block can't go at all (`BlockPlaceContext.canPlace`). Effortless Building's mirror and array draw no
 copies while Disable's preview shows.
 
-**Controls line.** In Disable, while the turning controls are active, a line of them shows in the place, look and
-background of the turning line (`ControlsLine.disable`), with the sprint key as the player has it bound, in the
-turning line's phrases and Single's line's "Right-click to place". These texts are proposed, for Geo's review with
-the build's screenshots:
+**Controls line.** In Disable, while the turning controls are active, a line of them shows in the place and
+rectangles of the turning line (`ControlsLine.disable`), with the sprint key as the player has it bound, in the
+turning line's words and Single's line's "[Right-click: place]". These texts follow Geo's form for the controls lines
+(inbox request 1155), for Geo's review with the build's screenshots:
 
-- without Left Control, the turning line: "Hold Left Control to turn or flip", or "Hold Left Control to turn" or
-  "Hold Left Control to flip", with no "Turned:", since a right click then places as in Minecraft (1033 Q2 A); no
+- without Left Control, the turning line: "[Hold Left Control: turn or flip]", or "[Hold Left Control: turn]" or
+  "[Hold Left Control: flip]", with no "Turned:", since a right click then places as in Minecraft (1033 Q2 A); no
   line while the block a right click would place hangs on the block behind it, as Minecraft's rule for that block
   requires (a ladder; a torch, sign, banner, button, lever or coral fan on a wall; a tripwire hook; cocoa;
   `DisablePreview.hangs`), though Left Control still turns it (1037 Q1 B);
-- while Left Control is held, "Right-click to place, Scroll to turn, Middle-click to flip", or with the one of "Scroll
-  to turn" and "Middle-click to flip" the block has, and "Turned:" before it once the block is turned or flipped;
-- while the turned block can't stay, the reason in red, "Can't place here", in place of "Right-click to place".
+- while Left Control is held, "[Right-click: place][Scroll: turn][Middle-click: flip]", or with the one of "[Scroll:
+  turn]" and "[Middle-click: flip]" the block has, and "Turned:" before it once the block is turned or flipped;
+- while the turned block can't stay, the reason in red, "[Can't place here]", in place of "[Right-click: place]".
 
 **Freecam.** Minecraft aims from Freecam's camera while it's on (`Minecraft.pick` traces from `getCameraEntity`), so
 the preview goes where the camera aims. With Freecam's "Allow interaction" and "Player control" off, the click
@@ -1906,8 +1914,8 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   raw key name;
   each is shot, Controls at 854 by 480 and 1920 by 1080, GUI scale 2, and at 1920 by 1080, GUI scale 4. The driver's
   own Page Up key, under a heading of its own, is unbound first, so Controls shows no clash.
-- The Copy button starts a box: the controls line shows "Copy: Left-click to set the first corner, Right-click to
-  cancel", a right click and a use of the place click places no block, and Effortless Building's preview and mode are
+- The Copy button starts a box: the controls line shows "Copy: [Left-click: set the first corner][Right-click:
+  cancel]", a right click and a use of the place click places no block, and Effortless Building's preview and mode are
   as they were. Aiming at a block's top face, the box's first corner is the space above it; aiming at its side, the
   block itself. The box follows the aim between clicks and the list under the crosshair counts its blocks. The third
   click makes the copy, with its message, places no real block, doesn't reach the other player, and leaves
@@ -1916,7 +1924,7 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   beside the wall, the middle of the side that touches it on the block beside the face; under a floating block's bottom
   face, it hangs below it. On the floor and against the wall it's shot at 854 by 480 and 1920 by 1080, GUI scale 2.
 - At 854 by 480, GUI scale 2, the list counts a small box's blocks, most numerous first, and the material list box's
-  controls line wraps onto two lines with the box's size whole. A box of 144 by 3 by 144 (as wide as the chunks the dev
+  controls line wraps onto two rows of whole rectangles, the box's size last. A box of 144 by 3 by 144 (as wide as the chunks the dev
   server's view distance of 6 loads around the player allows) over a floor of 40 kinds of block shows the list in rows
   of 10 that end inside the screen and above the controls line, with a "+11" cell; it's shot. A break shape drawn in
   Line mode over real grass has an empty break list (E8). A box past the side limit, or over a chunk not loaded, draws
@@ -1964,18 +1972,22 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   the row is blue. The copy is shot blue on the grass, yellow over the ghost blocks, red at the border, and the red row
   over the cap, each at 854 by 480 and 1920 by 1080, GUI scale 2.
 - The controls lines, each checked word for word (the driver's `modehud`): Single before the first paste, and with
-  "Hold Left Control to line up" after it; locked after a paste, with the nudge keys, "R for Zoop" and no "line up";
+  "[Hold Left Control: line up]" after it; locked after a paste, with the nudges, "[R: Zoop mode]" and no "line up";
   locked and red below the build height and at the border, with the reason in place of the paste, and the paste back
   once it's blue; R on that locked red copy, which makes it a red Zoop before its first click, with the reason before
-  "Left-click to set the start", and R twice more back to Single; Zoop and Vertical before the first click, and Zoop
-  locked; a fixed row of 1, 4, 10 and 5 copies; the red row over the cap, with "Can't paste: too many blocks"; and each
+  "[Left-click: set the start]", and R twice more back to Single; Zoop and Vertical before the first click, and Zoop
+  locked; a fixed row of 1, 4, 10 and 5 copies; the red row over the cap, with "[Can't paste: too many blocks]"; and each
   box's line, Delete's among them. With the lock key bound to K, the mode key to G, the nudge forward to I and the
   sprint key to Right Control (the driver's `bindkey`), the line names K, G and Right Control, K locks the copy, and
-  the locked line names the four nudges one by one beside "Page Up/Down", K and G; with the keys back, it names H and R again. Each line is
-  shot at 1920 by 1080, GUI scale 4, the longest (locked and red) at 854 by 480 and 1920 by 1080, GUI scale 2 too, and
-  Single's over a floor of ghost white wool, birch planks and glowstone at GUI scales 2 and 4, with the lines as they
-  wrap and their window box in the log (the driver's `modewrap` and `modebox`), the box being the text's, without the
-  background's 2 pixels at each side.
+  the locked line names the four nudges one by one beside "Page Up/Down", K and G; with the keys back, it names H and R
+  again. Each line is shot at noon at 1920 by 1080, GUI scale 4, the longest (the locked copy, and locked and red) at
+  854 by 480, GUI scale 2, locked and red at 1920 by 1080, GUI scale 2, too, and Single's over a floor of ghost white
+  wool, birch planks and glowstone at GUI scales 2 and 4, with the lines as they wrap, every rectangle's window box, and the union of their backgrounds in the log (the driver's `modewrap`, `moderects` and
+  `modebox`). In each shot every rectangle is one line of text high with 2 GUI pixels of background at each side, the
+  rectangles in a row are 4 GUI pixels apart, the rows 11 apart, and each row is centred and inside the screen less 4
+  GUI pixels at each side; at 854 by 480, GUI scale 2, the locked line wraps onto a second row. The reason's
+  rectangle on the locked red copy and on Disable's red line, and the warning's on a box too large, are red, and the
+  others white (the driver's `modecolours`).
 - A right click puts the copy away, and the radial menu's Paste button brings it back to the aim, turned and mirrored
   as it was. Choosing a mode in the radial menu, or the Block mix button, puts it away too.
 - A box around a real house with no ghost blocks copies its real blocks. With a ghost gold block added inside the house
@@ -2069,11 +2081,12 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   erases nothing; held 20 ticks it sends one edit, which takes the door's upper half too and which Planner2 sees glow
   with Planner1's name, and says "Erased 11 ghost blocks."; holding on erases nothing more, though a sweep marks the
   top row meanwhile. Aim stays on with no marks, and one Ctrl+Z brings the blocks back unmarked. The lines, each checked
-  word for word (the driver's `modehud`): a Delete box's three lines with "R for Aim", Aim with no marks and with marks,
-  an unmarking sweep, "Erasing 50%" at the hold's 10th tick (`await erasing`), and the cap's "Too many blocks" with
+  word for word (the driver's `modehud`): a Delete box's three lines with "[R: Delete mode]", Aim with no marks and with marks,
+  an unmarking sweep, "[Hold Left-click: erasing 50%]" at the hold's 10th tick (`await erasing`), and the cap's "Too many blocks" with
   200,000 marks; with the mode key bound to G and the sprint key to Right Control, the lines name G and Right Control.
-  Each line is shot at 1920 by 1080, GUI scale 4, the erase's message with it, and the marked wall with Aim's line at
-  854 by 480 and 1920 by 1080, GUI scale 2.
+  Each line is shot at 1920 by 1080, GUI scale 4, the erase's message with it, and the marked wall with Aim's line and
+  a Delete box with its size at 854 by 480 and 1920 by 1080, GUI scale 2, each with its rectangles checked as the
+  copy's are.
 - One ghost block, locking and nudging (step 14): in Single mode with stone bricks, H locks the block beside the aimed
   face, and with Planner1 flown 5 blocks away and aiming elsewhere, Effortless Building's preview draws it there. With
   Effortless Building's array of 2 copies one block apart upward, the preview draws all three. Facing north, Up moves it
@@ -2183,7 +2196,7 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   G, the nudge forward on I and the sprint key on Right Control, the lines name them. No line shows with a stick in
   hand or with the copy at the aim (the copy's line shows), and in Line mode only the turning line shows; F1 hides it. Each line is shot at 1920 by
   1080, GUI scale 4, the locked line at 854 by 480 and 1920 by 1080, GUI scale 2, and a yellow row crossing ghost
-  blocks at 1920 by 1080, GUI scale 2.
+  blocks and a red one across the world border at 1920 by 1080, GUI scale 2.
 
 `step10.sh`, hold to repeat, editing from Freecam and the settings Building Planner changes once, with Freecam 1.5.1 (Modrinth version
 `lwrkvqym`, the pack's) on both clients. The driver counts the ticks each mouse button was down and
@@ -2315,15 +2328,16 @@ only then.
 
 The controls lines have unit tests as a pure function too. `ControlsLineTest` reads each line in English from
 `en_us.json`: Single before and after the first paste, locked with and without a paste to line up with (no "line up",
-and "R for"), Zoop, Vertical, Zoop locked and Vertical locked before the first click, a fixed row of 4 and of 1 (no "R
-for"), each red reason in place of the paste (and a red Zoop or Vertical, locked or not, giving its reason before "set
-the start"), the reason as a warning and the actions as actions, keys a player rebound, the nudge keys off the arrow
+and "R: Zoop mode"), Zoop, Vertical, Zoop locked and Vertical locked before the first click, a fixed row of 4 and of 1 (no "R:
+Zoop mode"), each red reason in place of the paste (and a red Zoop or Vertical, locked or not, giving its reason before "set
+the start"), each control as a rectangle of its own after the label, the reason as a warning and the actions as actions, a
+warning above the controls as a line of its own in red, keys a player rebound, the nudge keys off the arrow
 keys named one by one, the up and down keys named with their shared first word dropped ("Page Up/Down", "Keypad
 8/2") or in full ("U/J"), the nudge phrase with only one of its two parts, unbound keys left out and the phrase gone
 with all six unbound, and each box's lines, Delete's among them. `PayloadsTest` covers the
 Delete box's message writing 16,001 with digit grouping. For the new features (steps 13, 17, 19 and 20),
 `ControlsLineTest` also covers Aim's lines (no marks, marks, unmarking, the hold's progress in steps of 5%, the cap's
-warning) and the Delete box's "R for Aim", the turning line (each turn phrase, with Left Control held, "Turned:" with
+warning) and the Delete box's "R: Delete mode", the turning line (each turn phrase, with Left Control held, "Turned:" with
 and without it, the sprint key as a player rebound it, the actions as actions, and no line for a block that neither
 turns nor flips or with the sprint key unbound), Disable's lines (without Left Control and with no "Turned:", with
 it held, turned, each turn phrase, the red "Can't place here" as a warning, the actions as actions, the sprint key as a player rebound it, no line

@@ -9,27 +9,25 @@ import java.util.Locale;
 
 /**
  * The lines of a mouse mode's controls (see "Building Planner's mouse modes"), as texts from the language file with
- * the keys' names in them, worked out from the mode's state and the keys as the player has them bound. The game turns
- * them into its own components ({@code ModeHud}): white, with each action in dark aqua and a reason the copy can't be
- * pasted in red.
+ * the keys' names in them, worked out from the mode's state and the keys as the player has them bound. Each line is a
+ * row of rectangles: its label (the mode and its state, such as "Delete:"), if it has one, then each control as "key:
+ * action", a red reason in place of a control that can't act, and a box's size. The game turns them into its own
+ * components and lays the rectangles out ({@code ModeHud}, {@link ControlsRows}): white, with each action in dark aqua
+ * and each reason in red.
  */
 public final class ControlsLine {
-	private static final String BOX = "buildingplanner.ui.mode.box";
-	private static final String COPY = "buildingplanner.ui.mode.copy";
-	private static final String DELETE = "buildingplanner.ui.mode.delete";
-	private static final String TURN = "buildingplanner.ui.mode.turn";
-	private static final String SINGLE = "buildingplanner.ui.mode.single";
+	private static final String MODE = "buildingplanner.ui.mode";
+	private static final String BOX = MODE + ".box";
+	private static final String COPY = MODE + ".copy";
+	private static final String DELETE = MODE + ".delete";
+	private static final String TURN = MODE + ".turn";
+	private static final String SINGLE = MODE + ".single";
 
 	private ControlsLine() {
 	}
 
-	/** How a part of a line looks: as the line, as an action, or as a warning. */
-	public enum Look {
-		PLAIN, ACTION, WARNING
-	}
-
 	/** A part of a line. */
-	public sealed interface Text permits Translated, Literal, Joined {
+	public sealed interface Text permits Translated, Literal {
 	}
 
 	/** A text from the language file, with its arguments in its {@code %s} places. */
@@ -39,16 +37,35 @@ public final class ControlsLine {
 		}
 	}
 
-	/** A key's name as the game gives it. */
+	/** A key's name as the game gives it, or a number. */
 	public record Literal(String text) implements Text {
 	}
 
-	/** Parts separated by ", ". */
-	public record Joined(List<Text> parts) implements Text {
+	private static final Text LEFT = Translated.of(MODE + ".left_click", Look.PLAIN);
+	private static final Text RIGHT = Translated.of(MODE + ".right_click", Look.PLAIN);
+	private static final Text MIDDLE = Translated.of(MODE + ".middle_click", Look.PLAIN);
+	private static final Text SCROLL = Translated.of(MODE + ".scroll", Look.PLAIN);
+
+	/** How a part of a line looks: as the line, as an action, or as a warning. */
+	public enum Look {
+		PLAIN, ACTION, WARNING
 	}
 
-	/** A line of the controls, with the box's size at its end, which never breaks across lines, or null. */
-	public record Line(Text text, Text size) {
+	/**
+	 * A line of the controls: its label's rectangle, or null, then the other rectangles in order. A warning above the
+	 * controls ("Too many blocks") is a line of its label alone.
+	 */
+	public record Line(Text label, List<Text> rects) {
+		/** Every rectangle of the line, its label first. */
+		public List<Text> all() {
+			if (label == null) {
+				return rects;
+			}
+			List<Text> all = new ArrayList<>(rects.size() + 1);
+			all.add(label);
+			all.addAll(rects);
+			return all;
+		}
 	}
 
 	/**
@@ -89,25 +106,25 @@ public final class ControlsLine {
 			case 1 -> BOX + ".second";
 			default -> BOX + ".height";
 		};
-		List<Text> parts = new ArrayList<>(3);
-		parts.add(click(action(next)));
+		List<Text> rects = new ArrayList<>(4);
+		rects.add(hint(LEFT, next));
 		if (purpose.equals("DELETE") && mode != null) {
-			parts.add(modeFor(mode, DELETE + ".aim"));
+			rects.add(hint(new Literal(mode), MODE + ".delete_mode"));
 		}
-		parts.add(Translated.of(COPY + ".right", Look.PLAIN, action(BOX + ".cancel")));
-		Text controls = Translated.of(COPY + ".titled", Look.PLAIN,
-			Translated.of(BOX + "." + purpose.toLowerCase(Locale.ROOT), Look.PLAIN), new Joined(List.copyOf(parts)));
-		Text sides = size == null ? null : Translated.of(BOX + ".size", Look.PLAIN, new Literal(String.valueOf(size[0])),
-			new Literal(String.valueOf(size[1])), new Literal(String.valueOf(size[2])));
+		rects.add(hint(RIGHT, BOX + ".cancel"));
+		if (size != null) {
+			rects.add(Translated.of(BOX + ".size", Look.PLAIN, new Literal(String.valueOf(size[0])),
+				new Literal(String.valueOf(size[1])), new Literal(String.valueOf(size[2]))));
+		}
 		List<Line> lines = new ArrayList<>(2);
 		if (limit != null) {
 			String reason = switch (limit) {
 				case SIDE, TOO_MANY_BLOCKS -> BOX + ".too_large";
 				case NOT_LOADED -> BOX + ".not_loaded";
 			};
-			lines.add(new Line(Translated.of(reason, Look.WARNING), null));
+			lines.add(warning(reason));
 		}
-		lines.add(new Line(controls, sides));
+		lines.add(labelled(Translated.of(BOX + "." + purpose.toLowerCase(Locale.ROOT), Look.PLAIN), rects));
 		return lines;
 	}
 
@@ -118,28 +135,26 @@ public final class ControlsLine {
 	 * none closes Aim. A key with no key bound is left out.
 	 */
 	public static List<Line> deleteAim(AimState state, Keys keys) {
-		List<Text> parts = new ArrayList<>();
+		List<Text> rects = new ArrayList<>();
 		if (state.marked()) {
-			parts.add(state.erasing() >= 0
-				? Translated.of(DELETE + ".erasing", Look.ACTION, new Literal(String.valueOf(state.erasing())))
-				: Translated.of(DELETE + ".hold_click", Look.PLAIN, action(DELETE + ".erase")));
+			Text hold = Translated.of(MODE + ".hold", Look.PLAIN, LEFT);
+			rects.add(state.erasing() >= 0
+				? hint(hold, Translated.of(DELETE + ".erasing", Look.ACTION, new Literal(String.valueOf(state.erasing()))))
+				: hint(hold, DELETE + ".erase"));
 		}
 		if (keys.sprint() != null) {
-			parts.add(Translated.of(COPY + ".hold", Look.PLAIN, new Literal(keys.sprint()),
-				action(state.unmarking() ? DELETE + ".unmark" : DELETE + ".mark")));
+			rects.add(hint(held(keys.sprint()), state.unmarking() ? DELETE + ".unmark" : DELETE + ".mark"));
 		}
 		if (keys.mode() != null) {
-			parts.add(modeFor(keys.mode(), DELETE + ".box"));
+			rects.add(hint(new Literal(keys.mode()), MODE + ".delete_mode"));
 		}
-		parts.add(Translated.of(COPY + ".right", Look.PLAIN,
-			action(state.marked() ? DELETE + ".clear" : COPY + ".put_away")));
+		rects.add(hint(RIGHT, state.marked() ? DELETE + ".clear" : COPY + ".put_away"));
 		List<Line> lines = new ArrayList<>(2);
 		if (state.full()) {
-			lines.add(new Line(Translated.of(BOX + ".too_large", Look.WARNING), null));
+			lines.add(warning(BOX + ".too_large"));
 		}
-		lines.add(new Line(Translated.of(COPY + ".titled", Look.PLAIN,
-			Translated.of(DELETE + ".titled", Look.PLAIN, Translated.of(DELETE + ".aim", Look.PLAIN)),
-			new Joined(List.copyOf(parts))), null));
+		lines.add(labelled(Translated.of(DELETE + ".titled", Look.PLAIN, Translated.of(DELETE + ".aim", Look.PLAIN)),
+			rects));
 		return lines;
 	}
 
@@ -157,32 +172,33 @@ public final class ControlsLine {
 	 * while the sprint key has no key bound.
 	 */
 	public static Line turning(TurnState state, String sprint) {
-		List<Text> parts = turnParts(state, sprint);
-		return parts.isEmpty() ? null : titled(state.turned() ? Translated.of(TURN + ".turned", Look.PLAIN) : null, parts);
+		List<Text> rects = turnParts(state, sprint);
+		return rects.isEmpty() ? null
+			: labelled(state.turned() ? Translated.of(TURN + ".turned", Look.PLAIN) : null, rects);
 	}
 
 	/**
-	 * The turning line's parts: with the sprint key held, the wheel that turns and the middle click that flips, otherwise
-	 * the sprint key held to turn or flip, each only for a block that turns or flips; none for a block that does neither
-	 * or while the sprint key has no key bound.
+	 * The turning line's controls: with the sprint key held, the wheel that turns and the middle click that flips,
+	 * otherwise the sprint key held to turn or flip, each only for a block that turns or flips; none for a block that
+	 * does neither or while the sprint key has no key bound.
 	 */
 	private static List<Text> turnParts(TurnState state, String sprint) {
 		if (!state.turns() && !state.flips() || sprint == null) {
 			return List.of();
 		}
-		List<Text> parts = new ArrayList<>(2);
+		List<Text> rects = new ArrayList<>(2);
 		if (state.held()) {
 			if (state.turns()) {
-				parts.add(Translated.of(COPY + ".scroll", Look.PLAIN, action(COPY + ".turn")));
+				rects.add(hint(SCROLL, COPY + ".turn"));
 			}
 			if (state.flips()) {
-				parts.add(Translated.of(COPY + ".middle", Look.PLAIN, action(TURN + ".flip")));
+				rects.add(hint(MIDDLE, TURN + ".flip"));
 			}
 		} else {
 			String verb = !state.flips() ? COPY + ".turn" : !state.turns() ? TURN + ".flip" : TURN + ".turn_or_flip";
-			parts.add(Translated.of(COPY + ".hold", Look.PLAIN, new Literal(sprint), action(verb)));
+			rects.add(hint(held(sprint), verb));
 		}
-		return parts;
+		return rects;
 	}
 
 	/**
@@ -195,61 +211,50 @@ public final class ControlsLine {
 
 	/**
 	 * Single's line (see "One ghost block": "Controls line"). With a row fixed: the mode, the right click that places the
-	 * row with its count (or in red why it can't), the turning parts, and the left click that cancels the row, locked or
-	 * not. Otherwise: the mode, "Locked" or both, the right click (placing, or in red why it can't; in Zoop and Vertical
-	 * the reason if there is one, then setting the row's start), the nudge keys while it's locked, the left click that
-	 * erases, the turning parts, the lock key and the mode key. ", turned" follows the mode and the lock once the block
-	 * is turned or flipped, or "Turned" alone in Single. A key with no key bound is left out.
+	 * row with its count (or in red why it can't), the turning controls, and the left click that cancels the row, locked
+	 * or not. Otherwise: the mode, "Locked" or both, the right click (placing, or in red why it can't; in Zoop and
+	 * Vertical the reason if there is one, then setting the row's start), the nudge keys while it's locked, the left
+	 * click that erases, the turning controls, the lock key and the mode key. ", turned" follows the mode and the lock
+	 * once the block is turned or flipped, or "Turned" alone in Single. A key with no key bound is left out.
 	 */
 	public static Line single(SingleState state, Keys keys) {
 		List<Text> turning = turnParts(state.turn(), keys.sprint());
-		List<Text> parts = new ArrayList<>();
-		Text title;
+		List<Text> rects = new ArrayList<>();
 		if (state.row() > 0) {
-			title = modeName(state.mode());
-			parts.add(state.red() ? Translated.of(SINGLE + ".outside", Look.WARNING)
-				: Translated.of(COPY + ".right", Look.PLAIN, state.row() == 1
-					? Translated.of(SINGLE + ".place_row_one", Look.ACTION)
+			rects.add(state.red() ? reason(SINGLE + ".outside")
+				: hint(RIGHT, state.row() == 1 ? Translated.of(SINGLE + ".place_row_one", Look.ACTION)
 					: Translated.of(SINGLE + ".place_row", Look.ACTION, new Literal(String.valueOf(state.row())))));
-			parts.addAll(turning);
-			parts.add(click(action(COPY + ".cancel")));
-			return titled(turned(title, state.turn().turned()), parts);
-		}
-		if (state.locked()) {
-			Text locked = Translated.of(COPY + ".locked", Look.PLAIN);
-			title = state.mode() == CopyMode.SINGLE ? locked
-				: Translated.of(COPY + ".mode_locked", Look.PLAIN, modeName(state.mode()));
-		} else {
-			title = state.mode() == CopyMode.SINGLE ? null : modeName(state.mode());
+			rects.addAll(turning);
+			rects.add(hint(LEFT, COPY + ".cancel"));
+			return labelled(turned(modeName(state.mode()), state.turn().turned()), rects);
 		}
 		if (state.mode() != CopyMode.SINGLE) {
 			// The first click still fixes the row's start while the block is red, so it stays, after the reason.
 			if (state.red()) {
-				parts.add(Translated.of(SINGLE + ".outside", Look.WARNING));
+				rects.add(reason(SINGLE + ".outside"));
 			}
-			parts.add(Translated.of(COPY + ".right", Look.PLAIN, action(COPY + ".start")));
+			rects.add(hint(RIGHT, COPY + ".start"));
 		} else {
-			parts.add(state.red() ? Translated.of(SINGLE + ".outside", Look.WARNING)
-				: Translated.of(COPY + ".right", Look.PLAIN, action(TURN + ".place")));
+			rects.add(state.red() ? reason(SINGLE + ".outside") : hint(RIGHT, TURN + ".place"));
 		}
 		if (state.locked()) {
 			Text nudge = nudge(keys);
 			if (nudge != null) {
-				parts.add(key(nudge, COPY + ".nudge"));
+				rects.add(hint(nudge, COPY + ".nudge"));
 			}
 		}
-		parts.add(click(action(DELETE + ".erase")));
-		parts.addAll(turning);
+		rects.add(hint(LEFT, DELETE + ".erase"));
+		rects.addAll(turning);
 		if (keys.lock() != null) {
-			parts.add(key(new Literal(keys.lock()), state.locked() ? COPY + ".unlock" : COPY + ".lock"));
+			rects.add(hint(new Literal(keys.lock()), state.locked() ? COPY + ".unlock" : COPY + ".lock"));
 		}
 		if (keys.mode() != null) {
-			parts.add(modeFor(keys.mode(), modeKey(state.mode().next())));
+			rects.add(hint(new Literal(keys.mode()), MODE + ".zoop_mode"));
 		}
-		return titled(turned(title, state.turn().turned()), parts);
+		return labelled(turned(title(state.mode(), state.locked()), state.turn().turned()), rects);
 	}
 
-	/** The line's start with ", turned" after it once the block is turned or flipped, or "Turned" alone with none. */
+	/** The label's text with ", turned" after it once the block is turned or flipped, or "Turned" alone with none. */
 	private static Text turned(Text title, boolean turned) {
 		if (!turned) {
 			return title;
@@ -269,7 +274,7 @@ public final class ControlsLine {
 	 * Disable's line (see "Turning real blocks in Disable": "Controls line"): without the sprint key held, the turning
 	 * line with no "Turned:", since a right click then places as in Minecraft, and no line for a block that hangs on the
 	 * block behind it; with it held, the right click that places the turned block, or in red why it can't, then the
-	 * turning line's parts, after "Turned:" once the block is turned or flipped. Null as for the turning line.
+	 * turning line's controls, after "Turned:" once the block is turned or flipped. Null as for the turning line.
 	 */
 	public static Line disable(DisableState state, String sprint) {
 		TurnState turn = state.turn();
@@ -280,21 +285,10 @@ public final class ControlsLine {
 		if (turning == null) {
 			return null;
 		}
-		List<Text> parts = new ArrayList<>(3);
-		parts.add(state.stays() ? Translated.of(COPY + ".right", Look.PLAIN, action(TURN + ".place"))
-			: Translated.of(TURN + ".cant_place", Look.WARNING));
-		if (turn.turns()) {
-			parts.add(Translated.of(COPY + ".scroll", Look.PLAIN, action(COPY + ".turn")));
-		}
-		if (turn.flips()) {
-			parts.add(Translated.of(COPY + ".middle", Look.PLAIN, action(TURN + ".flip")));
-		}
-		return titled(turn.turned() ? Translated.of(TURN + ".turned", Look.PLAIN) : null, parts);
-	}
-
-	/** "R for Aim": the mode key, by its name, and the mode it switches to, as an action. */
-	private static Text modeFor(String key, String mode) {
-		return Translated.of(COPY + ".for", Look.PLAIN, new Literal(key), Translated.of(mode, Look.ACTION));
+		List<Text> rects = new ArrayList<>(3);
+		rects.add(state.stays() ? hint(RIGHT, TURN + ".place") : reason(TURN + ".cant_place"));
+		rects.addAll(turning.rects());
+		return new Line(turning.label(), List.copyOf(rects));
 	}
 
 	/**
@@ -306,51 +300,51 @@ public final class ControlsLine {
 	 * bound is left out.
 	 */
 	public static Line copy(CopyState state, Keys keys) {
-		List<Text> parts = new ArrayList<>();
-		Text title;
+		List<Text> rects = new ArrayList<>();
 		if (state.row() > 0) {
-			title = modeName(state.mode());
-			parts.add(state.refusal() != null ? refusal(state.refusal())
-				: click(state.row() == 1 ? Translated.of(COPY + ".paste_row_one", Look.ACTION)
+			rects.add(state.refusal() != null ? refusal(state.refusal())
+				: hint(LEFT, state.row() == 1 ? Translated.of(COPY + ".paste_row_one", Look.ACTION)
 					: Translated.of(COPY + ".paste_row", Look.ACTION, new Literal(String.valueOf(state.row())))));
-			parts.add(Translated.of(COPY + ".right", Look.PLAIN, action(COPY + ".cancel")));
-			return titled(title, parts);
-		}
-		if (state.locked()) {
-			Text locked = Translated.of(COPY + ".locked", Look.PLAIN);
-			title = state.mode() == CopyMode.SINGLE ? locked
-				: Translated.of(COPY + ".mode_locked", Look.PLAIN, modeName(state.mode()));
-		} else {
-			title = state.mode() == CopyMode.SINGLE ? null : modeName(state.mode());
+			rects.add(hint(RIGHT, COPY + ".cancel"));
+			return labelled(modeName(state.mode()), rects);
 		}
 		if (state.mode() != CopyMode.SINGLE) {
 			// A zoop's first click still fixes the row while the copy is red, so it stays, after the reason.
 			if (state.refusal() != null) {
-				parts.add(refusal(state.refusal()));
+				rects.add(refusal(state.refusal()));
 			}
-			parts.add(click(action(COPY + ".start")));
+			rects.add(hint(LEFT, COPY + ".start"));
 		} else {
-			parts.add(state.refusal() != null ? refusal(state.refusal()) : click(action(COPY + ".paste")));
+			rects.add(state.refusal() != null ? refusal(state.refusal()) : hint(LEFT, COPY + ".paste"));
 		}
 		if (state.locked()) {
 			Text nudge = nudge(keys);
 			if (nudge != null) {
-				parts.add(key(nudge, COPY + ".nudge"));
+				rects.add(hint(nudge, COPY + ".nudge"));
 			}
 		}
-		parts.add(Translated.of(COPY + ".scroll", Look.PLAIN, action(COPY + ".turn")));
-		parts.add(Translated.of(COPY + ".middle", Look.PLAIN, action(COPY + ".mirror")));
+		rects.add(hint(SCROLL, COPY + ".turn"));
+		rects.add(hint(MIDDLE, COPY + ".mirror"));
 		if (!state.locked() && state.pasted() && keys.sprint() != null) {
-			parts.add(Translated.of(COPY + ".hold", Look.PLAIN, new Literal(keys.sprint()), action(COPY + ".line_up")));
+			rects.add(hint(held(keys.sprint()), COPY + ".line_up"));
 		}
 		if (keys.lock() != null) {
-			parts.add(key(new Literal(keys.lock()), state.locked() ? COPY + ".unlock" : COPY + ".lock"));
+			rects.add(hint(new Literal(keys.lock()), state.locked() ? COPY + ".unlock" : COPY + ".lock"));
 		}
 		if (keys.mode() != null) {
-			parts.add(modeFor(keys.mode(), modeKey(state.mode().next())));
+			rects.add(hint(new Literal(keys.mode()), MODE + ".zoop_mode"));
 		}
-		parts.add(Translated.of(COPY + ".right", Look.PLAIN, action(COPY + ".put_away")));
-		return titled(title, parts);
+		rects.add(hint(RIGHT, COPY + ".put_away"));
+		return labelled(title(state.mode(), state.locked()), rects);
+	}
+
+	/** The label of a line that follows the aim: the mode outside Single, "Locked" or both, or none. */
+	private static Text title(CopyMode mode, boolean locked) {
+		if (locked) {
+			return mode == CopyMode.SINGLE ? Translated.of(COPY + ".locked", Look.PLAIN)
+				: Translated.of(COPY + ".mode_locked", Look.PLAIN, modeName(mode));
+		}
+		return mode == CopyMode.SINGLE ? null : modeName(mode);
 	}
 
 	/** The four nudges along the ground: "Arrow keys" while they're on them, otherwise their keys' names. */
@@ -363,7 +357,7 @@ public final class ControlsLine {
 	}
 
 	/**
-	 * The keys of the one phrase "... to nudge": the keys along the ground and the keys up and down joined by " + ", or
+	 * The keys of the one control "...: nudge": the keys along the ground and the keys up and down joined by " + ", or
 	 * whichever of the two has a key, or null while no nudge has one.
 	 */
 	private static Text nudge(Keys keys) {
@@ -393,35 +387,43 @@ public final class ControlsLine {
 		return one == null ? null : new Literal(one);
 	}
 
-	private static Line titled(Text title, List<Text> parts) {
-		Text joined = new Joined(List.copyOf(parts));
-		return new Line(title == null ? joined : Translated.of(COPY + ".titled", Look.PLAIN, title, joined), null);
+	/** A line with its label ("Delete:"), or with none while {@code title} is null. */
+	private static Line labelled(Text title, List<Text> rects) {
+		return new Line(title == null ? null : Translated.of(MODE + ".label", Look.PLAIN, title), List.copyOf(rects));
+	}
+
+	/** A warning above the controls, in red, alone on its line. */
+	private static Line warning(String key) {
+		return new Line(Translated.of(key, Look.WARNING), List.of());
+	}
+
+	/** A control: its key, then its action in dark aqua ("Left-click: paste"). */
+	private static Text hint(Text key, Text action) {
+		return Translated.of(MODE + ".hint", Look.PLAIN, key, action);
+	}
+
+	private static Text hint(Text key, String action) {
+		return hint(key, Translated.of(action, Look.ACTION));
+	}
+
+	/** "Hold Left Control": a key held down, by its name. */
+	private static Text held(String key) {
+		return Translated.of(MODE + ".hold", Look.PLAIN, new Literal(key));
+	}
+
+	/** A reason in red in place of a control that can't act. */
+	private static Text reason(String key) {
+		return Translated.of(key, Look.WARNING);
 	}
 
 	private static Text refusal(CopyColour.Refusal refusal) {
-		return Translated.of(switch (refusal) {
+		return reason(switch (refusal) {
 			case TOO_MANY_BLOCKS -> COPY + ".too_many";
 			case BUILD_HEIGHT, WORLD_BORDER -> COPY + ".outside";
-		}, Look.WARNING);
-	}
-
-	private static Text click(Text action) {
-		return Translated.of(COPY + ".click", Look.PLAIN, action);
-	}
-
-	private static Text key(Text key, String verb) {
-		return Translated.of(COPY + ".key", Look.PLAIN, key, action(verb));
+		});
 	}
 
 	private static Text modeName(CopyMode mode) {
-		return Translated.of(modeKey(mode), Look.PLAIN);
-	}
-
-	private static String modeKey(CopyMode mode) {
-		return COPY + "." + mode.name().toLowerCase(Locale.ROOT);
-	}
-
-	private static Text action(String key) {
-		return Translated.of(key, Look.ACTION);
+		return Translated.of(COPY + "." + mode.name().toLowerCase(Locale.ROOT), Look.PLAIN);
 	}
 }

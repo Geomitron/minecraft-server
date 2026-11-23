@@ -145,7 +145,7 @@ check "N shows them" drv 1 "await block 4 -59 3 minecraft:glowstone"
 # Drawing a shape while ghost blocks are hidden shows them again, then draws, with a message the first time only.
 drv 1 "cmd clear @s" "cmd item replace entity @s weapon.mainhand with minecraft:stone_bricks" "ebarray 0" > /dev/null
 # With no mouse mode on, Single's line shows for the stone bricks, which neither turn nor flip (step 20).
-single_line="Right-click to place, Left-click to erase, H to lock, R for Zoop"
+single_line="[Right-click: place][Left-click: erase][H: lock][R: Zoop mode]"
 press 1 n
 drv 1 "cmd tp @s 20.5 -55 5.5 0 90" "wait 30" > /dev/null
 check "ghost blocks are hidden before the shape" eval '[[ $(val 1 ghosts) == "hidden, "* ]]'
@@ -387,26 +387,26 @@ drv 2 "wait 5" "fly true" > /dev/null
 # The copy at the aim's controls lines, with the copy's keys as bound by default, and a box's controls for each click.
 # Before the player's first paste, the copy's line in Single; after it, with the sprint key, which lines the copy up
 # while the copy follows the aim; a locked copy doesn't line up, so its lines leave the sprint key out. R changes the
-# copy's mode locked or not, so every line but a fixed row's has "R for".
-turn_mirror="Scroll to turn, Middle-click to mirror"
-controls="Left-click to paste, $turn_mirror, H to lock, R for Zoop, Right-click to close"
-line_up="Hold Left Control to line up"
-controls_ctrl="Left-click to paste, $turn_mirror, $line_up, H to lock, R for Zoop, Right-click to close"
-nudges="Arrow keys + Page Up/Down to nudge"
-locked_line="Locked: Left-click to paste, $nudges, $turn_mirror, H to unlock, R for Zoop, Right-click to close"
-outside="Can't paste: part of the copy is outside the world"
-locked_red="Locked: $outside, $nudges, $turn_mirror, H to unlock, R for Zoop, Right-click to close"
-zoop_locked_red="Zoop, locked: $outside, Left-click to set the start, $nudges, $turn_mirror, H to unlock, R for Vertical, Right-click to close"
-zoop_line="Zoop: Left-click to set the start, $turn_mirror, $line_up, H to lock, R for Vertical, Right-click to close"
-vertical_line="Vertical: Left-click to set the start, $turn_mirror, $line_up, H to lock, R for Single, Right-click to close"
-zoop_locked="Zoop, locked: Left-click to set the start, $nudges, $turn_mirror, H to unlock, R for Vertical, Right-click to close"
-first_line="Left-click to set the first corner, Right-click to cancel"
-second_line="Left-click to set the opposite corner, Right-click to cancel"
-height_line="Left-click to set the height, Right-click to cancel"
+# copy's mode locked or not, so every line but a fixed row's has R's "Zoop mode".
+turn_mirror="[Scroll: turn][Middle-click: mirror]"
+controls="[Left-click: paste]$turn_mirror[H: lock][R: Zoop mode][Right-click: close]"
+line_up="[Hold Left Control: line up]"
+controls_ctrl="[Left-click: paste]$turn_mirror$line_up[H: lock][R: Zoop mode][Right-click: close]"
+nudges="[Arrow keys + Page Up/Down: nudge]"
+locked_line="Locked: [Left-click: paste]$nudges$turn_mirror[H: unlock][R: Zoop mode][Right-click: close]"
+outside="[Can't paste: part of the copy is outside the world]"
+locked_red="Locked: $outside$nudges$turn_mirror[H: unlock][R: Zoop mode][Right-click: close]"
+zoop_locked_red="Zoop, locked: $outside[Left-click: set the start]$nudges$turn_mirror[H: unlock][R: Zoop mode][Right-click: close]"
+zoop_line="Zoop: [Left-click: set the start]$turn_mirror$line_up[H: lock][R: Zoop mode][Right-click: close]"
+vertical_line="Vertical: [Left-click: set the start]$turn_mirror$line_up[H: lock][R: Zoop mode][Right-click: close]"
+zoop_locked="Zoop, locked: [Left-click: set the start]$nudges$turn_mirror[H: unlock][R: Zoop mode][Right-click: close]"
+first_line="[Left-click: set the first corner][Right-click: cancel]"
+second_line="[Left-click: set the opposite corner][Right-click: cancel]"
+height_line="[Left-click: set the height][Right-click: cancel]"
 # A Delete box's lines name R, which switches it to Delete by aim, before the right click.
-delete_first="Delete: Left-click to set the first corner, R for Aim, Right-click to cancel"
-delete_second="Delete: Left-click to set the opposite corner, R for Aim, Right-click to cancel"
-delete_height="Delete: Left-click to set the height, R for Aim, Right-click to cancel"
+delete_first="Delete: [Left-click: set the first corner][R: Delete mode][Right-click: cancel]"
+delete_second="Delete: [Left-click: set the opposite corner][R: Delete mode][Right-click: cancel]"
+delete_height="Delete: [Left-click: set the height][R: Delete mode][Right-click: cancel]"
 # copy_button, delete_button and paste_button: a click on the radial menu's Copy, Delete or Paste button.
 copy_button() {
 	radial_open
@@ -427,13 +427,38 @@ paste_button() {
 copy_kept() {
 	val 1 copy | sed -E 's/^(at [^ ]+|away) //'
 }
-# line_shot <name> [<width> <height> <gui scale> [<part>]]: Planner1's view at that size (1920 by 1080, GUI scale 4,
-# unless given) as <name>, once the chat lines that draw over the controls line have faded, with the controls as they
-# wrap and their window box (left top right bottom) in the log, and that of <part> of them if given, for the shot's
-# outline; then back to 854 by 480, GUI scale 2.
+# rects_ok <window width> <gui scale>: Planner1's controls as drawn now (the driver's moderects) are rows of rectangles,
+# each one line (9) high, 4 apart in its row, the rows 2 apart; each row is centred and inside the screen less 4 at each
+# side, unless it's one rectangle wider than that.
+rects_ok() {
+	val 1 moderects | awk -v W="$1" -v S="$2" '
+		BEGIN { RS = " / "; bad = 0; last = "" }
+		{
+			sub(/\n$/, "")
+			n = split($0, r, / \| /)
+			for (i = 1; i <= n; i++) {
+				split(r[i], f, " ")
+				if (f[4] - f[2] != 9 * S) bad = 1
+				if (i == 1) { top = f[2]; left = f[1]; if (last != "" && top != last + 11 * S) bad = 1 }
+				else if (f[2] != top || f[1] != right + 4 * S) bad = 1
+				right = f[3]
+			}
+			if (n > 1 && (left < 4 * S || right > W - 4 * S)) bad = 1
+			if (left + right < W - 2 * S || left + right > W + 2 * S) bad = 1
+			last = top
+		}
+		END { exit bad || NR == 0 }'
+}
+# line_shot <name> [<width> <height> <gui scale> [<part>]]: Planner1's view at noon at that size (1920 by 1080, GUI
+# scale 4, unless given) as <name>, once the chat lines that draw over the controls line have faded, with the
+# controls' rows and their window box (left top right bottom) in the log, and that of the rectangle holding <part> if
+# given, for the shot's outline, and a check that the rectangles are laid out in rows (rects_ok); then back to 854 by
+# 480, GUI scale 2.
 line_shot() {
-	drv 1 "wait 210" "window ${2:-1920} ${3:-1080} ${4:-4}" "wait 20" "notoasts" "wait 5" "shot $1" "wait 20" > /dev/null
+	drv 1 "cmd time set noon" "wait 210" "window ${2:-1920} ${3:-1080} ${4:-4}" "wait 20" "notoasts" "wait 5" \
+		"shot $1" "wait 20" > /dev/null
 	echo "  $1: $(val 1 modewrap) | box $(val 1 modebox)${5:+ | part $(val 1 "modepart $5")}" >> /out/checks.log
+	check "$1: each control is its own rectangle, in centred rows" rects_ok "${2:-1920}" "${4:-4}"
 	drv 1 "window 854 480 2" "wait 20" > /dev/null
 }
 # shots <name>: Planner1's view at 854 by 480 and at 1920 by 1080, both at GUI scale 2, as <name>-854x480 and
@@ -466,6 +491,7 @@ check "aiming at a block's top face, the box's first corner is the space above i
 	box_is "COPY 0 5,-59,4..5,-59,4 white SINGLE"
 drv 1 "lookat 4.5 -58.5 3.9" "wait 5" > /dev/null
 check "aiming at its side, the block itself" box_is "COPY 0 4,-59,3..4,-59,3 white SINGLE"
+line_shot line-copy-first
 
 # A box from the space above the stone brick at 5 -60 4 to 3 -60 3, around 6 stone bricks, the stairs and the
 # glowstone. Between clicks it follows the aim, with the corners set so far fixed; it's shot after the first and the
@@ -474,23 +500,25 @@ drv 1 "lookat 5.5 -59 4.5" "wait 5" > /dev/null
 attack_click 1
 drv 1 "lookat 6.5 -59 6.5" "wait 5" > /dev/null
 check "the first click sets the first corner, and the box follows the aim on its level" eval \
-	'box_is "COPY 1 5,-59,4..6,-59,6 white SINGLE" && [[ $(val 1 modehud) == "Copy: $second_line (2 × 1 × 3)" ]]'
+	'box_is "COPY 1 5,-59,4..6,-59,6 white SINGLE" && [[ $(val 1 modehud) == "Copy: $second_line[2 × 1 × 3]" ]]'
 drv 1 "lookat 3.5 -59 3.5" "wait 5" > /dev/null
 check "to the opposite corner" eval 'box_is "COPY 1 3,-59,3..5,-59,4 white SINGLE" &&
-	[[ $(val 1 modehud) == "Copy: $second_line (3 × 1 × 2)" ]]'
+	[[ $(val 1 modehud) == "Copy: $second_line[3 × 1 × 2]" ]]'
 check "the list under the crosshair counts the box's blocks: the stairs and the glowstone" eval \
 	'drv 1 "wait 5" > /dev/null && [[ $(val 1 boxlist) == *" | minecraft:glowstone 1, minecraft:oak_stairs 1" ]]'
+line_shot line-copy-second
 drv 1 "wait 200" > /dev/null
 shot 1 box-copy-first-click
 attack_click 1
 drv 1 "lookat 3.5 -57.5 3.5" "wait 5" > /dev/null
 check "the second click sets the opposite corner, and the height follows the aim" eval \
-	'box_is "COPY 2 3,-59,3..5,-58,4 white SINGLE" && [[ $(val 1 modehud) == "Copy: $height_line (3 × 2 × 2)" ]]'
+	'box_is "COPY 2 3,-59,3..5,-58,4 white SINGLE" && [[ $(val 1 modehud) == "Copy: $height_line[3 × 2 × 2]" ]]'
 drv 1 "lookat 3.5 -59.5 3.5" "wait 5" > /dev/null
 check "down to the stone bricks" eval 'box_is "COPY 2 3,-60,3..5,-59,4 white SINGLE" &&
-	[[ $(val 1 modehud) == "Copy: $height_line (3 × 2 × 2)" ]]'
+	[[ $(val 1 modehud) == "Copy: $height_line[3 × 2 × 2]" ]]'
 check "and the list counts the stone bricks too, most numerous first" eval 'drv 1 "wait 5" > /dev/null &&
 	[[ $(val 1 boxlist) == *" | minecraft:stone_bricks 6, minecraft:glowstone 1, minecraft:oak_stairs 1" ]]'
+line_shot line-copy-height
 shot 1 box-copy-second-click
 attack_click 1
 drv 1 "wait 5" > /dev/null
@@ -674,6 +702,7 @@ drv 1 "lookat -24.5 -60.5 31.5" "wait 5" > /dev/null
 check "and stays there for the shot" copy_is 1 "^at -30,-60,29\.\.-29,-59,31 "
 shots copy-locked
 line_shot line-locked
+line_shot line-locked-854x480-gui2 854 480 2
 # Facing north, each key moves the locked copy one block: Up north, away from the view, Down south, Left west, Right
 # east, Page Up up and Page Down down.
 drv 1 "cmd tp @s -29.5 -55 40.5 180 30" "wait 40" > /dev/null
@@ -764,8 +793,12 @@ check "Litematica draws no box for the copy" eval '[[ $(val 1 boxes) == *"others
 drv 1 "lookat -24.5 -60 33.5" > /dev/null
 shots copy-red-border
 line_shot line-locked-red
+check "the label's rectangle and the controls' are white, and the reason's red" eval \
+	'[[ $(val 1 modecolours) == "white red white white white white white white" ]]'
 line_shot line-locked-red-854x480-gui2 854 480 2
 line_shot line-locked-red-1920x1080-gui2 1920 1080 2
+check "at 854 by 480, GUI scale 2, the locked line goes on in a row below, moving whole rectangles" eval \
+	'[[ $(val 1 modewrap) == "[Locked:]"*"] / ["*"[Right-click: close]" ]] && rects_ok 854 2'
 # R changes a locked copy's mode, and a red Zoop copy before its first click says why in the reason's place, keeping
 # "Left-click to set the start", since that click still fixes the row; R twice more is back to Single.
 press 1 r
@@ -790,11 +823,11 @@ rebind() {
 }
 rebind key.keyboard.k key.keyboard.g key.keyboard.i key.keyboard.right.control
 check "with the keys rebound, the controls line names them as bound" eval '[[ $(val 1 modehud) == \
-	"Left-click to paste, $turn_mirror, Hold Right Control to line up, K to lock, G for Zoop, Right-click to close" ]]'
+	"[Left-click: paste]$turn_mirror[Hold Right Control: line up][K: lock][G: Zoop mode][Right-click: close]" ]]'
 line_shot line-rebound
 press 1 k
 check "K then locks the copy, and the locked line names the nudge keys one by one" eval \
-	'[[ $(val 1 copylock) == locked ]] && [[ $(val 1 modehud) == "Locked: Left-click to paste, I/Down Arrow/Left Arrow/Right Arrow + Page Up/Down to nudge, $turn_mirror, K to unlock, G for Zoop, Right-click to close" ]]'
+	'[[ $(val 1 copylock) == locked ]] && [[ $(val 1 modehud) == "Locked: [Left-click: paste][I/Down Arrow/Left Arrow/Right Arrow + Page Up/Down: nudge]$turn_mirror[K: unlock][G: Zoop mode][Right-click: close]" ]]'
 press 1 k
 rebind key.keyboard.h key.keyboard.r key.keyboard.up key.keyboard.left.control
 check "and with the keys back, K has unlocked it and the line names H and R again" eval \
@@ -830,7 +863,7 @@ check "in Zoop the first click fixes the copy as the start of a row, sending no 
 	'[[ $(val 1 holdlog) == *" edits=0 "* ]] &&
 	drv 1 "await row 1 copies, 1 placements FRONT_BACK COUNTERCLOCKWISE_90: -45,-60,33..-44,-59,35" > /dev/null'
 check "and its controls line offers to paste the row, with its count" eval \
-	'[[ $(val 1 modehud) == "Zoop: Left-click to paste 1 copy, Right-click to cancel" ]]'
+	'[[ $(val 1 modehud) == "Zoop: [Left-click: paste 1 copy][Right-click: cancel]" ]]'
 # Aimed 9 blocks north, the row runs north from the first copy, end to end, each 3 blocks (the copy's length north to
 # south) from the one before, to the copy that holds the aim: 4 copies, each one of Litematica's placements.
 row4="-45,-60,33..-44,-59,35 ; -45,-60,30..-44,-59,32 ; -45,-60,27..-44,-59,29 ; -45,-60,24..-44,-59,26"
@@ -843,14 +876,14 @@ check "Litematica draws each copy, the fourth's stairs at its north west corner"
 check "Litematica draws no box for the row's copies, and Building Planner draws them blue" eval \
 	'[[ $(val 1 boxes) == *"others: none" ]] && [[ $(val 1 copycolour) == BLUE ]]'
 check "the controls line counts the row's 4 copies" eval \
-	'[[ $(val 1 modehud) == "Zoop: Left-click to paste 4 copies, Right-click to cancel" ]]'
+	'[[ $(val 1 modehud) == "Zoop: [Left-click: paste 4 copies][Right-click: cancel]" ]]'
 shots zoop-row
 line_shot line-zoop-row
 aim 1 -45 -60 0
 check "aimed farther, the row stops at 10 copies" \
 	drv 1 "await row 10 copies, 10 placements FRONT_BACK COUNTERCLOCKWISE_90: -45,-60,33..-44,-59,35 ; "
 check "the tenth 27 blocks north of the first" eval '[[ $(val 1 copyrow) == *" ; -45,-60,6..-44,-59,8" ]] &&
-	[[ $(val 1 modehud) == "Zoop: Left-click to paste 10 copies, Right-click to cancel" ]]'
+	[[ $(val 1 modehud) == "Zoop: [Left-click: paste 10 copies][Right-click: cancel]" ]]'
 aim 1 -45 -60 25
 check "aimed back, the row shrinks to 4 copies" \
 	drv 1 "await row 4 copies, 4 placements FRONT_BACK COUNTERCLOCKWISE_90: $row4"
@@ -908,7 +941,7 @@ drv 1 "lookat -44.5 -50.5 34.5" "wait 5" > /dev/null
 check "looking up, the row goes up: 5 copies, each the copy's height above the one before" \
 	drv 1 "await row 5 copies, 5 placements FRONT_BACK COUNTERCLOCKWISE_90: -45,-60,33..-44,-59,35 ; -45,-58,33..-44,-57,35 ; -45,-56,33..-44,-55,35 ; -45,-54,33..-44,-53,35 ; -45,-52,33..-44,-51,35"
 check "with its controls line" eval \
-	'[[ $(val 1 modehud) == "Vertical: Left-click to paste 5 copies, Right-click to cancel" ]]'
+	'[[ $(val 1 modehud) == "Vertical: [Left-click: paste 5 copies][Right-click: cancel]" ]]'
 shots vertical-row
 line_shot line-vertical-row
 drv 1 "lookat -44.5 -63.5 34.5" "wait 5" > /dev/null
@@ -1201,7 +1234,7 @@ attack_click 1
 drv 1 "lookat 60.5 -60.5 2.5" "wait 10" > /dev/null
 check "a Delete box over more ghost blocks than the server's limit draws red" \
 	box_is "DELETE 2 60,-61,2..139,-9,51 red SINGLE"
-check "with its line saying so" eval '[[ $(val 1 modehud) == "Too many blocks | $delete_height (80 × 53 × 50)" ]]'
+check "with its line saying so" eval '[[ $(val 1 modehud) == "Too many blocks | $delete_height[80 × 53 × 50]" ]]'
 drv 1 "wait 200" > /dev/null
 shot 1 box-delete-too-many
 attack_click 1
@@ -1243,7 +1276,7 @@ check "a row of two copies, 204,800 blocks, is over the block cap and draws red"
 	'drv 1 "await row 2 copies, 2 placements NONE NONE: 60,-35,2..123,-11,65 ; 60,-60,2..123,-36,65" > /dev/null &&
 	drv 1 "await copycolour RED TOO_MANY_BLOCKS" > /dev/null'
 check "its controls line says why in place of the paste" eval \
-	'[[ $(val 1 modehud) == "Vertical: Can'"'"'t paste: too many blocks, Right-click to cancel" ]]'
+	'[[ $(val 1 modehud) == "Vertical: [Can'"'"'t paste: too many blocks][Right-click: cancel]" ]]'
 check "Litematica draws no box for the copy or its row" eval '[[ $(val 1 boxes) == *"others: none" ]]'
 drv 1 "wait 200" > /dev/null
 shots copy-red-row-over-cap
@@ -1293,18 +1326,19 @@ radial_let_go
 drv 1 "lookat 3.5 -59 3.5" "wait 5" > /dev/null
 check "the Material list button during a box for Copy switches it to the material list, keeping its corner" eval \
 	'box_is "MATERIAL_LIST 1 3,-59,3..5,-59,4 white SINGLE" &&
-	[[ $(val 1 modehud) == "Material list: $second_line (3 × 1 × 2)" ]]'
-# At 854 by 480, GUI scale 2, this line wraps onto two lines, with the box's size whole.
+	[[ $(val 1 modehud) == "Material list: $second_line[3 × 1 × 2]" ]]'
+# At 854 by 480, GUI scale 2, the box's size is a rectangle of its own at the line's end.
 wrap=$(val 1 modewrap)
 echo "  the material list's controls as they wrap: $wrap" >> /out/checks.log
-check "the controls line wraps without breaking the box's size" eval \
-	'[[ $wrap == *" / "* && $wrap == *"(3 × 1 × 2)" && ${wrap%% / *} != *"("* ]]'
+check "the box's size is the line's last rectangle, and the rectangles are laid out in rows" eval \
+	'[[ $wrap == *"[3 × 1 × 2]" ]] && rects_ok 854 2'
+line_shot line-material-list-second
 drv 1 "wait 200" > /dev/null
 shot 1 box-material-list-first-click
 attack_click 1
 drv 1 "lookat 3.5 -59.5 3.5" "wait 5" > /dev/null
 check "its second click sets the opposite corner" eval 'box_is "MATERIAL_LIST 2 3,-60,3..5,-59,4 white SINGLE" &&
-	[[ $(val 1 modehud) == "Material list: $height_line (3 × 2 × 2)" ]]'
+	[[ $(val 1 modehud) == "Material list: $height_line[3 × 2 × 2]" ]]'
 shot 1 box-material-list-second-click
 lines=$(chat_lines 1)
 use_click 1
@@ -1326,7 +1360,7 @@ drv 1 "lookat 5.5 -59 4.5" "wait 5" > /dev/null
 attack_click 1
 switch_to Delete
 check "the Delete button during a box for Copy switches it to Delete, keeping its corner" eval \
-	'box_is "DELETE 1 3,-59,3..5,-59,4 white SINGLE" && [[ $(val 1 modehud) == "$delete_second (3 × 1 × 2)" ]]'
+	'box_is "DELETE 1 3,-59,3..5,-59,4 white SINGLE" && [[ $(val 1 modehud) == "$delete_second[3 × 1 × 2]" ]]'
 check "its list counts the ghost blocks in it" eval 'drv 1 "wait 5" > /dev/null &&
 	[[ $(val 1 boxlist) == *" | minecraft:glowstone 1, minecraft:oak_stairs 1" ]]'
 switch_to "Material list"
@@ -1372,7 +1406,7 @@ drv 1 "lookat 239.5 -60 0.5" "wait 5" > /dev/null
 attack_click 1
 drv 1 "lookat 239.5 -50.5 0.5" "wait 10" > /dev/null
 check "its three clicks draw a box of 40 by 40 by 10" eval 'box_is "DELETE 2 200,-60,0..239,-51,39 white SINGLE" &&
-	[[ $(val 1 modehud) == "$delete_height (40 × 10 × 40)" ]]'
+	[[ $(val 1 modehud) == "$delete_height[40 × 10 × 40]" ]]'
 list=$(val 1 boxlist)
 echo "  the Delete box's list: $list" >> /out/checks.log
 check "and its list counts only the ghost blocks in it, not the real stone" eval \
@@ -1383,7 +1417,8 @@ drv 1 "window 1920 1080 2" "wait 20" "notoasts" > /dev/null
 shot 1 box-delete-1920x1080
 echo "  box-delete-1920x1080 box: $(val 1 drawbox)" >> /out/checks.log
 drv 1 "window 854 480 2" "wait 20" > /dev/null
-line_shot line-delete 1920 1080 4 "R for Aim"
+line_shot line-delete 1920 1080 4 "R: Delete mode"
+line_shot line-delete-854x480-gui2 854 480 2 "R: Delete mode"
 attack_click 1
 check "the third click erases the ghost blocks, with a message" client_said 1 "Erased 16,001 ghost blocks."
 check "as one edit" eval '[[ $(val 1 holdlog) == *" edits=1 "* ]]'
@@ -1509,15 +1544,15 @@ check "after a Delete in Aim, the Delete button starts Aim" eval '[[ $(val 1 mou
 # Delete by aim, erasing and its line. Aim's line with no marks; then the middle row's 9 ghost blocks the aim meets and
 # the ghost door, marked by its lower half: 10 marks, and 11 positions to erase. Each line is shot at 1920 by 1080, GUI
 # scale 4.
-aim_none="Delete, Aim: Hold Left Control to mark, R for Box, Right-click to close"
-aim_marked="Delete, Aim: Hold Left-click to erase, Hold Left Control to mark, R for Box, Right-click to clear"
+aim_none="Delete, Aim: [Hold Left Control: mark][R: Delete mode][Right-click: close]"
+aim_marked="Delete, Aim: [Hold Left-click: erase][Hold Left Control: mark][R: Delete mode][Right-click: clear]"
 check "Aim's line with no marks names marking, R and the right click that closes it" eval \
 	'[[ $(val 1 modehud) == "$aim_none" ]]'
 line_shot line-aim
 press 1 r
-check "R switches to a Delete box, whose line names R for Aim" eval '[[ $(val 1 mousemode) == BOX ]] &&
+check "R switches to a Delete box, whose line names R for Delete mode" eval '[[ $(val 1 mousemode) == BOX ]] &&
 	[[ $(val 1 modehud) == "$delete_first" ]]'
-line_shot line-delete-first 1920 1080 4 "R for Aim"
+line_shot line-delete-first 1920 1080 4 "R: Delete mode"
 press 1 r
 row="100,-53,40 101,-53,40 102,-53,40 104,-53,40 105,-53,40 106,-53,40 107,-53,40 108,-53,40 109,-53,40"
 drv 1 "lookat 100.5 -52.5 40" "wait 5" > /dev/null
@@ -1533,11 +1568,12 @@ check "back in Aim, the middle row's 9 ghost blocks and the ghost door are marke
 check "Aim's line with marks names the hold that erases them and the right click that clears them" eval \
 	'[[ $(val 1 modehud) == "$aim_marked" ]]'
 line_shot line-aim-marked
+line_shot line-aim-marked-854x480-gui2 854 480 2
 # A sweep that starts on a mark says "unmark" while Left Ctrl stays down; a sweep that starts off the marks marks it
 # again.
 drv 1 "lookat 104.5 -52.5 40" "wait 5" > /dev/null
 hold_ctrl
-check "during a sweep that unmarks, the line says unmark" eval '[[ $(val 1 modehud) == "Delete, Aim: Hold Left-click to erase, Hold Left Control to unmark, R for Box, Right-click to clear" ]]'
+check "during a sweep that unmarks, the line says unmark" eval '[[ $(val 1 modehud) == "Delete, Aim: [Hold Left-click: erase][Hold Left Control: unmark][R: Delete mode][Right-click: clear]" ]]'
 line_shot line-aim-unmarking
 let_go_ctrl
 hold_ctrl
@@ -1548,14 +1584,14 @@ check "and a sweep that starts on the unmarked block marks it again" eval '[[ $(
 # erase, shot then at 1920 by 1080, GUI scale 4, and the driver lets go of the button in the game at the next tick.
 drv 1 "wait 210" "window 1920 1080 4" "wait 20" "notoasts" "wait 5" "holdreset" > /dev/null
 xdo 1 mousedown 1
-held=$(drv 1 "await erasing 50" "modehud" "modewrap" "modebox" "modepart Erasing 50%" "shot line-aim-erasing" \
+held=$(drv 1 "await erasing 50" "modehud" "modewrap" "modebox" "modepart erasing 50%" "shot line-aim-erasing" \
 	"release attack" "wait 20") || true
 xdo 1 mouseup 1
 result() {
 	awk -v c="$1" 'index($0, c) == 1 { sub(/^[^=]* => /, ""); print; exit }' <<< "$held"
 }
 echo "  line-aim-erasing: $(result modewrap) | box $(result modebox) | part $(result modepart)" >> /out/checks.log
-check "at the hold's 10th tick the line says Erasing 50% in place of the erase" eval '[[ $(result modehud) == "Delete, Aim: Erasing 50%, Hold Left Control to mark, R for Box, Right-click to clear" ]]'
+check "at the hold's 10th tick the line says Erasing 50% in place of the erase" eval '[[ $(result modehud) == "Delete, Aim: [Hold Left-click: erasing 50%][Hold Left Control: mark][R: Delete mode][Right-click: clear]" ]]'
 check "let go then, it erases nothing" eval '[[ $(val 1 holdlog) == *" edits=0 "* ]] && [[ $(val 1 marks) == "$marked" ]] &&
 	[[ $(val 1 erasing) == -1 ]] && [[ $(val 1 modehud) == "$aim_marked" ]]'
 # Held 20 ticks it sends one edit, which takes the door's upper half too, which Planner2 sees glow with Planner1's
@@ -1599,12 +1635,12 @@ check "unmarked, with Aim still on" eval 'drv 1 "wait 10" > /dev/null && [[ $(va
 drv 1 "bindkey key.buildingplanner.copy_mode key.keyboard.g" "bindkey key.sprint key.keyboard.right.control" \
 	"wait 2" > /dev/null
 check "with the keys rebound, Aim's line names G and Right Control" eval \
-	'[[ $(val 1 modehud) == "Delete, Aim: Hold Right Control to mark, G for Box, Right-click to close" ]]'
+	'[[ $(val 1 modehud) == "Delete, Aim: [Hold Right Control: mark][G: Delete mode][Right-click: close]" ]]'
 line_shot line-aim-rebound
 press 1 g
 check "G switches to a Delete box, whose line names G" eval '[[ $(val 1 mousemode) == BOX ]] &&
-	[[ $(val 1 modehud) == "Delete: Left-click to set the first corner, G for Aim, Right-click to cancel" ]]'
-line_shot line-delete-rebound 1920 1080 4 "G for Aim"
+	[[ $(val 1 modehud) == "Delete: [Left-click: set the first corner][G: Delete mode][Right-click: cancel]" ]]'
+line_shot line-delete-rebound 1920 1080 4 "G: Delete mode"
 press 1 g
 drv 1 "bindkey key.buildingplanner.copy_mode key.keyboard.r" "bindkey key.sprint key.keyboard.left.control" \
 	"wait 2" > /dev/null
@@ -2246,9 +2282,9 @@ xdo 1 click 4
 check "another notch between the two clicks turns the preview at once, to face west" eval \
 	'drv 1 "wait 3" > /dev/null && preview_faces -60 -42 -62 -58 "facing=west,half=bottom"'
 check "with Left Ctrl held during the shape, the turning line names the wheel and the middle click" eval \
-	'[[ $(val 1 modehud) == "Turned: Scroll to turn, Middle-click to flip" ]]'
+	'[[ $(val 1 modehud) == "Turned: [Scroll: turn][Middle-click: flip]" ]]'
 let_go_ctrl
-check "and without it, the sprint key" eval '[[ $(val 1 modehud) == "Turned: Hold Left Control to turn or flip" ]]'
+check "and without it, the sprint key" eval '[[ $(val 1 modehud) == "Turned: [Hold Left Control: turn or flip]" ]]'
 # During the shape, the turning line ends 2 GUI pixels above the action bar's text (72 to 63 above the screen's bottom),
 # which shows the shape's block count above Effortless Building's own line (58 above the bottom). Each shot comes once
 # the chat has faded, with the line's end moved between -57 and -58 first, so Effortless Building shows the count again.
@@ -2318,7 +2354,7 @@ xdo 1 click 5
 check "in Disable, Left Ctrl with a notch down turns the stairs to face south, and the hotbar slot stays" eval \
 	'turn_is "facing=south,half=bottom" && [[ $(val 1 slot) == "4 minecraft:oak_stairs" ]]'
 check "and Disable's line shows there in place of the turning line" eval \
-	'[[ $(val 1 modehud) == "Turned: Right-click to place, Scroll to turn, Middle-click to flip" ]]'
+	'[[ $(val 1 modehud) == "Turned: [Right-click: place][Scroll: turn][Middle-click: flip]" ]]'
 let_go_ctrl
 drv 1 "ebmode LINE" "wait 5" > /dev/null
 check "back in Line, the stairs keep the turn made in Disable" turn_is "facing=south,half=bottom"
@@ -2328,28 +2364,28 @@ check "switching to stone and back to the stairs drops it" turn_is none
 aim 1 -54 -60 -36
 # The turning line, in Line, word for word.
 check "in Line with stairs in hand, the turning line says to hold Left Control to turn or flip" eval \
-	'[[ $(val 1 modehud) == "Hold Left Control to turn or flip" ]]'
+	'[[ $(val 1 modehud) == "[Hold Left Control: turn or flip]" ]]'
 hold_ctrl
 check "with Left Ctrl held, to scroll to turn and middle-click to flip" eval \
-	'[[ $(val 1 modehud) == "Scroll to turn, Middle-click to flip" ]]'
+	'[[ $(val 1 modehud) == "[Scroll: turn][Middle-click: flip]" ]]'
 xdo 1 click 4
 check "turned, it starts with Turned" eval 'drv 1 "wait 5" > /dev/null &&
-	[[ $(val 1 modehud) == "Turned: Scroll to turn, Middle-click to flip" ]]'
+	[[ $(val 1 modehud) == "Turned: [Scroll: turn][Middle-click: flip]" ]]'
 let_go_ctrl
-check "and so it does without Left Ctrl" eval '[[ $(val 1 modehud) == "Turned: Hold Left Control to turn or flip" ]]'
+check "and so it does without Left Ctrl" eval '[[ $(val 1 modehud) == "Turned: [Hold Left Control: turn or flip]" ]]'
 line_shot turning-line-1920x1080-gui4
 line_shot turning-line-854x480-gui2 854 480 2
 press 1 8
 check "for a chest, which turns but doesn't flip, it names only the turn" eval \
-	'[[ $(val 1 modehud) == "Hold Left Control to turn" ]]'
+	'[[ $(val 1 modehud) == "[Hold Left Control: turn]" ]]'
 hold_ctrl
-check "with Left Ctrl held too" eval '[[ $(val 1 modehud) == "Scroll to turn" ]]'
+check "with Left Ctrl held too" eval '[[ $(val 1 modehud) == "[Scroll: turn]" ]]'
 let_go_ctrl
 press 1 9
 check "for an oak slab, which flips but doesn't turn, only the flip" eval \
-	'[[ $(val 1 modehud) == "Hold Left Control to flip" ]]'
+	'[[ $(val 1 modehud) == "[Hold Left Control: flip]" ]]'
 hold_ctrl
-check "with Left Ctrl held too" eval '[[ $(val 1 modehud) == "Middle-click to flip" ]]'
+check "with Left Ctrl held too" eval '[[ $(val 1 modehud) == "[Middle-click: flip]" ]]'
 xdo 1 click 2
 check "the middle click with Left Ctrl held flips the slab to its top half" turn_is "type=top"
 let_go_ctrl
@@ -2365,18 +2401,18 @@ drv 1 "cmd item replace entity @s hotbar.6 with minecraft:stone" > /dev/null
 press 1 5
 paste_button
 check "with the copy at the aim, the copy's line shows in its place" eval \
-	'[[ $(val 1 mousemode) == COPY_AT_AIM ]] && [[ $(val 1 modehud) == "Left-click to paste, "* ]]'
+	'[[ $(val 1 mousemode) == COPY_AT_AIM ]] && [[ $(val 1 modehud) == "[Left-click: paste]"* ]]'
 drv 1 "ebmode LINE" "wait 5" > /dev/null
 check "choosing Line puts the copy away, and the turning line shows again" eval '[[ $(val 1 mousemode) == none ]] &&
-	[[ $(val 1 modehud) == "Hold Left Control to turn or flip" ]]'
+	[[ $(val 1 modehud) == "[Hold Left Control: turn or flip]" ]]'
 drv 1 "bindkey key.sprint key.keyboard.right.control" "wait 2" > /dev/null
 check "with the sprint key on Right Control, the turning line names Right Control" eval \
-	'[[ $(val 1 modehud) == "Hold Right Control to turn or flip" ]]'
+	'[[ $(val 1 modehud) == "[Hold Right Control: turn or flip]" ]]'
 drv 1 "bindkey key.sprint key.keyboard.left.control" "wait 2" > /dev/null
 press 1 F1
 check "F1 hides the turning line" eval '[[ $(val 1 modehud) == hidden ]]'
 press 1 F1
-check "and F1 again shows it" eval '[[ $(val 1 modehud) == "Hold Left Control to turn or flip" ]]'
+check "and F1 again shows it" eval '[[ $(val 1 modehud) == "[Hold Left Control: turn or flip]" ]]'
 # During a Line drawn with the break click, from the first Line's west end, the turning controls aren't active: no
 # turning line shows, and Left Ctrl with the wheel changes the hotbar slot; a right click cancels the shape.
 drv 1 "lookat -61.5 -59.5 -39.5" "wait 5" > /dev/null
@@ -2392,7 +2428,7 @@ press 1 5
 use_click 1
 check "a right click cancels the shape, erasing nothing, and the turning line shows again" eval \
 	'drv 1 "wait 10" > /dev/null && [[ $(val 1 "layer -62 -60 -40") == minecraft:oak_stairs ]] &&
-	[[ $(val 1 modehud) == "Hold Left Control to turn or flip" ]]'
+	[[ $(val 1 modehud) == "[Hold Left Control: turn or flip]" ]]'
 # In Disable, the middle click with Left Ctrl held flips the stairs, from the way Minecraft would place them on the
 # grass below Planner1, within the game's own reach (Effortless Building's longer reach is left out in Disable), and
 # picks no block; with stone, which neither turns nor flips, it picks the aimed block. The grass is due north, so the
@@ -2664,18 +2700,18 @@ press 1 9
 press 1 5
 stand -54 -31
 check "in Disable with oak stairs, Disable's line says to hold Left Control to turn or flip" \
-	disable_line_is "Hold Left Control to turn or flip"
+	disable_line_is "[Hold Left Control: turn or flip]"
 check "and without Left Ctrl, no preview shows" preview_is none
 line_shot disable-line-hold
 hold_ctrl
 check "with Left Ctrl held, the line names the right click that places, the wheel and the middle click" \
-	disable_line_is "Right-click to place, Scroll to turn, Middle-click to flip"
+	disable_line_is "[Right-click: place][Scroll: turn][Middle-click: flip]"
 check "and the preview draws the stair where a right click would place it, facing north, as Minecraft would" \
 	preview_is "-54,-60,-31" "minecraft:oak_stairs[facing=north,half=bottom,"
 line_shot disable-line-held
 xdo 1 click 4
 check "a notch up turns it: the line starts \"Turned:\"" \
-	disable_line_is "Turned: Right-click to place, Scroll to turn, Middle-click to flip"
+	disable_line_is "Turned: [Right-click: place][Scroll: turn][Middle-click: flip]"
 check "and the preview draws the stair facing east, not red" eval \
 	'preview_is "-54,-60,-31" "minecraft:oak_stairs[facing=east,half=bottom," && [[ $(val 1 previewred) == none ]]'
 line_shot disable-line-turned
@@ -2686,7 +2722,7 @@ check "the stair placed matches the preview" eval 'drv 1 "await real -54 -60 -31
 	placed=$(val 1 "realstate -54 -60 -31") && placed=${placed#Block\{} && placed=${placed/\}/} &&
 	echo "  drawn: $drawn; placed: $placed" >> /out/checks.log && [[ $placed == "$drawn" ]]'
 check "without Left Ctrl, the line has no \"Turned:\", since a right click places as Minecraft does" \
-	disable_line_is "Hold Left Control to turn or flip"
+	disable_line_is "[Hold Left Control: turn or flip]"
 # Short grass, which a block replaces, aimed at on its south side: the preview takes the grass's place, not the space
 # south of it.
 drv 1 "cmd tp @s -49.5 -60 -27.5 180 30" "wait 10" "lookat -49.5 -59.6 -30.5" "wait 5" > /dev/null
@@ -2700,14 +2736,15 @@ drv 1 "cmd tp @s -41.5 -60 -28.5 180 30" "wait 10" "lookat -41.5 -59.5 -31.5" "w
 check "with a torch aimed at a wall, no line shows without Left Ctrl" disable_line_is hidden
 hold_ctrl
 check "with Left Ctrl held, Disable's line names the right click and the wheel" \
-	disable_line_is "Right-click to place, Scroll to turn"
+	disable_line_is "[Right-click: place][Scroll: turn]"
 check "and the preview draws the wall torch on the stone, not red" eval \
 	'preview_is "-42,-60,-31" "minecraft:wall_torch[facing=south]" && [[ $(val 1 previewred) == none ]]'
 xdo 1 click 4
 check "turned away from the stone, the preview draws the torch red" eval \
 	'preview_is "-42,-60,-31" "minecraft:wall_torch[facing=west]" && [[ $(val 1 previewred) == "-42,-60,-31" ]]'
-check "and the line says in red that it can't be placed" disable_line_is "Turned: Can't place here, Scroll to turn"
+check "and the line says in red that it can't be placed" disable_line_is "Turned: [Can't place here][Scroll: turn]"
 line_shot disable-line-red 1920 1080 4 "Can't place here"
+check "the reason's rectangle is red, the others white" eval '[[ $(val 1 modecolours) == "white red white" ]]'
 disable_shots disable-preview-torch-red "-42 -60 -31"
 let_go_ctrl
 check "without Left Ctrl, no line shows, though the torch is turned" disable_line_is hidden
@@ -2744,15 +2781,15 @@ drv 1 "ebarray 0" "wait 5" > /dev/null
 # Each block's line, word for word: a chest only turns, a slab only flips, and stone and a stick have none.
 press 1 7
 check "with a chest, which only turns, the line says to hold Left Control to turn" \
-	disable_line_is "Hold Left Control to turn"
+	disable_line_is "[Hold Left Control: turn]"
 hold_ctrl
-check "and with it held, to place and scroll to turn" disable_line_is "Right-click to place, Scroll to turn"
+check "and with it held, to place and scroll to turn" disable_line_is "[Right-click: place][Scroll: turn]"
 let_go_ctrl
 press 1 8
 check "with an oak slab, which only flips, the line says to hold Left Control to flip" \
-	disable_line_is "Hold Left Control to flip"
+	disable_line_is "[Hold Left Control: flip]"
 hold_ctrl
-check "and with it held, to place and middle-click to flip" disable_line_is "Right-click to place, Middle-click to flip"
+check "and with it held, to place and middle-click to flip" disable_line_is "[Right-click: place][Middle-click: flip]"
 let_go_ctrl
 press 1 9
 check "with stone, no line shows" disable_line_is hidden
@@ -2764,12 +2801,12 @@ check "with a stick, no line shows" disable_line_is hidden
 press 1 5
 drv 1 "bindkey key.sprint key.keyboard.right.control" "wait 2" > /dev/null
 check "with the sprint key on Right Control, Disable's line names Right Control" \
-	disable_line_is "Hold Right Control to turn or flip"
+	disable_line_is "[Hold Right Control: turn or flip]"
 drv 1 "bindkey key.sprint key.keyboard.left.control" "wait 2" > /dev/null
 press 1 F1
 check "F1 hides Disable's line" disable_line_is hidden
 press 1 F1
-check "and F1 again shows it" disable_line_is "Hold Left Control to turn or flip"
+check "and F1 again shows it" disable_line_is "[Hold Left Control: turn or flip]"
 drv 1 "cmd fill -61 -60 -45 -36 -56 -19 minecraft:air" "ebmode SINGLE" "wait 10" \
 	"cmd item replace entity @s hotbar.3 with minecraft:air" > /dev/null
 check "the blocks placed for Disable's preview are cleared" eval \
@@ -2810,38 +2847,38 @@ check "in Single mode with oak stairs, the one ghost block follows the aim in it
 	'single_mode SINGLE && [[ $(val 1 single) == "unlocked active" ]] && [[ $(val 1 heldturn) == none ]]'
 check "following the aim, no box shows" eval '[[ $(val 1 copycolour) == none ]]'
 check "Single's line names the clicks, holding Left Control to turn or flip, the lock key and the mode key" \
-	single_line_is "Right-click to place, Left-click to erase, Hold Left Control to turn or flip, H to lock, R for Zoop"
+	single_line_is "[Right-click: place][Left-click: erase][Hold Left Control: turn or flip][H: lock][R: Zoop mode]"
 line_shot single-line-following
 hold_ctrl
 check "with Left Ctrl held, the wheel and the middle click take its place" \
-	single_line_is "Right-click to place, Left-click to erase, Scroll to turn, Middle-click to flip, H to lock, R for Zoop"
+	single_line_is "[Right-click: place][Left-click: erase][Scroll: turn][Middle-click: flip][H: lock][R: Zoop mode]"
 line_shot single-line-held
 xdo 1 click 4
 check "a notch up turns the stairs, and the line starts \"Turned:\"" single_line_is \
-	"Turned: Right-click to place, Left-click to erase, Scroll to turn, Middle-click to flip, H to lock, R for Zoop"
+	"Turned: [Right-click: place][Left-click: erase][Scroll: turn][Middle-click: flip][H: lock][R: Zoop mode]"
 let_go_ctrl
 check "and so it does without Left Ctrl" single_line_is \
-	"Turned: Right-click to place, Left-click to erase, Hold Left Control to turn or flip, H to lock, R for Zoop"
+	"Turned: [Right-click: place][Left-click: erase][Hold Left Control: turn or flip][H: lock][R: Zoop mode]"
 line_shot single-line-turned
 press 1 6
 check "for a chest, which turns but doesn't flip, it names only the turn" \
-	single_line_is "Right-click to place, Left-click to erase, Hold Left Control to turn, H to lock, R for Zoop"
+	single_line_is "[Right-click: place][Left-click: erase][Hold Left Control: turn][H: lock][R: Zoop mode]"
 line_shot single-line-chest
 hold_ctrl
 check "with Left Ctrl held too" \
-	single_line_is "Right-click to place, Left-click to erase, Scroll to turn, H to lock, R for Zoop"
+	single_line_is "[Right-click: place][Left-click: erase][Scroll: turn][H: lock][R: Zoop mode]"
 let_go_ctrl
 press 1 7
 check "for an oak slab, which flips but doesn't turn, only the flip" \
-	single_line_is "Right-click to place, Left-click to erase, Hold Left Control to flip, H to lock, R for Zoop"
+	single_line_is "[Right-click: place][Left-click: erase][Hold Left Control: flip][H: lock][R: Zoop mode]"
 line_shot single-line-slab
 hold_ctrl
 check "with Left Ctrl held too" \
-	single_line_is "Right-click to place, Left-click to erase, Middle-click to flip, H to lock, R for Zoop"
+	single_line_is "[Right-click: place][Left-click: erase][Middle-click: flip][H: lock][R: Zoop mode]"
 let_go_ctrl
 press 1 4
 check "for stone, which neither turns nor flips, no turning part" \
-	single_line_is "Right-click to place, Left-click to erase, H to lock, R for Zoop"
+	single_line_is "[Right-click: place][Left-click: erase][H: lock][R: Zoop mode]"
 line_shot single-line-stone
 # Locked over the grass, the block is blue; nudged into a ghost gold block it's yellow and its click places, replacing
 # the gold, after which the same stair there leaves it blue; nudged below the world's bottom (-64) it's red, and its
@@ -2852,9 +2889,10 @@ drv 1 "edit -50 -60 -32 -50 -60 -32 minecraft:gold_block" > /dev/null
 press 1 h
 check "H locks the block, and Building Planner draws its box blue over the grass" eval \
 	'[[ $(val 1 single) == "locked -50,-60,-31 active" ]] && drv 1 "await copycolour BLUE" > /dev/null'
-locked_line="Arrow keys + Page Up/Down to nudge, Left-click to erase, Hold Left Control to turn or flip, H to unlock, R for Zoop"
-check "the locked line names the nudges and H to unlock" single_line_is "Locked: Right-click to place, $locked_line"
+locked_line="[Arrow keys + Page Up/Down: nudge][Left-click: erase][Hold Left Control: turn or flip][H: unlock][R: Zoop mode]"
+check "the locked line names the nudges and H to unlock" single_line_is "Locked: [Right-click: place]$locked_line"
 line_shot single-line-locked
+line_shot single-line-locked-854x480-gui2 854 480 2
 single_shot single-locked 854 480 "-50 -60 -31" "-50 -60 -31"
 single_shot single-locked 1920 1080 "-50 -60 -31" "-50 -60 -31"
 press 1 Up
@@ -2871,7 +2909,7 @@ press 1 Next
 check "one block lower, below the build height, it's red" eval \
 	'[[ $(val 1 single) == "locked -50,-65,-32 active" ]] && drv 1 "await copycolour RED BUILD_HEIGHT" > /dev/null'
 check "and the line says why in red, in place of the right click" \
-	single_line_is "Locked: Can't place: outside the world, $locked_line"
+	single_line_is "Locked: [Can't place: outside the world]$locked_line"
 line_shot single-line-red 1920 1080 4 "Can't place: outside the world"
 use_click 1
 check "its click places nothing and sends no edit, and it stays locked" eval 'drv 1 "wait 20" > /dev/null &&
@@ -2882,19 +2920,19 @@ check "nudged back up and unlocked, it follows the aim with no box" eval \
 	'[[ $(val 1 single) == "unlocked active" ]] && [[ $(val 1 copycolour) == none ]]'
 # Zoop and Vertical before the first click, and Zoop locked.
 press 1 r
-check "in Zoop, the line starts \"Zoop:\" and sets the start, R for Vertical" eval '[[ $(val 1 singlerow) == "ZOOP none" ]] &&
-	single_line_is "Zoop: Right-click to set the start, Left-click to erase, Hold Left Control to turn or flip, H to lock, R for Vertical"'
+check "in Zoop, the line starts \"Zoop:\" and sets the start" eval '[[ $(val 1 singlerow) == "ZOOP none" ]] &&
+	single_line_is "Zoop: [Right-click: set the start][Left-click: erase][Hold Left Control: turn or flip][H: lock][R: Zoop mode]"'
 line_shot single-line-zoop
 press 1 r
-check "in Vertical, \"Vertical:\", R for Single" eval '[[ $(val 1 singlerow) == "VERTICAL none" ]] &&
-	single_line_is "Vertical: Right-click to set the start, Left-click to erase, Hold Left Control to turn or flip, H to lock, R for Single"'
+check "in Vertical, it starts \"Vertical:\"" eval '[[ $(val 1 singlerow) == "VERTICAL none" ]] &&
+	single_line_is "Vertical: [Right-click: set the start][Left-click: erase][Hold Left Control: turn or flip][H: lock][R: Zoop mode]"'
 line_shot single-line-vertical
 press 1 r
 press 1 r
 press 1 h
 check "in Zoop, locked, the line starts \"Zoop, locked:\" with the nudges" eval \
 	'[[ $(val 1 singlerow) == "ZOOP none" ]] && [[ $(val 1 single) == "locked -50,-60,-31 active" ]] &&
-	single_line_is "Zoop, locked: Right-click to set the start, ${locked_line/R for Zoop/R for Vertical}"'
+	single_line_is "Zoop, locked: [Right-click: set the start]$locked_line"'
 line_shot single-line-zoop-locked
 press 1 h
 # A Zoop row from -61 -60 -31 east, crossing ghost gold blocks at -56 and -53: one block after the first click, blue;
@@ -2906,12 +2944,12 @@ aim 1 -61 -60 -31
 use_click 1
 check "a row of one block says to place 1 block, and is blue" eval \
 	'drv 1 "await singlerow ZOOP 1 -61,-60,-31..-61,-60,-31" > /dev/null && drv 1 "await copycolour BLUE" > /dev/null &&
-	single_line_is "Zoop: Right-click to place 1 block, Hold Left Control to turn or flip, Left-click to cancel"'
+	single_line_is "Zoop: [Right-click: place 1 block][Hold Left Control: turn or flip][Left-click: cancel]"'
 line_shot single-line-row-1
 aim 1 -50 -60 -31
 check "a row of 12 crossing ghost gold blocks is yellow, and the line says to place 12 blocks" eval \
 	'drv 1 "await singlerow ZOOP 12 -61,-60,-31..-50,-60,-31" > /dev/null && drv 1 "await copycolour YELLOW" > /dev/null &&
-	single_line_is "Zoop: Right-click to place 12 blocks, Hold Left Control to turn or flip, Left-click to cancel"'
+	single_line_is "Zoop: [Right-click: place 12 blocks][Hold Left Control: turn or flip][Left-click: cancel]"'
 line_shot single-line-row-12
 # The whole row in view: Planner1 13 blocks farther south and 6 west, still aimed at -50 -60 -31, so the row stays.
 drv 1 "cmd tp @s -55.5 -58 -14.5 180 30" "wait 10" "lookat -49.5 -60 -30.5" "wait 5" > /dev/null
@@ -2921,7 +2959,10 @@ stand -50 -31
 drv 1 "cmd worldborder center 44.0 -31.0" "cmd worldborder set 200" > /dev/null
 check "with the world border crossing the row, it's red" drv 1 "await copycolour RED WORLD_BORDER"
 check "and the line says why in red, in place of the place" \
-	single_line_is "Zoop: Can't place: outside the world, Hold Left Control to turn or flip, Left-click to cancel"
+	single_line_is "Zoop: [Can't place: outside the world][Hold Left Control: turn or flip][Left-click: cancel]"
+drv 1 "cmd tp @s -55.5 -58 -14.5 180 30" "wait 10" "lookat -49.5 -60 -30.5" "wait 5" > /dev/null
+single_shot single-row-red 1920 1080 "-61 -60 -31" "-50 -60 -31"
+stand -50 -31
 use_click 1
 check "its click places nothing and sends no edit, and the row stays" eval 'drv 1 "wait 20" > /dev/null &&
 	[[ $(val 1 holdlog) == *" edits=0 "* ]] && [[ $(val 1 singlerow) == "ZOOP 12 -61,-60,-31..-50,-60,-31" ]] &&
@@ -2936,9 +2977,9 @@ press 1 r
 # to Right Control.
 rebind key.keyboard.k key.keyboard.g key.keyboard.i key.keyboard.right.control
 check "with the keys rebound, Single's line names them as bound" eval '[[ $(val 1 singlerow) == "SINGLE none" ]] &&
-	single_line_is "Right-click to place, Left-click to erase, Hold Right Control to turn or flip, K to lock, G for Zoop"'
+	single_line_is "[Right-click: place][Left-click: erase][Hold Right Control: turn or flip][K: lock][G: Zoop mode]"'
 press 1 k
-check "and locked, the nudges one by one" single_line_is "Locked: Right-click to place, I/Down Arrow/Left Arrow/Right Arrow + Page Up/Down to nudge, Left-click to erase, Hold Right Control to turn or flip, K to unlock, G for Zoop"
+check "and locked, the nudges one by one" single_line_is "Locked: [Right-click: place][I/Down Arrow/Left Arrow/Right Arrow + Page Up/Down: nudge][Left-click: erase][Hold Right Control: turn or flip][K: unlock][G: Zoop mode]"
 press 1 k
 rebind key.keyboard.h key.keyboard.r key.keyboard.up key.keyboard.left.control
 check "with the keys back, K has unlocked it" eval '[[ $(val 1 single) == "unlocked active" ]]'
@@ -2947,16 +2988,16 @@ check "with a stick in hand, no line shows" single_line_is hidden
 press 1 5
 paste_button
 check "with the copy at the aim, the copy's line shows" eval \
-	'[[ $(val 1 mousemode) == COPY_AT_AIM ]] && [[ $(val 1 modehud) == "Left-click to paste, "* ]]'
+	'[[ $(val 1 mousemode) == COPY_AT_AIM ]] && [[ $(val 1 modehud) == "[Left-click: paste]"* ]]'
 drv 1 "ebmode LINE" "wait 5" > /dev/null
 check "in Line mode, only the turning line shows" eval '[[ $(val 1 mousemode) == none ]] &&
-	single_line_is "Hold Left Control to turn or flip"'
+	single_line_is "[Hold Left Control: turn or flip]"'
 drv 1 "ebmode SINGLE" "wait 5" > /dev/null
 press 1 F1
 check "F1 hides Single's line" single_line_is hidden
 press 1 F1
 check "and F1 again shows it" \
-	single_line_is "Right-click to place, Left-click to erase, Hold Left Control to turn or flip, H to lock, R for Zoop"
+	single_line_is "[Right-click: place][Left-click: erase][Hold Left Control: turn or flip][H: lock][R: Zoop mode]"
 drv 1 "edit -62 -60 -33 -48 -59 -29 minecraft:air" "cmd item replace entity @s hotbar.3 with minecraft:air" > /dev/null
 check "the ghost blocks placed for the colours are erased" drv 1 "await block -50 -60 -32 minecraft:air" \
 	"await block -56 -60 -31 minecraft:air"
@@ -3037,7 +3078,10 @@ attack_click 1
 drv 1 "cmd tp @s 330.5 -50 64.5 90 30" "wait 210" "lookat 380.5 -60 64.5" "wait 5" > /dev/null
 check "a box of 261 blocks a side draws red" box_is "COPY 1 120,-60,64..380,-60,64 red SINGLE"
 check "with its line saying which limit" eval \
-	'[[ $(val 1 modehud) == "Too many blocks | Copy: $second_line (261 × 1 × 1)" ]]'
+	'[[ $(val 1 modehud) == "Too many blocks | Copy: $second_line[261 × 1 × 1]" ]]'
+line_shot line-copy-too-large
+check "the warning's rectangle is red, the line's white" eval \
+	'[[ $(val 1 modecolours) == "red white white white white" ]]'
 shot 1 box-too-large
 attack_click 1
 check "and its click sets no corner" eval 'drv 1 "wait 5" > /dev/null &&
@@ -3045,7 +3089,7 @@ check "and its click sets no corner" eval 'drv 1 "wait 5" > /dev/null &&
 drv 1 "lookat 300.5 -60 64.5" "wait 5" > /dev/null
 check "a box over chunks the game hasn't loaded draws red" box_is "COPY 1 120,-60,64..300,-60,64 red SINGLE"
 check "with its line saying which limit" eval '[[ $(val 1 modehud) == \
-	"Part of the box is too far away to read. Move closer. | Copy: $second_line (181 × 1 × 1)" ]]'
+	"Part of the box is too far away to read. Move closer. | Copy: $second_line[181 × 1 × 1]" ]]'
 shot 1 box-not-loaded
 attack_click 1
 check "and its click sets no corner" eval 'drv 1 "wait 5" > /dev/null &&

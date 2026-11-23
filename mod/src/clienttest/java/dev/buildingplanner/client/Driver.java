@@ -952,9 +952,18 @@ public final class Driver implements ClientModInitializer {
 				return modeHud().windowBox();
 			}
 			case "modepart" -> {
-				// modepart <text>: the window box (left top right bottom, in the window's pixels) of that text in the
-				// controls as they wrap and are drawn now, or none; for the shots' outlines.
-				return modePart(line.substring("modepart ".length()));
+				// modepart <text>: the window box (left top right bottom, in the window's pixels) of the first rectangle
+				// of the controls drawn now whose text holds that text, or none; for the shots' outlines.
+				return modeHud().partBox(line.substring("modepart ".length()));
+			}
+			case "modecolours" -> {
+				// modecolours: the colour of each rectangle's text as drawn now, row after row, separated by spaces.
+				return modeHud().rectColours();
+			}
+			case "moderects" -> {
+				// moderects: each rectangle of the controls as drawn now, its window box (left top right bottom, in the
+				// window's pixels) and its text in [ ], separated by " | ", the rows by " / ", or hidden.
+				return modeHud().rectBoxes();
 			}
 			case "erasing" -> {
 				// erasing: Delete by aim's hold toward the erase, in percent, or -1 while the left button isn't held to
@@ -1147,32 +1156,6 @@ public final class Driver implements ClientModInitializer {
 	private static int erasing() throws Exception {
 		ControlsLine.AimState state = session() == null ? null : session().aimState();
 		return state == null ? -1 : state.erasing();
-	}
-
-	/**
-	 * The window box of {@code text} in the controls as they wrap now, found in the first wrapped line holding it: each
-	 * line is centred, the last 58 above the screen's bottom, as {@link ModeHud} draws them.
-	 */
-	private static String modePart(String text) throws Exception {
-		String wrapped = modeHud().wrappedText();
-		if (wrapped.equals("hidden")) {
-			return "none";
-		}
-		Minecraft mc = Minecraft.getInstance();
-		String[] lines = wrapped.split(" / ");
-		int width = mc.getWindow().getGuiScaledWidth();
-		int top = mc.getWindow().getGuiScaledHeight() - 58 - (lines.length - 1) * mc.font.lineHeight;
-		int scale = (int) mc.getWindow().getGuiScale();
-		for (int i = 0; i < lines.length; i++) {
-			int at = lines[i].indexOf(text);
-			if (at >= 0) {
-				int left = (width - mc.font.width(lines[i])) / 2 + mc.font.width(lines[i].substring(0, at));
-				int y = top + i * mc.font.lineHeight;
-				return left * scale + " " + y * scale + " " + (left + mc.font.width(text)) * scale + " "
-					+ (y + mc.font.lineHeight) * scale;
-			}
-		}
-		return "none";
 	}
 
 	/** The one ghost block, for the driver's {@code single}. */

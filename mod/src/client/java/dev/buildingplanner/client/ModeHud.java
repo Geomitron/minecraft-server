@@ -4,6 +4,7 @@ import dev.buildingplanner.input.BoxCorners;
 import dev.buildingplanner.input.MouseMode;
 import dev.buildingplanner.look.BoxListLayout;
 import dev.buildingplanner.look.ControlsLine;
+import dev.buildingplanner.look.ControlsRows;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
@@ -17,25 +18,22 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.Style;
 import net.minecraft.util.ARGB;
-import net.minecraft.util.FormattedCharSequence;
 
 /**
- * The line of a mouse mode's controls, centred where Effortless Building draws its own line during a shape
- * ({@code RenderHandler.renderSubtitle}: 58 above the screen's bottom, with a shadow), in its colours: white, with each
- * action in dark aqua, each wrapped line on a dark see-through background as wide as its text; the lines themselves
- * are worked out by {@link ControlsLine}. A box's line ends with its size, a
- * box past a limit has a red line above saying which, and the copy's line names in red why it can't be pasted. A
- * line too wide for the screen wraps onto lines above it, keeping the size whole. While a box is drawn, the blocks in it
- * show under the crosshair ({@link BoxList}, laid out by {@link BoxListLayout}), in rows that end above the controls,
- * and in Delete by aim, the marked ghost blocks.
+ * The lines of a mouse mode's controls, centred where Effortless Building draws its own line during a shape
+ * ({@code RenderHandler.renderSubtitle}: 58 above the screen's bottom, with a shadow), in its colours: each line is a
+ * row of rectangles ({@link ControlsLine.Line}), each on its own dark see-through background with a gap between them,
+ * laid out by {@link ControlsRows}; white, with each action in dark aqua and each reason in red. A box's line ends with
+ * its size, and a box past a limit has a red line above saying which. A line too wide for the screen goes on in a row
+ * below. While a box is drawn, the blocks in it show under the crosshair ({@link BoxList}, laid out by
+ * {@link BoxListLayout}), in rows that end above the controls, and in Delete by aim, the marked ghost blocks.
  * They show while a mode is on, with no screen open and the HUD shown (not hidden with F1). With no mode on, Single's
- * line shows in the same place while the one ghost block's controls are active ({@link ControlsLine#single}), naming
- * in red why the block can't be placed, or the turning line ({@link ControlsLine#turning}), or in Disable, Disable's
- * line ({@link ControlsLine#disable}), which names in red why the turned block can't be placed; during a shape drawn
- * with the place click,
- * while Effortless Building draws its own line there and the shape's block count in the action bar above it, it shows
- * above the action bar.
+ * line shows in the same place while the one ghost block's controls are active ({@link ControlsLine#single}), or the
+ * turning line ({@link ControlsLine#turning}), or in Disable, Disable's line ({@link ControlsLine#disable}); during a
+ * shape drawn with the place click, while Effortless Building draws its own line there and the shape's block count in
+ * the action bar above it, it shows above the action bar.
  */
 final class ModeHud implements HudElement {
 	private static final int BOTTOM = 58;
@@ -44,17 +42,31 @@ final class ModeHud implements HudElement {
 	 * to 63 above the screen's bottom ({@code Hud.extractOverlayMessage}).
 	 */
 	private static final int ABOVE_ACTION_BAR = 74;
-	private static final int MARGIN = 4;
 	private static final int WHITE = -1;
-	/** The black behind each line of text: the opacity of the game's chat background by default (0.5). */
+	/** The black behind each rectangle: the opacity of the game's chat background by default (0.5). */
 	private static final int BACKGROUND = ARGB.black(0.5F);
-	/** How far the background reaches past the text at each side, as {@code GuiGraphicsExtractor.textWithBackdrop}'s. */
-	private static final int PADDING = 2;
 
-	/** A line of the controls, and the box's size at its end, which never breaks across lines, or null. */
-	private record Line(Component text, Component size) {
+	/** A line of the controls: its rectangles, its label first, and whether it starts with a label (a warning above the
+	 * controls is a line of its label alone). */
+	private record Line(List<Component> rects, boolean labelled) {
+		/** The line as the checks read it: its label, then each other rectangle in [ ]. */
 		String read() {
-			return size == null ? text.getString() : text.getString() + " " + size.getString();
+			StringBuilder text = new StringBuilder();
+			for (int i = 0; i < rects.size(); i++) {
+				if (i == 0 && labelled) {
+					text.append(rects.get(i).getString()).append(rects.size() > 1 ? " " : "");
+				} else {
+					text.append('[').append(rects.get(i).getString()).append(']');
+				}
+			}
+			return text.toString();
+		}
+	}
+
+	/** A rectangle as it's drawn: its text and its background's box, in GUI pixels. */
+	private record Placed(Component text, int left, int top, int right, int bottom) {
+		String box(int scale) {
+			return left * scale + " " + top * scale + " " + right * scale + " " + bottom * scale;
 		}
 	}
 
@@ -107,8 +119,9 @@ final class ModeHud implements HudElement {
 			}
 			case DELETE_AIM -> aim.get();
 		};
-		return lines.stream().map(line -> new Line(component(line.text()).withStyle(ChatFormatting.WHITE),
-			line.size() == null ? null : component(line.size()).withStyle(ChatFormatting.WHITE))).toList();
+		return lines.stream().map(line -> new Line(line.all().stream()
+			.map(rect -> (Component) component(rect).withStyle(ModeHud::white)).toList(),
+			line.label() != null)).toList();
 	}
 
 	/** The line with no mouse mode on, Single's, the turning line or Disable's, while it shows, or none. */
@@ -140,6 +153,11 @@ final class ModeHud implements HudElement {
 		return now == MouseMode.BOX || now == MouseMode.DELETE_AIM;
 	}
 
+	/** The style white where it has no colour of its own, so a warning stays red and a rectangle's text is white. */
+	private static Style white(Style style) {
+		return style.getColor() == null ? style.withColor(ChatFormatting.WHITE) : style;
+	}
+
 	/** The game's component for a part of a line, in its look: an action in dark aqua and a warning in red. */
 	private static MutableComponent component(ControlsLine.Text text) {
 		return switch (text) {
@@ -153,95 +171,111 @@ final class ModeHud implements HudElement {
 				};
 			}
 			case ControlsLine.Literal literal -> Component.literal(literal.text());
-			case ControlsLine.Joined joined -> {
-				MutableComponent made = Component.empty();
-				for (int i = 0; i < joined.parts().size(); i++) {
-					if (i > 0) {
-						made.append(", ");
-					}
-					made.append(component(joined.parts().get(i)));
-				}
-				yield made;
-			}
 		};
 	}
 
-	/**
-	 * The lines as they show on a screen {@code width} wide: each wrapped at its spaces, with the size after the last
-	 * word that leaves it room, or alone on a line below.
-	 */
-	private static List<FormattedCharSequence> wrapped(List<Line> lines, Font font, int width) {
-		List<FormattedCharSequence> wrapped = new ArrayList<>();
-		for (Line line : lines) {
-			List<FormattedCharSequence> parts = font.split(line.text(), width);
-			wrapped.addAll(parts);
-			if (line.size() == null) {
-				continue;
+	/** The rectangles as they're drawn on a screen {@code width} by {@code height}, row by row, top first. */
+	private List<List<Placed>> placed(List<Line> lines, Font font, int width, int height) {
+		List<List<Integer>> widths = lines.stream().map(line -> line.rects().stream().map(font::width).toList()).toList();
+		List<List<ControlsRows.Rect>> rows = ControlsRows.of(widths, width);
+		int y = top(rows.size(), font, height, raised());
+		List<List<Placed>> placed = new ArrayList<>(rows.size());
+		for (List<ControlsRows.Rect> row : rows) {
+			List<Placed> rects = new ArrayList<>(row.size());
+			for (ControlsRows.Rect rect : row) {
+				rects.add(new Placed(lines.get(rect.line()).rects().get(rect.index()), rect.left(), y,
+					rect.left() + rect.width(), y + font.lineHeight));
 			}
-			FormattedCharSequence size = line.size().getVisualOrderText();
-			FormattedCharSequence last = wrapped.getLast();
-			FormattedCharSequence joined = FormattedCharSequence.composite(last,
-				Component.literal(" ").getVisualOrderText(), size);
-			if (font.width(joined) <= width) {
-				wrapped.set(wrapped.size() - 1, joined);
-			} else {
-				wrapped.add(size);
-			}
+			placed.add(rects);
+			y += ControlsRows.pitch(font.lineHeight);
 		}
-		return wrapped;
+		return placed;
 	}
 
-	/** The lines' text as the player reads them, separated by " | ", or {@code hidden}; for the in-game checks. */
+	/** The rectangles as they're drawn now, row by row, top first. */
+	private List<List<Placed>> placedNow() {
+		Minecraft mc = Minecraft.getInstance();
+		return placed(lines(), mc.font, mc.getWindow().getGuiScaledWidth(), mc.getWindow().getGuiScaledHeight());
+	}
+
+	private static int scale() {
+		return (int) Minecraft.getInstance().getWindow().getGuiScale();
+	}
+
+	/**
+	 * The lines' text as the player reads them, separated by " | ", each its label, then each other rectangle in [ ]; or
+	 * {@code hidden}; for the in-game checks.
+	 */
 	String text() {
 		List<Line> lines = lines();
 		return lines.isEmpty() ? "hidden" : lines.stream().map(Line::read).collect(Collectors.joining(" | "));
 	}
 
 	/**
-	 * The lines as they wrap on the screen now, separated by " / ", or {@code hidden}; for the in-game checks, which see
-	 * where the size goes.
+	 * The rows of rectangles as they're laid out on the screen now, separated by " / ", each rectangle in [ ]; or
+	 * {@code hidden}; for the in-game checks, which see where each row breaks.
 	 */
 	String wrappedText() {
-		List<Line> lines = lines();
-		if (lines.isEmpty()) {
-			return "hidden";
-		}
-		Minecraft mc = Minecraft.getInstance();
-		List<String> texts = new ArrayList<>();
-		for (FormattedCharSequence line : wrapped(lines, mc.font, mc.getWindow().getGuiScaledWidth() - 2 * MARGIN)) {
-			StringBuilder text = new StringBuilder();
-			line.accept((index, style, codePoint) -> {
-				text.appendCodePoint(codePoint);
-				return true;
-			});
-			texts.add(text.toString());
-		}
-		return String.join(" / ", texts);
+		List<List<Placed>> rows = placedNow();
+		return rows.isEmpty() ? "hidden" : rows.stream().map(row -> row.stream()
+			.map(rect -> "[" + rect.text().getString() + "]").collect(Collectors.joining()))
+			.collect(Collectors.joining(" / "));
 	}
 
 	/**
-	 * The window box of the lines as they're drawn now: left, top, right and bottom, in the window's pixels, or
+	 * The window box of the rectangles as they're drawn now: left, top, right and bottom, in the window's pixels, or
 	 * {@code hidden}; for the outlines on the in-game checks' shots.
 	 */
 	String windowBox() {
-		List<Line> lines = lines();
-		if (lines.isEmpty()) {
+		List<List<Placed>> rows = placedNow();
+		if (rows.isEmpty()) {
 			return "hidden";
 		}
-		Minecraft mc = Minecraft.getInstance();
-		int width = mc.getWindow().getGuiScaledWidth();
-		List<FormattedCharSequence> wrapped = wrapped(lines, mc.font, width - 2 * MARGIN);
-		int top = top(wrapped.size(), mc.font, mc.getWindow().getGuiScaledHeight(), raised());
-		int left = width;
-		int right = 0;
-		for (FormattedCharSequence line : wrapped) {
-			int lineWidth = mc.font.width(line);
-			left = Math.min(left, (width - lineWidth) / 2);
-			right = Math.max(right, (width - lineWidth) / 2 + lineWidth);
+		int left = Integer.MAX_VALUE;
+		int right = Integer.MIN_VALUE;
+		for (List<Placed> row : rows) {
+			left = Math.min(left, row.getFirst().left());
+			right = Math.max(right, row.getLast().right());
 		}
-		int scale = (int) mc.getWindow().getGuiScale();
-		return left * scale + " " + top * scale + " " + right * scale + " "
-			+ (top + wrapped.size() * mc.font.lineHeight) * scale;
+		return new Placed(null, left, rows.getFirst().getFirst().top(), right, rows.getLast().getFirst().bottom())
+			.box(scale());
+	}
+
+	/**
+	 * Each rectangle as it's drawn now: its window box (left top right bottom, in the window's pixels) and its text in
+	 * [ ], separated by " | ", and the rows by " / "; or {@code hidden}; for the in-game checks.
+	 */
+	String rectBoxes() {
+		List<List<Placed>> rows = placedNow();
+		int scale = scale();
+		return rows.isEmpty() ? "hidden" : rows.stream().map(row -> row.stream()
+			.map(rect -> rect.box(scale) + " [" + rect.text().getString() + "]").collect(Collectors.joining(" | ")))
+			.collect(Collectors.joining(" / "));
+	}
+
+	/**
+	 * The colour of each rectangle's text as drawn now, row after row, separated by spaces ("white", "red"), or
+	 * {@code hidden}; an action's own colour inside a rectangle doesn't count.
+	 */
+	String rectColours() {
+		List<List<Placed>> rows = placedNow();
+		return rows.isEmpty() ? "hidden" : rows.stream().flatMap(List::stream)
+			.map(rect -> rect.text().getStyle().getColor().serialize()).collect(Collectors.joining(" "));
+	}
+
+	/**
+	 * The window box (left top right bottom, in the window's pixels) of the first rectangle drawn now whose text holds
+	 * {@code text}, or {@code none}; for the outlines on the in-game checks' shots.
+	 */
+	String partBox(String text) {
+		for (List<Placed> row : placedNow()) {
+			for (Placed rect : row) {
+				if (rect.text().getString().contains(text)) {
+					return rect.box(scale());
+				}
+			}
+		}
+		return "none";
 	}
 
 	/**
@@ -258,7 +292,7 @@ final class ModeHud implements HudElement {
 		Minecraft mc = Minecraft.getInstance();
 		int width = mc.getWindow().getGuiScaledWidth();
 		int height = mc.getWindow().getGuiScaledHeight();
-		int top = top(wrapped(lines, mc.font, width - 2 * MARGIN).size(), mc.font, height, false);
+		int top = top(placed(lines, mc.font, width, height).size(), mc.font, height, false);
 		BoxListLayout layout = BoxListLayout.of(width, height, entries.size(), top);
 		int right = 0;
 		int bottom = 0;
@@ -281,12 +315,13 @@ final class ModeHud implements HudElement {
 	}
 
 	/**
-	 * The top of the controls, {@code count} lines ending 58 above the screen's bottom, or while {@code raised}, 74 above
-	 * it, over the action bar; with none, of one line there.
+	 * The top of the controls: {@code count} rows, the last of them starting 58 above the screen's bottom, or while
+	 * {@code raised}, ending 74 above it, over the action bar; with none, of one row there.
 	 */
 	private static int top(int count, Font font, int height, boolean raised) {
-		return raised ? height - ABOVE_ACTION_BAR - Math.max(count, 1) * font.lineHeight
-			: height - BOTTOM - (Math.max(count, 1) - 1) * font.lineHeight;
+		int rows = Math.max(count, 1);
+		return raised ? height - ABOVE_ACTION_BAR - ControlsRows.height(rows, font.lineHeight)
+			: height - BOTTOM - (rows - 1) * ControlsRows.pitch(font.lineHeight);
 	}
 
 	@Override
@@ -296,22 +331,20 @@ final class ModeHud implements HudElement {
 			return;
 		}
 		Font font = Minecraft.getInstance().font;
-		List<FormattedCharSequence> wrapped = wrapped(lines, font, graphics.guiWidth() - 2 * MARGIN);
-		int top = top(wrapped.size(), font, graphics.guiHeight(), raised());
-		// The backgrounds first, each as wide as its line's text, so no box covers the line above's shadow.
-		int y = top;
-		for (FormattedCharSequence text : wrapped) {
-			int x = (graphics.guiWidth() - font.width(text)) / 2;
-			graphics.fill(x - PADDING, y, x + font.width(text) + PADDING, y + font.lineHeight, BACKGROUND);
-			y += font.lineHeight;
+		List<List<Placed>> rows = placed(lines, font, graphics.guiWidth(), graphics.guiHeight());
+		// The backgrounds first, so no rectangle covers the shadow of the text in another.
+		for (List<Placed> row : rows) {
+			for (Placed rect : row) {
+				graphics.fill(rect.left(), rect.top(), rect.right(), rect.bottom(), BACKGROUND);
+			}
 		}
-		y = top;
-		for (FormattedCharSequence text : wrapped) {
-			graphics.text(font, text, (graphics.guiWidth() - font.width(text)) / 2, y, WHITE, true);
-			y += font.lineHeight;
+		for (List<Placed> row : rows) {
+			for (Placed rect : row) {
+				graphics.text(font, rect.text(), rect.left() + ControlsRows.PADDING, rect.top(), WHITE, true);
+			}
 		}
 		if (listed()) {
-			drawList(graphics, font, top);
+			drawList(graphics, font, top(rows.size(), font, graphics.guiHeight(), raised()));
 		}
 	}
 
