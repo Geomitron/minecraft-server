@@ -405,7 +405,9 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
     revision 2 showed it: each control its own rectangle, the label its own first rectangle, a reason its own red
     rectangle, a box's size its own last rectangle, and "R: Delete mode" in Delete and "R: Zoop mode" in the copy's and the one
     ghost block's lines (1155 revision 2). Effortless Building's own line during a shape is drawn in the same
-    rectangles: "[Left-click: cancel][Right-click: place]" (1155 revision 2, Q1 A).
+    rectangles: "[Left-click: cancel][Right-click: place]" (1155 revision 2, Q1 A). Geo approved its two other forms
+    and releasing 0.6.0 with them: "[Left-click: cancel][Right-click: interact]" with a tool in hand, and "[Left-click:
+    break][Right-click: cancel]" with the actions in red for a shape that breaks blocks (1185 A).
 - The shared layer replaces the decisions above that concern separate plans: named plans that move and turn as a whole
   (411 Q1), plan growth (411 Q2), who deletes a plan (411 Q3, 420 Q9), starting a plan with N (420 Q1, 469 Q1), hiding
   a plan with Litematica or Syncmatica (420 Q2, 469 Q2), the paste's target plan (485 Q3), Litematica's Edit Schematic
