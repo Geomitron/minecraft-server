@@ -21,12 +21,12 @@ in [plan.md](plan.md) "Decisions"):
   item's name above the controls lines (see "Esc" and "The build mode's name and the held item's name");
 - boxes in a colour for each purpose, the first corner's face shaded, and the blocks listed under the crosshair on a
   dark background (see "Boxes for Copy and the material list");
-- a settings screen with a setting that places a block turned as the ghost block it fills (see "Settings");
+- a setting in Effortless Building's "Visual Settings" screen that places a block turned as the ghost block it fills
+  (see "Settings");
 - the material list screens' "Close" button and Building Planner's own (i) text (see "The screen's buttons").
 
 0.7.0 keeps protocol version 5: it changes nothing the server does, so a 0.6.0 game and a 0.7.0 server work together.
-The build steps are in [plan.md](plan.md) ("Agent-ready work"). `OPEN:` marks a choice still Geo's, with the inbox
-request that asks it.
+The build steps are in [plan.md](plan.md) ("Agent-ready work").
 
 ## What players get
 
@@ -137,8 +137,8 @@ request that asks it.
   from any computer, on that server only. The panel stays on across restarts, with the same list, until the player
   turns it off. The radial menu's "Material lists" button opens the current list. Each of the list's screens has a
   "Close" button at its bottom right, and its (i) icon explains Building Planner's list (see "The material list").
-- **Settings.** The setting "Match ghost blocks", off at first, places a real block turned as the ghost block it fills
-  (see "Settings").
+- **Settings.** The setting "Match ghost blocks", in Effortless Building's "Visual Settings" screen and off at first,
+  places a real block turned as the ghost block it fills (see "Settings").
 - **Building Planner's name.** Where players see Effortless Building's name in the game, the corner of the radial
   menu, it reads "Building Planner". Effortless Building's four keys in Controls show under the "Building Planner"
   heading, with Building Planner's own.
@@ -186,7 +186,7 @@ menus, so it adds nothing to the registries Fabric API syncs at login, and playe
   hooks that hide them, the show or hide switch, the Effortless Building capture, hold to repeat, the radial menu's
   buttons and sliders, the block mix and its panel, copy and paste, the build modes' lock and first click
   (`ShapeLock`), Esc's steps (`EscSteps`), Disable's turn and its preview (`DisableTurn`, `DisablePreview`), the
-  settings screen and "Match ghost blocks" (`SettingsScreen`, `GhostMatch`), the wrong blocks drawn through walls
+  "Match ghost blocks" row and its rule (`GhostMatch`), the wrong blocks drawn through walls
   (`WrongBlocks`), Delete, the material list with its panel and saved lists, the edit glow, the settings it changes
   once, and the check for a server without the add-on.
 
@@ -587,15 +587,15 @@ the wrong block into a ghost block; orange shows where a block was built facing 
 several to a spot has fewer than planned. Litematica's own "Render Through" option draws every overlay through
 walls, light blue included, so every ghost block would show.
 
-Building Planner draws the red ones through walls itself (Geo's comment c3 on 815 revision 2): each ghost block whose
-real block is a different block, by Litematica's rule (neither air nor a fluid, and another block), within 16 blocks of
-the camera (`OPEN:` the settings and red blocks request, Q2 and Q3), gets a faint red outline and red sides through
-any block in front of it, in Litematica's red (#FF3333, the outline at 0.4 alpha and the sides at 0.1), drawn through
-MaLiLib's renderer with the depth test off, after the world. Faces between two such blocks aren't drawn, as for
+Building Planner draws the red and orange ones through walls itself (Geo's comment c3 on 815 revision 2; 1241 Q3 B):
+each ghost block whose real block is a different block, or the same block in another state, by Litematica's rule
+(neither air nor a fluid), within 32 blocks of the camera (1241 Q2 C), gets a faint outline and sides through any
+block in front of it, in Litematica's red (#FF3333) or orange (#FF9010), the outline at 0.4 alpha and the sides at
+0.1, drawn through MaLiLib's renderer with the depth test off, after the world. Faces between two such blocks aren't drawn, as for
 Delete's marks (`MarksOutline`'s shape). The positions come from a pure function of the player's copy of the layer
 and the real blocks (`WrongBlocks`), worked out again every 10 ticks over the 16-block sections within reach that hold
 ghost blocks, so a block built or broken shows within half a second. Where the player sees the ghost block itself, the
-faint red draws over Litematica's red. Nothing draws while ghost blocks are hidden or without a session.
+faint colour draws over Litematica's overlay of the same colour. Nothing draws while ghost blocks are hidden or without a session.
 
 ### The client
 
@@ -698,7 +698,7 @@ mode: it acts only while no mouse mode is on. A mode ends when the player:
 - presses Esc, one step at a time (see "Esc");
 - chooses a mode in the radial menu (E21), even the one they had;
 - shows or hides ghost blocks;
-- presses the radial menu's Copy, Delete, "Material list", Paste, "Block mix" or "Settings" button, or the block mix
+- presses the radial menu's Copy, Delete, "Material list", Paste or "Block mix" button, or the block mix
   key, each of which then does its own action (Copy and "Material list" start or switch a box, Delete starts or ends
   Delete, Paste brings the copy back);
 - leaves the server or changes dimension.
@@ -990,9 +990,8 @@ not 50. Satisfactory's Dismantle Filter (G) and its blueprint mode have no equiv
 
 Hooks E11 and E12 add Building Planner's widgets to Effortless Building's radial menu (opened by holding its key, left
 Alt by default; it closes when the key is let go): two sliders, "Build speed" and "Break speed", just under the menu's
-left-hand buttons (the wrench, undo and redo, and the row under them), and eight buttons: "Show or hide ghost blocks",
-Copy, Paste, Delete, "Block mix", "Material list", "Material lists" and "Settings" (`OPEN:` the settings and red blocks
-request, Q1, whether "Settings" is a button that opens a screen). The
+left-hand buttons (the wrench, undo and redo, and the row under them), and seven buttons: "Show or hide ghost blocks",
+Copy, Paste, Delete, "Block mix", "Material list" and "Material lists". The
 widgets sit by the menu's middle, as its own buttons do (`RadialMenuWidgets`): the menu's left-hand buttons are 20
 across with their middles 26 apart, the leftmost 157 left of the middle, in two rows 13 above and below it, so they
 span 167 to 95 left of the middle and end 23 below it. The sliders, with 2 between
@@ -1031,12 +1030,12 @@ nothing. Each action plays the menu's quiet click (`RadialMenu.playRadialMenuSou
 what its key does (see "Show or hide"), "Block mix" what the block mix key does (see "The block mix and its panel"),
 Copy and "Material list" start a box (see "Boxes for Copy and the material list"), Delete starts or ends Delete (see
 "Delete"), Paste brings back the most recent copy (see "Copy and paste"), "Material lists" opens the current material
-list (see "The Material lists button"), and "Settings" opens Building Planner's settings screen (see "Settings").
+list (see "The Material lists button").
 
 The buttons sit in the columns of the wrench, undo and redo, as Geo arranged them (comment c2 on 815 revision 2):
 "Show or hide ghost blocks" under the wrench, 13 below the middle; Copy, Paste and Delete in the row above the wrench,
-39 above the middle; "Block mix", "Material list" and "Material lists" in the row above that, 65 above it; and
-"Settings" 91 above it, over "Block mix". Under the wrench, Effortless Building shows its "Functional Settings" button
+39 above the middle; and "Block mix", "Material list" and "Material lists" in the row above that, 65 above it. Building
+Planner adds no settings button to the radial menu (1241 Q1; see "Settings"). Under the wrench, Effortless Building shows its "Functional Settings" button
 to operators, which changes its settings on the server; this server doesn't run Effortless Building, so during a
 session hook E34 leaves that button out, for everyone, and "Show or hide ghost blocks" takes its place. They meet
 nothing the menu draws at 854 by 480, GUI scale 2, and at 1920 by 1080, GUI scales 2 and 4.
@@ -1053,9 +1052,7 @@ shows Effortless Building's own Randomizer Bag item texture (`effortlessbuilding
 drawn from Effortless Building's jar, which copies none of it. The "Material lists" button shows Minecraft's Book and
 Quill item texture (`minecraft:textures/item/writable_book.png`), drawn from the game's own (786 Q5 A), and the Delete
 button the Barrier's (`minecraft:textures/item/barrier.png`), a red no-entry sign that reads as "remove" at 16 pixels,
-unlike a tool such as the pickaxe, which would suggest breaking real blocks. The "Settings" button shows Minecraft's
-Redstone Comparator item texture (`minecraft:textures/item/comparator.png`), the game's own item that sets how a
-circuit behaves, which Geo sees in the build's screenshots.
+unlike a tool such as the pickaxe, which would suggest breaking real blocks.
 
 ### Keys
 
@@ -1628,14 +1625,16 @@ mod"). It is part of protocol version 5, which no release has used.
 
 ### Settings
 
-The radial menu's "Settings" button opens Building Planner's settings screen (`SettingsScreen`, a Minecraft
-`Screen`), titled "Building Planner settings", with one setting and a "Done" button at the bottom, which closes it, as
-Esc does (`OPEN:` the settings and red blocks request, Q1, where the setting goes). The setting is a button that
-switches between its two states, as Minecraft's own settings do (`CycleButton.onOffBuilder`): "Match ghost blocks:
-Off", at first, and "Match ghost blocks: On". Its tooltip reads "Places a block turned as the ghost block it fills,
-whichever way you face" (proposed, for Geo's review). The screen saves the setting at once in
-`config/buildingplanner-client.properties` (`match-ghost-turn`, `false` at first, which a missing or other value
-reads as). The screen opens on any server; the setting acts only during a session.
+"Match ghost blocks" is a row Building Planner adds to Effortless Building's "Visual Settings" screen
+(`ClientConfigScreen`), which the radial menu's "Visual Settings" button opens (1244 Q1 B). Geo wants the setting with
+Effortless Building's settings (1241 Q1: "I meant the game options for effortless building, which you have to get to
+through the pause or main menu's settings button"), and "Visual Settings" is Effortless Building's only settings
+screen; Mod Menu, which the pack doesn't have, would open it too. The row comes after Effortless Building's own rows
+and is drawn as they are, a setting that is on or off, labelled "Match ghost blocks", with the tooltip "Places a block
+turned as the ghost block it fills, whichever way you face" (proposed, for Geo's review). It is off at first. The
+screen's "Save" button saves it with Effortless Building's own settings, in `config/buildingplanner-client.properties`
+(`match-ghost-turn`, `false` at first, which a missing or other value reads as). The row shows on any server; the
+setting acts only during a session.
 
 With "Match ghost blocks" on, a real block placed into a ghost block of the same block takes the ghost block's
 orientation, regardless of how the player is standing (Geo's comment c9: "stairs being placed correctly, according to

@@ -452,7 +452,14 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
   - a locked copy unlocks once it's pasted and follows the aim again (1239 Q2 A);
   - in Delete, holding Left Control still marks each ghost block the crosshair passes over, alongside the box, but
     "if the user is actively drawing the delete box, it does *not* mark ghost blocks that the crosshair passes over"
-    (1240 Q1 A, with Geo's comment).
+    (1240 Q1 A, with Geo's comment);
+  - red ghost blocks, and orange ones (the right block in another state), show faintly through walls within 32 blocks
+    (1241 Q2 C, Q3 B);
+  - "Match ghost blocks" is a row in Effortless Building's "Visual Settings" screen, which its radial menu opens (1244
+    Q1 B), so the radial menu has no settings button of Building Planner's. Geo had answered "I meant the game options
+    for effortless building, which you have to get to through the pause or main menu's settings button" (1241 Q1,
+    Other); "Visual Settings" is Effortless Building's only settings screen, and only its radial menu and Mod Menu,
+    which the pack doesn't have, open it.
 - The shared layer replaces the decisions above that concern separate plans: named plans that move and turn as a whole
   (411 Q1), plan growth (411 Q2), who deletes a plan (411 Q3, 420 Q9), starting a plan with N (420 Q1, 469 Q1), hiding
   a plan with Litematica or Syncmatica (420 Q2, 469 Q2), the paste's target plan (485 Q3), Litematica's Edit Schematic
@@ -461,12 +468,8 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
 ## Agent-ready work
 
 **Building Planner 0.7.0** (the bullet "Building Planner 0.7.0" in "Decisions" above: Geo's comments c2 to c19 on 815
-revision 2). [building-planner.md](building-planner.md) is the design; each choice still Geo's is marked `OPEN:` there,
-with the inbox request that asks it: "Building Planner 0.7.0: the settings menu and red blocks through walls" (the
-settings and red blocks request, 1241). Geo has answered "Zoop and the copy's mode" (1238), "When a lock ends" (1239)
-and "Marking in Delete" (1240), in "Decisions" above. A step that waits on a question starts once Geo has answered
-it, and builds Geo's answer, updating the spec's `OPEN:` mark to the decision in the same change; the steps marked
-"can start now" wait on nothing.
+revision 2). [building-planner.md](building-planner.md) is the design, with Geo's answers to the questions it left
+open (1238, 1239, 1240, 1241 and 1244) in "Decisions" above. No step waits on a question.
 
 The steps come in this order, each small enough for one child. Steps 1 and 3 change no file another step changes,
 so each may run beside another step; the others change `ControlsLine`, `ModeHud`, `CopyKeys` or `step9.sh`, so they
@@ -540,18 +543,20 @@ where a step says so. 0.7.0 keeps protocol version 5 and changes nothing on the 
     Done when `EscStepsTest` covers each step's order, and `step9.sh` checks pass: during a copy's Line, Esc drops the
     set, then puts the copy away, then sets the mode to Disable, then pauses; in Delete with marks, Esc clears them,
     then ends Delete; with the inventory open, Esc closes it.
-13. **Wrong blocks through walls** ("Wrong blocks through walls"; c3). Waits on the settings and red blocks request,
-    Q2 and Q3. `WrongBlocks` and its drawing. Done when unit tests cover which blocks count and the distance, and new
-    `filled.sh` checks pass: a cobblestone block in a ghost stone brick shows through a wall from 10 blocks and not
-    from beyond the distance Geo chose; shots from both sides of the wall.
-14. **Settings and "Match ghost blocks"** ("Settings"; c9). Waits on the settings and red blocks request, Q1. The
-    settings screen where Geo chooses, `match-ghost-turn`, `GhostMatch`, and M6 sending the ghost block's turn. Done
-    when `GhostMatchTest` covers a match, a different block, a wall torch, and a turn that can't stay, and new
-    `filled.sh` checks pass: with the setting on, Planner1 facing south places oak stairs into a ghost stair facing
-    east, and the server's world and Planner2 show it facing east, filling the ghost block; with it off, it faces as
-    Planner1 does; shots of the screen and the placed stair.
+13. **Wrong blocks through walls** ("Wrong blocks through walls"; c3, 1241 Q2 C, Q3 B). `WrongBlocks` and its
+    drawing. Done when unit tests cover which blocks count and the distance, and new `filled.sh` checks pass: a
+    cobblestone block in a ghost stone brick shows red through a wall from 10 blocks and not from beyond 32, and an
+    oak stair facing north in a ghost oak stair facing east shows orange through it; shots from both sides of the
+    wall.
+14. **"Match ghost blocks"** ("Settings"; c9, 1244 Q1 B). The row in Effortless Building's "Visual Settings" screen
+    and its hook, `match-ghost-turn` saved by the screen's "Save" button, `GhostMatch`, and M6 sending the ghost
+    block's turn. Done when `GhostMatchTest` covers a match, a different block, a wall torch, and a turn that can't
+    stay, and new `filled.sh` checks pass: the row shows in "Visual Settings" and stays as saved after the game
+    restarts; with the setting on, Planner1 facing south places oak stairs into a ghost stair facing east, and the
+    server's world and Planner2 show it facing east, filling the ghost block; with it off, it faces as Planner1 does;
+    shots of "Visual Settings" with the row and of the placed stair.
 15. **Texts and screenshots for Geo**: every text steps 1 to 14 add or change (each controls line, "Change copy mode",
-    "[Esc: exit mode]", the (i) text, the settings screen's title, setting and tooltip, Delete's lines and messages)
+    "[Esc: exit mode]", the (i) text, the "Match ghost blocks" row and its tooltip, Delete's lines and messages)
     goes to Geo as editable text, with every step's screenshots, the changes outlined in red, each text following the
     rule Geo approved for the game's texts (985 Q1 A). Geo's version is built in, with `ControlsLineTest` and
     `step9.sh` checking each text exactly. The same step sets the version 0.7.0.
