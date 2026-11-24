@@ -418,10 +418,13 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
     H locks and nudges that first position, or during a shape every position set so far, together; everything else
     works as usual, and the lock ends once the blocks are placed (c5);
   - each key that switches a state names the current state, as "R: Zoop mode (Off)" (c6);
-  - Zoop goes from the one ghost block, since Line, Wall, Floor and Cube do the same, with Geo asking which part of
-    Zoop they can't do (c6); the copy keeps it as "Mode" (Off, Line, Wall, Floor), placing copies as those modes do
-    (c12, c15), and the key that switches it works during a row (c7);
-  - the first corner of a box (Copy, "Material list", Delete) marks the face it sits on, and the box is red for
+  - Geo proposes removing Zoop from the one ghost block, since Line, Wall, Floor and Cube overlap it, and asks which
+    part of Zoop those modes can't do easily (c6); the copy keeps it, as "Mode" (Off, Line, Wall, Floor), placing
+    copies as those modes do (c12, c15);
+  - the key that switches the one ghost block's Zoop stays available while a row's length is adjusted, switching
+    between a Vertical row and none (c7); the design applies this to the copy's mode, which keeps a row;
+  - the first corner of a box (Copy, "Material list", Delete), placed looking down on a block, darkens that block's top
+    face, and the box is red for
     Delete, white for Copy and blue for "Material list" (c8);
   - a setting that, when on, places a block into a ghost block of the same kind turned as the ghost block is (c9);
   - Esc steps out of one mode a press at a time (a copy's row, then the copy, then a build mode back to "Disable")
@@ -443,189 +446,111 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
 
 ## Agent-ready work
 
-**Building Planner 0.6.0** (the bullet "Building Planner 0.6.0 takes the six changes" in "Decisions" above: 806, 808,
-809, 811, 972, 980, 981 and the choices the agent settled). [building-planner.md](building-planner.md) is the design,
-and Geo's answers settle every choice in it. Steps 1 to 10 build the six changes, step 11 builds the texts Geo approved for them (972), steps 12 and 13 build Delete by aim, and steps 14
-to 20 the copy's controls for one ghost block, with turning and flipping in every mode and the real blocks placed in
-Disable; those features' texts are proposed, for Geo to edit in step 21, which sets the version, and step 22 is the
-release, which waits for both features (972 revision 2, Q1 B). The steps come in this order, each small enough for
-one child; steps 12 to 20 each change `CopyKeys`,
-`ControlsLine`, `ModeHud` and `step9.sh`, so they run one at a time. A step that changes nothing players see goes to
-`main` once its checks pass (inbox request 429). A step that changes what players see is committed without pushing,
-and goes to `main` once Geo has seen its in-game screenshots, with the changes outlined in red, and its texts. Each
-step adds its checks to the spec's "In-game checks", and every step's checks include `step6.sh` to `step10.sh` still
-passing. `overlap.sh` (about 15 minutes) runs in the steps that change the layer, edits, tiles or what Litematica
-draws (1, 3, 4 and 8) and at the release. Screenshots are at 854 by 480 and 1920 by 1080, GUI scale 2, plus GUI scale
-4 where a step says so. Filled ghost blocks need protocol version 5, so nothing goes to the server or the pack before
-the last step, when the server and the pack update together.
+**Building Planner 0.7.0** (the bullet "Building Planner 0.7.0" in "Decisions" above: Geo's comments c2 to c19 on 815
+revision 2). [building-planner.md](building-planner.md) is the design; each choice still Geo's is marked `OPEN:` there,
+with the inbox request that asks it: "Zoop and the copy's mode", "Locking in every build mode", "Delete as one mode",
+and "Match ghost blocks and wrong blocks through walls". A step that waits on a question starts once Geo has answered
+it, and builds Geo's answer, updating the spec's `OPEN:` mark to the decision in the same change; the steps marked
+"can start now" wait on nothing.
 
-1. **Older shapes stay drawn** ("Overlapping shapes"): the new tile added
-   before the old one is removed, and the game's self-check that logs a warning when a column loses ghost blocks an
-   edit didn't touch, or Litematica's blocks differ from the game's copy of the layer. `overlap.sh` hasn't reproduced
-   what Geo saw, so this step makes the next sighting leave evidence in Geo's game log. Done when unit tests cover the
-   self-check's comparison as a pure function (an edit's own positions ignored, a block lost outside them reported, at
-   most one warning a minute for a column), `overlap.sh` passes with no self-check warning in either client's log, and
-   a driver command that removes a block from Litematica's copy alone makes the warning appear. Players see nothing,
-   so it goes to `main` once its checks pass.
-2. **Editing from Freecam** ("Editing from Freecam"): `Aim` from the camera entity, read by `GhostAim`, `BoxDraw`, the
-   copy's aim and E1's block states; hooks E24 to E26; and a priority for M1, M3 and M4 that runs them before Freecam's
-   cancelling hooks. Done when unit tests cover `Aim` (the camera entity while Freecam's camera is on, the player with
-   "Player control" on or Freecam off), and new `step10.sh` checks pass with Freecam's camera on and 10 blocks from
-   Planner1, "Allow interaction" off: a Single shape and a Line shape go where the camera aims; a stair drawn with the
-   camera facing north faces north; the break click erases where the camera aims; a box for Copy and the copy at the
-   aim follow the camera's aim, and the middle click mirrors by the camera's facing; the radial menu, the block mix, N,
-   undo and redo work as without Freecam; and a left click with a stick breaks no real block. Shots of a shape's
-   preview, a box and the copy from the camera.
-3. **Ghost blocks the real world fills** ("Ghost blocks the real world fills"): the rule for a filled ghost block,
-   hook S1 and the end-of-tick edit with the nil author and no glow, the check as each chunk loads, edits that skip
-   filled positions, the undo notice's count, and protocol version 5. Done when unit tests cover the rule for each
-   property it compares or ignores (a stair facing another way and a log on another axis stay; a fence or wall with
-   other connections, a waterlogged slab and a crop of another age fill it; a top slab doesn't fill a bottom one; a
-   door with the other hinge stays), an edit's filter, the split at the block cap and the undo's count; `step8.sh`'s
-   other-version check hands the client a `hello` of protocol version 4; and a new script, `filled.sh`, passes: real
-   blocks placed by hand, by `/fill`, by a piston and by water remove their ghost blocks within a tick, for Planner1
-   and Planner2, with no glow; a stair placed facing the other way leaves its ghost block; breaking a filled block
-   brings no ghost block back; a paste onto built blocks changes nothing; and ghost blocks saved over matching real
-   blocks while the server ran without the hook are gone once their chunk loads. Shots of a wall half built, before
-   and after.
-4. **The Delete box** ("The Delete box"): `BoxDraw.Purpose.DELETE`, its count of ghost blocks only, the erase edit and
-   its messages, the seventh `RadialButton` above Copy with the Barrier's icon, and hook E2 sending air only where
-   ghost blocks are. Done when unit tests cover the box's count, the erase edit (only positions with ghost blocks,
-   both halves of a door) and E2's filter, and new `step9.sh` checks pass: a Delete box of 40 by 40 by 10 erases its
-   ghost blocks as one edit, which one undo brings back, and Planner2 sees them glow; a box without ghost blocks gives
-   its message and changes nothing; Copy, Delete and "Material list" switch purposes keeping the corners; a box over
-   the block cap draws red; and the radial menu checks pass with seven buttons and their hover texts. Shots of the
-   radial menu (with GUI scale 4) and of a Delete box being drawn.
-5. **Page Up and Page Down freed from Litematica** ("Keys" and "Settings Building Planner changes once"): the
-   `layer-keys-applied` group. Done when unit tests cover the group's rules (each hotkey cleared only while it's
-   "PAGE_UP" or "PAGE_DOWN", the record written only with Litematica loaded), and new `step10.sh` checks pass: after
-   the first start both hotkeys have no key in `config/litematica.json`, a hotkey the player moved stays, and a Page
-   Up press reaches a `KeyMapping` bound to it. The step changes nothing players see, so it goes to `main` once its
-   checks pass.
-6. **Where the copy sits, and snapping** ("Copy and paste": "Where the copy sits", "Snapping" and the wheel): the copy
-   against the aimed face with its middle under the crosshair, turning and mirroring around its middle, a notch up
-   turning it clockwise, flush to the player's 16 most recent pastes (`PasteBoxes`), and in line with the latest while
-   the sprint key is held. Done when unit tests cover the placement as a pure function (each of the six faces, odd and
-   even sides, each turn and mirror) and snapping (flush to a paste's box on each side, the guide line along a row and
-   a column), and `step9.sh`'s copy checks, rewritten for the new placement, pass: the copy rests on the aimed top,
-   side and bottom faces; a notch up turns it clockwise in place; aimed at a recent paste it sits flush beside it;
-   with Left Ctrl held it stays in line with the latest paste. Shots of the copy on a floor and against a wall.
-7. **Locking and nudging** ("Copy and paste": the controls, and "Keys"): the seven keys "Lock or unlock" and the six
-   nudge keys ("Nudge forward" and the rest) under the "Building Planner" heading, acting only while the copy is at the
-   aim. Needs steps 5 and 6. Done when unit tests cover the nudge's direction from the view's facing and a held key's
-   repeat (after 0.2 seconds, then every 4 ticks), and new `step9.sh` checks pass: H locks the copy and walking away
-   leaves it; each arrow key and Page Up and Page Down move it one block the right way; a held key moves it about 5
-   blocks a second; H unlocks it; a paste keeps it locked; with Freecam's camera on, Up moves it away from the camera.
-   Shots of the locked copy and of Controls' "Building Planner" heading (with GUI scale 4).
-8. **Zoop and Vertical** ("Build modes and zoop"): the eighth key, "Change Zoop or Delete mode" (R), the row's
-   placements, and the row pasted as one edit. Done when unit tests cover the row as a pure function (its direction from
-   the aim, up to 10 copies, each the turned copy's length apart, up or down for Vertical), and new `step9.sh` checks
-   pass: R cycles Single, Zoop and Vertical; a Zoop row of 4 pastes as one edit, which one undo takes back; a right
-   click after the first click drops the row and leaves the copy; the wheel turns every copy in the row; the mode stays
-   across copies until the game restarts. Shots of a Zoop row and a Vertical row before the second click.
-9. **The copy's colours** ("Colours"): the copy's box drawn by Building Planner in blue, yellow and red, hook L6
-   leaving the copy and its row out of Litematica's boxes, and a red copy's click pasting nothing. Needs step 8. Done
-   when unit tests cover the colour as a pure function (clear, over ghost blocks, outside the build height or the
-   border, a row over the block cap), and new `step9.sh` checks pass for each colour, with a red click sending no
-   edit. Shots of the copy in each colour.
-10. **The controls lines** ("Building Planner's mouse modes"): the Delete box's line and the copy's lines for each
-    mode, locked, after the first paste ("Hold Ctrl to line up") and red, with the keys as the player has them bound.
-    Done when unit tests cover the line for each state as a pure function, and `step9.sh` checks each line exactly.
-    Shots of each line (with GUI scale 4).
-11. **Geo's texts (972)** ("Building Planner's mouse modes", "Keys" and "The Delete box"): the texts steps 4 to 10
-    add, as Geo approved them in inbox request 972 (the "Texts (972)" bullet in "Decisions"): the controls lines, with
-    Geo's phrase "Arrow keys + Page Up/Down to nudge" in every locked line, the eight keys' names, and the Delete
-    button's name, its icon and its messages. Done when `ControlsLineTest` and `step9.sh` check each text exactly, and
-    the shots of each line (with GUI scale 4) show Geo's wording. It doesn't set the version.
-12. **Delete by aim: marking** ("Delete by aim"): Delete's two modes (`DeleteMode`) and the mouse mode `DELETE_AIM`, R
-    switching a Delete box and Aim, the sweep with the sprint key (`DeleteAim`, `DeleteMarks`), the marks' red outline
-    and sides (`MarksOutline`), their list under the crosshair, the cap, marks dropping with their ghost blocks, and the
-    right click that clears the marks or ends Aim. Done when `DeleteMarksTest` passes and the spec's "Delete by aim,
-    marking (step 12)" checks in `step9.sh` pass, with shots of a marked wall.
-13. **Delete by aim: erasing and its line** ("Delete by aim"): the one-second hold (M1 and the client tick), the erase
-    edit and its message, Aim staying on, the Delete box's "R for Aim" and Aim's controls lines
-    (`ControlsLine.deleteAim`). Needs step 12. Done when `EraseHoldTest` and `ControlsLineTest` pass and the spec's
-    "Delete by aim, erasing and its line (step 13)" checks pass, with shots of each line (with GUI scale 4).
-14. **One ghost block: locking and nudging** ("One ghost block"): `SingleBlock` and when its controls are active
-    (`SingleRule`), H and the nudge keys acting for it in `CopyKeys`, hooks E14, M1, M2 and M3 taking its clicks while
-    it's locked (a left click erasing at the locked position), E27 and E30 drawing the locked block and E28 its state,
-    and the eight keys' proposed names. Done when `SingleRuleTest` passes and the spec's "One ghost block, locking and
-    nudging (step 14)" checks pass, with shots of the locked block and of Controls' "Building Planner" heading (with GUI
-    scale 4).
-15. **One ghost block: Zoop and Vertical** ("One ghost block"): R cycling the block's own mode, `CopyRow` with a
-    longest row of 32 for a block and 10 for the copy, the row through Effortless Building's `processBlocks` and
-    `EffortlessShapes.place`, and its preview through E27. Needs step 14. Done when `CopyRowTest` passes and the spec's
-    "One ghost block, Zoop and Vertical (step 15)" checks pass, with shots of a Zoop row and a Vertical row before the
-    second click.
-16. **One ghost block: turning and flipping** ("One ghost block"): `BlockTurn` and `HeldTurn`, hooks M4 and M5 with
-    the sprint key held, L11 for the flip, E1 (after the placement rules and before the modifiers' transforms) and E28
-    applying the turn, and the turn dropping when the player switches to another block, all in Single mode. Needs step
-    14. Done when `BlockTurnTest` passes and the spec's "One ghost block, turning and flipping (step 16)" checks pass,
-    with shots of turned and flipped stairs before and after placing. The step also makes a locked block's left click
-    erase every block a right click would place (1074 Q1 A), with its check among the spec's "One ghost block, locking
-    and nudging (step 14)" checks.
-17. **Turning in every mode** ("One ghost block": "Turning and flipping" and "Controls line"): the turning controls
-    active in every mode but Disable and not during a shape drawn with the break click (`SingleRule.turning`), so M4,
-    M5, L11, E1 and E28 act in every mode, and the turning line (`ControlsLine.turning`), which `ModeHud` draws above
-    the action bar while Effortless Building's own line shows. In Disable the wheel and the middle click stay
-    Minecraft's until steps 18 and 19 add Disable's turning. Needs step 16. Done when `SingleRuleTest` and `ControlsLineTest` pass and the spec's "Turning in every mode
-    (step 17)" checks pass, with shots of a Line of turned stairs and of the turning line before a shape and during one
-    (with GUI scale 4). The step also draws Single's unlocked block at the aim, turned as it will be placed (1108 Q1
-    A), through E30, with a check among its checks and a shot of a turned stair at the aim.
-18. **Turning real blocks in Disable** ("One ghost block": "Turning real blocks in Disable"): the payload
-    `place_turn` and each player's turn on the server (`PlaceTurns`), dropped when the player leaves; hook M6 sending
-    it before a right click on a block while Left Ctrl is held (`DisableTurn`); hook S2 in `BlockItem.place`, on both
-    sides, setting the turn, the shape from the neighbours, and the checks that the turned block can stay, a bed's head
-    space among them, placing nothing when it can't (1033 Q1 A); the turning controls (M4, M5 and L11) active in
-    Disable; and `place_turn` among the payloads the client checks at joining, in protocol version 5. Needs step 17.
-    Done when `DisableTurnTest` and
-    `PlaceTurnTest` pass as pure functions and the spec's "Turning real blocks in Disable (step 18)" checks pass:
-    Planner1 places a turned stair and log in Disable, the server's world and Planner2 show them turned, and Planner1's
-    own block shows turned at every tick from the click; a torch and a bed that can't stay turned place nothing; and a
-    game on another protocol version places as Minecraft does. Shots of the turned stair and log, placed.
-19. **Disable's preview and its line** ("One ghost block": "Turning real blocks in Disable"): hooks E29 and E30,
-    and E28's Disable state,
-    drawing in Effortless Building's preview the block a right click would place (`DisablePreview`), red through E29
-    when it can't stay, and none while Freecam's "Allow interaction" is off or the player is beyond reach; and
-    Disable's controls line (`ControlsLine.disable`), drawn by `ModeHud`, showing without Left Control except for a
-    block that hangs on the block behind it (1033 Q2 A, 1037 Q1 B). Needs step 18. Done when `DisablePreviewTest` and
-    `ControlsLineTest` pass and the spec's "Disable's
-    preview and its line (step 19)" checks pass, with shots of the preview of a turned stair and of a red torch at 854
-    by 480 and 1920 by 1080, GUI scale 2, and of each line (with GUI scale 4), with the changes outlined in red. The
-    step also draws the block at the aim in Zoop and Vertical before their first click, as in Single (1128 Q1 A),
-    with a check among the spec's "Turning in every mode (step 17)" checks.
-20. **One ghost block: colours and its line** ("One ghost block"): `CopyOutline` for the locked block and the row,
-    red placing nothing, and the controls line for each state (`ControlsLine.single`), drawn by `ModeHud`. Needs steps
-    15 and 17. Done when `CopyColourTest` and `ControlsLineTest` pass and the spec's "One ghost block, colours and its
-    line (step 20)" checks pass, with shots of each line (with GUI scale 4) and of a yellow row crossing ghost blocks.
-21. **Texts for Geo**: every text steps 12 to 20 add (Aim's controls lines and the Delete box's "R for Aim", the one
-    ghost block's controls lines and its red reason, the turning line, Disable's lines and their red reason, and the
-    eight keys' proposed names) goes to Geo
-    as editable text with its step's screenshots, each following the rule Geo approved for the game's texts (985 Q1
-    A), and Geo's version is built in, with `ControlsLineTest` and `step9.sh` checking each text exactly. Every
-    controls line is drawn as separate rectangles, and so is Effortless Building's own line during a shape (1155).
-    The same step sets the version 0.6.0.
-22. **The release**: after Geo's approval, released as 0.5.0 was: the GitHub release, then the server and the pack in
-    one sitting, since protocol version 5 turns Building Planner off for a game and a server on different versions. On
-    the server: a backup of the world named for 0.6.0, the jar in `mods/` in place of 0.5.0's, and a
-    restart; the log shows Building Planner start with no error, and a player beside a part of a plan that's already
-    built sees no ghost blocks over it. Then the pack's push to `main`. "Current setup" in this plan is updated to
-    0.6.0, protocol version 5 and the new backup, and the README and the guide are checked against what 0.6.0 changes.
-    Released on November 23rd (1185 A): `overlap.sh`, `filled.sh` and `import.sh` passed on the release commit; the
-    GitHub release `building-planner-0.6.0` (not latest, jar SHA-256 `a65e35e7…97d8`); the server stopped with no
-    one online, backed up, and started on 0.6.0 with 0 error lines (its only warnings are Java's four `Unsafe` lines,
-    as at every start); the pack (`ffa00cc`), whose served files match the commit. The README and the guide name no
-    version and nothing 0.6.0 changes. Geo did every step of the walkthrough of 0.5.0's material lists and every
-    0.6.0 change (815 revision 2), with no fault reported other than the item name drawn over the controls line; the
-    server has saved Geo's material list, and its only error lines since are the "Error sending packet" lines it logged
-    under 0.5.0. Geo's comments are the changes for the next version ("Building Planner 0.7.0" in "Decisions"). A
-    walkthrough waits until every change Geo asked for in its version is approved and released (815 [c1]).
+The steps come in this order, each small enough for one child. Steps 1 and 3 change no file another step changes,
+so each may run beside another step; the others change `ControlsLine`, `ModeHud`, `CopyKeys` or `step9.sh`, so they
+run one at a time. A step that changes what players see is committed without pushing, and goes to `main` once Geo
+has seen its in-game screenshots, with the changes outlined in red, in step 15. Each step rewrites the spec's
+"In-game checks" for what it changes, removing the checks of behavior it removes, and every step's checks include
+`step6.sh` to `step10.sh` still passing. `overlap.sh` (about 15 minutes) runs in step 10, which changes what Litematica
+draws, and at the release. Screenshots are at 854 by 480 and 1920 by 1080, GUI scale 2, plus GUI scale 4
+where a step says so. 0.7.0 keeps protocol version 5 and changes nothing on the server.
+
+1. **The radial menu's rows** ("The radial menu's buttons and sliders"; c2). Can start now. "Show or hide ghost
+   blocks" under the wrench, Copy, Paste and Delete in the row above it, "Block mix", "Material list" and "Material
+   lists" in the row above that, and hook E34 leaving out "Functional Settings" during a session. Done when the radial
+   menu's checks in `step9.sh` pass for the new positions and hover texts, with Planner1 an operator and not, and the
+   shots of the menu (with GUI scale 4) show nothing overlapping.
+2. **Boxes in their colours** ("Boxes for Copy and the material list"; c8, c11, c18). Can start now. Each purpose's
+   colour (white for Copy, blue #00D4FF for the material list, red for Delete's box), the aimed face shaded black at
+   0.35 alpha under a first corner, and the dark background under the blocks listed beside the crosshair. Done when
+   unit tests cover the colour for each purpose and the shaded face for each of the six faces, and `step9.sh` checks
+   pass for each, with shots of a box for each purpose and of the list under the crosshair.
+3. **The material list's Close buttons and (i) text** ("The screen's buttons" and "Saved lists"; c8, c19). Can start
+   now. Hook L10's "Close" at the bottom right, "Close" on "Saved lists", and hook L12 with the proposed text in the
+   language file. Done when `step10.sh`'s material list checks pass: each "Close" closes its screen as Escape does, and
+   the (i) icon's tooltip shows the proposed lines; shots of both screens and the tooltip.
+4. **The build mode's name and the held item's name** ("The build mode's name and the held item's name"; c17). Can
+   start now. `ModeHud` drawing the mode's name left of the hotbar or the off hand's slot, hook E35, and hook M8 moving
+   the item's name above Building Planner's lines. Done when unit tests cover the name's position with and without an
+   off-hand item, and `step9.sh` checks pass: the name shows in every mode but Disable, the action bar shows no name
+   after a mode is chosen, and an item's name draws above a line of one row and of two; shots in Line with oak stairs
+   (Geo's image 1) and with a shield in the off hand.
+5. **The first click's block in every mode** ("Locking and the first click": "The first click's block"; c4). Can
+   start now. Hook E30 drawing the first click's block in every mode but Disable, and E28 its state. Done when
+   `step9.sh` checks pass: in Line, Wall, Cube and Sphere, the preview draws one stair at the aim before the first
+   click, turned as it will be placed, and none while aiming at nothing; with the array on, its copies draw as before;
+   shots in Wall and Cube.
+6. **Locking in every mode** ("Locking and the first click": "Locking and nudging" and "Colours"; c5). Can start
+   now; its rule for a click that erases waits on the locking request, Q1. `ShapeLock` in place of `SingleBlock`'s
+   lock, hooks E32 and E33, H and the nudge keys in every mode but Disable (`CopyKeys`), the copy's box around each
+   locked position, and the lock ending when a shape finishes. Done when `ShapeLockTest` covers when the lock is
+   active and when it ends, and `step9.sh` checks pass: in Single, a locked stair nudged up places there and unlocks;
+   in Wall, H before the first click locks the first corner, the far corner follows the aim, and the wall places from
+   the locked corner; in Cube, H after the second click and Up move both set positions and the preview with them;
+   Freecam's camera nudges by its facing; shots of a locked Wall corner and a nudged Cube.
+7. **Each build mode's controls line** ("Locking and the first click": "Controls line"; c6, c13, c17). Needs steps 5
+   and 6. `ControlsLine.shape` before the first click in every mode but Disable, with "[H: Lock (Off)]" and "[Esc: exit
+   mode]", and the lock and turning line above the action bar during a shape. Done when `ControlsLineTest` covers each
+   state's line, and `step9.sh` checks each line exactly; shots of each line (with GUI scale 4).
+8. **Single without Zoop and Vertical** ("Locking and the first click"; c6). Waits on the Zoop request, Q1. Removing
+   the block's own mode, its row and R in Single (`SingleBlock`'s row, `CopyRow` for a block), with their checks.
+   Needs step 6. Done when `step9.sh` passes without the row checks, R in Single does nothing, and a Line of 12
+   upward stairs, started from a locked position, places as one edit.
+9. **The copy's right-click paste** ("Copy and paste": the controls; c13, c14). Waits on the Zoop request, Q2, and
+   the locking request, Q2. Hooks M2 pasting and M1 putting the copy away or dropping its set, and the copy's lines
+   with "[Right-click: paste]" and "[Esc/Left-click: close]". Done when `step9.sh`'s copy checks, rewritten for the
+   right click, pass: a right click pastes, a left click puts the copy away, and a locked copy behaves after a paste
+   as Geo answers; shots of the copy's lines (with GUI scale 4).
+10. **The copy's mode: Off, Line, Wall and Floor** ("Copy and paste": "The copy's mode"; c7, c12, c15). Waits on the
+    Zoop request, Q4. Needs step 9. `CopyGrid` with Effortless Building's `findLine`, `findWall` and `findFloor`, the
+    set's placements, R during a set, H and the nudges during a set, and "Change copy mode". Done when `CopyGridTest`
+    covers each mode in each direction and the cap on copies, and `step9.sh` checks pass: a Line of 4 copies upward and
+    one eastward, a Wall of 3 by 2 and a Floor of 4 by 4 each paste as one edit, which one undo takes back; R during a
+    Line keeps the first copy as a Wall, and at Off drops the set; shots of each mode before the second click.
+11. **Delete as one mode** ("Delete"; c16). Waits on the Delete request, Q1. One mode `DELETE` in place of the box
+    and Aim, the box drawn with Left Control and a held left click marking or unmarking, the one-second erase with the
+    progress bar, and Delete's lines. Needs step 2. Done when `DeleteMarksTest` and `EraseHoldTest` pass and
+    `step9.sh`'s Delete checks, rewritten for one mode, pass: a box of 10 by 4 by 10 marks its ghost blocks; a box
+    started on a marked block unmarks; holding the left click for a second erases the marks as one edit, with the
+    bar filling; shots of a marked box, the bar half full, and each line (with GUI scale 4).
+12. **Esc** ("Esc"; c10, c13, c17). Waits on the Zoop request, Q3. Needs steps 6, 10 and 11. Hook M7 and `EscSteps`.
+    Done when `EscStepsTest` covers each step's order, and `step9.sh` checks pass: during a copy's Line, Esc drops the
+    set, then puts the copy away, then sets the mode to Disable, then pauses; in Delete with marks, Esc clears them,
+    then ends Delete; with the inventory open, Esc closes it.
+13. **Wrong blocks through walls** ("Wrong blocks through walls"; c3). Waits on the settings and red blocks request,
+    Q2 and Q3. `WrongBlocks` and its drawing. Done when unit tests cover which blocks count and the distance, and new
+    `filled.sh` checks pass: a cobblestone block in a ghost stone brick shows through a wall from 10 blocks and not
+    from beyond the distance Geo chose; shots from both sides of the wall.
+14. **Settings and "Match ghost blocks"** ("Settings"; c9). Waits on the settings and red blocks request, Q1. The
+    settings screen where Geo chooses, `match-ghost-turn`, `GhostMatch`, and M6 sending the ghost block's turn. Done
+    when `GhostMatchTest` covers a match, a different block, a wall torch, and a turn that can't stay, and new
+    `filled.sh` checks pass: with the setting on, Planner1 facing south places oak stairs into a ghost stair facing
+    east, and the server's world and Planner2 show it facing east, filling the ghost block; with it off, it faces as
+    Planner1 does; shots of the screen and the placed stair.
+15. **Texts and screenshots for Geo**: every text steps 1 to 14 add or change (each controls line, "Change copy mode",
+    "[Esc: exit mode]", the (i) text, the settings screen's title, setting and tooltip, Delete's lines and messages)
+    goes to Geo as editable text, with every step's screenshots, the changes outlined in red, each text following the
+    rule Geo approved for the game's texts (985 Q1 A). Geo's version is built in, with `ControlsLineTest` and
+    `step9.sh` checking each text exactly. The same step sets the version 0.7.0.
+16. **The release**: after Geo's approval, released as 0.6.0 was: `overlap.sh`, `filled.sh` and `import.sh` on the
+    release commit; the GitHub release `building-planner-0.7.0`; then, in one sitting, the server (a backup of the
+    world named for 0.7.0, the jar in `mods/` in place of 0.6.0's, and a restart whose log shows Building Planner
+    start with no error) and the pack's push to `main`, so both run one version. "Current setup" in this plan is
+    updated to 0.7.0 and the new backup, and the README and the guide are checked against what 0.7.0 changes. Geo's
+    walkthrough of 0.7.0 follows, once every change Geo asked for in it is approved and released (815 [c1]).
 
 ## Design work: Building Planner
 
 [building-planner.md](building-planner.md) is the spec: what players get, how each goal above is met, the technical
 design with every hook checked in the source, and what's unverified. Geo's decisions are above. The texts players see
-are in the wording Geo approved.
+are in the wording Geo approved, except those marked as proposed for 0.7.0, which Geo edits in its step 15.
 
 ### Source evidence (read 2026-11-13)
 
