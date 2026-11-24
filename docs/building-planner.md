@@ -10,7 +10,8 @@ except 0.7.0's changes, from Geo's walkthrough of 0.6.0 (815 revision 2, comment
 in [plan.md](plan.md) "Decisions"):
 
 - the radial menu's buttons in new rows (see "The radial menu's buttons and sliders");
-- ghost blocks with the wrong block in them seen faintly through walls from nearby (see "Wrong blocks through walls");
+- ghost blocks with the wrong block or the wrong state in them seen faintly through walls from nearby (see "Wrong
+  blocks through walls");
 - the block a click would place drawn before the first click, and locking and nudging the first click's position and
   the positions a shape has set, in every build mode (see "Locking and the first click");
 - Single mode without Zoop and Vertical, and the copy's "Mode" (Off, Line, Wall and Floor) in place of its Zoop and
@@ -73,8 +74,9 @@ The build steps are in [plan.md](plan.md) ("Agent-ready work").
 - **The build mode's name.** While a build mode other than Disable is chosen, its name shows just left of the hotbar.
   The held item's name, which the game shows for a moment after the player picks an item, shows above the controls
   lines, where the build mode's name used to show (see "The build mode's name and the held item's name").
-- **Wrong blocks through walls.** A ghost block with a different real block in it, which Litematica draws red, shows
-  faintly through walls within 16 blocks (see "Wrong blocks through walls").
+- **Wrong blocks through walls.** A ghost block with a different real block in it, which Litematica draws red, or the
+  same block in another state, which it draws orange, shows faintly through walls within 32 blocks (see "Wrong blocks
+  through walls").
 - **Block mixes.** The block mix key (B unless the player changes it in Controls) and the Block mix button in the
   radial menu open the block mix screen, the only place to choose a mix's blocks: it lists the blocks in the player's
   inventory at first ("Only my inventory" starts on), or every block in the game with that switch off, with search. A
@@ -2647,8 +2649,8 @@ other in the game's own copy of the layer, again after a restart, which doesn't 
   seen doing so.
 - That Effortless Building's "Functional Settings" button is the only one the radial menu gives operators alone
   (source read); Planner1 and Planner2 are made operators for the check of hook E34.
-- What drawing the wrong blocks through walls costs (`WrongBlocks`, rescanned every 10 ticks within 16 blocks):
-  expected under a millisecond a scan of 33 by 33 by 33 positions, not measured.
+- What drawing the wrong blocks through walls costs (`WrongBlocks`, rescanned every 10 ticks within 32 blocks, up to
+  65 by 65 by 65 positions a scan in the sections that hold ghost blocks): not measured.
 - That a two-part block placed with "Match ghost blocks" on (a door, a bed) takes the ghost block's facing for both
   parts, as one turned with Left Ctrl does; read, not run.
 - That no Litematica or MaLiLib hotkey acts on Left Ctrl with the wheel or the middle button while Litematica's tool
