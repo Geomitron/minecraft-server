@@ -145,7 +145,8 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 			BuildingPlannerClient::copyLine, BuildingPlannerClient::aimLines, BuildingPlannerClient::modelessLine,
 			() -> effortless && EffortlessShapes.shapeUnderWay(),
 			() -> CopyKeys.names(Minecraft.getInstance()).mode(),
-			() -> session == null ? List.of() : session.boxList());
+			() -> session == null ? List.of() : session.boxList(),
+			() -> effortless && session != null ? EffortlessShapes.modeName() : null);
 		HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(BuildingPlanner.MOD_ID, "mode_controls"),
 			modeHud);
 		HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(BuildingPlanner.MOD_ID, "material_panel"),
@@ -750,6 +751,14 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 			session.turnCopy(wheel > 0);
 		}
 		return false;
+	}
+
+	/**
+	 * Hook M8: the top of the held item's name, which the game gives as {@code drawnAt}: 2 above the top of the highest
+	 * row of Building Planner's lines above the hotbar while one shows, or {@code drawnAt}.
+	 */
+	public static int itemNameTop(int drawnAt) {
+		return modeHud == null ? drawnAt : modeHud.itemNameTop(drawnAt);
 	}
 
 	/** Whether Building Planner is on for this server, so Effortless Building's hooks draw ghost blocks. */

@@ -35,6 +35,7 @@
 		"litematica.WidgetListSchematicPlacementsMixin",
 		"litematica.WorldUtilsMixin",
 		"minecraft.BlockItemInvoker",
+		"minecraft.HudMixin",
 		"minecraft.MinecraftMouseModeMixin",
 		"minecraft.MinecraftUseItemMixin",
 		"minecraft.MouseHandlerMixin",

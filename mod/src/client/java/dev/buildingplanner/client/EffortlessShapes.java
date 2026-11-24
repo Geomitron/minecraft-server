@@ -21,6 +21,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
+import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
@@ -140,6 +141,12 @@ public final class EffortlessShapes {
 	/** Whether Effortless Building's mode is Disable, where the player places real blocks. */
 	static boolean disableMode() {
 		return BuildModes.CLIENT.getBuildMode() == BuildModeEnum.DISABLED;
+	}
+
+	/** The name of Effortless Building's mode ("Line", say), or null in Disable. */
+	static Component modeName() {
+		BuildModeEnum mode = BuildModes.CLIENT.getBuildMode();
+		return mode == BuildModeEnum.DISABLED ? null : Component.translatable(mode.getNameKey());
 	}
 
 	/** Whether a shape drawn with the break click is under way: it erases, so the turning controls aren't active. */

@@ -5,6 +5,7 @@ import dev.buildingplanner.input.MouseMode;
 import dev.buildingplanner.look.BoxListLayout;
 import dev.buildingplanner.look.ControlsLine;
 import dev.buildingplanner.look.ControlsRows;
+import dev.buildingplanner.look.ModeName;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
@@ -20,6 +21,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
 import net.minecraft.util.ARGB;
+import net.minecraft.world.entity.HumanoidArm;
 
 /**
  * The lines of a mouse mode's controls, centred where Effortless Building draws its own line during a shape
@@ -34,7 +36,8 @@ import net.minecraft.util.ARGB;
  * line shows in the same place while the one ghost block's controls are active ({@link ControlsLine#single}), or the
  * turning line ({@link ControlsLine#turning}), or in Disable, Disable's line ({@link ControlsLine#disable}); during a
  * shape drawn with the place click, while Effortless Building draws its own line there and the shape's block count in
- * the action bar above it, it shows above the action bar.
+ * the action bar above it, it shows above the action bar. While the HUD shows, Effortless Building's mode's name shows
+ * just left of the hotbar, in a rectangle of the same look ({@link ModeName}), but in Disable.
  */
 final class ModeHud implements HudElement {
 	private static final int BOTTOM = 58;
@@ -79,6 +82,7 @@ final class ModeHud implements HudElement {
 	private final Supplier<Boolean> shape;
 	private final Supplier<String> modeKey;
 	private final Supplier<List<BoxList.Entry>> list;
+	private final Supplier<Component> modeName;
 
 	/**
 	 * {@code mode} is the mouse mode now, or null, {@code box} the box drawn now, or null, {@code copy} the copy at the
@@ -86,11 +90,12 @@ final class ModeHud implements HudElement {
 	 * {@code modeless} the line with no mouse mode on, Single's ({@link ControlsLine#single}), the turning line
 	 * ({@link ControlsLine#turning}) or Disable's ({@link ControlsLine#disable}), or null, {@code shape} whether Effortless
 	 * Building's shape is under way, {@code modeKey} the name of the key that switches a Delete box to Aim, or null
-	 * while it has none, and {@code list} the kinds of block in the box, or the marks.
+	 * while it has none, {@code list} the kinds of block in the box, or the marks, and {@code modeName} the name of
+	 * Effortless Building's mode during a session, or null in Disable or without one.
 	 */
 	ModeHud(Supplier<MouseMode> mode, Supplier<BoxDraw.Shown> box, Supplier<ControlsLine.Line> copy,
 		Supplier<List<ControlsLine.Line>> aim, Supplier<ControlsLine.Line> modeless, Supplier<Boolean> shape,
-		Supplier<String> modeKey, Supplier<List<BoxList.Entry>> list) {
+		Supplier<String> modeKey, Supplier<List<BoxList.Entry>> list, Supplier<Component> modeName) {
 		this.mode = mode;
 		this.box = box;
 		this.copy = copy;
@@ -99,6 +104,7 @@ final class ModeHud implements HudElement {
 		this.shape = shape;
 		this.modeKey = modeKey;
 		this.list = list;
+		this.modeName = modeName;
 	}
 
 	/** The lines to show now, from the top, or none. */
@@ -385,13 +391,46 @@ final class ModeHud implements HudElement {
 			: height - BOTTOM - (rows - 1) * ControlsRows.pitch(font.lineHeight);
 	}
 
+	/**
+	 * Hook M8: the top of the held item's name, which the game gives as {@code drawnAt}: 2 above the top of the highest
+	 * row of the lines while they show, or {@code drawnAt}.
+	 */
+	int itemNameTop(int drawnAt) {
+		List<Line> lines = lines();
+		if (lines.isEmpty()) {
+			return drawnAt;
+		}
+		Minecraft mc = Minecraft.getInstance();
+		int height = mc.getWindow().getGuiScaledHeight();
+		int rows = placed(lines, mc.font, mc.getWindow().getGuiScaledWidth(), height).size();
+		return drawnAt + ModeName.itemNameShift(drawnAt, mc.font.lineHeight, top(rows, mc.font, height, raised()));
+	}
+
+	/** The mode's name in its rectangle beside the hotbar while it shows, or null. */
+	private Placed modeNamePlaced(Font font, int width, int height) {
+		Minecraft mc = Minecraft.getInstance();
+		Component name = mc.gui.hud.isHidden() || mc.player == null ? null : modeName.get();
+		if (name == null) {
+			return null;
+		}
+		Component text = Component.empty().append(name).withStyle(ChatFormatting.WHITE);
+		boolean offHandLeft = !mc.player.getOffhandItem().isEmpty()
+			&& mc.player.getMainArm().getOpposite() == HumanoidArm.LEFT;
+		ModeName.Box box = ModeName.box(font.width(text), font.lineHeight, width, height, offHandLeft);
+		return new Placed(text, box.left(), box.top(), box.right(), box.bottom());
+	}
+
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor graphics, DeltaTracker delta) {
+		Font font = Minecraft.getInstance().font;
+		Placed name = modeNamePlaced(font, graphics.guiWidth(), graphics.guiHeight());
+		if (name != null) {
+			draw(graphics, font, List.of(List.of(name)));
+		}
 		List<Line> lines = lines();
 		if (lines.isEmpty() && !(listed() && shown())) {
 			return;
 		}
-		Font font = Minecraft.getInstance().font;
 		List<List<Placed>> rows = placed(lines, font, graphics.guiWidth(), graphics.guiHeight());
 		draw(graphics, font, rows);
 		if (listed()) {

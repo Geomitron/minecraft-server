@@ -99,6 +99,19 @@ final class EffortlessDriver {
 		return selected.isEmpty() ? "none" : String.join(" ", selected);
 	}
 
+	/**
+	 * The window position on the radial menu's ring segment of {@code mode}, 45 GUI pixels from the menu's middle along
+	 * the segment's middle line, between the coloured category line (30 to 32) and the ring's outer edge (65).
+	 */
+	static String segmentAt(Minecraft mc, String mode) {
+		double slice = 2 * Math.PI / BuildModeEnum.values().length;
+		double angle = (BuildModeEnum.valueOf(mode).ordinal() + 0.5) * slice - Math.PI / 2;
+		double scale = mc.getWindow().getGuiScale();
+		int x = (int) (mc.getWindow().getWidth() / 2.0 + Math.cos(angle) * 45 * scale);
+		int y = (int) (mc.getWindow().getHeight() / 2.0 + Math.sin(angle) * 45 * scale);
+		return x + " " + y;
+	}
+
 	/** A box on the screen, in GUI pixels, with what it is. */
 	private record Box(String what, double left, double top, double right, double bottom) {
 		boolean meets(Box other) {

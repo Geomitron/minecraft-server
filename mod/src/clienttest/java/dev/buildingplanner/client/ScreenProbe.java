@@ -123,6 +123,17 @@ public final class ScreenProbe {
 		return lastTooltips.isEmpty() ? "none" : String.join(" | ", lastTooltips);
 	}
 
+	/**
+	 * The window box (left top right bottom: its text's own, one line high) of each component the last frame drew whose
+	 * text is {@code text}, separated by " | ", or none; as the held item's name and the mode's name beside the hotbar.
+	 */
+	static String drawnBoxes(Minecraft mc, String text) {
+		double scale = mc.getWindow().getGuiScale();
+		List<String> boxes = lastComponents.stream().filter(d -> d.text().getString().equals(text))
+			.map(d -> box(scale, d.x(), d.y(), d.x() + d.width(), d.y() + FONT_HEIGHT)).toList();
+		return boxes.isEmpty() ? "none" : String.join(" | ", boxes);
+	}
+
 	/** Each string drawn in the last frame, separated by " | ". */
 	static String drawnTexts() {
 		return last.stream().map(Drawn::text).collect(Collectors.joining(" | "));

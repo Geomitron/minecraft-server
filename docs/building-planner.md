@@ -267,7 +267,7 @@ Minecraft 26.3, read in the client jar Loom maps (`minecraft-clientonly-deobf-26
 | M4 | `Minecraft.java`, `pickBlockOrEntity()` | `@Inject` at head, cancellable | While the copy is at the aim, the middle click (the pick block key) mirrors the copy; while a box is drawn or Delete is on, it does nothing. While the turning controls are active (every mode, Disable's as "Turning real blocks in Disable" describes), with a block in hand that flips and Minecraft's sprint key held, it flips the block (see "Locking and the first click"). |
 | M5 | `MouseHandler.java`, `onScroll(long, double, double)` | `@WrapWithCondition` on `Inventory.setSelectedSlot`, reading the local `wheel` | While the copy is at the aim, each notch of the wheel turns the copy a quarter turn, instead of changing the hotbar slot: clockwise seen from above for a notch up, counterclockwise for a notch down, as Satisfactory's wheel turns a hologram. While the turning controls are active (every mode, Disable's as "Turning real blocks in Disable" describes), with a block in hand that turns and Minecraft's sprint key held, each notch turns the block the same way. The method reaches that call only with no screen open and the player not a spectator. |
 | M7 | `KeyboardHandler.java`, `keyPress` | `@WrapWithCondition` on its call to `Minecraft.pauseGame(boolean)`, which it makes for Esc with no screen open | During a session, Esc takes the next step out of Building Planner's and Effortless Building's modes (`EscSteps`) and doesn't pause; with no step left, it pauses as usual (see "Esc"). The game's other calls to `pauseGame` (when the window loses focus) stay as they are. |
-| M8 | `gui/Hud.java`, `extractSelectedItemName` | `@WrapMethod`, moving the pose up | While Building Planner draws a line above the hotbar, the held item's name draws 2 above the top of its highest row instead of over it (see "The build mode's name and the held item's name"). |
+| M8 | `gui/Hud.java`, `extractSelectedItemName` | `@ModifyArg` on the `y` of `GuiGraphicsExtractor.textWithBackdrop` | While Building Planner draws a line above the hotbar, the held item's name draws 2 above the top of its highest row instead of over it (see "The build mode's name and the held item's name"). |
 
 The hooks go by Minecraft's attack, use and pick block keys, so a player who moves one of them to another button finds
 the copy's controls there too. Effortless Building's own hooks into `startUseItem`, `startAttack` and
@@ -828,7 +828,8 @@ above it (Geo's comment c17, image 1: "Oak Stairs" over "[Hold Left Control: tur
 During a session, while Effortless Building's mode isn't Disable and the HUD shows, `ModeHud` draws the mode's name
 (Effortless Building's own, such as "Line" or "Diagonal Wall") just left of the hotbar, on the controls' dark
 background in a rectangle of the same padding, white, ending 4 left of the hotbar, or 4 left of the off hand's slot
-when the off hand holds an item and the slot shows on the hotbar's left, and centred on the hotbar's height. Hook E35
+when the off hand holds an item and the slot shows on the hotbar's left, and centred on the hotbar's height
+(`ModeName`). Hook E35
 keeps the name out of the action bar. Hook M8 draws the held item's name 2 above the top of the highest row of
 Building Planner's lines, about where the action bar's text sits above a line of one row; with no line showing, the
 game draws it in its own place.
@@ -2337,6 +2338,15 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   `actionbar`), at 854 by 480, GUI scale 2, and at 1920 by 1080, GUI scale 2 and 4, each shot. The turning line is
   shot in Line before a shape at 1920 by 1080, GUI scale 4, and 854 by 480, GUI scale 2, and a placed Line of turned
   stairs at 854 by 480 and 1920 by 1080, GUI scale 2.
+- The build mode's name and the held item's name, at 854 by 480, GUI scale 2, with oak stairs in hand: choosing Wall
+  in the radial menu (a real pointer on its segment of the ring, the driver's `ringat`) puts nothing in the action bar
+  (hook E35). The mode's name, as the last frame drew it (the driver's `drawnbox`), shows once, its rectangle ending 4
+  GUI pixels left of the hotbar and centred on the hotbar's height, in every mode but Disable, each by Effortless
+  Building's own name ("Diagonal Wall", say); in Disable no name shows. With a shield in the off hand, the rectangle
+  ends 4 left of the off hand's slot, shot at 854 by 480 and 1920 by 1080, GUI scale 2; without it, 4 left of the
+  hotbar again. The held item's name (hook M8), shown again by switching to stone and back, ends 2 GUI pixels above the
+  top of the controls' highest row: in survival mode, over the turning line of one row in Line, shot at 854 by 480 and
+  1920 by 1080, GUI scale 2 (Geo's image 1); in creative mode, over Single's line of two rows.
 - Effortless Building's own line during a shape (hook E31), word for word and colour by colour as the last frame drew
   it 58 above the screen's bottom (the driver's `ebline`, `eblinecolours` and `eblinerects`, from every component the
   frame drew there): during a Line drawn with the place click, "[Left-click: cancel][Right-click: place]", each

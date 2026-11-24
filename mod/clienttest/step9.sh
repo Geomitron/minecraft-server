@@ -2419,6 +2419,75 @@ aim 1 -54 -60 -36
 # The turning line, in Line, word for word.
 check "in Line with stairs in hand, the turning line says to hold Left Control to turn or flip" eval \
 	'[[ $(val 1 modehud) == "[Hold Left Control: turn or flip]" ]]'
+# The build mode's name beside the hotbar and the held item's name. At 854 by 480, GUI scale 2, the hotbar runs from
+# 122 to 304 GUI pixels across and from 218 to 240 down, and the off hand's slot from 93 to 122 across: the name's text
+# ends 2 inside its rectangle, which ends 4 left of either, and runs from 224 to 233 down, centred on the hotbar.
+# mode_name_at <name> <right>: the mode's name shows once, its text ending at <right> in the window's pixels.
+mode_name_at() {
+	local box
+	box=$(val 1 "drawnbox $1")
+	echo "  mode name $1: $box" >> /out/checks.log
+	[[ $box != *"|"* ]] && [[ $(cut -d" " -f2- <<< "$box") == "448 $2 466" ]]
+}
+# item_name_above <scale>: the held item's name, Oak Stairs, ends 2 GUI pixels above the top of the controls' highest
+# row.
+item_name_above() {
+	local name lines
+	name=$(val 1 "drawnbox Oak Stairs")
+	lines=$(val 1 modebox)
+	echo "  item name: $name | controls $lines | rows $(val 1 modewrap)" >> /out/checks.log
+	[[ $name != none ]] && (($(cut -d" " -f4 <<< "$name") == $(cut -d" " -f2 <<< "$lines") - 2 * $1))
+}
+# switch_back: from the stone and back to the stairs, so the game shows the stairs' name again for 2 seconds.
+switch_back() {
+	press 1 7
+	press 1 6
+}
+# Choosing a mode in the radial menu leaves its name out of the action bar (hook E35); the action bar's last text has
+# gone after 3 seconds.
+drv 1 "wait 70" > /dev/null
+radial_open
+xdo 1 mousemove --window %w $(val 1 "ringat WALL")
+drv 1 "wait 5" > /dev/null
+radial_let_go
+check "choosing Wall in the radial menu puts no name in the action bar" eval \
+	'[[ $(val 1 ebmode) == WALL ]] && drv 1 "wait 5" > /dev/null && [[ $(val 1 actionbar) == none ]]'
+check "and the name Wall shows left of the hotbar" mode_name_at Wall 232
+for mode in "SINGLE Single" "FLOOR Floor" "CUBE Cube" "DIAGONAL_LINE Diagonal Line" "DIAGONAL_WALL Diagonal Wall" \
+	"SLOPE_FLOOR Slope Floor" "CIRCLE Circle" "CYLINDER Cylinder" "SPHERE Sphere" "LINE Line"; do
+	drv 1 "ebmode ${mode%% *}" "wait 5" > /dev/null
+	check "in ${mode#* }, the name ${mode#* } shows there" mode_name_at "${mode#* }" 232
+done
+drv 1 "ebmode DISABLED" "wait 5" > /dev/null
+check "in Disable, no name shows" eval '[[ $(val 1 "drawnbox Disable") == none ]]'
+drv 1 "ebmode LINE" "cmd item replace entity @s weapon.offhand with minecraft:shield" "wait 5" > /dev/null
+check "with a shield in the off hand, the name ends 4 left of its slot" mode_name_at Line 174
+drv 1 "wait 210" "notoasts" "wait 5" "shot mode-name-shield-854x480" "window 1920 1080 2" "wait 20" "notoasts" \
+	"shot mode-name-shield-1920x1080" "window 854 480 2" "wait 20" "cmd item replace entity @s weapon.offhand with air" \
+	"wait 5" > /dev/null
+echo "  mode-name-shield: name $(val 1 "drawnbox Line")" >> /out/checks.log
+check "without it, the name ends 4 left of the hotbar again" mode_name_at Line 232
+# The held item's name (hook M8) in survival mode, where the game draws it 59 above the screen's bottom, over the
+# turning line of one row (Geo's image 1); then in creative mode, 45 above it, under Single's line, which takes two
+# rows.
+drv 1 "cmd gamemode survival" "wait 20" > /dev/null
+switch_back
+check "in survival mode, the stairs' name ends 2 above the turning line of one row" eval \
+	'[[ $(val 1 modewrap) != *" / "* ]] && item_name_above 2'
+drv 1 "wait 210" > /dev/null
+switch_back
+drv 1 "notoasts" "wait 2" "shot item-name-line-854x480" > /dev/null
+echo "  item-name-line-854x480: name $(val 1 "drawnbox Oak Stairs") | controls $(val 1 modebox)" >> /out/checks.log
+drv 1 "window 1920 1080 2" "wait 20" > /dev/null
+switch_back
+drv 1 "notoasts" "wait 2" "shot item-name-line-1920x1080" > /dev/null
+echo "  item-name-line-1920x1080: name $(val 1 "drawnbox Oak Stairs") | controls $(val 1 modebox)" >> /out/checks.log
+drv 1 "window 854 480 2" "cmd gamemode creative" "ebmode SINGLE" "wait 20" > /dev/null
+switch_back
+check "in creative mode, it ends 2 above Single's line of two rows" eval \
+	'[[ $(val 1 modewrap) == *" / "* ]] && [[ $(val 1 modewrap) != *" / "*" / "* ]] && item_name_above 2'
+drv 1 "ebmode LINE" "cmd tp @s -58.5 -58 -34.5 180 30" "wait 20" > /dev/null
+aim 1 -54 -60 -36
 hold_ctrl
 check "with Left Ctrl held, to scroll to turn and middle-click to flip" eval \
 	'[[ $(val 1 modehud) == "[Scroll: turn][Middle-click: flip]" ]]'

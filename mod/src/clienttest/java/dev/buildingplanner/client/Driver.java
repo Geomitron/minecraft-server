@@ -977,6 +977,16 @@ public final class Driver implements ClientModInitializer {
 				return message == null || time.getInt(mc.gui.hud) <= 0 ? "none"
 					: ((Component) message).getString();
 			}
+			case "drawnbox" -> {
+				// drawnbox <text>: the window box (left top right bottom) of each text the last frame drew as a component
+				// whose text is that text, separated by " | ", or none; as the held item's name and the mode's name.
+				return ScreenProbe.drawnBoxes(mc, line.substring("drawnbox ".length()));
+			}
+			case "ringat" -> {
+				// ringat <mode>: the window position on the open radial menu's ring segment of that build mode, 45 GUI
+				// pixels from the menu's middle along the segment's middle line, for pointing at it.
+				return EffortlessDriver.segmentAt(mc, a[1]);
+			}
 			case "modebox" -> {
 				// modebox: the window box (left top right bottom, in the window's pixels) of the controls as drawn now, or
 				// hidden; for the shots' outlines.
