@@ -448,8 +448,9 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
 
 **Building Planner 0.7.0** (the bullet "Building Planner 0.7.0" in "Decisions" above: Geo's comments c2 to c19 on 815
 revision 2). [building-planner.md](building-planner.md) is the design; each choice still Geo's is marked `OPEN:` there,
-with the inbox request that asks it: "Zoop and the copy's mode", "Locking in every build mode", "Delete as one mode",
-and "Match ghost blocks and wrong blocks through walls". A step that waits on a question starts once Geo has answered
+with the inbox request that asks it: "Zoop and the copy's mode" (the Zoop request), "When a lock ends" (the locking
+request), "Marking in Delete" (the Delete request), and "The settings menu and red blocks through walls" (the
+settings and red blocks request), each titled "Building Planner 0.7.0:" first. A step that waits on a question starts once Geo has answered
 it, and builds Geo's answer, updating the spec's `OPEN:` mark to the decision in the same change; the steps marked
 "can start now" wait on nothing.
 
