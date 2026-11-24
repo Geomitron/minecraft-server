@@ -409,6 +409,33 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
     rectangles: "[Left-click: cancel][Right-click: place]" (1155 revision 2, Q1 A). Geo approved its two other forms
     and releasing 0.6.0 with them: "[Left-click: cancel][Right-click: interact]" with a tool in hand, and "[Left-click:
     break][Right-click: cancel]" with the actions in red for a shape that breaks blocks (1185 A).
+- **Building Planner 0.7.0** takes the changes Geo asked for in the walkthrough of 0.6.0 (815 revision 2, comments
+  c2 to c19). Their design settles how each works and asks Geo what's still open:
+  - the radial menu: show/hide below the wrench, Copy, Paste and Delete in the row above the wrench, and "Block mix",
+    "Material list" and "Material lists" in the row above that (c2);
+  - a ghost block shown red because a different block fills it is seen faintly through walls from nearby (c3);
+  - every build mode shows the block a right click would place before the first click, as Single does (c4), and
+    H locks and nudges that first position, or during a shape every position set so far, together; everything else
+    works as usual, and the lock ends once the blocks are placed (c5);
+  - each key that switches a state names the current state, as "R: Zoop mode (Off)" (c6);
+  - Zoop goes from the one ghost block, since Line, Wall, Floor and Cube do the same, with Geo asking which part of
+    Zoop they can't do (c6); the copy keeps it as "Mode" (Off, Line, Wall, Floor), placing copies as those modes do
+    (c12, c15), and the key that switches it works during a row (c7);
+  - the first corner of a box (Copy, "Material list", Delete) marks the face it sits on, and the box is red for
+    Delete, white for Copy and blue for "Material list" (c8);
+  - a setting that, when on, places a block into a ghost block of the same kind turned as the ghost block is (c9);
+  - Esc steps out of one mode a press at a time (a copy's row, then the copy, then a build mode back to "Disable")
+    before it pauses, and the lines say "Esc/Right-click: close" (c10, c13, c17);
+  - the copy pastes with a right click, as blocks are placed (c14);
+  - Delete becomes one mode: Left Control with a held left click draws a box that marks what's in it, or unmarks it
+    when it starts on a marked block, and holding the left click alone erases the marks, with a progress bar in the
+    middle of the screen above the controls line (c16);
+  - the held item's name shows where the build mode's name is, the build mode's name stays beside the hotbar while a
+    build mode is on, and every build mode shows its left and right click controls before the first click (c17);
+  - the blocks listed under the crosshair while a box is drawn sit on the controls line's dark background (c11,
+    c18);
+  - the material list screen's (i) text covers only Building Planner, and the list screens get a "Close" button in
+    their bottom right corner (c8, c19).
 - The shared layer replaces the decisions above that concern separate plans: named plans that move and turn as a whole
   (411 Q1), plan growth (411 Q2), who deletes a plan (411 Q3, 420 Q9), starting a plan with N (420 Q1, 469 Q1), hiding
   a plan with Litematica or Syncmatica (420 Q2, 469 Q2), the paste's target plan (485 Q3), Litematica's Edit Schematic
@@ -588,10 +615,11 @@ the last step, when the server and the pack update together.
     GitHub release `building-planner-0.6.0` (not latest, jar SHA-256 `a65e35e7…97d8`); the server stopped with no
     one online, backed up, and started on 0.6.0 with 0 error lines (its only warnings are Java's four `Unsafe` lines,
     as at every start); the pack (`ffa00cc`), whose served files match the commit. The README and the guide name no
-    version and nothing 0.6.0 changes. Unchecked until a player joins: no ghost blocks over parts already built.
-    Then Geo gets one walkthrough of the released game, naming the version it walks through: 0.5.0's material lists
-    and every 0.6.0 change, Delete by aim and the one ghost block's controls among them, as a revision of inbox request
-    815. A walkthrough waits until every change Geo asked for in its version is approved and released (815 [c1]).
+    version and nothing 0.6.0 changes. Geo did every step of the walkthrough of 0.5.0's material lists and every
+    0.6.0 change (815 revision 2), with no fault reported other than the item name drawn over the controls line; the
+    server has saved Geo's material list, and its only error lines since are the "Error sending packet" lines it logged
+    under 0.5.0. Geo's comments are the changes for the next version ("Building Planner 0.7.0" in "Decisions"). A
+    walkthrough waits until every change Geo asked for in its version is approved and released (815 [c1]).
 
 ## Design work: Building Planner
 
