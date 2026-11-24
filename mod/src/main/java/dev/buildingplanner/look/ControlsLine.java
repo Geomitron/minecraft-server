@@ -47,6 +47,8 @@ public final class ControlsLine {
 
 	private static final Text LEFT = Translated.of(MODE + ".left_click", Look.PLAIN);
 	private static final Text RIGHT = Translated.of(MODE + ".right_click", Look.PLAIN);
+	/** The left click with Esc, which does the same: "Esc/Left-click". */
+	private static final Text ESC_LEFT = Translated.of(MODE + ".esc_click", Look.PLAIN, LEFT);
 	private static final Text MIDDLE = Translated.of(MODE + ".middle_click", Look.PLAIN);
 	private static final Text SCROLL = Translated.of(MODE + ".scroll", Look.PLAIN);
 
@@ -294,20 +296,20 @@ public final class ControlsLine {
 	}
 
 	/**
-	 * The copy at the aim's line. With a zoop's row fixed: the mode, the click that pastes the row (or why it can't),
-	 * and the right click that drops the row. Otherwise: the mode, or "Locked", the left click (paste, or why it can't,
-	 * in Single; in Zoop and Vertical the reason if there is one, then setting the row's start), the nudge keys while
-	 * it's locked, the wheel, the middle click, the sprint key while it's unlocked and there's a paste to line up with
-	 * (a locked copy doesn't line up), the lock key, the mode key, and the right click that closes it. A key with no key
-	 * bound is left out.
+	 * The copy at the aim's line. With a zoop's row fixed: the mode, the right click that pastes the row (or why it
+	 * can't), and Esc and the left click, which drop the row. Otherwise: the mode, or "Locked", the right click (paste,
+	 * or why it can't, in Single; in Zoop and Vertical the reason if there is one, then setting the row's start), the
+	 * nudge keys while it's locked, the wheel, the middle click, the sprint key while it's unlocked and there's a paste
+	 * to line up with (a locked copy doesn't line up), the lock key, the mode key, and Esc and the left click, which
+	 * close it. A key with no key bound is left out.
 	 */
 	public static Line copy(CopyState state, Keys keys) {
 		List<Text> rects = new ArrayList<>();
 		if (state.row() > 0) {
 			rects.add(state.refusal() != null ? refusal(state.refusal())
-				: hint(LEFT, state.row() == 1 ? Translated.of(COPY + ".paste_row_one", Look.ACTION)
+				: hint(RIGHT, state.row() == 1 ? Translated.of(COPY + ".paste_row_one", Look.ACTION)
 					: Translated.of(COPY + ".paste_row", Look.ACTION, new Literal(String.valueOf(state.row())))));
-			rects.add(hint(RIGHT, COPY + ".cancel"));
+			rects.add(hint(ESC_LEFT, COPY + ".cancel"));
 			return labelled(modeName(state.mode()), rects);
 		}
 		if (state.mode() != CopyMode.SINGLE) {
@@ -315,9 +317,9 @@ public final class ControlsLine {
 			if (state.refusal() != null) {
 				rects.add(refusal(state.refusal()));
 			}
-			rects.add(hint(LEFT, COPY + ".start"));
+			rects.add(hint(RIGHT, COPY + ".start"));
 		} else {
-			rects.add(state.refusal() != null ? refusal(state.refusal()) : hint(LEFT, COPY + ".paste"));
+			rects.add(state.refusal() != null ? refusal(state.refusal()) : hint(RIGHT, COPY + ".paste"));
 		}
 		if (state.locked()) {
 			Text nudge = nudge(keys);
@@ -336,7 +338,7 @@ public final class ControlsLine {
 		if (keys.mode() != null) {
 			rects.add(hint(new Literal(keys.mode()), MODE + ".zoop_mode"));
 		}
-		rects.add(hint(RIGHT, COPY + ".put_away"));
+		rects.add(hint(ESC_LEFT, COPY + ".put_away"));
 		return labelled(title(state.mode(), state.locked()), rects);
 	}
 
@@ -447,7 +449,7 @@ public final class ControlsLine {
 		return new Line(Translated.of(key, Look.WARNING), List.of());
 	}
 
-	/** A control: its key, then its action in dark aqua ("Left-click: paste"). */
+	/** A control: its key, then its action in dark aqua ("Right-click: paste"). */
 	private static Text hint(Text key, Text action) {
 		return Translated.of(MODE + ".hint", Look.PLAIN, key, action);
 	}

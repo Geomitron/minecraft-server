@@ -165,7 +165,7 @@ The build steps are in [plan.md](plan.md) ("Agent-ready work").
 | Plan room sizes and shapes before committing | Effortless Building's shapes drawn as ghost blocks, erased with the break click. | None. |
 | See and judge a build (free or fixed camera) | Litematica draws the ghost blocks; Freecam moves the camera away from the player; the switch hides them to compare with the real world; with Freecam's camera on, every edit aims from the camera (see "Editing from Freecam"). | None. |
 | Lay out walls, shapes and components quickly | Effortless Building's eleven build modes; hold to repeat in Single mode at the player's chosen speed. | None. |
-| Copy and paste | Copy takes the ghost blocks and real blocks in a box; a left click pastes the copy into the layer, placed with the controls of Satisfactory's build gun. Effortless Building's array repeats while drawing. | None. |
+| Copy and paste | Copy takes the ghost blocks and real blocks in a box; a right click pastes the copy into the layer, placed with the controls of Satisfactory's build gun. Effortless Building's array repeats while drawing. | None. |
 | Symmetry | Effortless Building's mirror and radial mirror. | None. |
 | Randomized block mixes | Building Planner's block mix (Effortless Building's Randomizer needs the server copy, which Geo kept off the server). | None. |
 | A plan everyone on the server sees, built for real by hand | The shared layer reaches everyone live; Litematica's ghost blocks, its missing-block colours and the material list for a marked area guide the build. | None. |
@@ -1346,7 +1346,7 @@ The wiki's pages disagree in places. Its Build Gun page and the 1.1.0.0 notes sa
 its Controls page still says the distance is limited; the copy has no limit. The Build Gun page gives fine rotation on
 foundations in 10° steps, and its Foundations and Controls pages give 5°; neither applies here. The Controls page says
 pressing H again "will reset the origin", which the copy reads as unlocking. Whether a Satisfactory hologram stays
-locked after it's placed isn't stated; the copy stays locked, as it stays at the aim. Since 1.2.2.2 a "Remember
+locked after it's placed isn't stated; the copy unlocks once pasted (1239 Q2 A). Since 1.2.2.2 a "Remember
 Snapping Toggle" option keeps "the last used snap mode", which suggests snapping can be toggled, but the wiki doesn't
 say how on a keyboard, and its "Hold To Snap Building" setting is for controllers only; the copy's guide lines follow
 the key held.
@@ -2113,7 +2113,7 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   facing south with the crosshair on the copy's blocks, flips it east to west within the same box, with its stairs
   turning with it, and picks no block, neither the game's nor Litematica's.
 - Over other ghost blocks, the copy's blocks show where they overlap, and the ghost blocks show in its empty space.
-- A left click pastes it: the other player sees its blocks at once, turned and mirrored as the copy showed them,
+- A right click pastes it: the other player sees its blocks at once, turned and mirrored as the copy showed them,
   glowing with the paster's name; the copy's empty space leaves the ghost blocks under it, and the copy stays. One
   Ctrl+Z undoes the whole paste, and Ctrl+Y redoes it.
 - Aimed at a side face inside that paste's box, the copy sits flush against the box's face, its edges in line with the
@@ -2125,15 +2125,17 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   1920 by 1080. Facing north, each arrow key, Page Up and Page Down moves it one block: Up north, Down south, Left west,
   Right east, Page Up up and Page Down down. Up held down moves it 1 + (ticks down − 1) / 4 blocks, by the driver's
   count of the ticks the key was down, about 5 a second. H unlocks it, and it rests on the aimed face again. Locked
-  again, a left click pastes it, for the other player too, and it stays locked where it was. With Freecam's camera on
-  and facing east while Planner1 faces north, Up moves it east, away from the camera.
-- The copy's mode starts as Single, and R switches it to Zoop, Vertical, Single and Zoop again. In Zoop the first left
+  again, a right click pastes it, for the other player too, and the copy unlocks, its line naming Left Control's line
+  up again, and follows the aim; it's shot following the aim at 854 by 480 and 1920 by 1080. With the paste erased and
+  the copy locked again where it was, with Freecam's camera on and facing east while Planner1 faces north, Up moves it
+  east, away from the camera.
+- The copy's mode starts as Single, and R switches it to Zoop, Vertical, Single and Zoop again. In Zoop the first right
   click fixes the copy as the row's start and sends no edit. Aimed 9 blocks north, the row has 4 copies end to end,
   each the copy's length north to south from the one before, each one of Litematica's placements, which Litematica
   draws; the first stays where the click fixed it. It's shot at 854 by 480 and 1920 by 1080. Aimed farther, the row
   stops at 10 copies; aimed back, it shrinks to 4. A notch of the wheel up turns every copy a quarter turn, the row
   laid again at the turned length (6 copies), and a notch down turns them back. H and the nudge keys act on nothing
-  while the row is fixed. A right click drops the row, sending no edit, and leaves the copy following the aim, still in
+  while the row is fixed. A left click drops the row, sending no edit, and leaves the copy following the aim, still in
   Zoop. A row of 4 pastes as one edit, which the other player sees, every copy's blocks; the copy is then at the aim
   with no row, and aimed at the east face of the row's third copy it sits flush beside that copy, not beside the row's
   end. One Ctrl+Z takes back the whole row. In Vertical, looking up past the copy, the row goes up 5
@@ -2154,7 +2156,7 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   "[Hold Left Control: line up]" after it; locked after a paste, with the nudges, "[R: Zoop mode]" and no "line up";
   locked and red below the build height and at the border, with the reason in place of the paste, and the paste back
   once it's blue; R on that locked red copy, which makes it a red Zoop before its first click, with the reason before
-  "[Left-click: set the start]", and R twice more back to Single; Zoop and Vertical before the first click, and Zoop
+  "[Right-click: set the start]", and R twice more back to Single; Zoop and Vertical before the first click, and Zoop
   locked; a fixed row of 1, 4, 10 and 5 copies; the red row over the cap, with "[Can't paste: too many blocks]"; and each
   box's line, Delete's among them. With the lock key bound to K, the mode key to G, the nudge forward to I and the
   sprint key to Right Control (the driver's `bindkey`), the line names K, G and Right Control, K locks the copy, and
@@ -2167,7 +2169,7 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   GUI pixels at each side; at 854 by 480, GUI scale 2, the locked line wraps onto a second row. The reason's
   rectangle on the locked red copy and on Disable's red line, and the warning's on a box too large, are red, and the
   others white (the driver's `modecolours`).
-- A right click puts the copy away, and the radial menu's Paste button brings it back to the aim, turned and mirrored
+- A left click puts the copy away, and the radial menu's Paste button brings it back to the aim, turned and mirrored
   as it was. Choosing a mode in the radial menu, or the Block mix button, puts it away too.
 - A box around a real house with no ghost blocks copies its real blocks. With a ghost gold block added inside the house
   and ghost stone over one of its real oak planks, the same box copies the ghost blocks and the real blocks together,
@@ -2430,7 +2432,7 @@ real buttons with xdotool while Planner1 is teleported one block every two ticks
   north faces north; the break click erases the ghost block the camera aims at and leaves the real block under it. A
   box for Copy starts at the camera's aim, follows it after the first and second left clicks, and the third copies its
   ghost blocks; the copy goes to the camera's aim and follows it, and a middle click mirrors it by the camera's facing
-  (`FRONT_BACK`, where Planner1's east would give `LEFT_RIGHT`). The radial menu opens and its show or hide button
+  (`FRONT_BACK`, where Planner1's east would give `LEFT_RIGHT`), and a left click puts it away. The radial menu opens and its show or hide button
   hides ghost blocks, N shows them again, a Line shape with the block mix on takes the mix's blocks, and Ctrl+Z and
   Ctrl+Y undo and redo it. A left click with a stick aimed at a real stone breaks nothing. A shape's preview, a box and
   the copy are shot from the camera at 854 by 480 and 1920 by 1080, GUI scale 2.

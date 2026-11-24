@@ -651,8 +651,9 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	}
 
 	/**
-	 * Hook M1: the left click sets the box's next corner, pastes the copy at the aim, or in Delete by aim starts the hold
-	 * that erases the marks; holding the button then does nothing more. Returns whether the click is taken from the game.
+	 * Hook M1: the left click sets the box's next corner, drops the zoop's row or puts the copy at the aim away when no
+	 * row is fixed, or in Delete by aim starts the hold that erases the marks; holding the button then does nothing more,
+	 * even once the box or the copy is gone. Returns whether the click is taken from the game.
 	 */
 	public static boolean leftClick() {
 		MouseMode mode = mouseMode();
@@ -666,7 +667,14 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 					attackHeld = Minecraft.getInstance().options.keyAttack.isDown();
 				}
 			}
-			case COPY_AT_AIM -> session.paste();
+			case COPY_AT_AIM -> {
+				if (!session.dropRow()) {
+					session.modeAction(MouseMode.Action.LEFT_CLICK);
+				}
+				if (session.mouseMode() == null) {
+					attackHeld = Minecraft.getInstance().options.keyAttack.isDown();
+				}
+			}
 			// Delete by aim's left click attacks and breaks nothing; held a second, it erases the marks.
 			case DELETE_AIM -> session.pressErase();
 		}
@@ -674,16 +682,19 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	}
 
 	/**
-	 * Hook M2: the right click puts the copy away, or during a zoop, after its first click, drops the row and leaves the
-	 * copy at the aim; in Delete by aim it clears the marks, or with none ends the mode. Returns whether the game's use is
-	 * skipped, which it is too while the button stays down after a mode started or ended, so holding it does no more.
+	 * Hook M2: the right click pastes the copy at the aim (in Zoop and Vertical, fixes the row's first copy or pastes the
+	 * row); a box ends; in Delete by aim it clears the marks, or with none ends the mode. Returns whether the game's use
+	 * is skipped, which it is too while the button stays down after a click the mode took or after a mode started or
+	 * ended, so holding it pastes or places no more.
 	 */
 	public static boolean rightClick() {
 		if (session == null) {
 			return false;
 		}
 		if (session.mouseMode() != null && !useHeld) {
-			if (!session.dropRow() && !session.clearMarks()) {
+			if (session.mouseMode() == MouseMode.COPY_AT_AIM) {
+				session.paste();
+			} else if (!session.clearMarks()) {
 				session.modeAction(MouseMode.Action.RIGHT_CLICK);
 			}
 			useHeld = true;

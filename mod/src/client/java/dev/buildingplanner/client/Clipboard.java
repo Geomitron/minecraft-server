@@ -46,7 +46,7 @@ final class Clipboard {
 	/** The most recent copy, at the aim or put away; null before the first copy. */
 	private SchematicPlacement placement;
 	private boolean atAim;
-	/** Whether the copy stays where it is, not following the aim; a paste keeps it locked. */
+	/** Whether the copy stays where it is, not following the aim; a paste unlocks it. */
 	private boolean locked;
 	/** Whether a zoop's first click has fixed the copy as the start of a row. */
 	private boolean rowFixed;
@@ -79,6 +79,11 @@ final class Clipboard {
 		if (atAim) {
 			locked = !locked;
 		}
+	}
+
+	/** Unlocks the copy, so it follows the aim again. */
+	void unlock() {
+		locked = false;
 	}
 
 	/** Moves the copy one block that way, as it's turned and mirrored. */

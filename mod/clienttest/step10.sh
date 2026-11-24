@@ -400,8 +400,8 @@ cam_shot freecam-copy
 # The camera faces north and Planner1 east: a middle click mirrors it left to right for the camera's facing.
 xdo 1 click 2
 check "a middle click mirrors the copy by the camera's facing" drv 1 "await copy at 59,-60,21..67,-60,21 FRONT_BACK NONE"
-use_click 1
-check "a right click puts the copy away" eval 'drv 1 "wait 10" > /dev/null && [[ $(val 1 copy) == "away "* ]]'
+attack_click 1
+check "a left click puts the copy away" eval 'drv 1 "wait 10" > /dev/null && [[ $(val 1 copy) == "away "* ]]'
 
 # The radial menu and N work as without Freecam: letting the menu's key go over its show or hide button hides ghost
 # blocks, and N shows them again.

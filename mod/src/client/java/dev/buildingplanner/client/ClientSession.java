@@ -267,7 +267,7 @@ final class ClientSession {
 	}
 
 	/**
-	 * The right click during a zoop, after its first click: drops the row and leaves the copy at the aim, which follows
+	 * The left click during a zoop, after its first click: drops the row and leaves the copy at the aim, which follows
 	 * the aim again unless it's locked. Returns whether there was a row.
 	 */
 	boolean dropRow() {
@@ -641,12 +641,12 @@ final class ClientSession {
 	}
 
 	/**
-	 * The left click with the copy at the aim. In Single it pastes the copy as one shape edit. In Zoop and Vertical the
+	 * The right click with the copy at the aim. In Single it pastes the copy as one shape edit. In Zoop and Vertical the
 	 * first click fixes the copy as the row's first, and the second pastes the whole row as one shape edit, which one
-	 * undo takes back, and the copy then follows the aim again (unless it's locked) for a new row. A paste names only
-	 * the copies' blocks, so their empty space leaves the layer's, and each copy's box joins the recent pastes the copy
-	 * snaps to, as a paste of its own. While the copy, or its row, is red ({@link #copyShown}), the click that would paste pastes nothing and sends
-	 * no edit; a zoop's first click, which pastes nothing anyway, still fixes the row.
+	 * undo takes back. A paste names only the copies' blocks, so their empty space leaves the layer's, and each copy's
+	 * box joins the recent pastes the copy snaps to, as a paste of its own; the copy stays at the aim, unlocked, and
+	 * follows the aim for the next paste. While the copy, or its row, is red ({@link #copyShown}), the click that would
+	 * paste pastes nothing and sends no edit; a zoop's first click, which pastes nothing anyway, still fixes the row.
 	 */
 	void paste() {
 		if (!clipboard.atAim()) {
@@ -659,6 +659,8 @@ final class ClientSession {
 			}
 			if (sendShape(EditKind.SHAPE, clipboard.worldBlocks())) {
 				pastes.add(clipboard.spot());
+				clipboard.unlock();
+				followAim();
 			}
 		} else if (!clipboard.rowFixed()) {
 			clipboard.fixRow();
@@ -667,6 +669,7 @@ final class ClientSession {
 			List<CopyPlacement.Spot> copies = clipboard.rowSpots();
 			if (sendShape(EditKind.SHAPE, clipboard.rowBlocks())) {
 				pastes.addAll(copies);
+				clipboard.unlock();
 				dropRow();
 			}
 		}

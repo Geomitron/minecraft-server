@@ -8,10 +8,13 @@ import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 class MouseModeTest {
-	/** Pasting, turning, mirroring, undo and redo keep the copy at the aim; everything else puts it away. */
+	/**
+	 * Pasting with the right click, turning, mirroring, undo and redo keep the copy at the aim; everything else, the left
+	 * click among them, puts it away.
+	 */
 	@Test
-	void theCopyAtTheAimEndsWithARightClickAndTheModsOtherActions() {
-		assertEquals(EnumSet.of(Action.RIGHT_CLICK, Action.CHOOSE_BUILD_MODE, Action.SHOW_OR_HIDE, Action.COPY_BUTTON,
+	void theCopyAtTheAimEndsWithALeftClickAndTheModsOtherActions() {
+		assertEquals(EnumSet.of(Action.LEFT_CLICK, Action.CHOOSE_BUILD_MODE, Action.SHOW_OR_HIDE, Action.COPY_BUTTON,
 			Action.DELETE_BUTTON, Action.MATERIAL_LIST_BUTTON, Action.PASTE_BUTTON, Action.BLOCK_MIX, Action.LEAVE),
 			ending(MouseMode.COPY_AT_AIM));
 	}

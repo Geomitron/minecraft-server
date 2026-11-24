@@ -75,6 +75,7 @@
 	"buildingplanner.ui.mode.middle_click": "Middle-click",
 	"buildingplanner.ui.mode.scroll": "Scroll",
 	"buildingplanner.ui.mode.hold": "Hold %s",
+	"buildingplanner.ui.mode.esc_click": "Esc/%s",
 	"buildingplanner.ui.mode.zoop_mode": "Zoop mode",
 	"buildingplanner.ui.mode.delete_mode": "Delete mode",
 	"buildingplanner.ui.mode.copy.locked": "Locked",
