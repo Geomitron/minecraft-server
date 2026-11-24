@@ -668,10 +668,11 @@ public final class Driver implements ClientModInitializer {
 				return !clipboard.exists() ? "none" : !clipboard.atAim() ? "away"
 					: clipboard.locked() ? "locked" : "unlocked";
 			}
-			case "single" -> {
-				// single: the one ghost block in Single mode: "locked x,y,z" or "unlocked", then whether its controls
-				// are active now; await single <text> waits for it.
-				return single();
+			case "lock" -> {
+				// lock: the build modes' lock: "locked" and each locked position as x,y,z (during a shape, the positions
+				// its clicks have set, its first first), or "unlocked", then whether its controls are active now; await
+				// lock <text> waits for it.
+				return lock();
 			}
 			case "singlerow" -> {
 				// singlerow: the one ghost block's mode, then its fixed row's length and ends, "<n> x,y,z..x,y,z", or none;
@@ -1213,12 +1214,14 @@ public final class Driver implements ClientModInitializer {
 		return state == null ? -1 : state.erasing();
 	}
 
-	/** The one ghost block, for the driver's {@code single}. */
-	private static String single() throws Exception {
-		SingleBlock block = session().single();
-		BlockPos pos = block.locked() ? block.pos() : null;
-		return (pos == null ? "unlocked" : "locked " + pos.getX() + "," + pos.getY() + "," + pos.getZ())
-			+ (BuildingPlannerClient.singleActive() ? " active" : " inactive");
+	/** The build modes' lock, for the driver's {@code lock}. */
+	private static String lock() throws Exception {
+		List<BlockPos> locked = EffortlessShapes.lockedPositions(session().lock());
+		StringBuilder text = new StringBuilder(locked.isEmpty() ? "unlocked" : "locked");
+		for (BlockPos pos : locked) {
+			text.append(' ').append(pos.getX()).append(',').append(pos.getY()).append(',').append(pos.getZ());
+		}
+		return text.append(BuildingPlannerClient.lockActive() ? " active" : " inactive").toString();
 	}
 
 	/** The one ghost block's mode and its fixed row, for the driver's {@code singlerow}. */
@@ -1256,7 +1259,7 @@ public final class Driver implements ClientModInitializer {
 			case "copycolour" -> copyColour().equals(what.substring(11));
 			case "sprint" -> mc.options.keySprint.isDown() == Boolean.parseBoolean(a[1]);
 			case "preview" -> PreviewProbe.positions().equals(what.substring(8));
-			case "single" -> single().equals(what.substring(7));
+			case "lock" -> lock().equals(what.substring(5));
 			case "singlerow" -> singleRow().equals(what.substring(10));
 			case "turned" -> FrameProbe.turned();
 			case "framestimed" -> FrameProbe.timed();

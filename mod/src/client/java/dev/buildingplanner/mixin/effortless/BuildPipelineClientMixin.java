@@ -22,6 +22,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
+import nl.requios.effortlessbuilding.buildpipeline.BuildPipeline;
 import nl.requios.effortlessbuilding.buildpipeline.BuildPipelineClient;
 import nl.requios.effortlessbuilding.network.BreakBuildModePacket;
 import nl.requios.effortlessbuilding.network.PlaceBuildModePacket;
@@ -35,10 +36,10 @@ import org.spongepowered.asm.mixin.injection.At;
  * Effortless Building's client pipeline, on a server with Building Planner: a finished shape goes into the layer
  * instead of to the server as real blocks (hooks E1 to E3), the mix starts shapes (E6), the preview has no "missing
  * items" tint and a break shape no list of real blocks (E8), shapes can start on ghost blocks (E9), and clicks without
- * a placeable item stay vanilla's and a mouse mode's go to it (E14), as do the one ghost block's while it's locked or
- * in Zoop or Vertical, whose preview draws it where it's locked, or its row (E27). A shape's first click and its
- * preview aim from Freecam's camera while it's on (E24). In Disable, the preview draws the real block a right click
- * would place while Left Ctrl turns it (E29).
+ * a placeable item stay vanilla's and a mouse mode's go to it (E14), as do the one ghost block's in Zoop or Vertical,
+ * whose preview draws its row (E27). A shape's first click and its preview aim from Freecam's camera while it's on
+ * (E24), and take a locked first position (E9, E32). In Disable, the preview draws the real block a right click would
+ * place while Left Ctrl turns it (E29).
  */
 @Mixin(value = BuildPipelineClient.class, remap = false)
 abstract class BuildPipelineClientMixin {
@@ -86,8 +87,8 @@ abstract class BuildPipelineClientMixin {
 	 * have them. With anything but a placeable item in the main hand, and no shape under way, Effortless Building takes
 	 * neither click either, so both act as without mods (its client tick, its cancelling of vanilla's use, attack and
 	 * held attack, and hold to repeat all ask these first). A shape under way still takes the click that finishes or
-	 * cancels it. In Single mode, the one ghost block's clicks while it's locked or in Zoop or Vertical are Building
-	 * Planner's ({@code SingleRule}), so hooks M1 and M2 take them.
+	 * cancels it. In Single mode, the one ghost block's clicks in Zoop or Vertical are Building Planner's
+	 * ({@code SingleRule}), so hooks M1 and M2 take them; a click on a locked position stays Effortless Building's.
 	 */
 	@ModifyReturnValue(method = "shouldInterceptPlacing", at = @At("RETURN"))
 	private static boolean buildingplanner$placingOnlyWithPlaceables(boolean intercept) {
@@ -105,7 +106,7 @@ abstract class BuildPipelineClientMixin {
 			|| BuildPipelineClient.getBuildState() != null || ClickRule.holdsPlaceable());
 	}
 
-	/** Hook E27: while the one ghost block is locked or its row is fixed, the preview draws the locked block or the row. */
+	/** Hook E27: while the one ghost block's row is fixed, the preview draws the row. */
 	@ModifyReturnValue(method = "getPreviewBlocks", at = @At("RETURN"))
 	private static BlockSet buildingplanner$shownPreview(BlockSet blocks) {
 		return BuildingPlannerClient.active() ? EffortlessShapes.previewBlocks(blocks) : blocks;
@@ -159,14 +160,30 @@ abstract class BuildPipelineClientMixin {
 		}
 	}
 
-	/** Hook E9: aim at the nearer of the real block and a ghost block. */
+	/**
+	 * Hook E9: aim at the nearer of the real block and a ghost block; while a first position is locked, at the hit it
+	 * was locked with, moved by the nudges.
+	 */
 	@WrapOperation(method = {"handleClick", "getPreviewBlocks"}, at = @At(value = "INVOKE",
 		target = "Lnet/minecraft/client/multiplayer/ClientLevel;clip(Lnet/minecraft/world/level/ClipContext;)Lnet/minecraft/world/phys/BlockHitResult;"),
 		require = 2)
 	private static BlockHitResult buildingplanner$aimAtGhosts(ClientLevel level, ClipContext context,
 		Operation<BlockHitResult> original) {
 		BlockHitResult real = original.call(level, context);
-		return BuildingPlannerClient.active() ? EffortlessShapes.nearerHit(real, context) : real;
+		return BuildingPlannerClient.active() ? EffortlessShapes.shapeAim(real, context) : real;
+	}
+
+	/**
+	 * Hook E32: while a first position is locked ({@code ShapeLock}), the first click and the first click's preview take
+	 * the locked position.
+	 */
+	@WrapOperation(method = {"handleClick", "getPreviewBlocks"}, at = @At(value = "INVOKE",
+		target = "Lnl/requios/effortlessbuilding/buildpipeline/BuildPipelineClient;resolveFirstClickPos(Lnet/minecraft/world/phys/BlockHitResult;Lnl/requios/effortlessbuilding/buildpipeline/BuildPipeline$BuildState;Lnet/minecraft/world/level/Level;)Lnet/minecraft/core/BlockPos;"),
+		require = 2)
+	private static BlockPos buildingplanner$lockedFirstClick(BlockHitResult hit, BuildPipeline.BuildState action,
+		Level level, Operation<BlockPos> original) {
+		BlockPos found = original.call(hit, action, level);
+		return BuildingPlannerClient.active() ? EffortlessShapes.firstClickPos(found) : found;
 	}
 
 	/** Hook E9: a shape started on a ghost block goes beside it, as on a real block. */

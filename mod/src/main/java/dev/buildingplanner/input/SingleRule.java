@@ -9,10 +9,10 @@ public final class SingleRule {
 	}
 
 	/**
-	 * The one ghost block as its clicks see it: its own mode, whether it's locked, and whether a Zoop or Vertical row of
-	 * it is fixed (after its first click).
+	 * The one ghost block as its clicks see it: its own mode, and whether a Zoop or Vertical row of it is fixed (after
+	 * its first click).
 	 */
-	public record State(CopyMode mode, boolean locked, boolean rowFixed) {
+	public record State(CopyMode mode, boolean rowFixed) {
 	}
 
 	/**
@@ -35,18 +35,18 @@ public final class SingleRule {
 	}
 
 	/**
-	 * Whether the place click is Building Planner's: while the block is locked, which places it where it's locked, or in
-	 * Zoop or Vertical, whose clicks fix and place a row. Following the aim in Single, it's Effortless Building's.
+	 * Whether the place click is Building Planner's: in Zoop or Vertical, whose clicks fix and place a row. In Single it's
+	 * Effortless Building's, locked or not (hook E32 hands it a locked position).
 	 */
 	public static boolean takesPlace(State state) {
-		return state.locked() || state.mode() != CopyMode.SINGLE;
+		return state.mode() != CopyMode.SINGLE;
 	}
 
 	/**
-	 * Whether the break click is Building Planner's: while the block is locked, which erases every ghost block a right
-	 * click would place, or a row is fixed, which the click drops. Otherwise it's Effortless Building's, erasing at the aim.
+	 * Whether the break click is Building Planner's: while a row is fixed, which the click drops. Otherwise it's
+	 * Effortless Building's, erasing at the aim or at a locked position.
 	 */
 	public static boolean takesBreak(State state) {
-		return state.locked() || state.rowFixed();
+		return state.rowFixed();
 	}
 }

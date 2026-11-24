@@ -24,6 +24,8 @@
 		"effortless.RadialMenuMixin",
 		"effortless.RandomizerSystemMixin",
 		"effortless.RenderHandlerMixin",
+		"effortless.ThreeClicksBuildModeAccessor",
+		"effortless.TwoClicksBuildModeAccessor",
 		"litematica.ChunkRendererSchematicVboMixin",
 		"litematica.GuiMaterialListMixin",
 		"litematica.OverlayRendererMixin",

@@ -2272,19 +2272,27 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   Each line is shot at 1920 by 1080, GUI scale 4, the erase's message with it, and the marked wall with Aim's line and
   a Delete box with its size at 854 by 480 and 1920 by 1080, GUI scale 2, each with its rectangles checked as the
   copy's are.
-- One ghost block, locking and nudging (step 14): in Single mode with stone bricks, H locks the block beside the aimed
-  face, and with Planner1 flown 5 blocks away and aiming elsewhere, Effortless Building's preview draws it there. With
-  Effortless Building's array of 2 copies one block apart upward, the preview draws all three. Facing north, Up moves it
-  one block north and Page Up one up. A right click places one ghost block there, on both clients, and it stays locked;
-  holding the right button for a second sends one edit; with Planner1 aiming at another ghost block, a left click erases
-  the ghost block at the locked position, leaves the aimed one, and the block stays locked. With the array of 2 copies
-  upward, a right click places three ghost blocks and a left click erases all three (1074 Q1 A). Holding the left
-  button for a second sends one edit. Locked, an oak stair placed with Planner1 facing east faces east. H unlocks it.
-  With a stick in hand, H and the nudge keys do nothing and Single's clicks act as without the add-on; choosing Line
-  in the radial menu unlocks the block; with the copy at the aim, H locks the copy and not the block. With Freecam's
-  camera on and facing east while Planner1 faces north, Up moves the locked block east. The locked block is shot in
-  open air at 854 by 480 and 1920 by 1080, GUI scale 2, and Controls' "Building Planner" heading with the keys'
-  proposed names at GUI scale 4.
+- Locking the first click (step 14): in Single mode with stone bricks, H locks the position beside the aimed face
+  (the driver's `lock`), and with Planner1 flown 5 blocks away and aiming elsewhere, Effortless Building's preview
+  draws it there. With Effortless Building's array of 2 copies one block apart upward, the preview draws all three.
+  Facing north, Up moves it one block north and Page Up one up. A right click places one ghost block there, on both
+  clients, and the lock ends. Locked and nudged, the right button held for a second while Planner1 looks at the sky
+  sends one edit, at the locked position, and the lock ends. Locked on a ghost block, with Planner1 aiming at another,
+  a left click erases the ghost block at the locked position, leaves the aimed one, and ends the lock. With the array
+  of 2 copies upward, a locked right click places three ghost blocks and a left click locked at the first erases all
+  three. Locked on a ghost block, the left button held for a second while Planner1 looks at the sky sends one edit. A
+  locked oak stair, nudged up into open air with Planner1 facing east, places there facing east, and the lock ends.
+  With a stick in hand, H and the nudge keys do nothing and Single's clicks act as without the add-on; with stone
+  bricks back in hand, the position is still locked; choosing Line in the radial menu ends the lock; with the copy at
+  the aim, H locks the copy and not the first click. With Freecam's camera on and facing east while Planner1 faces
+  north, Up moves the locked position east. The locked position is shot in open air at 854 by 480 and 1920 by 1080, GUI
+  scale 2, and Controls' "Building Planner" heading with the keys' proposed names at GUI scale 4. In Wall, H before the
+  first click locks the first corner and Up nudges it; aimed elsewhere, the preview draws the corner alone there; the
+  first click starts the wall there, the far corner follows the aim (a wall of 6, then of 15, by the preview), and the
+  second click places the wall from the locked corner, on both clients, and ends the lock. In Cube, H after the second
+  click locks both positions the clicks set, Up moves both north with the preview, and the third click places the cube
+  from the moved positions and ends the lock. The locked Wall corner and the nudged Cube are shot at 854 by 480 and
+  1920 by 1080, GUI scale 2.
 - One ghost block, Zoop and Vertical (step 15): in Single mode with stone bricks, R switches the block to Zoop,
   Vertical and Single (the driver's `singlerow`), and the copy's mode stays Single. In Zoop, a right click fixes the
   row's start and sends no edit, and the preview draws the start alone; aimed 11 blocks east of the start, the row is
@@ -2296,7 +2304,7 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   stone and andesite on, each block of the row is the mix's for its position, as the preview's is, and both kinds
   show. With Effortless Building's mirror on (the driver's `ebmirror`), the preview draws the row and its mirror image,
   24 blocks, and the click places both. In Zoop, H locks the block and Up nudges it; a row started then starts where
-  it's locked, and once placed, the block stays locked there. In Vertical, looking up into open air on the line above
+  it's locked, and once placed, the lock ends. In Vertical, looking up into open air on the line above
   the start, the row rises 8 blocks and the preview draws them; the second click places them as one edit. A Zoop row
   and a Vertical row are shot before the second click at 854 by 480 and 1920 by 1080, GUI scale 2.
 - One ghost block, turning and flipping (step 16): with oak stairs in Single mode, facing north, a notch up with Left
@@ -2394,8 +2402,8 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   torch are shot at 854 by 480 and 1920 by 1080, GUI scale 2, and each line at 1920 by 1080, GUI scale 4, with the
   changes outlined in red.
 - One ghost block, colours and its line (step 20): locked over grass the block is blue (the driver's `copycolour`);
-  nudged into a ghost gold block it's yellow and its click still places; nudged below the world's bottom it's red, and
-  its click sends no edit; a Zoop row crossing ghost blocks is yellow; with a world border crossing a row, it's red and
+  nudged into a ghost gold block it's yellow and its click still places and ends the lock; locked again over the stair
+  placed there it's blue; nudged below the world's bottom it's red, and its click sends no edit and ends the lock; a Zoop row crossing ghost blocks is yellow; with a world border crossing a row, it's red and
   places nothing. With Planner1 following the aim, no box shows. The lines, each checked word for word: following the
   aim, with Left Ctrl held, for a chest (turn only), a slab (flip only) and stone (neither), turned, locked, Zoop and
   Vertical before the first click, Zoop locked, a row of 12 and of 1, and red; with the lock key on K, the mode key on
@@ -2563,9 +2571,13 @@ shown in steps of 5%.
 
 The one ghost block's rules have unit tests as pure functions (steps 14 to 17). `SingleRuleTest` covers when its
 controls are active (session, Single mode, no mouse mode, an item that places a block), which clicks are Building
-Planner's in each state, and when the turning controls are active (`SingleRule.turning`: every mode but Disable,
-where step 18 adds `DisableTurn`'s rule; none without a session, with a mouse mode on, with an item that places no
-block, or during a shape drawn with the break click, but during one drawn with the place click).
+Planner's in each state (in Single both are Effortless Building's), and when the turning controls are active
+(`SingleRule.turning`: every mode but Disable, where step 18 adds `DisableTurn`'s rule; none without a session, with a
+mouse mode on, with an item that places no block, or during a shape drawn with the break click, but during one drawn
+with the place click). `ShapeLockTest` covers when the lock's controls are active (a session, any mode but Disable, no
+mouse mode, an item that places a block), when the first click's block alone is drawn, the lock off until H, the
+locked position and hit taking the first click, no click taken during a shape or while the controls aren't active, a
+nudge moving the position and the hit point one block, unlocking, and a shape's first click moving with a nudge.
 `CopyRowTest` covers a 1×1×1 row (step 15):
 every block to the aim east, north and up, the block alone when aimed at itself, and up to 32 blocks, where the copy's
 row stops at 10. `BlockTurnTest` (step 16) covers a

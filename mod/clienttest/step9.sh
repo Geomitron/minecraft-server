@@ -1774,98 +1774,113 @@ check "erasing the bricks reaches both games" eval 'drv 2 "await block 60 -60 2 
 	"await block 139 -11 51 minecraft:air" > /dev/null && drv 1 "await block 139 -11 51 minecraft:air" > /dev/null'
 drv 1 "cmd tp @s 8.5 -56 9.5 0 30" "wait 40" > /dev/null
 
-# One ghost block, locking and nudging, on the grass north-west of the rest, with stone bricks in Single mode. Facing
-# north from -59.5 -58 -36.5 and aimed at -60 -61 -40's top, a right click would place at -60 -60 -40. Planner2 flies
-# beside it, since a game gets the layer's changes only where it has the world loaded.
+# Locking the first click in Single, on the grass north-west of the rest, with stone bricks. Facing north from -59.5
+# -58 -36.5 and aimed at -60 -61 -40's top, a right click would place at -60 -60 -40. Planner2 flies beside it, since
+# a game gets the layer's changes only where it has the world loaded.
 main_hand=$(val 1 slot | cut -d' ' -f2)
 drv 1 "cmd item replace entity @s weapon.mainhand with minecraft:stone_bricks" "ebmode SINGLE" "ebarray 0" \
 	"cmd tp @s -59.5 -58 -36.5 180 30" "cmd tp Planner2 -66.5 -55 -34.5 180 30" "wait 60" > /dev/null
 aim 1 -60 -60 -40
-check "in Single mode with stone bricks, the one ghost block's controls are active, unlocked" eval \
-	'[[ $(val 1 single) == "unlocked active" ]]'
+check "in Single mode with stone bricks, the lock's controls are active, unlocked" eval \
+	'[[ $(val 1 lock) == "unlocked active" ]]'
 press 1 h
-check "H locks the block beside the aimed face" eval '[[ $(val 1 single) == "locked -60,-60,-40 active" ]]'
+check "H locks the position beside the aimed face" eval '[[ $(val 1 lock) == "locked -60,-60,-40 active" ]]'
 drv 1 "cmd tp @s -54.5 -58 -36.5 180 30" "wait 40" > /dev/null
 aim 1 -52 -60 -44
 check "flown 5 blocks away and aiming elsewhere, Effortless Building's preview draws it there" eval \
-	'drv 1 "wait 10" "await preview -60,-60,-40" > /dev/null && [[ $(val 1 single) == "locked -60,-60,-40 active" ]]'
+	'drv 1 "wait 10" "await preview -60,-60,-40" > /dev/null && [[ $(val 1 lock) == "locked -60,-60,-40 active" ]]'
 check "with Effortless Building's array of 2 copies one block apart upward, the preview draws all three" \
 	drv 1 "ebarray 2 0 1 0" "wait 10" "await preview -60,-60,-40 -60,-59,-40 -60,-58,-40" "ebarray 0"
 drv 1 "cmd tp @s -59.5 -58 -35.5 180 30" "wait 40" > /dev/null
-# single_nudge <xdotool key> <what it does> <the block's position after>: presses the key and checks it moved there.
-single_nudge() {
+# lock_nudge <xdotool key> <what it does> <the position after>: presses the key and checks the lock moved there.
+lock_nudge() {
 	press 1 "$1"
-	check "$2" eval "[[ \$(val 1 single) == 'locked $3 active' ]]"
+	check "$2" eval "[[ \$(val 1 lock) == 'locked $3 active' ]]"
 }
-single_nudge Up "facing north, Up moves it one block north" -60,-60,-41
-single_nudge Prior "Page Up one block up" -60,-59,-41
-single_nudge Next "and Page Down one down" -60,-60,-41
+lock_nudge Up "facing north, Up moves it one block north" -60,-60,-41
+lock_nudge Prior "Page Up one block up" -60,-59,-41
+lock_nudge Next "and Page Down one down" -60,-60,-41
 use_click 1
 check "a right click places one ghost block there, on both clients" eval \
 	'drv 1 "await block -60 -60 -41 minecraft:stone_bricks" > /dev/null &&
 	drv 2 "await block -60 -60 -41 minecraft:stone_bricks" > /dev/null && [[ $(val 1 holdlog) == *" edits=1 "* ]]'
-check "and it stays locked" eval '[[ $(val 1 single) == "locked -60,-60,-41 active" ]]'
-# Held for a second, the right button places once, at a position nudged to first, west of the first block.
-single_nudge Left "Left moves it one block west" -61,-60,-41
-drv 1 "holdreset" > /dev/null
+check "and the lock ends" eval '[[ $(val 1 lock) == "unlocked active" ]]'
+# Locked and nudged west, then held for a second while looking at the sky, the right button places once, at the locked
+# position: the lock ends with that block, and the repeats aim at nothing.
+aim 1 -60 -60 -40
+press 1 h
+lock_nudge Left "Left moves it one block west" -61,-60,-40
+drv 1 "lookat -59.5 -20 -60" "wait 5" "holdreset" > /dev/null
 xdo 1 mousedown 3
 drv 1 "wait 20" > /dev/null
 xdo 1 mouseup 3
-check "holding the right button for a second sends one edit" eval 'drv 1 "wait 10" > /dev/null &&
-	[[ $(val 1 holdlog) == *" edits=1 "* ]] && drv 2 "await block -61 -60 -41 minecraft:stone_bricks" > /dev/null'
-# Aimed at the first ghost block's south face, a left click erases the one at the locked position, west of it.
+check "held for a second, the right button places once at the locked position and the lock ends" eval \
+	'drv 1 "wait 10" > /dev/null && [[ $(val 1 holdlog) == *" edits=1 "* ]] &&
+	drv 2 "await block -61 -60 -40 minecraft:stone_bricks" > /dev/null && [[ $(val 1 lock) == "unlocked active" ]]'
+# Locked on the ghost block just placed and aimed at the first one's south face, a left click erases at the locked
+# position.
+aim 1 -60 -60 -40
+press 1 h
+lock_nudge Left "locked again and nudged west, onto the ghost block placed there" -61,-60,-40
 drv 1 "lookat -59.5 -59.5 -40.5" "wait 5" > /dev/null
 attack_click 1
 check "aiming at another ghost block, a left click erases the ghost block at the locked position" eval \
-	'drv 2 "await block -61 -60 -41 minecraft:air" > /dev/null && drv 1 "await block -61 -60 -41 minecraft:air" > /dev/null'
-check "leaves the aimed one" eval '[[ $(val 1 "layer -60 -60 -41") == minecraft:stone_bricks ]] &&
-	[[ $(val 2 "layer -60 -60 -41") == minecraft:stone_bricks ]]'
-check "and the block stays locked" eval '[[ $(val 1 single) == "locked -61,-60,-41 active" ]]'
-# With Effortless Building's array of 2 copies one block apart upward, a right click places three ghost blocks, and the
-# left click erases every block a right click would place, all three (1074 Q1 A).
+	'drv 2 "await block -61 -60 -40 minecraft:air" > /dev/null && drv 1 "await block -61 -60 -40 minecraft:air" > /dev/null'
+check "leaves the aimed one, and the lock ends" eval '[[ $(val 1 "layer -60 -60 -41") == minecraft:stone_bricks ]] &&
+	[[ $(val 2 "layer -60 -60 -41") == minecraft:stone_bricks ]] && [[ $(val 1 lock) == "unlocked active" ]]'
+# With Effortless Building's array of 2 copies one block apart upward, a locked right click places three ghost blocks,
+# and a left click locked at the first erases all three.
 drv 1 "ebarray 2 0 1 0" "wait 5" > /dev/null
+aim 1 -60 -60 -40
+press 1 h
 use_click 1
-check "with an array of 2, a right click on the locked block places three ghost blocks" eval \
-	'drv 1 "await block -61 -60 -41 minecraft:stone_bricks" "await block -61 -59 -41 minecraft:stone_bricks" \
-	"await block -61 -58 -41 minecraft:stone_bricks" > /dev/null'
+check "with an array of 2, a right click on the locked position places three ghost blocks" eval \
+	'drv 1 "await block -60 -60 -40 minecraft:stone_bricks" "await block -60 -59 -40 minecraft:stone_bricks" \
+	"await block -60 -58 -40 minecraft:stone_bricks" > /dev/null && [[ $(val 1 lock) == "unlocked active" ]]'
+aim 1 -59 -60 -40
+press 1 h
+lock_nudge Left "locked east of them and nudged west, onto the first" -60,-60,-40
 attack_click 1
-check "and the left click erases all three" eval 'drv 2 "await block -61 -60 -41 minecraft:air" \
-	"await block -61 -59 -41 minecraft:air" "await block -61 -58 -41 minecraft:air" > /dev/null &&
-	drv 1 "await block -61 -58 -41 minecraft:air" > /dev/null &&
-	[[ $(val 1 "layer -60 -60 -41") == minecraft:stone_bricks ]] && [[ $(val 1 single) == "locked -61,-60,-41 active" ]]'
+check "and a left click there erases all three" eval 'drv 2 "await block -60 -60 -40 minecraft:air" \
+	"await block -60 -59 -40 minecraft:air" "await block -60 -58 -40 minecraft:air" > /dev/null &&
+	drv 1 "await block -60 -58 -40 minecraft:air" > /dev/null &&
+	[[ $(val 1 "layer -60 -60 -41") == minecraft:stone_bricks ]] && [[ $(val 1 lock) == "unlocked active" ]]'
 drv 1 "ebarray 0" > /dev/null
-# Held for a second, aimed at the grass, the left button erases the ghost block placed again there once, and mines no
-# real block.
-use_click 1
-drv 1 "await block -61 -60 -41 minecraft:stone_bricks" "lookat -57.5 -61 -38.5" "wait 5" "holdreset" > /dev/null
+# Held for a second while looking at the sky, the left button locked on a ghost block erases it once.
+drv 1 "edit -61 -60 -40 -61 -60 -40 minecraft:stone_bricks" "await block -61 -60 -40 minecraft:stone_bricks" > /dev/null
+aim 1 -60 -60 -40
+press 1 h
+lock_nudge Left "locked and nudged onto another ghost block" -61,-60,-40
+drv 1 "lookat -59.5 -20 -60" "wait 5" "holdreset" > /dev/null
 xdo 1 mousedown 1
 drv 1 "wait 20" > /dev/null
 xdo 1 mouseup 1
-check "holding the left button for a second sends one edit" eval 'drv 1 "wait 10" > /dev/null &&
-	[[ $(val 1 holdlog) == *" edits=1 "* ]] && drv 1 "await block -61 -60 -41 minecraft:air" > /dev/null'
-check "and mines no real block" eval '[[ $(val 1 "real -58 -61 -39") == minecraft:grass_block ]]'
-# Locked, an oak stair placed facing east faces east.
+check "held for a second, the left button erases it once and the lock ends" eval 'drv 1 "wait 10" > /dev/null &&
+	[[ $(val 1 holdlog) == *" edits=1 "* ]] && drv 1 "await block -61 -60 -40 minecraft:air" > /dev/null &&
+	[[ $(val 1 lock) == "unlocked active" ]]'
+# A locked oak stair, nudged up into open air, places there facing east, as Planner1 faces, and the lock ends.
 drv 1 "cmd item replace entity @s weapon.mainhand with minecraft:oak_stairs" \
 	"cmd tp @s -64.5 -58 -40.5 -90 30" "wait 40" > /dev/null
-use_click 1
-check "locked, an oak stair placed facing east faces east" eval \
-	'drv 1 "await block -61 -60 -41 minecraft:oak_stairs" > /dev/null &&
-	[[ $(val 1 "layerstate -61 -60 -41") == *"facing=east"* ]]'
+aim 1 -62 -60 -41
 press 1 h
-check "H unlocks it" eval '[[ $(val 1 single) == "unlocked active" ]]'
+lock_nudge Prior "a locked oak stair nudged up" -62,-59,-41
+use_click 1
+check "places there facing east, and the lock ends" eval \
+	'drv 1 "await block -62 -59 -41 minecraft:oak_stairs" > /dev/null &&
+	[[ $(val 1 "layerstate -62 -59 -41") == *"facing=east"* ]] && [[ $(val 1 lock) == "unlocked active" ]]'
 # With a stick in hand, the controls aren't active: H and the nudge keys do nothing, and the clicks are Minecraft's: a
-# right click sends nothing, and a left click breaks a real stone and leaves the ghost block at the locked position.
+# right click sends nothing, and a left click breaks a real stone and leaves the ghost blocks.
 drv 1 "cmd item replace entity @s weapon.mainhand with minecraft:stone_bricks" \
 	"cmd tp @s -59.5 -58 -35.5 180 30" "wait 40" > /dev/null
 aim 1 -60 -60 -40
 press 1 h
 drv 1 "cmd item replace entity @s weapon.mainhand with minecraft:stick" "cmd setblock -58 -60 -39 minecraft:stone" \
 	"wait 10" > /dev/null
-check "with a stick in hand, the block's controls aren't active" eval \
-	'[[ $(val 1 single) == "locked -60,-60,-40 inactive" ]]'
+check "with a stick in hand, the lock's controls aren't active" eval \
+	'[[ $(val 1 lock) == "locked -60,-60,-40 inactive" ]]'
 press 1 h
 press 1 Up
-check "and H and the nudge keys do nothing" eval '[[ $(val 1 single) == "locked -60,-60,-40 inactive" ]]'
+check "and H and the nudge keys do nothing" eval '[[ $(val 1 lock) == "locked -60,-60,-40 inactive" ]]'
 use_click 1
 check "a right click with a stick sends nothing" eval 'drv 1 "wait 10" > /dev/null &&
 	[[ $(val 1 holdlog) == *" edits=0 "* ]] && [[ $(val 1 "layer -60 -60 -40") == minecraft:air ]]'
@@ -1875,44 +1890,116 @@ check "and a left click breaks the real stone, as without the add-on" eval 'drv 
 	[[ $(val 1 "real -58 -60 -39") == minecraft:air ]] && [[ $(val 1 holdlog) == *" edits=0 "* ]] &&
 	[[ $(val 1 "layer -60 -60 -41") == minecraft:stone_bricks ]]'
 drv 1 "cmd item replace entity @s weapon.mainhand with minecraft:stone_bricks" "wait 5" > /dev/null
+check "with stone bricks back in hand, the lock's controls are active again, still locked" eval \
+	'[[ $(val 1 lock) == "locked -60,-60,-40 active" ]]'
 drv 1 "ebmode LINE" "wait 5" > /dev/null
-check "choosing Line in the radial menu unlocks the block" eval '[[ $(val 1 single) == "unlocked inactive" ]]'
+check "choosing Line in the radial menu ends the lock" eval '[[ $(val 1 lock) == "unlocked active" ]]'
 drv 1 "ebmode SINGLE" "wait 5" > /dev/null
-# With the copy at the aim, H locks the copy and not the block.
+# With the copy at the aim, H locks the copy and not the first click.
 aim 1 -60 -60 -40
 press 1 h
 paste_button
 press 1 h
-check "with the copy at the aim, H locks the copy and not the block" eval '[[ $(val 1 copylock) == locked ]] &&
-	[[ $(val 1 single) == "unlocked inactive" ]]'
+check "with the copy at the aim, H locks the copy and not the first click" eval '[[ $(val 1 copylock) == locked ]] &&
+	[[ $(val 1 lock) == "unlocked inactive" ]]'
 press 1 h
 use_click 1
 check "the copy goes away" eval 'drv 1 "wait 10" > /dev/null && copy_is 1 "^away "'
-# With Freecam's camera on, facing east while Planner1 faces north, Up moves the locked block east, away from the
+# With Freecam's camera on, facing east while Planner1 faces north, Up moves the locked position east, away from the
 # camera.
 aim 1 -60 -60 -40
 press 1 h
-check "Freecam's camera comes on, facing east, with the block locked" eval \
-	'[[ $(val 1 single) == "locked -60,-60,-40 active" ]] && [[ $(val 1 "freecam true") == true ]] &&
+check "Freecam's camera comes on, facing east, with the position locked" eval \
+	'[[ $(val 1 lock) == "locked -60,-60,-40 active" ]] && [[ $(val 1 "freecam true") == true ]] &&
 	drv 1 "wait 10" > /dev/null && [[ $(val 1 "camtp -66.5 -57.5 -39.5 -90 30") == "FreeCamera -66.5,-57.5,-39.5 east" ]]'
 press 1 Up
-check "with Freecam's camera on, Up moves the locked block away from the camera, east" eval \
-	'[[ $(val 1 single) == "locked -59,-60,-40 active" ]]'
+check "with Freecam's camera on, Up moves the locked position away from the camera, east" eval \
+	'[[ $(val 1 lock) == "locked -59,-60,-40 active" ]]'
 check "Freecam's camera goes off" eval '[[ $(val 1 "freecam false") == false ]] && drv 1 "wait 10" > /dev/null'
-# The locked block in open air, 3 blocks up, with the crosshair on the grass, shot locked and then unlocked in the same
-# view, for the shots' outline.
+# The locked position in open air, 3 blocks up, with the crosshair on the grass, shot locked and then unlocked in the
+# same view, for the shots' outline.
 press 1 Prior
 press 1 Prior
 press 1 Prior
 drv 1 "lookat -50.5 -61 -50.5" "wait 5" > /dev/null
-check "the block floats in open air, locked" eval '[[ $(val 1 single) == "locked -59,-57,-40 active" ]] &&
+check "the first click's block floats in open air, locked" eval '[[ $(val 1 lock) == "locked -59,-57,-40 active" ]] &&
 	drv 1 "await preview -59,-57,-40" > /dev/null'
 shots single-locked
 press 1 h
+check "H unlocks it" eval '[[ $(val 1 lock) == "unlocked active" ]]'
 shots single-unlocked
 drv 1 "edit -70 -60 -50 -50 -55 -30 minecraft:air" > /dev/null
 check "erasing the ghost blocks reaches both games" eval 'drv 2 "await block -60 -60 -41 minecraft:air" > /dev/null &&
 	drv 1 "await block -60 -60 -41 minecraft:air" > /dev/null'
+
+# Locking the first click in Wall and Cube, on the same grass with stone bricks, from Planner1 at -59.5 -58 -35.5
+# facing north.
+# preview_has <count> <positions>...: Effortless Building's preview drew that many blocks, among them each position.
+preview_has() {
+	local drawn pos
+	drv 1 "wait 10" > /dev/null
+	drawn=" $(val 1 preview) "
+	echo "  preview: $(($(wc -w <<< "$drawn"))) blocks" >> /out/checks.log
+	(($(wc -w <<< "$drawn") == $1)) || return 1
+	shift
+	for pos in "$@"; do
+		[[ $drawn == *" $pos "* ]] || return 1
+	done
+}
+drv 1 "ebmode WALL" "ebarray 0" "cmd tp @s -59.5 -58 -35.5 180 30" "wait 40" > /dev/null
+aim 1 -64 -60 -44
+check "in Wall, the lock's controls are active, unlocked" eval '[[ $(val 1 lock) == "unlocked active" ]]'
+press 1 h
+lock_nudge Up "H before the first click locks the first corner, and Up nudges it north" -64,-60,-45
+aim 1 -56 -60 -40
+check "aimed elsewhere, the preview draws the first corner alone, where it's locked" \
+	drv 1 "wait 10" "await preview -64,-60,-45"
+use_click 1
+check "the first click starts the wall at the locked corner, which stays locked" eval \
+	'drv 1 "wait 10" > /dev/null && [[ $(val 1 lock) == "locked -64,-60,-45 active" ]] &&
+	[[ $(val 1 holdlog) == *" edits=0 "* ]]'
+drv 1 "lookat -61.5 -58.5 -44.5" "wait 5" > /dev/null
+check "the far corner follows the aim: aimed at -62 -59 -45, the preview draws a wall of 6" \
+	preview_has 6 -64,-60,-45 -62,-59,-45
+drv 1 "lookat -59.5 -57.5 -44.5" "wait 5" > /dev/null
+check "and aimed at -60 -58 -45, a wall of 15" preview_has 15 -64,-60,-45 -60,-58,-45
+shots wall-locked-corner
+use_click 1
+check "the second click places the wall from the locked corner, on both clients, and the lock ends" eval \
+	'drv 1 "await block -60 -58 -45 minecraft:stone_bricks" > /dev/null &&
+	drv 2 "await block -60 -58 -45 minecraft:stone_bricks" > /dev/null &&
+	[[ $(val 1 "boxstates -64 -60 -45 -60 -58 -45 stone_bricks") == "15 15" ]] &&
+	[[ $(val 1 "layer -64 -60 -44") == minecraft:air ]] && [[ $(val 1 lock) == "unlocked active" ]]'
+drv 1 "edit -64 -60 -45 -60 -58 -45 minecraft:air" "await block -60 -58 -45 minecraft:air" > /dev/null
+# In Cube, H after the second click locks both positions the clicks set, and Up moves them north together, with the
+# preview; the third click sets the height and places the cube from the moved positions.
+drv 1 "ebmode CUBE" "wait 5" > /dev/null
+aim 1 -66 -60 -46
+use_click 1
+aim 1 -63 -60 -48
+use_click 1
+# Aimed at the middle of the second position's block, the height is that block's alone.
+drv 1 "lookat -62.5 -59.5 -47.5" "wait 5" > /dev/null
+check "in Cube, after the second click the preview draws the floor from -66 -60 -46 to -63 -60 -48" \
+	preview_has 12 -66,-60,-46 -63,-60,-48
+press 1 h
+check "H locks both positions the clicks set" eval \
+	'[[ $(val 1 lock) == "locked -66,-60,-46 -63,-60,-48 active" ]]'
+press 1 Up
+check "Up moves both one block north" eval '[[ $(val 1 lock) == "locked -66,-60,-47 -63,-60,-49 active" ]]'
+drv 1 "lookat -62.5 -59.5 -48.5" "wait 5" > /dev/null
+check "and the preview with them" eval 'preview_has 12 -66,-60,-47 -63,-60,-49 &&
+	[[ " $(val 1 preview) " != *" -66,-60,-46 "* ]]'
+shots cube-nudged
+drv 1 "lookat -62.5 -57.5 -48.5" "wait 5" > /dev/null
+use_click 1
+check "the third click places the cube from the moved positions, 3 high, and the lock ends" eval \
+	'drv 1 "await block -63 -58 -49 minecraft:stone_bricks" > /dev/null &&
+	drv 2 "await block -66 -60 -47 minecraft:stone_bricks" > /dev/null &&
+	[[ $(val 1 "layer -66 -60 -46") == minecraft:air ]] && [[ $(val 1 "layer -63 -60 -50") == minecraft:air ]] &&
+	[[ $(val 1 lock) == "unlocked active" ]]'
+drv 1 "edit -66 -60 -49 -63 -58 -47 minecraft:air" "await block -63 -58 -49 minecraft:air" "ebmode SINGLE" \
+	> /dev/null
 
 # One ghost block, Zoop and Vertical, on the same grass, with stone bricks in Single mode. Each row starts on a line of
 # its own at x -64 or -62, from Planner1 at -58.5 -58 -34.5 facing north.
@@ -1949,7 +2036,7 @@ check "aimed 11 blocks east of the start, the row is 12 blocks" \
 	drv 1 "await singlerow ZOOP 12 -64,-60,-40..-53,-60,-40"
 check "and the preview draws the 12" drv 1 "await preview $(row_east -64 -53 -60 -40)"
 check "H, R and the nudge keys act on nothing while the row is fixed" eval 'press 1 h && press 1 r && press 1 Up &&
-	[[ $(val 1 single) == "unlocked active" ]] && [[ $(val 1 singlerow) == "ZOOP 12 -64,-60,-40..-53,-60,-40" ]]'
+	[[ $(val 1 lock) == "unlocked active" ]] && [[ $(val 1 singlerow) == "ZOOP 12 -64,-60,-40..-53,-60,-40" ]]'
 drv 1 "lookat -58.5 -20 -60" "wait 5" > /dev/null
 check "aimed at nothing, the row stays as it was" eval 'drv 1 "wait 5" > /dev/null &&
 	[[ $(val 1 singlerow) == "ZOOP 12 -64,-60,-40..-53,-60,-40" ]]'
@@ -1963,7 +2050,7 @@ check "a second right click places the 12 ghost blocks as one edit" eval \
 check "which the other player sees" drv 2 "await block -64 -60 -40 minecraft:stone_bricks" \
 	"await block -53 -60 -40 minecraft:stone_bricks"
 check "and the block follows the aim again, still in Zoop" eval '[[ $(val 1 singlerow) == "ZOOP none" ]] &&
-	[[ $(val 1 single) == "unlocked active" ]]'
+	[[ $(val 1 lock) == "unlocked active" ]]'
 drv 1 "close" > /dev/null
 keys 1 keydown ctrl key z sleep 0.3 keyup ctrl
 check "one Ctrl+Z takes the row back" drv 2 "await block -64 -60 -40 minecraft:air" \
@@ -2037,17 +2124,16 @@ drv 1 "ebarray 0" > /dev/null
 aim 1 -64 -60 -42
 press 1 h
 press 1 Up
-check "in Zoop, H locks the block and Up nudges it north" eval '[[ $(val 1 single) == "locked -64,-60,-43 active" ]]'
+check "in Zoop, H locks the block and Up nudges it north" eval '[[ $(val 1 lock) == "locked -64,-60,-43 active" ]]'
 aim 1 -58 -60 -42
 use_click 1
 check "a row started while the block is locked starts where it's locked" eval 'drv 1 "wait 10" > /dev/null &&
 	[[ $(val 1 holdlog) == *" edits=0 "* ]] && [[ $(val 1 singlerow) == "ZOOP 7 -64,-60,-43..-58,-60,-43" ]]'
 use_click 1
-check "the second click places it, and the block stays locked where the row started" eval \
+check "the second click places it, and the lock ends" eval \
 	'drv 1 "await block -58 -60 -43 minecraft:stone_bricks" > /dev/null &&
 	(($(val 1 "countblocks -70 -45 -60 -43 minecraft:stone_bricks") == 7)) &&
-	[[ $(val 1 single) == "locked -64,-60,-43 active" ]] && [[ $(val 1 singlerow) == "ZOOP none" ]]'
-press 1 h
+	[[ $(val 1 lock) == "unlocked active" ]] && [[ $(val 1 singlerow) == "ZOOP none" ]]'
 # Vertical, from farther off: fixed on -62 -61 -38's top and looking up into open air at -61.5 -52.5 -37.5, on the
 # vertical line through the start, the row rises 8 blocks, to -53.
 press 1 r
@@ -2158,10 +2244,9 @@ check "placed, the stair faces east with its top half, on both clients" eval \
 	'drv 1 "await block -56 -60 -40 minecraft:oak_stairs" > /dev/null &&
 	[[ $(val 1 "layerstate -56 -60 -40") == *"facing=east,half=top,"* ]] &&
 	drv 2 "await block -56 -60 -40 minecraft:oak_stairs" > /dev/null'
-press 1 h
-check "unlocked, the preview draws the block at the aim, and not the locked position's as well" eval \
+check "the lock ends with it, and the preview draws the block at the aim, and not the locked position's as well" eval \
 	'drv 1 "wait 10" > /dev/null && echo "  unlocked preview over the placed stair: $(val 1 preview)" >> /out/checks.log &&
-	(($(val 1 preview | wc -w) == 1))'
+	[[ $(val 1 lock) == "unlocked active" ]] && (($(val 1 preview | wc -w) == 1))'
 shots stairs-turned-after
 press 1 r
 # With the mix of oak and spruce stairs, a row of 12 at z -46, from close enough to reach it: both kinds take the turn.
@@ -3044,7 +3129,7 @@ press 1 4
 press 1 5
 stand -50 -31
 check "in Single mode with oak stairs, the one ghost block follows the aim in its own Single mode" eval \
-	'single_mode SINGLE && [[ $(val 1 single) == "unlocked active" ]] && [[ $(val 1 heldturn) == none ]]'
+	'single_mode SINGLE && [[ $(val 1 lock) == "unlocked active" ]] && [[ $(val 1 heldturn) == none ]]'
 check "following the aim, no box shows" eval '[[ $(val 1 copycolour) == none ]]'
 check "Single's line names the clicks, holding Left Control to turn or flip, the lock key and the mode key" \
 	single_line_is "[Right-click: place][Left-click: erase][Hold Left Control: turn or flip][H: lock][R: Zoop mode]"
@@ -3088,7 +3173,7 @@ check "back on the stairs, the turn is gone" eval '[[ $(val 1 heldturn) == none 
 drv 1 "edit -50 -60 -32 -50 -60 -32 minecraft:gold_block" > /dev/null
 press 1 h
 check "H locks the block, and Building Planner draws its box blue over the grass" eval \
-	'[[ $(val 1 single) == "locked -50,-60,-31 active" ]] && drv 1 "await copycolour BLUE" > /dev/null'
+	'[[ $(val 1 lock) == "locked -50,-60,-31 active" ]] && drv 1 "await copycolour BLUE" > /dev/null'
 locked_line="[Arrow keys + Page Up/Down: nudge][Left-click: erase][Hold Left Control: turn or flip][H: unlock][R: Zoop mode]"
 check "the locked line names the nudges and H to unlock" single_line_is "Locked: [Right-click: place]$locked_line"
 line_shot single-line-locked
@@ -3097,27 +3182,28 @@ single_shot single-locked 854 480 "-50 -60 -31" "-50 -60 -31"
 single_shot single-locked 1920 1080 "-50 -60 -31" "-50 -60 -31"
 press 1 Up
 check "nudged into a ghost gold block, it's yellow" eval \
-	'[[ $(val 1 single) == "locked -50,-60,-32 active" ]] && drv 1 "await copycolour YELLOW" > /dev/null'
+	'[[ $(val 1 lock) == "locked -50,-60,-32 active" ]] && drv 1 "await copycolour YELLOW" > /dev/null'
 use_click 1
-check "and its click still places, replacing the gold with a stair" eval \
-	'drv 1 "await block -50 -60 -32 minecraft:oak_stairs" > /dev/null && [[ $(val 1 holdlog) == *" edits=1 "* ]]'
-check "with the same stair there, it's blue" drv 1 "await copycolour BLUE"
+check "and its click still places, replacing the gold with a stair, and the lock ends with no box" eval \
+	'drv 1 "await block -50 -60 -32 minecraft:oak_stairs" > /dev/null && [[ $(val 1 holdlog) == *" edits=1 "* ]] &&
+	[[ $(val 1 lock) == "unlocked active" ]] && [[ $(val 1 copycolour) == none ]]'
+press 1 h
+press 1 Up
+check "locked again and nudged onto the same stair, it's blue" eval \
+	'[[ $(val 1 lock) == "locked -50,-60,-32 active" ]] && drv 1 "await copycolour BLUE" > /dev/null'
 for _ in 1 2 3 4; do press 1 Next; done
 check "nudged down to the world's bottom, it's still blue" eval \
-	'[[ $(val 1 single) == "locked -50,-64,-32 active" ]] && drv 1 "await copycolour BLUE" > /dev/null'
+	'[[ $(val 1 lock) == "locked -50,-64,-32 active" ]] && drv 1 "await copycolour BLUE" > /dev/null'
 press 1 Next
 check "one block lower, below the build height, it's red" eval \
-	'[[ $(val 1 single) == "locked -50,-65,-32 active" ]] && drv 1 "await copycolour RED BUILD_HEIGHT" > /dev/null'
+	'[[ $(val 1 lock) == "locked -50,-65,-32 active" ]] && drv 1 "await copycolour RED BUILD_HEIGHT" > /dev/null'
 check "and the line says why in red, in place of the right click" \
 	single_line_is "Locked: [Can't place: outside the world]$locked_line"
 line_shot single-line-red 1920 1080 4 "Can't place: outside the world"
 use_click 1
-check "its click places nothing and sends no edit, and it stays locked" eval 'drv 1 "wait 20" > /dev/null &&
-	[[ $(val 1 holdlog) == *" edits=0 "* ]] && [[ $(val 1 single) == "locked -50,-65,-32 active" ]]'
-for _ in 1 2 3 4 5; do press 1 Prior; done
-press 1 h
-check "nudged back up and unlocked, it follows the aim with no box" eval \
-	'[[ $(val 1 single) == "unlocked active" ]] && [[ $(val 1 copycolour) == none ]]'
+check "its click places nothing and sends no edit, and, finishing the shape, ends the lock with no box" eval \
+	'drv 1 "wait 20" > /dev/null && [[ $(val 1 holdlog) == *" edits=0 "* ]] && [[ $(val 1 lock) == "unlocked active" ]] &&
+	[[ $(val 1 copycolour) == none ]]'
 # Zoop and Vertical before the first click, and Zoop locked.
 press 1 r
 check "in Zoop, the line starts \"Zoop:\" and sets the start" eval '[[ $(val 1 singlerow) == "ZOOP none" ]] &&
@@ -3131,7 +3217,7 @@ press 1 r
 press 1 r
 press 1 h
 check "in Zoop, locked, the line starts \"Zoop, locked:\" with the nudges" eval \
-	'[[ $(val 1 singlerow) == "ZOOP none" ]] && [[ $(val 1 single) == "locked -50,-60,-31 active" ]] &&
+	'[[ $(val 1 singlerow) == "ZOOP none" ]] && [[ $(val 1 lock) == "locked -50,-60,-31 active" ]] &&
 	single_line_is "Zoop, locked: [Right-click: set the start]$locked_line"'
 line_shot single-line-zoop-locked
 press 1 h
@@ -3182,7 +3268,7 @@ press 1 k
 check "and locked, the nudges one by one" single_line_is "Locked: [Right-click: place][I/Down Arrow/Left Arrow/Right Arrow + Page Up/Down: nudge][Left-click: erase][Hold Right Control: turn or flip][K: unlock][G: Zoop mode]"
 press 1 k
 rebind key.keyboard.h key.keyboard.r key.keyboard.up key.keyboard.left.control
-check "with the keys back, K has unlocked it" eval '[[ $(val 1 single) == "unlocked active" ]]'
+check "with the keys back, K has unlocked it" eval '[[ $(val 1 lock) == "unlocked active" ]]'
 press 1 8
 check "with a stick in hand, no line shows" single_line_is hidden
 press 1 5

@@ -11,6 +11,7 @@ import dev.buildingplanner.input.DeleteMode;
 import dev.buildingplanner.input.EraseHold;
 import dev.buildingplanner.input.MouseMode;
 import dev.buildingplanner.input.PasteBoxes;
+import dev.buildingplanner.input.ShapeLock;
 import dev.buildingplanner.layer.BoxCount;
 import dev.buildingplanner.layer.DeleteMarks;
 import dev.buildingplanner.layer.GhostErase;
@@ -69,6 +70,8 @@ final class ClientSession {
 	private final Clipboard clipboard = new Clipboard();
 	/** The one ghost block's controls in Effortless Building's Single mode. */
 	private final SingleBlock single = new SingleBlock();
+	/** The build modes' lock on the first click's position (see "Locking and the first click"). */
+	private final ShapeLock lock = new ShapeLock();
 	/** The player's recent pastes in this dimension, which the copy snaps to. */
 	private final PasteBoxes pastes = new PasteBoxes();
 	/** Whether the copy was over ghost blocks, for these row boxes, these blocks and this layer at this version. */
@@ -146,9 +149,14 @@ final class ClientSession {
 		return clipboard;
 	}
 
-	/** The one ghost block, locked or following the aim (see "One ghost block"). */
+	/** The one ghost block's mode and row in Single (see "One ghost block"). */
 	SingleBlock single() {
 		return single;
+	}
+
+	/** The build modes' lock (see "Locking and the first click"). */
+	ShapeLock lock() {
+		return lock;
 	}
 
 	/** The material lists the server keeps for the player. */
@@ -173,6 +181,7 @@ final class ClientSession {
 		endAim();
 		clipboard.clear();
 		single.clear();
+		lock.unlock();
 		pastes.clear();
 		glow.clear();
 	}
@@ -207,6 +216,7 @@ final class ClientSession {
 		followAim();
 		if (mouseMode() != null) {
 			single.clear();
+			lock.unlock();
 		}
 		lists.tick(System.currentTimeMillis());
 	}
@@ -286,11 +296,12 @@ final class ClientSession {
 
 	/**
 	 * The player did something that may end the mouse mode ({@link MouseMode#endedBy}): ending it ends the box, or puts
-	 * the copy away. Choosing a build mode also unlocks the one ghost block and drops its row.
+	 * the copy away. Choosing a build mode also ends the lock and drops the one ghost block's row.
 	 */
 	void modeAction(MouseMode.Action action) {
 		if (action == MouseMode.Action.CHOOSE_BUILD_MODE) {
 			single.clear();
+			lock.unlock();
 		}
 		MouseMode mode = mouseMode();
 		if (mode != null && mode.endedBy(action)) {
@@ -498,6 +509,7 @@ final class ClientSession {
 		endAim();
 		clipboard.clear();
 		single.clear();
+		lock.unlock();
 		tiles.clear();
 		check.clear();
 		glow.clear();
