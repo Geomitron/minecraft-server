@@ -6,7 +6,7 @@ import net.minecraft.commands.arguments.EntityAnchorArgument;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Turns the player's view one step each frame, as a quick mouse sweep would, for Delete by aim's marking, and times
+ * Turns the player's view one step each frame, as a quick mouse sweep would, for Delete's marking, and times
  * frames, for what drawing the marks costs (step9.sh). Both act at the start of each pass of the game's loop, before
  * that pass draws its frame; the driver's own commands run in client ticks, which can come only every few frames.
  */

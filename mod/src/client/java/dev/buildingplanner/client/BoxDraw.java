@@ -2,7 +2,6 @@ package dev.buildingplanner.client;
 
 import dev.buildingplanner.input.BoxCorners;
 import dev.buildingplanner.input.BoxPurpose;
-import dev.buildingplanner.layer.GhostErase;
 import dev.buildingplanner.layer.Layer;
 import dev.buildingplanner.look.BoxLook;
 import java.util.Locale;
@@ -17,12 +16,11 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Building Planner's box for Copy, Delete or the material list, one of its mouse modes: three left clicks set the first
- * corner, the opposite corner on the same level, and the height ({@link BoxCorners}). Between clicks the box follows the
- * aim, with the corners set so far fixed, in its purpose's colour ({@link BoxLook}); until the first click, the top
- * face of the block aimed at shows shaded. A box past a limit draws red, and its click sets no corner; a Delete box's
- * limits include the server's cap for one edit, on the ghost blocks it holds. It uses none of Effortless Building's
- * classes.
+ * Building Planner's box for Copy or the material list, one of its mouse modes: three left clicks set the first corner,
+ * the opposite corner on the same level, and the height ({@link BoxCorners}). Between clicks the box follows the aim,
+ * with the corners set so far fixed, in its purpose's colour ({@link BoxLook}); until the first click, the top face of
+ * the block aimed at shows shaded. A box past a limit draws red, and its click sets no corner. It uses none of
+ * Effortless Building's classes.
  */
 final class BoxDraw {
 	/**
@@ -48,8 +46,6 @@ final class BoxDraw {
 	record Finished(BoxPurpose purpose, BlockPos min, BlockPos max) {
 	}
 
-	/** The server's cap on the blocks of one edit, which a Delete box's ghost blocks may not pass. */
-	private final int maxEditBlocks;
 	private BoxPurpose purpose;
 	private BlockPos first;
 	private BlockPos second;
@@ -57,18 +53,6 @@ final class BoxDraw {
 	private Shown shown;
 	/** The corner the aim gave at the last update, which the next left click sets. */
 	private BlockPos next;
-	/**
-	 * The last box whose ghost blocks were checked against the cap, by its corners, and whether it passed it: the check
-	 * runs again only when the corners move. The third click's erase is checked against the cap again as it's sent.
-	 */
-	private BlockPos cappedMin;
-	private BlockPos cappedMax;
-	private boolean overCap;
-
-	BoxDraw(int maxEditBlocks) {
-		this.maxEditBlocks = maxEditBlocks;
-	}
-
 	/** Whether a box is drawn. */
 	boolean on() {
 		return purpose != null;
@@ -84,13 +68,11 @@ final class BoxDraw {
 		first = null;
 		second = null;
 		shown = null;
-		cappedMin = null;
 	}
 
 	/** The box is for another purpose now, keeping the corners set so far; the next {@link #update} checks its limits. */
 	void switchTo(BoxPurpose purpose) {
 		this.purpose = purpose;
-		cappedMin = null;
 		if (shown != null) {
 			shown = new Shown(purpose, shown.corners(), shown.min(), shown.max(), shown.aimed(), shown.limit(),
 				shown.shade());
@@ -162,21 +144,8 @@ final class BoxDraw {
 		BlockPos max = BlockPos.max(from, to);
 		BoxCorners.Limit limit = BoxCorners.limit(from, to,
 			(x, z) -> chunks.getChunk(x, z, ChunkStatus.FULL, false) != null);
-		if (limit == null && purpose == BoxPurpose.DELETE && overCap(layer, min, max)) {
-			limit = BoxCorners.Limit.TOO_MANY_BLOCKS;
-		}
 		shown = new Shown(purpose, corners, min, max, aimed, limit, shade);
 		next = to;
-	}
-
-	/** Whether the box holds more ghost blocks than one edit may erase, counted again only when its corners moved. */
-	private boolean overCap(Layer layer, BlockPos min, BlockPos max) {
-		if (!min.equals(cappedMin) || !max.equals(cappedMax)) {
-			cappedMin = min;
-			cappedMax = max;
-			overCap = GhostErase.overCap(layer, min, max, maxEditBlocks);
-		}
-		return overCap;
 	}
 
 	/**
@@ -203,7 +172,7 @@ final class BoxDraw {
 
 	/**
 	 * The box as the in-game checks read it: what it's for, the corners set, its corners and its colour ("white",
-	 * "blue", "red", or "limit" past a limit), or none.
+	 * "blue", or "limit" past a limit), or none.
 	 */
 	String describe() {
 		if (shown == null) {

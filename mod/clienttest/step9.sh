@@ -1,8 +1,8 @@
 # Step 9's in-game checks: showing and hiding ghost blocks with N and the radial menu's button, drawing while they're
 # hidden, the choice kept across a restart, where the radial menu's buttons sit, with screenshots, the menu's corner
 # text, the key headings in Controls, the box with its list under the crosshair, copy and paste with the copy at the
-# aim worked by the mouse and its keys, its Line, Wall and Floor, the copy's colours, the Delete box, Delete by aim's
-# marking with what its marks cost, its erasing and its lines, the material list, the counted list kept on the server
+# aim worked by the mouse and its keys, its Line, Wall and Floor, the copy's colours, Delete's marking by sweeping and
+# with a box, with what its marks cost, its erasing and its lines, the material list, the counted list kept on the server
 # across restarts, the list screen's buttons, saving, opening and deleting lists, the lists
 # across restarts and on another computer, a damaged lists file, the server's limits, Refresh far from the box, and N on
 # a server without Building Planner. Sourced by inside.sh, which provides drv, val,
@@ -440,10 +440,10 @@ set_line() {
 first_line="[Left-click: set the first corner][Right-click: cancel]"
 second_line="[Left-click: set the opposite corner][Right-click: cancel]"
 height_line="[Left-click: set the height][Right-click: cancel]"
-# A Delete box's lines name R, which switches it to Delete by aim, before the right click.
-delete_first="Delete: [Left-click: set the first corner][R: Delete mode][Right-click: cancel]"
-delete_second="Delete: [Left-click: set the opposite corner][R: Delete mode][Right-click: cancel]"
-delete_height="Delete: [Left-click: set the height][R: Delete mode][Right-click: cancel]"
+# Delete's lines with no marks, with marks, and during a hold of Left Ctrl that unmarks.
+delete_none="Delete: [Hold Left Control: mark][Hold Left Control + Left-click: mark a box][Esc/Right-click: close]"
+delete_marked="Delete: [Hold Left-click: erase][Hold Left Control: mark][Hold Left Control + Left-click: mark a box][Esc/Right-click: clear]"
+delete_unmarking="Delete: [Hold Left-click: erase][Hold Left Control: unmark][Hold Left Control + Left-click: unmark a box][Esc/Right-click: clear]"
 # copy_button, delete_button and paste_button: a click on the radial menu's Copy, Delete or Paste button.
 copy_button() {
 	radial_open
@@ -1320,12 +1320,12 @@ check "while it's drawn for the material list, Material list shows selected" eva
 check "and no mode segment does" eval '[[ $(val 1 "ringselected radial-material-list-selected") == none ]]'
 radial_click "Delete"
 selected_shot radial-delete-selected
-check "while it's drawn for Delete, Delete shows selected" eval \
-	'[[ $(val 1 drawbox) == "DELETE 0 "* ]] && [[ $(val 1 selectedbuttons) == Delete ]]'
+check "the Delete button ends the box and starts Delete, and Delete shows selected" eval \
+	'[[ $(val 1 mousemode) == DELETE ]] && [[ $(val 1 drawbox) == none* ]] && [[ $(val 1 selectedbuttons) == Delete ]]'
 check "and no mode segment does" eval '[[ $(val 1 "ringselected radial-delete-selected") == none ]]'
 radial_click "Delete"
 selected_shot radial-line-selected
-check "with the box ended, no button shows selected, and Line's segment does" eval '[[ $(val 1 drawbox) == none* ]] &&
+check "with Delete ended, no button shows selected, and Line's segment does" eval '[[ $(val 1 drawbox) == none* ]] &&
 	[[ $(val 1 selectedbuttons) == none ]] && [[ $(val 1 "ringselected radial-line-selected") == LINE ]]'
 radial_let_go
 drv 1 "ebmode SINGLE" > /dev/null
@@ -1376,29 +1376,6 @@ check "a box over more blocks than the server's limit gives a message" \
 	client_said 1 "That box has 204000 blocks, more than the server's limit of 200000."
 shot 1 copy-too-many-message
 check "and keeps the earlier copy" eval '[[ $(copy_kept) == "$earlier" ]]'
-# A Delete box over Big and one more ghost block on its top corner holds 200,001 ghost blocks, more than one erase may
-# take: it draws red with its line, and its click sets no corner and erases nothing. The box starts in the space above
-# that block.
-drv 1 "edit 139 -10 51 139 -10 51 minecraft:stone" "await block 139 -10 51 minecraft:stone" > /dev/null
-delete_button
-drv 1 "lookat 139.5 -9 51.5" "wait 5" > /dev/null
-attack_click 1
-drv 1 "lookat 60.5 -9 2.5" "wait 5" > /dev/null
-attack_click 1
-drv 1 "lookat 60.5 -60.5 2.5" "wait 10" > /dev/null
-check "a Delete box over more ghost blocks than the server's limit draws red" \
-	box_is "DELETE 2 60,-61,2..139,-9,51 limit SINGLE"
-check "with its line saying so" eval '[[ $(val 1 modehud) == "Too many blocks | $delete_height[80 × 53 × 50]" ]]'
-drv 1 "wait 200" > /dev/null
-shot 1 box-delete-too-many
-attack_click 1
-check "and its click sets no corner and erases nothing" eval 'drv 1 "wait 5" > /dev/null &&
-	box_is "DELETE 2 60,-61,2..139,-9,51 limit SINGLE" && [[ $(val 1 holdlog) == *" edits=0 "* ]] &&
-	[[ $(val 2 "get 139 -10 51") == minecraft:stone ]]'
-drv 1 "lookat 60.5 -9.5 2.5" "wait 5" > /dev/null
-check "a box over fewer ghost blocks draws in Delete's red again" box_is "DELETE 2 60,-10,2..139,-9,51 red SINGLE"
-use_click 1
-check "a right click ends it" eval 'drv 1 "wait 10" > /dev/null && box_is "none SINGLE"'
 # Erasing Big is another edit of 200,000 blocks, and leaves the layer as the later checks expect it.
 drv 1 "edit 60 -60 2 139 -11 51 minecraft:air" "edit 139 -10 51 139 -10 51 minecraft:air" > /dev/null
 check "erasing all of Big reaches both games" eval 'drv 2 "await block 60 -60 2 minecraft:air" \
@@ -1505,9 +1482,8 @@ use_click 1
 check "a right click before the third click ends the box, with no message" eval \
 	'drv 1 "wait 10" > /dev/null && box_is "none SINGLE" && (($(chat_lines 1) == lines))'
 
-# The Delete button during a box for Copy switches it to Delete, keeping its first corner, and Copy, Delete and
-# Material list each switch it from the others. A Delete box's list counts only the ghost blocks in it. The Delete
-# button pressed again ends its box. switch_to <button>: a click on that button of the radial menu, then the aim on the
+# Copy and Material list each switch a box from the other, keeping its first corner; the Delete button during a box
+# ends it and starts Delete. switch_to <button>: a click on that button of the radial menu, then the aim on the
 # opposite corner.
 switch_to() {
 	radial_open
@@ -1518,110 +1494,23 @@ switch_to() {
 copy_button
 drv 1 "lookat 5.5 -59 4.5" "wait 5" > /dev/null
 attack_click 1
-switch_to Delete
-check "the Delete button during a box for Copy switches it to Delete, keeping its corner" eval \
-	'box_is "DELETE 1 3,-59,3..5,-59,4 red SINGLE" && [[ $(val 1 modehud) == "$delete_second[3 × 1 × 2]" ]]'
-check "its list counts the ghost blocks in it" eval 'drv 1 "wait 5" > /dev/null &&
-	[[ $(val 1 boxlist) == *" | minecraft:glowstone 1, minecraft:oak_stairs 1" ]]'
 switch_to "Material list"
-check "Material list switches a box for Delete, keeping its corner" \
+check "Material list switches a box for Copy, keeping its corner" \
 	box_is "MATERIAL_LIST 1 3,-59,3..5,-59,4 blue SINGLE"
-switch_to Delete
-check "Delete switches it back" box_is "DELETE 1 3,-59,3..5,-59,4 red SINGLE"
 switch_to Copy
-check "and Copy switches a box for Delete, keeping its corner" box_is "COPY 1 3,-59,3..5,-59,4 white SINGLE"
+check "and Copy switches it back" box_is "COPY 1 3,-59,3..5,-59,4 white SINGLE"
 switch_to Delete
-switch_to Delete
-check "the Delete button pressed again ends its box, leaving the player's mode" box_is "none SINGLE"
-
-# Starting a Delete box while ghost blocks are hidden shows them first, as starting a shape does.
-press 1 n
-check "with ghost blocks hidden" eval '[[ $(val 1 ghosts) == "hidden, "* ]]'
-delete_button
-check "the Delete button shows them and starts its box" eval '[[ $(val 1 ghosts) == "shown, "* ]] &&
-	[[ $(val 1 drawbox) == "DELETE 0 "* ]] && [[ $(val 1 modehud) == "$delete_first" ]]'
+check "the Delete button during a box ends it and starts Delete" eval '[[ $(val 1 mousemode) == DELETE ]] &&
+	box_is "none SINGLE"'
 use_click 1
-check "a right click ends it" eval 'drv 1 "wait 10" > /dev/null && box_is "none SINGLE"'
+check "a right click with no marks ends Delete, leaving the player's mode" eval 'drv 1 "wait 10" > /dev/null &&
+	[[ $(val 1 mousemode) == none ]] && box_is "none SINGLE"'
 
-# A Delete box of 40 by 40 by 10 over 16,000 ghost oak planks, a ghost oak door among them in the box's top layer whose
-# upper half stands above the box, and a real stone among the planks, which a stone doesn't fill. The box's first
-# corner is the plank at its south-west bottom corner, aimed at on its side; it's shot before the third click at 854 by
-# 480 and at 1920 by 1080. The third click erases the 16,001 ghost blocks, the door's upper half among them, as one
-# edit, which Planner2 sees glow with Planner1's name, and leaves the real stone; one Ctrl+Z brings them all back.
-drv 1 "cmd tp @s 219.5 -30 60.5 180 30" "cmd tp Planner2 223.5 -30 62.5 180 30" "wait 100" > /dev/null
-drv 1 "edit 200 -60 0 239 -51 39 minecraft:oak_planks" \
-	"edit 239 -51 39 239 -51 39 minecraft:oak_door[half=lower,facing=north]" \
-	"edit 239 -50 39 239 -50 39 minecraft:oak_door[half=upper,facing=north]" \
-	"cmd setblock 205 -60 5 minecraft:stone" > /dev/null
-check "both clients show the ghost blocks" eval 'drv 2 "await block 200 -60 0 minecraft:oak_planks" \
-	"await block 238 -51 39 minecraft:oak_planks" "await block 239 -50 39 minecraft:oak_door" > /dev/null &&
-	drv 1 "await block 239 -50 39 minecraft:oak_door" "await real 205 -60 5 minecraft:stone" > /dev/null &&
-	[[ $(val 1 "layer 205 -60 5") == minecraft:oak_planks ]]'
-delete_button
-drv 1 "lookat 200.5 -59.5 39.9" "wait 5" > /dev/null
-check "a Delete box's first corner on a ghost block's side is that block" \
-	box_is "DELETE 0 200,-60,39..200,-60,39 red SINGLE"
-attack_click 1
-drv 1 "lookat 239.5 -60 0.5" "wait 5" > /dev/null
-attack_click 1
-drv 1 "lookat 239.5 -50.5 0.5" "wait 10" > /dev/null
-check "its three clicks draw a box of 40 by 40 by 10" eval 'box_is "DELETE 2 200,-60,0..239,-51,39 red SINGLE" &&
-	[[ $(val 1 modehud) == "$delete_height[40 × 10 × 40]" ]]'
-list=$(val 1 boxlist)
-echo "  the Delete box's list: $list" >> /out/checks.log
-check "and its list counts only the ghost blocks in it, not the real stone" eval \
-	'[[ $list == *" | minecraft:oak_planks 15999, minecraft:oak_door 1" ]]'
-drv 1 "wait 200" > /dev/null
-shot 1 box-delete-854x480
-drv 1 "window 1920 1080 2" "wait 20" "notoasts" > /dev/null
-shot 1 box-delete-1920x1080
-echo "  box-delete-1920x1080 box: $(val 1 drawbox)" >> /out/checks.log
-drv 1 "window 854 480 2" "wait 20" > /dev/null
-line_shot line-delete 1920 1080 4 "R: Delete mode"
-line_shot line-delete-854x480-gui2 854 480 2 "R: Delete mode"
-attack_click 1
-check "the third click erases the ghost blocks, with a message" client_said 1 "Erased 16,001 ghost blocks."
-check "as one edit" eval '[[ $(val 1 holdlog) == *" edits=1 "* ]]'
-check "and ends the box, leaving the player's mode" box_is "none SINGLE"
-check "Planner2 sees them go, the door's upper half above the box with them" drv 2 \
-	"await block 200 -60 0 minecraft:air" "await block 239 -51 39 minecraft:air" "await block 239 -50 39 minecraft:air" \
-	"await block 238 -51 39 minecraft:air"
-# An edit over 512 blocks glows as its area's outline, which keeps no list of blocks.
-check "glowing with Planner1's name" drv 2 "await glow Planner1:0"
-shot 2 delete-erased-seen
-check "no ghost plank is left in the box for either player" eval \
-	'[[ $(val 1 "countbox 200 -60 0 239 -51 39 minecraft:oak_planks") == "layer 0 "* ]] &&
-	[[ $(val 2 "countbox 200 -60 0 239 -51 39 minecraft:oak_planks") == "layer 0 "* ]]'
-check "and the real stone stays" eval '[[ $(val 1 "real 205 -60 5") == minecraft:stone ]]'
-drv 1 "close" > /dev/null
-keys 1 keydown ctrl key z sleep 0.3 keyup ctrl
-check "one Ctrl+Z brings them all back" drv 2 "await block 200 -60 0 minecraft:oak_planks" \
-	"await block 239 -51 39 minecraft:oak_door" "await block 239 -50 39 minecraft:oak_door" \
-	"await block 238 -51 39 minecraft:oak_planks"
-check "every one of them" eval '[[ $(val 2 "countbox 200 -60 0 239 -51 39 minecraft:oak_planks") == "layer 15999 "* ]]'
+drv 1 "cmd tp Planner2 101.5 0 26.5 0 30" "wait 40" > /dev/null
 
-# A Delete box without ghost blocks, over the grass south of the planks, gives its message and changes nothing.
-delete_button
-drv 1 "lookat 210.5 -60 45.5" "wait 5" > /dev/null
-attack_click 1
-drv 1 "lookat 214.5 -60 48.5" "wait 5" > /dev/null
-attack_click 1
-drv 1 "lookat 214.5 -58.5 48.5" "wait 10" > /dev/null
-check "a Delete box over no ghost blocks" box_is "DELETE 2 210,-60,45..214,-59,48 red SINGLE"
-attack_click 1
-check "gives its message" client_said 1 "There are no ghost blocks in that box to erase."
-shot 1 delete-nothing-message
-check "and changes nothing" eval '[[ $(val 1 holdlog) == *" edits=0 "* ]] && box_is "none SINGLE" &&
-	[[ $(val 1 "real 210 -61 45") == minecraft:grass_block ]] &&
-	[[ $(val 2 "countbox 200 -60 0 239 -51 39 minecraft:oak_planks") == "layer 15999 "* ]]'
-drv 1 "edit 200 -60 0 239 -50 39 minecraft:air" > /dev/null
-check "erasing the planks reaches both games" eval 'drv 2 "await block 200 -60 0 minecraft:air" \
-	"await block 239 -50 39 minecraft:air" > /dev/null && drv 1 "await block 239 -50 39 minecraft:air"'
-drv 1 "cmd tp @s 8.5 -56 9.5 0 30" "cmd tp Planner2 101.5 0 26.5 0 30" "wait 40" > /dev/null
-
-# Delete by aim, marking. A ghost wall of 10 by 5 stone bricks at x 100 to 109, y -55 to -51, z 40, a ghost oak door
-# beside it at x 111, and a real stone right in front of the middle row's fourth block, at 103 -53 39. Planner1 faces
-# the wall from 8 blocks away, straight in front of that fourth block, with their eyes at the middle row's height.
+# Delete, marking by sweeping. A ghost wall of 10 by 5 stone bricks at x 100 to 109, y -55 to -51, z 40, a ghost oak
+# door beside it at x 111, and a real stone right in front of the middle row's fourth block, at 103 -53 39. Planner1
+# faces the wall from 8 blocks away, straight in front of that fourth block, with their eyes at the middle row's height.
 drv 1 "cmd tp @s 103.5 -54.12 32 0 0" "wait 40" > /dev/null
 drv 1 "edit 100 -55 40 109 -51 40 minecraft:stone_bricks" \
 	"edit 111 -55 40 111 -55 40 minecraft:oak_door[half=lower,facing=north]" \
@@ -1631,20 +1520,15 @@ check "both clients show the ghost wall and its door" eval 'drv 2 "await block 1
 	"await block 111 -54 40 minecraft:oak_door" > /dev/null && drv 1 "await block 109 -51 40 minecraft:stone_bricks" \
 	"await block 111 -54 40 minecraft:oak_door" "await real 103 -53 39 minecraft:stone" > /dev/null'
 
-# R in a Delete box after its first click switches to Aim, with no corners, and R again to a box with no corners;
-# Delete then starts in the mode last used.
+# The Delete button starts Delete, whose line with no marks names marking, marking a box and the right click that
+# closes it; R does nothing in it.
 delete_button
-drv 1 "lookat 100.5 -54.5 40" "wait 5" > /dev/null
-attack_click 1
-check "a Delete box's first click sets its first corner" eval '[[ $(val 1 drawbox) == "DELETE 1 "* ]]'
+check "the Delete button starts Delete" eval '[[ $(val 1 mousemode) == DELETE ]] && box_is "none SINGLE"'
+check "whose line with no marks names marking, marking a box and closing" eval '[[ $(val 1 modehud) == "$delete_none" ]]'
+line_shot line-delete
 press 1 r
-check "R switches it to Delete by aim, with no corners" eval '[[ $(val 1 mousemode) == DELETE_AIM ]] &&
-	box_is "none SINGLE" && [[ $(val 1 deletemode) == AIM ]]'
-press 1 r
-check "R again switches to a Delete box with no corners" eval '[[ $(val 1 drawbox) == "DELETE 0 "* ]] &&
-	[[ $(val 1 mousemode) == BOX ]] && [[ $(val 1 deletemode) == BOX ]]'
-press 1 r
-check "and back to Aim" eval '[[ $(val 1 mousemode) == DELETE_AIM ]]'
+check "R does nothing in Delete" eval 'drv 1 "wait 5" > /dev/null && [[ $(val 1 mousemode) == DELETE ]] &&
+	[[ $(val 1 modehud) == "$delete_none" ]]'
 
 # hold_ctrl and let_go_ctrl: Left Ctrl, Minecraft's sprint key, held down and let go. sweep <x1 y1 z1> <x2 y2 z2>: the
 # view turns from looking at the first point to the second in 3 frames, as a quick mouse sweep would, and stays there
@@ -1691,29 +1575,17 @@ drv 2 "edit 109 -53 40 109 -53 40 minecraft:air" > /dev/null
 check "Planner2 erasing a marked ghost block drops its mark" eval 'drv 1 "await block 109 -53 40 minecraft:air" \
 	"wait 5" > /dev/null && [[ $(val 1 marks) == "6 marks, 7 to erase: ${row% *} 111,-55,40" ]]'
 drv 1 "edit 109 -53 40 109 -53 40 minecraft:stone_bricks" "await block 109 -53 40 minecraft:stone_bricks" > /dev/null
-# A right click clears the marks; a second, with none, ends Aim. The Delete button then starts Aim, the mode last used.
+# A right click clears the marks; a second, with none, ends Delete.
 use_click 1
-check "a right click clears the marks, leaving Aim on" eval 'drv 1 "wait 10" > /dev/null &&
-	[[ $(val 1 marks) == "0 marks, 0 to erase" ]] && [[ $(val 1 mousemode) == DELETE_AIM ]]'
+check "a right click clears the marks, leaving Delete on" eval 'drv 1 "wait 10" > /dev/null &&
+	[[ $(val 1 marks) == "0 marks, 0 to erase" ]] && [[ $(val 1 mousemode) == DELETE ]]'
 use_click 1
-check "a second ends Aim" eval 'drv 1 "wait 10" > /dev/null && [[ $(val 1 mousemode) == none ]]'
-delete_button
-check "after a Delete in Aim, the Delete button starts Aim" eval '[[ $(val 1 mousemode) == DELETE_AIM ]] &&
-	[[ $(val 1 deletemode) == AIM ]]'
+check "a second ends Delete" eval 'drv 1 "wait 10" > /dev/null && [[ $(val 1 mousemode) == none ]]'
 
-# Delete by aim, erasing and its line. Aim's line with no marks; then the middle row's 9 ghost blocks the aim meets and
-# the ghost door, marked by its lower half: 10 marks, and 11 positions to erase. Each line is shot at 1920 by 1080, GUI
+# Delete's lines with marks, and during a hold that unmarks. The middle row's 9 ghost blocks the aim meets and the
+# ghost door, marked by its lower half: 10 marks, and 11 positions to erase. Each line is shot at 1920 by 1080, GUI
 # scale 4.
-aim_none="Delete, Aim: [Hold Left Control: mark][R: Delete mode][Right-click: close]"
-aim_marked="Delete, Aim: [Hold Left-click: erase][Hold Left Control: mark][R: Delete mode][Right-click: clear]"
-check "Aim's line with no marks names marking, R and the right click that closes it" eval \
-	'[[ $(val 1 modehud) == "$aim_none" ]]'
-line_shot line-aim
-press 1 r
-check "R switches to a Delete box, whose line names R for Delete mode" eval '[[ $(val 1 mousemode) == BOX ]] &&
-	[[ $(val 1 modehud) == "$delete_first" ]]'
-line_shot line-delete-first 1920 1080 4 "R: Delete mode"
-press 1 r
+delete_button
 row="100,-53,40 101,-53,40 102,-53,40 104,-53,40 105,-53,40 106,-53,40 107,-53,40 108,-53,40 109,-53,40"
 drv 1 "lookat 100.5 -52.5 40" "wait 5" > /dev/null
 hold_ctrl
@@ -1723,95 +1595,89 @@ drv 1 "lookat 111.5 -54.5 40.5" "wait 5" > /dev/null
 hold_ctrl
 let_go_ctrl
 marked="10 marks, 11 to erase: $row 111,-55,40"
-check "back in Aim, the middle row's 9 ghost blocks and the ghost door are marked" eval \
-	'[[ $(val 1 mousemode) == DELETE_AIM ]] && [[ $(val 1 marks) == "$marked" ]]'
-check "Aim's line with marks names the hold that erases them and the right click that clears them" eval \
-	'[[ $(val 1 modehud) == "$aim_marked" ]]'
-line_shot line-aim-marked
-line_shot line-aim-marked-854x480-gui2 854 480 2
-# A sweep that starts on a mark says "unmark" while Left Ctrl stays down; a sweep that starts off the marks marks it
+check "the middle row's 9 ghost blocks and the ghost door are marked" eval \
+	'[[ $(val 1 mousemode) == DELETE ]] && [[ $(val 1 marks) == "$marked" ]]'
+check "Delete's line with marks names the hold that erases them and the right click that clears them" eval \
+	'[[ $(val 1 modehud) == "$delete_marked" ]]'
+line_shot line-delete-marked
+line_shot line-delete-marked-854x480-gui2 854 480 2
+# A hold that starts on a mark says "unmark" while Left Ctrl stays down; a hold that starts off the marks marks it
 # again.
 drv 1 "lookat 104.5 -52.5 40" "wait 5" > /dev/null
 hold_ctrl
-check "during a sweep that unmarks, the line says unmark" eval '[[ $(val 1 modehud) == "Delete, Aim: [Hold Left-click: erase][Hold Left Control: unmark][R: Delete mode][Right-click: clear]" ]]'
-line_shot line-aim-unmarking
+check "during a hold that unmarks, the line says unmark" eval '[[ $(val 1 modehud) == "$delete_unmarking" ]]'
+line_shot line-delete-unmarking
 let_go_ctrl
 hold_ctrl
 let_go_ctrl
-check "and a sweep that starts on the unmarked block marks it again" eval '[[ $(val 1 marks) == "$marked" ]]'
+check "and a hold that starts on the unmarked block marks it again" eval '[[ $(val 1 marks) == "$marked" ]]'
 
-# A left click held 10 ticks erases nothing: at the hold's 10th tick the line says "Erasing 50%" in place of the
-# erase, shot then at 1920 by 1080, GUI scale 4, and the driver lets go of the button in the game at the next tick.
+# A left click held 10 ticks erases nothing. While it's held, a bar fills above the controls: the hotbar's width, 182,
+# and 5 high, centred, its bottom 4 above the controls' top, filled a twentieth for each tick, so a quarter at the 5th
+# tick and half at the 10th. At 1920 by 1080, GUI scale 4, the screen is 480 wide: the bar runs from 149 to 331, filled
+# to 194 and to 240, 4 window pixels to each. The half-full bar is shot, and the driver lets go of the button in the game
+# at the next tick.
 drv 1 "wait 210" "window 1920 1080 4" "wait 20" "notoasts" "wait 5" "holdreset" > /dev/null
+check "with the button up, no bar shows" eval '[[ $(val 1 erasebar) == hidden ]]'
 xdo 1 mousedown 1
-held=$(drv 1 "await erasing 50" "modehud" "modewrap" "modebox" "modepart erasing 50%" "shot line-aim-erasing" \
+held=$(drv 1 "await erasing 5" "erasebar" "await erasing 10" "erasebar" "modehud" "modebox" "shot delete-erase-bar-half" \
 	"release attack" "wait 20") || true
 xdo 1 mouseup 1
+# result <command> [<nth>]: the driver's reply to the nth such command (the first by default) in $held.
 result() {
-	awk -v c="$1" 'index($0, c) == 1 { sub(/^[^=]* => /, ""); print; exit }' <<< "$held"
+	awk -v c="$1" -v n="${2:-1}" 'index($0, c) == 1 { if (++seen == n) { sub(/^[^=]* => /, ""); print; exit } }' \
+		<<< "$held"
 }
-echo "  line-aim-erasing: $(result modewrap) | box $(result modebox) | part $(result modepart)" >> /out/checks.log
-check "at the hold's 10th tick the line says Erasing 50% in place of the erase" eval '[[ $(result modehud) == "Delete, Aim: [Hold Left-click: erasing 50%][Hold Left Control: mark][R: Delete mode][Right-click: clear]" ]]'
-check "let go then, it erases nothing" eval '[[ $(val 1 holdlog) == *" edits=0 "* ]] && [[ $(val 1 marks) == "$marked" ]] &&
-	[[ $(val 1 erasing) == -1 ]] && [[ $(val 1 modehud) == "$aim_marked" ]]'
+echo "  delete-erase-bar-half: bar $(result erasebar 2) | box $(result modebox)" >> /out/checks.log
+read -r _ box_top _ _ <<< "$(result modebox)"
+check "at the hold's 5th tick the bar is a quarter full" eval '[[ $(result erasebar 1) == "596 "*" 1324 "*" fill 776" ]]'
+check "at its 10th, half full, 5 high and 4 above the controls" eval \
+	'[[ $(result erasebar 2) == "596 $((box_top - 36)) 1324 $((box_top - 16)) fill 960" ]]'
+check "and the line stays as it was" eval '[[ $(result modehud) == "$delete_marked" ]]'
+check "let go then, it erases nothing, and the bar goes" eval '[[ $(val 1 holdlog) == *" edits=0 "* ]] &&
+	[[ $(val 1 marks) == "$marked" ]] && [[ $(val 1 erasing) == -1 ]] && [[ $(val 1 erasebar) == hidden ]]'
 # Held 20 ticks it sends one edit, which takes the door's upper half too, which Planner2 sees glow with Planner1's
-# name, and says how many it erased; the message is shot. Holding on erases nothing more, even once a sweep marks the
-# top row again.
+# name, and says how many it erased; the message is shot. Holding on erases nothing more.
 erased_before=$(chat_count 1 "Erased 11 ghost blocks.")
 drv 1 "holdreset" > /dev/null
 xdo 1 mousedown 1
-check "a left click held 20 ticks erases the marks, saying how many" eval 'drv 1 "await erasing 50" > /dev/null &&
+check "a left click held 20 ticks erases the marks, saying how many" eval 'drv 1 "await erasing 10" > /dev/null &&
 	client_said 1 "Erased 11 ghost blocks."'
 check "which Planner2 sees glow with Planner1's name, the door's upper half with it" eval \
 	'drv 2 "await glow Planner1:11" "await block 100 -53 40 minecraft:air" "await block 111 -55 40 minecraft:air" \
 	"await block 111 -54 40 minecraft:air" > /dev/null'
-drv 1 "shot aim-erased-message" "wait 20" > /dev/null
-echo "  aim-erased-message: $(val 1 modewrap) | box $(val 1 modebox)" >> /out/checks.log
+drv 1 "shot delete-erased-message" "wait 20" > /dev/null
+echo "  delete-erased-message: $(val 1 modewrap) | box $(val 1 modebox)" >> /out/checks.log
 check "as one edit" eval '[[ $(val 1 holdlog) == *" edits=1 "* ]]'
-check "Aim stays on, with no marks" eval '[[ $(val 1 mousemode) == DELETE_AIM ]] &&
-	[[ $(val 1 marks) == "0 marks, 0 to erase" ]] && [[ $(val 1 modehud) == "$aim_none" ]]'
-drv 1 "window 854 480 2" "wait 20" "lookat 100.5 -50.5 40" "wait 5" > /dev/null
-hold_ctrl
-sweep "100.5 -50.5 40" "109.5 -50.5 40"
-let_go_ctrl
+check "Delete stays on, with no marks" eval '[[ $(val 1 mousemode) == DELETE ]] &&
+	[[ $(val 1 marks) == "0 marks, 0 to erase" ]] && [[ $(val 1 modehud) == "$delete_none" ]]'
 drv 1 "wait 30" > /dev/null
-check "holding on erases nothing more, though the top row is marked" eval '[[ $(val 1 marks) == "10 marks, 10 to erase:"* ]] &&
-	[[ $(val 1 holdlog) == *" edits=1 "* ]] && said_once_more 1 "Erased 11 ghost blocks." "$erased_before"'
+check "holding on erases nothing more" eval '[[ $(val 1 holdlog) == *" edits=1 "* ]] &&
+	said_once_more 1 "Erased 11 ghost blocks." "$erased_before"'
 xdo 1 mouseup 1
-use_click 1
-check "a right click clears the top row's marks" eval 'drv 1 "wait 10" > /dev/null &&
-	[[ $(val 1 marks) == "0 marks, 0 to erase" ]] && [[ $(val 1 mousemode) == DELETE_AIM ]]'
+drv 1 "window 854 480 2" "wait 20" > /dev/null
 # One Ctrl+Z, aimed at the grass so that holding Ctrl marks nothing, brings the blocks back unmarked.
 drv 1 "lookat 104.5 -61 35" "wait 5" "close" > /dev/null
 keys 1 keydown ctrl key z sleep 0.3 keyup ctrl
 check "one Ctrl+Z brings the erased blocks back" drv 1 "await block 100 -53 40 minecraft:stone_bricks" \
 	"await block 109 -53 40 minecraft:stone_bricks" "await block 111 -55 40 minecraft:oak_door" \
 	"await block 111 -54 40 minecraft:oak_door"
-check "unmarked, with Aim still on" eval 'drv 1 "wait 10" > /dev/null && [[ $(val 1 marks) == "0 marks, 0 to erase" ]] &&
-	[[ $(val 1 mousemode) == DELETE_AIM ]]'
+check "unmarked, with Delete still on" eval 'drv 1 "wait 10" > /dev/null && [[ $(val 1 marks) == "0 marks, 0 to erase" ]] &&
+	[[ $(val 1 mousemode) == DELETE ]]'
 
-# With the mode key on G and the sprint key on Right Control, Aim's line and a Delete box's name them; then both go
-# back.
-drv 1 "bindkey key.buildingplanner.copy_mode key.keyboard.g" "bindkey key.sprint key.keyboard.right.control" \
-	"wait 2" > /dev/null
-check "with the keys rebound, Aim's line names G and Right Control" eval \
-	'[[ $(val 1 modehud) == "Delete, Aim: [Hold Right Control: mark][G: Delete mode][Right-click: close]" ]]'
-line_shot line-aim-rebound
-press 1 g
-check "G switches to a Delete box, whose line names G" eval '[[ $(val 1 mousemode) == BOX ]] &&
-	[[ $(val 1 modehud) == "Delete: [Left-click: set the first corner][G: Delete mode][Right-click: cancel]" ]]'
-line_shot line-delete-rebound 1920 1080 4 "G: Delete mode"
-press 1 g
-drv 1 "bindkey key.buildingplanner.copy_mode key.keyboard.r" "bindkey key.sprint key.keyboard.left.control" \
-	"wait 2" > /dev/null
-check "and with the keys back, G has switched back to Aim, whose line names R and Left Control" eval \
-	'[[ $(val 1 mousemode) == DELETE_AIM ]] && [[ $(val 1 modehud) == "$aim_none" ]]'
+# With the sprint key on Right Control, Delete's line names it; then it goes back.
+drv 1 "bindkey key.sprint key.keyboard.right.control" "wait 2" > /dev/null
+check "with the sprint key rebound, Delete's line names Right Control" eval \
+	'[[ $(val 1 modehud) == "Delete: [Hold Right Control: mark][Hold Right Control + Left-click: mark a box][Esc/Right-click: close]" ]]'
+line_shot line-delete-rebound
+drv 1 "bindkey key.sprint key.keyboard.left.control" "wait 2" > /dev/null
+check "and with the key back, it names Left Control" eval '[[ $(val 1 modehud) == "$delete_none" ]]'
 
 # The marked wall, shot at 854 by 480 and 1920 by 1080, GUI scale 2, and with GUI scale 4 for the list under the
 # crosshair; first the same view unmarked, for where the marks show. One hold sweeps each row in turn, marking all but
 # the block behind the real stone.
 drv 1 "lookat 104.5 -52.5 40" "wait 5" > /dev/null
-shots aim-unmarked
+shots delete-unmarked
 hold_ctrl
 for y in -50.5 -51.5 -52.5 -53.5 -54.5; do
 	sweep "100.5 $y 40" "109.5 $y 40"
@@ -1820,26 +1686,104 @@ let_go_ctrl
 drv 1 "lookat 104.5 -52.5 40" "wait 10" > /dev/null
 check "one hold over each row marks the wall's 49 ghost blocks the aim meets" eval \
 	'[[ $(val 1 marks) == "49 marks, 49 to erase" ]] && [[ $(val 1 boxlist) == *" | minecraft:stone_bricks 49" ]]'
-check "with Aim's line for marks" eval '[[ $(val 1 modehud) == "$aim_marked" ]]'
-echo "  aim-marked-854x480 list: $(val 1 boxlist) | box $(val 1 modebox)" >> /out/checks.log
-shots aim-marked
-drv 1 "window 1920 1080 2" "wait 20" > /dev/null
-echo "  aim-marked-1920x1080 list: $(val 1 boxlist) | box $(val 1 modebox)" >> /out/checks.log
-drv 1 "window 1920 1080 4" "wait 20" "notoasts" "wait 5" "shot aim-marked-gui4" "wait 20" > /dev/null
-echo "  aim-marked-gui4 list: $(val 1 boxlist)" >> /out/checks.log
+check "with Delete's line for marks" eval '[[ $(val 1 modehud) == "$delete_marked" ]]'
+echo "  delete-marked-854x480 list: $(val 1 boxlist) | box $(val 1 modebox)" >> /out/checks.log
+shots delete-marked
+drv 1 "window 1920 1080 4" "wait 20" "notoasts" "wait 5" "shot delete-marked-gui4" "wait 20" > /dev/null
+echo "  delete-marked-gui4 list: $(val 1 boxlist)" >> /out/checks.log
 drv 1 "window 854 480 2" "wait 20" > /dev/null
+use_click 1
 
-# The Delete button with ghost blocks hidden, in Aim, shows them; the Copy button in Aim starts a Copy box.
+# Delete, marking with a box. Ghost stone bricks of 10 by 4 by 10 at x 100 to 109, y -60 to -57, z 20 to 29, in front
+# of the wall, seen from above their south side. With Left Ctrl held, the left button pressed on the front face of the
+# bottom block at 100 -60 20 starts the box there; aimed at the top face of the block at 109 -57 29, the box is 10 by 4
+# by 10, its line names the release and its size, and the list under the crosshair counts its 400 ghost blocks. It's
+# shot at 854 by 480 and 1920 by 1080, GUI scale 2, and its line at GUI scale 4. While it's drawn, the crosshair passing
+# over the wall's middle row, outside the box, marks none of it; aimed back, letting go marks the 400 ghost blocks in the
+# box and nothing else.
+drv 1 "cmd tp @s 104.5 -50 15 0 30" "wait 20" "edit 100 -60 20 109 -57 29 minecraft:stone_bricks" > /dev/null
+check "both clients show the ghost bricks" eval 'drv 2 "await block 109 -57 29 minecraft:stone_bricks" > /dev/null &&
+	drv 1 "await block 109 -57 29 minecraft:stone_bricks" "await block 100 -60 20 minecraft:stone_bricks" > /dev/null'
+check "with no marks" eval '[[ $(val 1 marks) == "0 marks, 0 to erase" ]]'
+drv 1 "lookat 100.5 -59.5 20" "wait 5" > /dev/null
+hold_ctrl
+xdo 1 mousedown 1
+check "Left Ctrl and the left button start the box at the block aimed at" eval \
+	'drv 1 "wait 5" > /dev/null && [[ $(val 1 markbox) == "mark 100,-60,20..100,-60,20 red" ]] &&
+	[[ $(val 1 modehud) == "Delete: [Release Left-click: mark the box][Esc: cancel][1 × 1 × 1]" ]]'
+drv 1 "lookat 109.5 -56 29.5" "wait 10" > /dev/null
+check "aimed at the far top block, the box is 10 by 4 by 10" eval \
+	'[[ $(val 1 markbox) == "mark 100,-60,20..109,-57,29 red" ]] &&
+	[[ $(val 1 modehud) == "Delete: [Release Left-click: mark the box][Esc: cancel][10 × 4 × 10]" ]]'
+check "and the list under the crosshair counts its 400 ghost bricks" eval \
+	'[[ $(val 1 boxlist) == *" | minecraft:stone_bricks 400" ]]'
+shots delete-box
+line_shot line-delete-box
+before=$(val 1 marks)
+sweep "100.5 -52.5 40" "109.5 -52.5 40"
+check "the crosshair passing over the wall outside the box marks none of it" eval '[[ $(val 1 marks) == "$before" ]]'
+drv 1 "lookat 109.5 -56 29.5" "wait 10" > /dev/null
+xdo 1 mouseup 1
+drv 1 "wait 5" > /dev/null
+check "letting go marks the box's 400 ghost blocks and nothing else" eval \
+	'[[ $(val 1 marks) == "400 marks, 400 to erase" ]] && [[ $(val 1 markbox) == none ]] &&
+	[[ $(val 1 modehud) == "$delete_marked" ]]'
+let_go_ctrl
+drv 1 "lookat 104.5 -60 25" "wait 10" > /dev/null
+check "the list under the crosshair counts the 400 marks" eval '[[ $(val 1 boxlist) == *" | minecraft:stone_bricks 400" ]]'
+shots delete-box-marked
+# A box started on a marked block unmarks: from the front bottom block to the top of the block at 104 -57 24, a box of
+# 5 by 4 by 5 unmarks its 100 ghost blocks, and the other 300 stay marked.
+drv 1 "lookat 100.5 -59.5 20" "wait 5" > /dev/null
+hold_ctrl
+xdo 1 mousedown 1
+drv 1 "lookat 104.5 -56 24.5" "wait 10" > /dev/null
+check "a box started on a marked block unmarks" eval '[[ $(val 1 markbox) == "unmark 100,-60,20..104,-57,24 red" ]] &&
+	[[ $(val 1 modehud) == "Delete: [Release Left-click: unmark the box][Esc: cancel][5 × 4 × 5]" ]]'
+line_shot line-delete-box-unmark
+xdo 1 mouseup 1
+drv 1 "wait 5" > /dev/null
+check "letting go unmarks its 100 ghost blocks, leaving 300 marked" eval \
+	'[[ $(val 1 marks) == "300 marks, 300 to erase" ]] && [[ $(val 1 markbox) == none ]]'
+let_go_ctrl
+# A right click while the box is drawn ends it, marking nothing, and leaves Delete on. This box starts on the grass in
+# front of the bricks, a real block, so that holding Left Ctrl first marks nothing.
+drv 1 "lookat 104.5 -61 18.5" "wait 5" > /dev/null
+hold_ctrl
+xdo 1 mousedown 1
+drv 1 "lookat 109.5 -56 29.5" "wait 10" > /dev/null
+check "a box can start on a real block" eval '[[ $(val 1 markbox) == "mark 104,-61,18..109,-57,29 red" ]]'
 use_click 1
+drv 1 "wait 5" > /dev/null
+check "a right click during the box ends it, marking nothing" eval '[[ $(val 1 markbox) == none ]] &&
+	[[ $(val 1 marks) == "300 marks, 300 to erase" ]] && [[ $(val 1 mousemode) == DELETE ]]'
+xdo 1 mouseup 1
+let_go_ctrl
+# Held a second, the left button erases the 300 marked bricks as one edit, which one Ctrl+Z takes back.
+drv 1 "holdreset" > /dev/null
+xdo 1 mousedown 1
+check "a left click held a second erases the box's 300 marks as one edit" eval 'drv 2 "await block 109 -57 29 minecraft:air" \
+	> /dev/null && client_said 1 "Erased 300 ghost blocks." && [[ $(val 1 holdlog) == *" edits=1 "* ]]'
+xdo 1 mouseup 1
+check "leaving the unmarked ones" eval '[[ $(val 2 "countbox 100 -60 20 109 -57 29 minecraft:stone_bricks") == "layer 100 "* ]]'
+drv 1 "lookat 104.5 -40 40" "wait 5" "close" > /dev/null
+keys 1 keydown ctrl key z sleep 0.3 keyup ctrl
+check "one Ctrl+Z brings them back" eval 'drv 2 "await block 109 -57 29 minecraft:stone_bricks" > /dev/null &&
+	[[ $(val 2 "countbox 100 -60 20 109 -57 29 minecraft:stone_bricks") == "layer 400 "* ]]'
+drv 1 "edit 100 -60 20 109 -57 29 minecraft:air" "cmd tp @s 103.5 -54.12 32 0 0" "wait 20" > /dev/null
+check "erasing the bricks reaches both games" eval 'drv 2 "await block 109 -57 29 minecraft:air" > /dev/null &&
+	drv 1 "await block 109 -57 29 minecraft:air" > /dev/null'
+
+# The Delete button with ghost blocks hidden shows them and starts Delete; the Copy button in Delete starts a Copy box.
 use_click 1
+check "with no marks, a right click ends Delete" eval 'drv 1 "wait 10" > /dev/null && [[ $(val 1 mousemode) == none ]]'
 press 1 n
-check "with ghost blocks hidden and Delete in Aim" eval '[[ $(val 1 ghosts) == "hidden, "* ]] &&
-	[[ $(val 1 deletemode) == AIM ]]'
+check "with ghost blocks hidden" eval '[[ $(val 1 ghosts) == "hidden, "* ]]'
 delete_button
-check "the Delete button shows them and starts Aim" eval '[[ $(val 1 ghosts) == "shown, "* ]] &&
-	[[ $(val 1 mousemode) == DELETE_AIM ]]'
+check "the Delete button shows them and starts Delete" eval '[[ $(val 1 ghosts) == "shown, "* ]] &&
+	[[ $(val 1 mousemode) == DELETE ]]'
 copy_button
-check "the Copy button in Aim starts a Copy box" eval '[[ $(val 1 drawbox) == "COPY 0 "* ]] &&
+check "the Copy button in Delete starts a Copy box" eval '[[ $(val 1 drawbox) == "COPY 0 "* ]] &&
 	[[ $(val 1 mousemode) == BOX ]]'
 use_click 1
 drv 1 "wait 10" "edit 100 -55 40 111 -51 40 minecraft:air" "cmd setblock 103 -53 39 minecraft:air" > /dev/null
@@ -1848,12 +1792,13 @@ check "erasing the wall and its door reaches both games" eval 'drv 2 "await bloc
 
 # What marks cost, logged: 200,000 ghost stone bricks of 80 by 50 by 50, the most one edit holds, under the players;
 # frames timed with none marked and with all marked, building their shape and the shape of 200,000 marks that touch no
-# other, and a frame's sweep of 65 aims, half over the bricks and half to the horizon, and all to the horizon.
+# other, and a frame's sweep of 65 aims, half over the bricks and half to the horizon, and all to the horizon. Two more
+# ghost bricks beside the top corner, at 140 and 141 -11 51, stay unmarked.
 drv 1 "cmd tp @s 100.5 0 26.5 0 30" "wait 60" > /dev/null
-drv 1 "edit 60 -60 2 139 -11 51 minecraft:stone_bricks" > /dev/null
-check "both games show the 200,000 ghost bricks" eval 'drv 2 "await block 139 -11 51 minecraft:stone_bricks" \
-	> /dev/null && drv 1 "await block 60 -60 2 minecraft:stone_bricks" "await block 139 -11 51 minecraft:stone_bricks" \
-	> /dev/null'
+drv 1 "edit 60 -60 2 139 -11 51 minecraft:stone_bricks" "edit 140 -11 51 141 -11 51 minecraft:stone_bricks" > /dev/null
+check "both games show the 200,002 ghost bricks" eval 'drv 2 "await block 139 -11 51 minecraft:stone_bricks" \
+	"await block 141 -11 51 minecraft:stone_bricks" > /dev/null && drv 1 "await block 60 -60 2 minecraft:stone_bricks" \
+	"await block 139 -11 51 minecraft:stone_bricks" "await block 141 -11 51 minecraft:stone_bricks" > /dev/null'
 delete_button
 drv 1 "wait 200" "frametimes 300" "await framestimed" > /dev/null
 echo "  frames with no marks: $(val 1 frametimes)" >> /out/checks.log
@@ -1861,23 +1806,38 @@ check "all 200,000 ghost bricks are marked" eval '[[ $(val 1 "markall 60 -60 2 1
 	[[ $(val 1 marks) == "200000 marks, 200000 to erase" ]]'
 drv 1 "wait 20" "frametimes 300" "await framestimed" > /dev/null
 echo "  frames with 200,000 marks: $(val 1 frametimes)" >> /out/checks.log
-shot 1 aim-200000-marks
+shot 1 delete-200000-marks
 echo "  building the shape of the 200,000 marks: $(val 1 timeoutline)" >> /out/checks.log
 echo "  building the shape of 200,000 marks that touch no other: $(val 1 "timeoutline scattered 200000")" \
 	>> /out/checks.log
 echo "  a sweep half over the bricks and half to the horizon: $(val 1 "timeaims 100.5 -11 30 100.5 0 280 100")" \
 	>> /out/checks.log
 echo "  a sweep all to the horizon: $(val 1 "timeaims 350 0 26.5 100.5 0 280 100")" >> /out/checks.log
-check "with the marks at the cap, Aim's line warns above its controls" eval \
-	'[[ $(val 1 modehud) == "Too many blocks | $aim_marked" ]]'
-line_shot line-aim-cap
+check "with the marks at the cap, Delete's line warns above its controls" eval \
+	'[[ $(val 1 modehud) == "Too many blocks | $delete_marked" ]]'
+line_shot line-delete-cap
+# With the marks at the cap, a box over the two unmarked bricks would pass it: it draws red, with the warning above its
+# line, and letting go marks nothing.
+drv 1 "lookat 140.5 -10 51.5" "wait 5" > /dev/null
+hold_ctrl
+xdo 1 mousedown 1
+drv 1 "lookat 141.5 -10 51.5" "wait 10" > /dev/null
+check "a box that would take the marks past the cap draws red" eval \
+	'[[ $(val 1 markbox) == "mark 140,-11,51..141,-11,51 limit" ]] &&
+	[[ $(val 1 modehud) == "Too many blocks | Delete: [Release Left-click: mark the box][Esc: cancel][2 × 1 × 1]" ]]'
+line_shot line-delete-box-too-many
+xdo 1 mouseup 1
+drv 1 "wait 5" > /dev/null
+check "and letting go marks nothing" eval '[[ $(val 1 marks) == "200000 marks, 200000 to erase" ]] &&
+	[[ $(val 1 markbox) == none ]]'
+let_go_ctrl
 use_click 1
 use_click 1
-check "the marks clear and Aim ends" eval 'drv 1 "wait 10" > /dev/null && [[ $(val 1 mousemode) == none ]] &&
+check "the marks clear and Delete ends" eval 'drv 1 "wait 10" > /dev/null && [[ $(val 1 mousemode) == none ]] &&
 	[[ $(val 1 marks) == "0 marks, 0 to erase" ]]'
-drv 1 "edit 60 -60 2 139 -11 51 minecraft:air" > /dev/null
+drv 1 "edit 60 -60 2 139 -11 51 minecraft:air" "edit 140 -11 51 141 -11 51 minecraft:air" > /dev/null
 check "erasing the bricks reaches both games" eval 'drv 2 "await block 60 -60 2 minecraft:air" \
-	"await block 139 -11 51 minecraft:air" > /dev/null && drv 1 "await block 139 -11 51 minecraft:air" > /dev/null'
+	"await block 141 -11 51 minecraft:air" > /dev/null && drv 1 "await block 141 -11 51 minecraft:air" > /dev/null'
 drv 1 "cmd tp @s 8.5 -56 9.5 0 30" "wait 40" > /dev/null
 
 # Locking the first click in Single, on the grass north-west of the rest, with stone bricks. Facing north from -59.5
@@ -3471,12 +3431,10 @@ check "a box Planner1 counts is Last counted in their file on the server within 
 	((SECONDS - list_counted <= 31))'
 echo "  seconds from the count to the file: $((SECONDS - list_counted)); the file's Last counted: $(val 1 "listfile $lists_file")" \
 	>> /out/checks.log
-# The copy's mode, set to Line before the restart, starts as Off again after it, and Delete, last used in Aim, starts
-# in a box again.
+# The copy's mode, set to Line before the restart, starts as Off again after it.
 paste_button
 press 1 r
-check "before the restart, R sets the copy's mode to Line, and Delete was last used in Aim" eval \
-	'[[ $(val 1 copymode) == LINE ]] && [[ $(val 1 deletemode) == AIM ]]'
+check "before the restart, R sets the copy's mode to Line" eval '[[ $(val 1 copymode) == LINE ]]'
 cp /out/client1.log /out/client1-before-lists-restart.log
 cp /out/server.log /out/server-before-lists-restart.log
 stop_client 1
@@ -3487,7 +3445,7 @@ check "after the server and Planner1's game restart, the game has the list it co
 	'drv 1 "await session" "await noscreen" "wait 20" > /dev/null && [[ $(val 1 currentlist) == "$counted_list" ]]'
 check "and the copy's mode is Off again" eval '[[ $(val 1 copymode) == OFF ]]'
 delete_button
-check "and the Delete button starts a box" eval '[[ $(val 1 drawbox) == "DELETE 0 "* ]] && [[ $(val 1 mousemode) == BOX ]]'
+check "and the Delete button starts Delete" eval '[[ $(val 1 mousemode) == DELETE ]]'
 use_click 1
 drv 1 "wait 10" > /dev/null
 echo "  the current list after the restart: $(val 1 currentlist)" >> /out/checks.log

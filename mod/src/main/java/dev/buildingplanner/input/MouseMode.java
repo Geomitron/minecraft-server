@@ -7,9 +7,9 @@ package dev.buildingplanner.input;
  */
 public enum MouseMode {
 	/**
-	 * Drawing a box for Copy, Delete or the material list: three left clicks set a corner, the opposite corner on the
-	 * same level and the height, and a right click leaves the mode. The middle click does nothing and the wheel changes
-	 * the hotbar slot.
+	 * Drawing a box for Copy or the material list: three left clicks set a corner, the opposite corner on the same level
+	 * and the height, and a right click leaves the mode. The middle click does nothing and the wheel changes the hotbar
+	 * slot.
 	 */
 	BOX,
 	/**
@@ -19,11 +19,12 @@ public enum MouseMode {
 	 */
 	COPY_AT_AIM,
 	/**
-	 * Delete by aim: holding Minecraft's sprint key marks the ghost blocks the aim sweeps over, and a right click clears
-	 * the marks, or leaves the mode when there are none. The left click and the middle click do nothing, and the wheel
+	 * Delete: holding Minecraft's sprint key marks the ghost blocks the aim sweeps over, and with the left button too
+	 * draws a box that marks the ghost blocks in it; holding the left button alone for a second erases the marks; and a
+	 * right click clears the marks, or leaves the mode when there are none. The middle click does nothing, and the wheel
 	 * changes the hotbar slot.
 	 */
-	DELETE_AIM;
+	DELETE;
 
 	/** What the player does in Building Planner or Effortless Building while a mode is on. */
 	public enum Action {
@@ -47,19 +48,20 @@ public enum MouseMode {
 	}
 
 	/**
-	 * Whether the action ends this mode. Each action that ends it then does its own action (Copy, Delete and "Material
-	 * list" start a box, Paste brings the copy back); undo and redo keep it, so a player can undo a paste and paste
-	 * again. A box's own buttons, Copy, Delete and "Material list", don't end it here: the same button ends the box and
-	 * another switches it to that purpose, keeping its corners. A box ends too at its third left click, which finishes
-	 * it. Delete by aim ends at each of the three, and Delete then starts nothing; its right click ends it only once no
-	 * ghost block is marked, which the session decides before asking. The copy at the aim ends at a left click, its
-	 * right click being the paste, and the box and Delete by aim at a right click; a left click during a set
-	 * drops the set instead, which the session decides before asking.
+	 * Whether the action ends this mode. Each action that ends it then does its own action (Copy and "Material list"
+	 * start a box, Delete starts Delete, Paste brings the copy back); undo and redo keep it, so a player can undo a paste
+	 * and paste again. A box's own buttons, Copy and "Material list", don't end it here: the same button ends the box and
+	 * the other switches it to that purpose, keeping its corners. A box ends too at its third left click, which finishes
+	 * it. The Delete button ends Delete, which then starts nothing; Delete's right click ends it only once no ghost block
+	 * is marked and no box is drawn, which the session decides before asking. The copy at the aim ends at a left click,
+	 * its right click being the paste, and the box and Delete at a right click; a left click during a set drops the set
+	 * instead, which the session decides before asking.
 	 */
 	public boolean endedBy(Action action) {
 		return switch (action) {
 			case CHOOSE_BUILD_MODE, SHOW_OR_HIDE, PASTE_BUTTON, BLOCK_MIX, LEAVE -> true;
-			case COPY_BUTTON, DELETE_BUTTON, MATERIAL_LIST_BUTTON -> this != BOX;
+			case DELETE_BUTTON -> true;
+			case COPY_BUTTON, MATERIAL_LIST_BUTTON -> this != BOX;
 			case LEFT_CLICK -> this == COPY_AT_AIM;
 			case RIGHT_CLICK -> this != COPY_AT_AIM;
 			case SCROLL, MIDDLE_CLICK, UNDO, REDO -> false;

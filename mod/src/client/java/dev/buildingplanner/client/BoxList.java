@@ -25,10 +25,10 @@ import net.minecraft.world.level.chunk.status.ChunkStatus;
 /**
  * The blocks in the box being drawn, for the list under the crosshair: each block's item, as Litematica's material list
  * gives it ({@code MaterialCache}), with its count, most numerous first, counted by the copy's rule ({@link BoxCount}),
- * or for a Delete box its ghost blocks alone ({@link GhostErase#counts}), since Delete leaves real blocks as they are.
+ * or for Delete's box its ghost blocks alone ({@link GhostErase#counts}), since Delete leaves real blocks as they are.
  * It counts again when a corner moves or the box changes purpose, at most once every {@value #EVERY} ticks. A box past
- * a limit has no list. In Delete by aim it lists the marked ghost blocks instead, counted again when the marks or the
- * layer change, as often.
+ * a limit has no list. In Delete with no box drawn, it lists the marked ghost blocks instead, counted again when the
+ * marks or the layer change, as often.
  */
 final class BoxList {
 	private static final int EVERY = 5;
@@ -78,7 +78,7 @@ final class BoxList {
 	}
 
 	/**
-	 * Once a client tick in Delete by aim: counts the marked ghost blocks when the marks or the layer changed and the
+	 * Once a client tick in Delete with no box drawn: counts the marked ghost blocks when the marks or the layer changed and the
 	 * last count is old enough.
 	 */
 	void update(DeleteMarks marked, Layer layer) {

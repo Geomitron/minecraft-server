@@ -2,12 +2,12 @@ package dev.buildingplanner.client;
 
 import dev.buildingplanner.BuildingPlanner;
 import dev.buildingplanner.ClientConfig;
+import dev.buildingplanner.input.BoxCorners;
 import dev.buildingplanner.input.BoxPurpose;
 import dev.buildingplanner.input.CopyColour;
 import dev.buildingplanner.input.CopyMode;
 import dev.buildingplanner.input.CopyPlacement;
 import dev.buildingplanner.input.CopyGrid;
-import dev.buildingplanner.input.DeleteMode;
 import dev.buildingplanner.input.EraseHold;
 import dev.buildingplanner.input.MouseMode;
 import dev.buildingplanner.input.PasteBoxes;
@@ -56,11 +56,6 @@ final class ClientSession {
 	 * the game runs, across copies, servers and dimensions, as Satisfactory keeps a build mode until R changes it.
 	 */
 	private static CopyMode copyMode = CopyMode.OFF;
-	/**
-	 * Delete's mode, which starts as Box each time the game starts and stays as the player last used it while the game
-	 * runs, as the copy's mode does.
-	 */
-	private static DeleteMode deleteMode = DeleteMode.BOX;
 	private final int maxEditBlocks;
 	private final EditGlow glow;
 	private final Tiles tiles;
@@ -79,14 +74,16 @@ final class ClientSession {
 	private long ghostsVersion;
 	private final BoxDraw box;
 	private final BoxList list = new BoxList();
-	/** Whether Delete by aim is on. */
-	private boolean aimOn;
-	/** Delete by aim's marks, kept while R switches Aim to a Delete box and back, and cleared when Delete ends. */
+	/** Whether Delete is on. */
+	private boolean deleteOn;
+	/** Delete's marks, cleared when Delete ends. */
 	private final DeleteMarks marks;
+	/** Delete's box, drawn while the left button is held with the sprint key. */
+	private final MarkBox markBox = new MarkBox();
 	/** The layer, and its version, the marks were last checked against. */
 	private Layer marksLayer;
 	private long marksVersion;
-	/** Delete by aim's hold of the left button that erases the marks. */
+	/** Delete's hold of the left button that erases the marks. */
 	private final EraseHold hold = new EraseHold();
 	private final ListSync lists = new ListSync();
 	private int clientSeq;
@@ -110,7 +107,7 @@ final class ClientSession {
 	ClientSession(int maxEditBlocks, EditGlow glow, Identifier dimension, LongSet loadedChunks, ClientConfig config,
 		Supplier<String> showHideKey) {
 		this.maxEditBlocks = maxEditBlocks;
-		this.box = new BoxDraw(maxEditBlocks);
+		this.box = new BoxDraw();
 		this.marks = new DeleteMarks(maxEditBlocks);
 		this.glow = glow;
 		this.config = config;
@@ -170,7 +167,7 @@ final class ClientSession {
 		replica.levelChanged(dimension);
 		check.clear();
 		box.end();
-		endAim();
+		endDelete();
 		clipboard.clear();
 		lock.unlock();
 		pastes.clear();
@@ -179,9 +176,9 @@ final class ClientSession {
 
 	/**
 	 * Once a client tick: removes old plans' placements when due, asks for the columns that loaded and lets go of those
-	 * that unloaded, runs the self-check's comparisons that are due, counts Delete by aim's hold of the left button
-	 * ({@code attackDown}) and erases the marks once it's held a second, moves the box being drawn and the copy at the
-	 * aim to where the player aims, ends the build modes' lock once a mouse mode is on, and sends the
+	 * that unloaded, runs the self-check's comparisons that are due, moves Delete's box to where the player aims and
+	 * marks it once the left button ({@code attackDown}) is let go, counts Delete's hold of the left button and erases
+	 * the marks once it's held a second, moves the box being drawn and the copy at the aim to where the player aims, ends the build modes' lock once a mouse mode is on, and sends the
 	 * current material list when it changed.
 	 */
 	void tick(boolean attackDown) {
@@ -196,10 +193,19 @@ final class ClientSession {
 			box.update(replica.layer(), tiles.shown());
 		}
 		keepMarks();
-		if (hold.tick(attackDown) && aimOn) {
+		if (markBox.on()) {
+			if (attackDown) {
+				markBox.update(marks, replica.layer(), tiles.shown());
+			} else {
+				markBox.release(marks, replica.layer(), tiles.shown());
+			}
+		}
+		if (hold.tick(attackDown) && deleteOn) {
 			eraseMarks();
 		}
-		if (aimOn) {
+		if (markBox.on()) {
+			list.update(markBox.shown(), replica.layer(), tiles.shown());
+		} else if (deleteOn) {
 			list.update(marks, replica.layer());
 		} else {
 			list.update(box.shown(), replica.layer(), tiles.shown());
@@ -278,7 +284,7 @@ final class ClientSession {
 	/** Building Planner's mode that takes over the mouse now, or null. */
 	MouseMode mouseMode() {
 		return box.on() ? MouseMode.BOX : clipboard.atAim() ? MouseMode.COPY_AT_AIM
-			: aimOn ? MouseMode.DELETE_AIM : null;
+			: deleteOn ? MouseMode.DELETE : null;
 	}
 
 	/**
@@ -294,65 +300,49 @@ final class ClientSession {
 			switch (mode) {
 				case BOX -> box.end();
 				case COPY_AT_AIM -> clipboard.putAway();
-				case DELETE_AIM -> endAim();
+				case DELETE -> endDelete();
 			}
 		}
 	}
 
-	/** Delete's mode, which the Delete button starts in. */
-	static DeleteMode deleteMode() {
-		return deleteMode;
-	}
-
-	/** Whether Delete is on: Delete by aim, or a box drawn for Delete. */
+	/** Whether Delete is on. */
 	boolean deleteOn() {
-		return aimOn || box.on() && box.purpose() == BoxPurpose.DELETE;
+		return deleteOn;
 	}
 
-	/** Whether Delete by aim is on. */
-	boolean aimOn() {
-		return aimOn;
-	}
-
-	/** Delete by aim's marks. */
+	/** Delete's marks. */
 	DeleteMarks marks() {
 		return marks;
 	}
 
+	/** Delete's box, for the in-game checks. */
+	MarkBox markBox() {
+		return markBox;
+	}
+
 	/**
-	 * The Delete button in Aim, with no other mouse mode on: starts Delete by aim with no marks, showing hidden ghost
-	 * blocks first, as a Delete box does.
+	 * The Delete button, with no other mouse mode on: starts Delete with no marks, showing hidden ghost blocks first, as
+	 * starting a shape does.
 	 */
-	void startAim() {
+	void startDelete() {
 		showForDrawing();
 		marks.clear();
-		aimOn = true;
-		deleteMode = DeleteMode.AIM;
+		deleteOn = true;
 	}
 
 	/**
-	 * R while Delete is on: a Delete box, at any of its clicks, switches to Aim, dropping its corners, and Aim switches
-	 * to a Delete box with no corners. The marks stay, and show again back in Aim.
+	 * The right click in Delete: ends the box being drawn, marking nothing, or clears the marks; returns whether it did
+	 * either, false with no box and no marks, or out of Delete.
 	 */
-	void switchDeleteMode() {
-		if (aimOn) {
-			aimOn = false;
-			marks.endSweep();
-			hold.cancel();
-			box.start(BoxPurpose.DELETE);
-			box.update(replica.layer(), tiles.shown());
-			deleteMode = DeleteMode.BOX;
-		} else if (box.on() && box.purpose() == BoxPurpose.DELETE) {
-			box.end();
-			showForDrawing();
-			aimOn = true;
-			deleteMode = DeleteMode.AIM;
-		}
-	}
-
-	/** The right click in Delete by aim: clears the marks; returns whether there were any, or false out of Aim. */
 	boolean clearMarks() {
-		if (!aimOn || marks.size() == 0) {
+		if (!deleteOn) {
+			return false;
+		}
+		if (markBox.on()) {
+			markBox.end();
+			return true;
+		}
+		if (marks.size() == 0) {
 			return false;
 		}
 		marks.clear();
@@ -361,19 +351,26 @@ final class ClientSession {
 	}
 
 	/**
-	 * The left click in Delete by aim (hook M1): with marks, starts the hold that erases them once the button has stayed
-	 * down a second; with none, does nothing.
+	 * The left click in Delete (hook M1): with the sprint key held ({@code sprint}), starts Delete's box at the block
+	 * aimed at; otherwise, with marks, starts the hold that erases them once the button has stayed down a second; with
+	 * none, does nothing.
 	 */
-	void pressErase() {
-		if (aimOn && marks.size() > 0) {
+	void deletePress(boolean sprint) {
+		if (!deleteOn) {
+			return;
+		}
+		if (sprint) {
+			hold.cancel();
+			markBox.start(marks, replica.layer(), tiles.shown());
+		} else if (marks.size() > 0) {
 			hold.press();
 		}
 	}
 
 	/**
 	 * The hold's erase: one erase edit of the marked ghost blocks, with the other half of each two-block ghost block
-	 * ({@link GhostErase#of}), so one undo brings them all back, saying how many as the Delete box does. The marks go
-	 * with it, so an undo brings the ghost blocks back unmarked, and Aim stays on to mark more.
+	 * ({@link GhostErase#of}), so one undo brings them all back, saying how many. The marks go with it, so an undo
+	 * brings the ghost blocks back unmarked, and Delete stays on to mark more.
 	 */
 	private void eraseMarks() {
 		List<BlockPos> marked = new ArrayList<>(marks.size());
@@ -385,17 +382,28 @@ final class ClientSession {
 		}
 	}
 
-	/** Delete by aim as its controls line tells it ({@link ControlsLine#deleteAim}), or null while it's off. */
-	ControlsLine.AimState aimState() {
-		if (!aimOn) {
+	/** Delete as its controls lines tell it ({@link ControlsLine#delete}), or null while it's off. */
+	ControlsLine.DeleteState deleteState() {
+		if (!deleteOn) {
 			return null;
 		}
-		return new ControlsLine.AimState(marks.size() > 0, marks.sweeping() && marks.unmarking(), hold.percent(),
-			marks.full());
+		BoxDraw.Shown shown = markBox.shown();
+		return new ControlsLine.DeleteState(marks.size() > 0, marks.sweeping() && marks.unmarking(), marks.full(),
+			shown == null ? null : new ControlsLine.DeleteBox(markBox.unmarks(),
+				BoxCorners.size(shown.min(), shown.max()), shown.limit()));
 	}
 
-	private void endAim() {
-		aimOn = false;
+	/**
+	 * The ticks the left button has been held toward the erase, for the progress bar, or -1 while it isn't held to
+	 * erase.
+	 */
+	int eraseTicks() {
+		return deleteOn ? hold.ticks() : -1;
+	}
+
+	private void endDelete() {
+		deleteOn = false;
+		markBox.end();
 		marks.endSweep();
 		marks.clear();
 		hold.cancel();
@@ -415,17 +423,17 @@ final class ClientSession {
 		}
 		marksLayer = layer;
 		marksVersion = layer.version();
-		if (!aimOn || marks.size() == 0) {
+		if (!deleteOn || marks.size() == 0) {
 			hold.cancel();
 		}
 	}
 
-	/** The box being drawn now, as it shows, or null. */
+	/** The box being drawn now, for Copy or the material list or Delete's box, as it shows, or null. */
 	BoxDraw.Shown boxShown() {
-		return box.shown();
+		return box.on() ? box.shown() : markBox.shown();
 	}
 
-	/** The kinds of block in the box being drawn, for the list under the crosshair. */
+	/** The kinds of block in the box being drawn, or Delete's marks, for the list under the crosshair. */
 	List<BoxList.Entry> boxList() {
 		return list.entries();
 	}
@@ -436,19 +444,15 @@ final class ClientSession {
 	}
 
 	/**
-	 * Copy's, Delete's or the material list's button: starts a box for that purpose, or, while a box is drawn, ends it
-	 * when it's for the same purpose and otherwise switches it to that purpose, keeping its corners. A box for Delete
-	 * shows hidden ghost blocks first, as drawing a shape does. Returns whether a box started.
+	 * Copy's or the material list's button: starts a box for that purpose, or, while a box is drawn, ends it when it's
+	 * for the same purpose and otherwise switches it to that purpose, keeping its corners. Returns whether a box
+	 * started.
 	 */
 	boolean boxButton(BoxPurpose purpose) {
 		boolean started = !box.on();
 		if (!started && box.purpose() == purpose) {
 			box.end();
 			return false;
-		}
-		if (purpose == BoxPurpose.DELETE) {
-			showForDrawing();
-			deleteMode = DeleteMode.BOX;
 		}
 		if (started) {
 			box.start(purpose);
@@ -460,8 +464,8 @@ final class ClientSession {
 	}
 
 	/**
-	 * The left click while a box is drawn: sets its next corner, and after the third hands the box to Copy, Delete or
-	 * the material list. Returns whether the click made the copy, which is then at the aim.
+	 * The left click while a box is drawn: sets its next corner, and after the third hands the box to Copy or the
+	 * material list. Returns whether the click made the copy, which is then at the aim.
 	 */
 	boolean boxClick() {
 		BoxDraw.Finished finished = box.click(replica.layer(), tiles.shown());
@@ -470,29 +474,14 @@ final class ClientSession {
 		}
 		switch (finished.purpose()) {
 			case COPY -> copy(finished.min(), finished.max());
-			case DELETE -> erase(finished.min(), finished.max());
 			case MATERIAL_LIST -> materialList(finished.min(), finished.max());
 		}
 		return clipboard.atAim();
 	}
 
-	/**
-	 * Erases every ghost block in the box from {@code min} to {@code max}, with the other half of each two-block ghost
-	 * block, as one edit ({@link GhostErase#inBox}), so one undo brings them all back, saying how many; a box without
-	 * ghost blocks changes nothing, with its message.
-	 */
-	void erase(BlockPos min, BlockPos max) {
-		Map<BlockPos, BlockState> erase = GhostErase.inBox(replica.layer(), min, max);
-		if (erase.isEmpty()) {
-			show(PlayerMessage.nothingToErase());
-		} else if (sendShape(EditKind.ERASE, erase)) {
-			show(PlayerMessage.erased(erase.size()));
-		}
-	}
-
 	void close() {
 		box.end();
-		endAim();
+		endDelete();
 		clipboard.clear();
 		lock.unlock();
 		tiles.clear();

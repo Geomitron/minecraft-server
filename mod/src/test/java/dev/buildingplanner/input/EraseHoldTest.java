@@ -54,7 +54,7 @@ class EraseHoldTest {
 		for (int tick = 0; tick < 40; tick++) {
 			assertFalse(hold.tick(true));
 		}
-		assertEquals(-1, hold.percent());
+		assertEquals(-1, hold.ticks());
 	}
 
 	@Test
@@ -67,20 +67,21 @@ class EraseHoldTest {
 		}
 	}
 
+	/** The progress bar fills a twentieth for each tick held: half full at the 10th, and gone at the erase. */
 	@Test
-	void theProgressShowsInStepsOfFivePercent() {
+	void theProgressCountsTheTicksHeld() {
 		EraseHold hold = new EraseHold();
-		assertEquals(-1, hold.percent());
+		assertEquals(-1, hold.ticks());
 		hold.press();
 		assertTrue(hold.holding());
-		assertEquals(0, hold.percent());
+		assertEquals(0, hold.ticks());
 		List<Integer> shown = new ArrayList<>();
-		for (int tick = 1; tick < EraseHold.TICKS; tick++) {
+		for (int tick = 1; tick < 20; tick++) {
 			hold.tick(true);
-			shown.add(hold.percent());
+			shown.add(hold.ticks());
 		}
-		assertEquals(List.of(5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95), shown);
+		assertEquals(List.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19), shown);
 		hold.tick(true);
-		assertEquals(-1, hold.percent());
+		assertEquals(-1, hold.ticks());
 	}
 }

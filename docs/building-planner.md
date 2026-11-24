@@ -2185,17 +2185,8 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   gives its message; a box of one block has its own message.
 - The Copy button during its own box ends it; the "Material list" button during a Copy box switches it, keeping its
   corners, and its line starts "Material list:".
-- The Delete box ("The Delete box"): Copy, Delete and "Material list" each switch a box from the others, keeping its
-  corners, and Delete's line starts "Delete:", its list counting only ghost blocks; its box draws in the marks' red;
-  Delete during its own box ends it.
-  The Delete button with ghost blocks hidden shows them and starts its box. A Delete box of 40 by 40 by 10 over 16,000
-  ghost oak planks, with a ghost door in its top layer whose upper half stands above the box and a real stone among the
-  planks, lists the planks and the door and not the stone, and is shot at 854 by 480 and 1920 by 1080; its third click
-  says "Erased 16,001 ghost blocks.", sends one edit, takes the door's upper half too and leaves the real stone, and the
-  other player sees them go, glowing with Planner1's name. One Ctrl+Z brings them all back. A Delete box over grass
-  without ghost blocks gives its message and sends no edit. A Delete box over 200,001 ghost blocks draws in the
-  limit's red with "Too many blocks", and its click sets no corner and sends no edit; over fewer, it draws in the marks'
-  red again.
+- The Delete button during a box ends it and starts Delete (the driver's `mousemode`), and a right click with no
+  marks ends Delete.
 - A box for the material list draws blue, and is shot after its first click at 854 by 480 and 1920 by 1080. A box for
   the material list around 10 ghost oak planks, 6 of them built as real oak planks, and 20 real stone
   blocks, with ghost blocks shown and a copy at the aim, opens Litematica's material list as "The material list"
@@ -2256,29 +2247,38 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
 - On the same server with Building Planner left out, N makes no message and leaves ghost blocks shown, the mouse
   works as without the add-on, and the material list panel doesn't show; with Building Planner back, the panel shows
   again with the same list.
-- Delete by aim, marking (step 12): R in a Delete box after its first click switches to Aim with no corners, and R again
-  to a box with no corners (the driver's `mousemode`, `deletemode`); after a Delete in Aim, the Delete button starts
-  Aim, and after Planner1's game restarts, a box. The Delete button with ghost blocks hidden, in Aim, shows them. Facing
-  a ghost wall of 10 by 5 stone bricks 8 blocks away, with a real stone block in front of the middle row's fourth,
-  holding Left Ctrl while the driver turns the view across the middle row from end to end in 3 frames (`turn`) marks the
-  row's other 9 blocks and no real block (`marks`), with no gap; the list under the crosshair shows stone bricks and 9.
-  A second hold that starts on the third mark and sweeps west unmarks the first three. A ghost door marked by its lower
-  half has one mark and two positions to erase. Planner2 erasing a marked block drops its mark. A right click clears the
-  marks, a second ends Aim; the Copy button in Aim starts a Copy box. One hold over each row marks the wall's 49 blocks
-  the aim meets, and the marked wall is shot at 854 by 480 and 1920 by 1080, GUI scale 2, and with GUI scale 4, beside
-  the same view unmarked. What marks cost goes to the log: frames timed (`frametimes`) over 200,000 ghost bricks with
-  none marked and with all marked (`markall`), building the shape of those marks and of 200,000 that touch no other,
-  whole and after one mark changes (`timeoutline`), and a frame's sweep of 65 aims (`timeaims`).
-- Delete by aim, erasing and its line (step 13): with 9 marks and the ghost door marked, a left click held 10 ticks
-  erases nothing; held 20 ticks it sends one edit, which takes the door's upper half too and which Planner2 sees glow
-  with Planner1's name, and says "Erased 11 ghost blocks."; holding on erases nothing more, though a sweep marks the
-  top row meanwhile. Aim stays on with no marks, and one Ctrl+Z brings the blocks back unmarked. The lines, each checked
-  word for word (the driver's `modehud`): a Delete box's three lines with "[R: Delete mode]", Aim with no marks and with marks,
-  an unmarking sweep, "[Hold Left-click: erasing 50%]" at the hold's 10th tick (`await erasing`), and the cap's "Too many blocks" with
-  200,000 marks; with the mode key bound to G and the sprint key to Right Control, the lines name G and Right Control.
-  Each line is shot at 1920 by 1080, GUI scale 4, the erase's message with it, and the marked wall with Aim's line and
-  a Delete box with its size at 854 by 480 and 1920 by 1080, GUI scale 2, each with its rectangles checked as the
-  copy's are.
+- Delete, marking by sweeping ("Delete"): the Delete button starts Delete (the driver's `mousemode`), R does nothing
+  in it, and after Planner1's game restarts the Delete button starts Delete again. Facing a ghost wall of 10 by 5 stone
+  bricks 8 blocks away, with a real stone block in front of the middle row's fourth, holding Left Ctrl while the driver
+  turns the view across the middle row from end to end in 3 frames (`turn`) marks the row's other 9 blocks and no real
+  block (`marks`), with no gap; the list under the crosshair shows stone bricks and 9. A second hold that starts on the
+  third mark and sweeps west unmarks the first three. A ghost door marked by its lower half has one mark and two
+  positions to erase. Planner2 erasing a marked block drops its mark. A right click clears the marks, and a second ends
+  Delete. One hold over each row marks the wall's 49 blocks the aim meets, and the marked wall is shot at 854 by 480 and
+  1920 by 1080, GUI scale 2, and with GUI scale 4, beside the same view unmarked. The Delete button with ghost blocks
+  hidden shows them and starts Delete, and the Copy button in Delete starts a Copy box.
+- Delete, marking with a box: over ghost stone bricks of 10 by 4 by 10, Left Ctrl held and the left button pressed on
+  the front face of the bottom corner block start the box at that block (the driver's `markbox`); aimed at the top of
+  the far top corner block, the box is 10 by 4 by 10, its line names the release and its size, and the list under the
+  crosshair counts 400 stone bricks. It's shot at 854 by 480 and 1920 by 1080. While it's drawn, the crosshair passing
+  over the ghost wall outside the box marks none of it, and letting go marks the box's 400 ghost blocks and nothing
+  else, shot at both sizes. A box started on a marked block unmarks: a box of 5 by 4 by 5 from it leaves 300 marked. A
+  box may start on a real block, and a right click during the box ends it, marking nothing. The 300 marks erase as one
+  edit, leaving the 100 unmarked, and one Ctrl+Z brings them back.
+- Delete, erasing and its lines: with 9 marks and the ghost door marked, a left click held 10 ticks shows the progress
+  bar (the driver's `erasebar`) a quarter full at the 5th tick and half full at the 10th, 182 by 5 in the screen's
+  units, centred, its bottom 4 above the controls line's top (`modebox`), shot half full at 1920 by 1080, GUI scale
+  4; let go then, it erases nothing and the bar goes. Held 20 ticks, the left click sends one edit, which takes the
+  door's upper half too and which Planner2 sees glow with Planner1's name, and says "Erased 11 ghost blocks."; holding
+  on erases nothing more. Delete stays on with no marks, and one Ctrl+Z brings the blocks back unmarked. The lines,
+  each checked word for word (the driver's `modehud`): with no marks, with marks, during a hold that unmarks, while the
+  box is drawn marking and unmarking, with the cap's "Too many blocks" at 200,000 marks, and with the box over two
+  more ghost blocks at the cap, which draws red with "Too many blocks" and whose release marks nothing; with the sprint
+  key bound to Right Control, the line names Right Control. Each line is shot at 1920 by 1080, GUI scale 4, the line
+  with marks also at 854 by 480, GUI scale 2, and the erase's message, each with its rectangles checked as the copy's
+  are. What marks cost goes to the log: frames timed (`frametimes`) over 200,000 ghost bricks with none marked and
+  with all marked (`markall`), building the shape of those marks and of 200,000 that touch no other, whole and after
+  one mark changes (`timeoutline`), and a frame's sweep of 65 aims (`timeaims`).
 - Locking the first click (step 14): in Single mode with stone bricks, H locks the position beside the aimed face
   (the driver's `lock`), and with Planner1 flown 5 blocks away and aiming elsewhere, Effortless Building's preview
   draws it there. With Effortless Building's array of 2 copies one block apart upward, the preview draws all three.
@@ -2545,10 +2545,11 @@ not, giving its reason before "set the start"), each control as a rectangle of i
 warning above the controls as a line of its own in red, keys a player rebound, the nudge keys off the arrow
 keys named one by one, the up and down keys named with their shared first word dropped ("Page Up/Down", "Keypad
 8/2") or in full ("U/J"), the nudge phrase with only one of its two parts, unbound keys left out and the phrase gone
-with all six unbound, and each box's lines, Delete's among them. `PayloadsTest` covers the
-Delete box's message writing 16,001 with digit grouping. For the new features (steps 13, 17, 19 and 20),
-`ControlsLineTest` also covers Aim's lines (no marks, marks, unmarking, the hold's progress in steps of 5%, the cap's
-warning) and the Delete box's "R: Delete mode", the turning line (each turn phrase, with Left Control held, "Turned:" with
+with all six unbound, and each box's lines. `PayloadsTest` covers the
+erase's message writing 16,001 with digit grouping. For the new features (steps 13, 17, 19 and 20),
+`ControlsLineTest` also covers Delete's lines (no marks, marks, unmarking, the box marking and unmarking with its
+size, the cap's warning, a box's limit as a warning, the actions as actions, and the sprint key as a player rebound
+it or left out unbound), the turning line (each turn phrase, with Left Control held, "Turned:" with
 and without it, the sprint key as a player rebound it, the actions as actions, and no line for a block that neither
 turns nor flips or with the sprint key unbound), Disable's lines (without Left Control and with no "Turned:", with
 it held, turned, each turn phrase, the red "Can't place here" as a warning, the actions as actions, the sprint key as a player rebound it, no line
@@ -2558,15 +2559,17 @@ click, locked, each turn phrase with and without Left Control, "Turned:" and "Lo
 warning in place of the right click, during a shape drawn with the place click and with the break click, locked or
 not, with no "Turned:" during the break shape, keys a player rebound, and unbound keys left out).
 
-Delete by aim's marks have unit tests as pure functions (step 12). `DeleteMarksTest` covers a sweep between two aims
+Delete's marks have unit tests as pure functions. `DeleteMarksTest` covers a sweep between two aims
 10 blocks apart marking all 10 ghost blocks between them, and none behind a real block; at most 65 aims for a frame's
 half turn; an aim at nothing or at a real block marking nothing; a sweep that starts on a mark unmarking until it
-ends; a door marked by its lower half as one mark and two positions to erase; the cap, with the other halves counted;
-marks dropping when their ghost blocks leave the layer, and staying as they were when none did; and the changes the
-outline rebuilds from, each mark, unmark and dropped mark, and all of them after a clear. `MouseModeTest` covers which
-actions end Delete by aim. `EraseHoldTest` (step 13) covers the hold: 19 ticks erase nothing, the 20th erases once, holding on erases
-nothing more, a release starts the count again, a hold cancelled when its marks go erases nothing, and the progress
-shown in steps of 5%.
+ends; a box marking every ghost block between its corners at every height, a box started on a mark unmarking the
+marks in it and leaving the rest, a hold's sweep deciding before its box does, a box that would pass the cap marking
+nothing, and a box counting the other half of a door it cuts; a door marked by its lower half as one mark and two
+positions to erase; the cap, with the other halves counted; marks dropping when their ghost blocks leave the layer,
+and staying as they were when none did; and the changes the outline rebuilds from, each mark, unmark and dropped
+mark, and all of them after a clear. `MouseModeTest` covers which actions end Delete. `EraseHoldTest` covers the hold:
+19 ticks erase nothing, the 20th erases once, holding on erases nothing more, a release starts the count again, a hold
+cancelled when its marks go erases nothing, and the ticks held, which the progress bar fills by.
 
 The build modes' turning and lock rules have unit tests as pure functions (steps 14 to 17). `SingleRuleTest` covers
 when the turning controls are active (`SingleRule.turning`: every mode but Disable, where step 18 adds `DisableTurn`'s rule; none without a session, with a

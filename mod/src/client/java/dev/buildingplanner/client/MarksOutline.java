@@ -30,7 +30,7 @@ import org.joml.Matrix4fStack;
 import org.joml.Vector4f;
 
 /**
- * Draws Delete by aim's marks each frame through MaLiLib's renderer, as the copy's box is drawn: a red outline and
+ * Draws Delete's marks each frame through MaLiLib's renderer, as the copy's box is drawn: a red outline and
  * see-through red sides, in the red of the copy's box (#FF7070, sides at 0.2 alpha). Only the faces that don't touch
  * another marked block are drawn, and only the edges where the marks' shape turns, so a marked wall shows as one red
  * shape. The shape is built in sections of 16 blocks a side, as the game builds its terrain, and a section is built

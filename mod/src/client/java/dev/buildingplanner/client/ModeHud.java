@@ -1,6 +1,7 @@
 package dev.buildingplanner.client;
 
 import dev.buildingplanner.input.BoxCorners;
+import dev.buildingplanner.input.EraseHold;
 import dev.buildingplanner.input.MouseMode;
 import dev.buildingplanner.look.BoxListLayout;
 import dev.buildingplanner.look.ControlsLine;
@@ -31,7 +32,8 @@ import net.minecraft.world.entity.HumanoidArm;
  * its size, and a box past a limit has a red line above saying which. A line too wide for the screen goes on in a row
  * below. While a box is drawn, the blocks in it show under the crosshair ({@link BoxList}, laid out by
  * {@link BoxListLayout}), in rows that end above the controls, each row on the controls' dark background, and in
- * Delete by aim, the marked ghost blocks.
+ * Delete with no box drawn, the marked ghost blocks. While the left button is held in Delete to erase the marks, a
+ * progress bar shows just above the controls, filling in the marks' red toward the erase.
  * They show while a mode is on, with no screen open and the HUD shown (not hidden with F1). With no mode on, the build
  * modes' line shows in the same place while the lock's controls are active ({@link ControlsLine#shape}), or in Disable, Disable's line
  * ({@link ControlsLine#disable}); during a shape, while Effortless Building draws its own line there and the shape's
@@ -48,6 +50,11 @@ final class ModeHud implements HudElement {
 	private static final int WHITE = -1;
 	/** The black behind each rectangle: the opacity of the game's chat background by default (0.5). */
 	private static final int BACKGROUND = ARGB.black(0.5F);
+	/** The erase's progress bar: the hotbar's width, 5 high, 4 above the controls' top row, in the marks' red. */
+	private static final int BAR_WIDTH = 182;
+	private static final int BAR_HEIGHT = 5;
+	private static final int BAR_GAP = 4;
+	private static final int BAR_FILL = ARGB.opaque(0xFF7070);
 
 	/** A line of the controls: its rectangles, its label first, and whether it starts with a label (a warning above the
 	 * controls is a line of its label alone). */
@@ -76,32 +83,32 @@ final class ModeHud implements HudElement {
 	private final Supplier<MouseMode> mode;
 	private final Supplier<BoxDraw.Shown> box;
 	private final Supplier<ControlsLine.Line> copy;
-	private final Supplier<List<ControlsLine.Line>> aim;
+	private final Supplier<List<ControlsLine.Line>> delete;
 	private final Supplier<ControlsLine.Line> modeless;
 	private final Supplier<Boolean> shape;
-	private final Supplier<String> modeKey;
+	private final Supplier<Integer> eraseTicks;
 	private final Supplier<List<BoxList.Entry>> list;
 	private final Supplier<Component> modeName;
 
 	/**
 	 * {@code mode} is the mouse mode now, or null, {@code box} the box drawn now, or null, {@code copy} the copy at the
-	 * aim's line ({@link ControlsLine#copy}), or null, {@code aim} Delete by aim's lines ({@link ControlsLine#deleteAim}),
+	 * aim's line ({@link ControlsLine#copy}), or null, {@code delete} Delete's lines ({@link ControlsLine#delete}),
 	 * {@code modeless} the line with no mouse mode on, the build modes' ({@link ControlsLine#shape}) or Disable's
 	 * ({@link ControlsLine#disable}), or null, {@code shape} whether Effortless
-	 * Building's shape is under way, {@code modeKey} the name of the key that switches a Delete box to Aim, or null
-	 * while it has none, {@code list} the kinds of block in the box, or the marks, and {@code modeName} the name of
+	 * Building's shape is under way, {@code eraseTicks} the ticks the left button has been held in Delete toward the
+	 * erase, or -1, {@code list} the kinds of block in the box, or the marks, and {@code modeName} the name of
 	 * Effortless Building's mode during a session, or null in Disable or without one.
 	 */
 	ModeHud(Supplier<MouseMode> mode, Supplier<BoxDraw.Shown> box, Supplier<ControlsLine.Line> copy,
-		Supplier<List<ControlsLine.Line>> aim, Supplier<ControlsLine.Line> modeless, Supplier<Boolean> shape,
-		Supplier<String> modeKey, Supplier<List<BoxList.Entry>> list, Supplier<Component> modeName) {
+		Supplier<List<ControlsLine.Line>> delete, Supplier<ControlsLine.Line> modeless, Supplier<Boolean> shape,
+		Supplier<Integer> eraseTicks, Supplier<List<BoxList.Entry>> list, Supplier<Component> modeName) {
 		this.mode = mode;
 		this.box = box;
 		this.copy = copy;
-		this.aim = aim;
+		this.delete = delete;
 		this.modeless = modeless;
 		this.shape = shape;
-		this.modeKey = modeKey;
+		this.eraseTicks = eraseTicks;
 		this.list = list;
 		this.modeName = modeName;
 	}
@@ -117,13 +124,13 @@ final class ModeHud implements HudElement {
 				BoxDraw.Shown shown = box.get();
 				yield shown == null ? List.of() : ControlsLine.box(shown.purpose().name(), shown.corners(),
 					shown.corners() > 0 && shown.min() != null ? BoxCorners.size(shown.min(), shown.max()) : null,
-					shown.limit(), modeKey.get());
+					shown.limit());
 			}
 			case COPY_AT_AIM -> {
 				ControlsLine.Line line = copy.get();
 				yield line == null ? List.of() : List.of(line);
 			}
-			case DELETE_AIM -> aim.get();
+			case DELETE -> delete.get();
 		};
 		return lines.stream().map(line -> new Line(components(line), line.label() != null)).toList();
 	}
@@ -148,13 +155,13 @@ final class ModeHud implements HudElement {
 		return mode.get() == null && shape.get();
 	}
 
-	/** Whether the list under the crosshair goes with the mode now: a box's, or Delete by aim's marks. */
+	/** Whether the list under the crosshair goes with the mode now: a box's, or in Delete its box's or its marks. */
 	private boolean listed() {
 		MouseMode now = mode.get();
 		if (now == null) {
 			return false;
 		}
-		return now == MouseMode.BOX || now == MouseMode.DELETE_AIM;
+		return now == MouseMode.BOX || now == MouseMode.DELETE;
 	}
 
 	/** The style white where it has no colour of its own, so a warning stays red and a rectangle's text is white. */
@@ -432,9 +439,47 @@ final class ModeHud implements HudElement {
 		}
 		List<List<Placed>> rows = placed(lines, font, graphics.guiWidth(), graphics.guiHeight());
 		draw(graphics, font, rows);
+		int top = top(rows.size(), font, graphics.guiHeight(), raised());
 		if (listed()) {
-			drawList(graphics, font, top(rows.size(), font, graphics.guiHeight(), raised()));
+			drawList(graphics, font, top);
 		}
+		int[] bar = bar(graphics.guiWidth(), top);
+		if (bar != null) {
+			graphics.fill(bar[0], bar[1], bar[2], bar[3], BACKGROUND);
+			graphics.fill(bar[0], bar[1], bar[4], bar[3], BAR_FILL);
+		}
+	}
+
+	/**
+	 * The erase's progress bar on a screen {@code width} wide whose controls start at {@code top}: its left, top, right
+	 * and bottom and the right of its fill, in GUI pixels, or null while the left button isn't held in Delete to erase.
+	 */
+	private int[] bar(int width, int top) {
+		Integer ticks = eraseTicks.get();
+		if (mode.get() != MouseMode.DELETE || ticks == null || ticks < 0 || !shown()) {
+			return null;
+		}
+		int left = (width - BAR_WIDTH) / 2;
+		int bottom = top - BAR_GAP;
+		return new int[] {left, bottom - BAR_HEIGHT, left + BAR_WIDTH, bottom,
+			left + BAR_WIDTH * ticks / EraseHold.TICKS};
+	}
+
+	/**
+	 * The erase's progress bar as it's drawn now, for the in-game checks: its window box (left top right bottom, in the
+	 * window's pixels) and the right of its fill, or {@code hidden}.
+	 */
+	String eraseBar() {
+		Minecraft mc = Minecraft.getInstance();
+		int height = mc.getWindow().getGuiScaledHeight();
+		int[] bar = bar(mc.getWindow().getGuiScaledWidth(),
+			top(placedNow().size(), mc.font, height, raised()));
+		if (bar == null) {
+			return "hidden";
+		}
+		int scale = scale();
+		return bar[0] * scale + " " + bar[1] * scale + " " + bar[2] * scale + " " + bar[3] * scale + " fill "
+			+ bar[4] * scale;
 	}
 
 	/**

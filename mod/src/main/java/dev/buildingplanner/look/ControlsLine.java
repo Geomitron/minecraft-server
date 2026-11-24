@@ -93,75 +93,93 @@ public final class ControlsLine {
 	}
 
 	/**
-	 * Delete by aim as its line tells it: whether any ghost block is marked, whether the sweep under way unmarks, the
-	 * hold's progress toward the erase in percent ({@code erasing}, -1 while the left button isn't held to erase), and
-	 * whether the marks have reached the cap.
+	 * Delete as its lines tell it: whether any ghost block is marked, whether the hold of the sprint key under way
+	 * unmarks, whether the marks have reached the cap, and the box being drawn, or null.
 	 */
-	public record AimState(boolean marked, boolean unmarking, int erasing, boolean full) {
+	public record DeleteState(boolean marked, boolean unmarking, boolean full, DeleteBox box) {
+	}
+
+	/** A box being drawn in Delete: whether it unmarks, its size, and the limit it breaks, or null. */
+	public record DeleteBox(boolean unmarks, int[] size, BoxCorners.Limit limit) {
 	}
 
 	/**
 	 * A box's lines: a warning naming the limit the aimed corner breaks, if one does, then its controls for the next
 	 * click, with its size once a corner is set ({@code size} is null before). {@code purpose} is the box's purpose's
-	 * name (COPY, DELETE or MATERIAL_LIST); a Delete box names the mode key, {@code mode}, which switches it to Aim,
-	 * unless it has no key (null).
+	 * name (COPY or MATERIAL_LIST).
 	 */
-	public static List<Line> box(String purpose, int corners, int[] size, BoxCorners.Limit limit, String mode) {
+	public static List<Line> box(String purpose, int corners, int[] size, BoxCorners.Limit limit) {
 		String next = switch (corners) {
 			case 0 -> BOX + ".first";
 			case 1 -> BOX + ".second";
 			default -> BOX + ".height";
 		};
-		List<Text> rects = new ArrayList<>(4);
+		List<Text> rects = new ArrayList<>(3);
 		rects.add(hint(LEFT, next));
-		if (purpose.equals("DELETE") && mode != null) {
-			rects.add(hint(new Literal(mode), MODE + ".delete_mode"));
-		}
 		rects.add(hint(RIGHT, BOX + ".cancel"));
 		if (size != null) {
-			rects.add(Translated.of(BOX + ".size", Look.PLAIN, new Literal(String.valueOf(size[0])),
-				new Literal(String.valueOf(size[1])), new Literal(String.valueOf(size[2]))));
+			rects.add(size(size));
 		}
 		List<Line> lines = new ArrayList<>(2);
 		if (limit != null) {
-			String reason = switch (limit) {
-				case SIDE, TOO_MANY_BLOCKS -> BOX + ".too_large";
-				case NOT_LOADED -> BOX + ".not_loaded";
-			};
-			lines.add(warning(reason));
+			lines.add(limitWarning(limit));
 		}
 		lines.add(labelled(Translated.of(BOX + "." + purpose.toLowerCase(Locale.ROOT), Look.PLAIN), rects));
 		return lines;
 	}
 
 	/**
-	 * Delete by aim's lines: "Too many blocks" once the marks reach the cap, then its controls: with marks, the hold that
-	 * erases them, or its progress while the left button is held; the sprint key that marks, or unmarks during a sweep
-	 * that unmarks; the mode key, which switches to a Delete box; and the right click, which clears the marks, or with
-	 * none closes Aim. A key with no key bound is left out.
+	 * Delete's lines (see "Delete": "Controls line"). While a box is drawn: a warning naming the limit it breaks, if one
+	 * does, then the release that marks or unmarks it, Esc, which cancels it, and its size. Otherwise: "Too many blocks"
+	 * once the marks reach the cap, then the hold that erases the marks while there are any, the sprint key held to mark
+	 * and held with the left click to mark a box (or to unmark, during a hold that unmarks), and Esc or the right click,
+	 * which clears the marks, or with none closes Delete. The sprint key's controls go while it has no key bound.
 	 */
-	public static List<Line> deleteAim(AimState state, Keys keys) {
-		List<Text> rects = new ArrayList<>();
-		if (state.marked()) {
-			Text hold = Translated.of(MODE + ".hold", Look.PLAIN, LEFT);
-			rects.add(state.erasing() >= 0
-				? hint(hold, Translated.of(DELETE + ".erasing", Look.ACTION, new Literal(String.valueOf(state.erasing()))))
-				: hint(hold, DELETE + ".erase"));
-		}
-		if (keys.sprint() != null) {
-			rects.add(hint(held(keys.sprint()), state.unmarking() ? DELETE + ".unmark" : DELETE + ".mark"));
-		}
-		if (keys.mode() != null) {
-			rects.add(hint(new Literal(keys.mode()), MODE + ".delete_mode"));
-		}
-		rects.add(hint(RIGHT, state.marked() ? DELETE + ".clear" : COPY + ".put_away"));
+	public static List<Line> delete(DeleteState state, Keys keys) {
+		Text title = Translated.of(DELETE + ".title", Look.PLAIN);
 		List<Line> lines = new ArrayList<>(2);
+		List<Text> rects = new ArrayList<>(4);
+		DeleteBox box = state.box();
+		if (box != null) {
+			if (box.limit() != null) {
+				lines.add(limitWarning(box.limit()));
+			}
+			rects.add(hint(Translated.of(MODE + ".release", Look.PLAIN, LEFT),
+				box.unmarks() ? DELETE + ".unmark_the_box" : DELETE + ".mark_the_box"));
+			rects.add(hint(Translated.of(SHAPE + ".esc", Look.PLAIN), COPY + ".cancel"));
+			rects.add(size(box.size()));
+			lines.add(labelled(title, rects));
+			return lines;
+		}
 		if (state.full()) {
 			lines.add(warning(BOX + ".too_large"));
 		}
-		lines.add(labelled(Translated.of(DELETE + ".titled", Look.PLAIN, Translated.of(DELETE + ".aim", Look.PLAIN)),
-			rects));
+		if (state.marked()) {
+			rects.add(hint(Translated.of(MODE + ".hold", Look.PLAIN, LEFT), DELETE + ".erase"));
+		}
+		if (keys.sprint() != null) {
+			rects.add(hint(held(keys.sprint()), state.unmarking() ? DELETE + ".unmark" : DELETE + ".mark"));
+			rects.add(hint(Translated.of(COPY + ".plus", Look.PLAIN, held(keys.sprint()), LEFT),
+				state.unmarking() ? DELETE + ".unmark_box" : DELETE + ".mark_box"));
+		}
+		rects.add(hint(Translated.of(MODE + ".esc_click", Look.PLAIN, RIGHT),
+			state.marked() ? DELETE + ".clear" : COPY + ".put_away"));
+		lines.add(labelled(title, rects));
 		return lines;
+	}
+
+	/** A box's size: "12 × 5 × 8". */
+	private static Text size(int[] size) {
+		return Translated.of(BOX + ".size", Look.PLAIN, new Literal(String.valueOf(size[0])),
+			new Literal(String.valueOf(size[1])), new Literal(String.valueOf(size[2])));
+	}
+
+	/** The warning above a box's line naming the limit it breaks. */
+	private static Line limitWarning(BoxCorners.Limit limit) {
+		return warning(switch (limit) {
+			case SIDE, TOO_MANY_BLOCKS -> BOX + ".too_large";
+			case NOT_LOADED -> BOX + ".not_loaded";
+		});
 	}
 
 	/**

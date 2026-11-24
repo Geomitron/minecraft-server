@@ -20,7 +20,7 @@ import net.minecraft.world.entity.Entity;
  * a press made before the copy came to the aim doesn't act once it does. A nudge key acts only while the copy is locked,
  * and held down it acts again ({@link KeyRepeat}); during a set it moves the first copy, and the set with it. H and the
  * nudge keys act the same way for the build modes' lock while its controls are active, in every mode but Disable (see
- * "Locking and the first click"), where R does nothing. R also acts while Delete is on, switching a Delete box and Delete by aim into each other.
+ * "Locking and the first click"), where R does nothing. R does nothing in Delete.
  */
 final class CopyKeys {
 	static final KeyMapping LOCK =
@@ -94,10 +94,6 @@ final class CopyKeys {
 		} else if (locking) {
 			for (int i = 0; i < lockPresses; i++) {
 				BuildingPlannerClient.toggleLock();
-			}
-		} else if (session != null && session.deleteOn() && mc.gui.screen() == null) {
-			for (int i = 0; i < modePresses; i++) {
-				session.switchDeleteMode();
 			}
 		}
 		Entity view = Aim.entity();

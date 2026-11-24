@@ -33,8 +33,8 @@ import net.minecraft.resources.Identifier;
  * middle, where Effortless Building shows operators its "Functional Settings" button, which hook E34 leaves out during a
  * session; Copy, Paste and Delete 39 above the middle; and "Block mix", "Material list" and "Material lists" 65 above
  * it. The row 91 above the middle is left free. "Show or hide ghost blocks" and "Block mix" do what their keys do; the
- * others have no keys, and Copy, Delete, Paste and "Material list" each show selected while its mouse mode is on
- * (Delete in a Delete box and in Delete by aim), when no mode segment does (E19). Each icon is a
+ * others have no keys, and Copy, Delete, Paste and "Material list" each show selected while its mouse mode is on, when
+ * no mode segment does (E19). Each icon is a
  * texture of its own ({@link RadialButton#icon}), "Block mix" shows Effortless Building's Randomizer Bag, "Material
  * lists" Minecraft's Book and Quill, and Delete Minecraft's Barrier.
  *

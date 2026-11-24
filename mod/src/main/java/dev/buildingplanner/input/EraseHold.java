@@ -1,7 +1,7 @@
 package dev.buildingplanner.input;
 
 /**
- * Delete by aim's hold to erase (see "Delete by aim"): holding the left button for one second ({@link #TICKS} ticks)
+ * Delete's hold to erase (see "Delete"): holding the left button for one second ({@link #TICKS} ticks)
  * erases the marked ghost blocks, as holding it for a second dismantles in Satisfactory. A press starts the count, each
  * client tick the button stays down counts one, and letting go before the last erases nothing; the next press starts
  * again from nothing. Holding on past the erase erases nothing more until the button is let go and pressed again.
@@ -9,8 +9,6 @@ package dev.buildingplanner.input;
 public final class EraseHold {
 	/** The ticks the left button is held to erase: one second. */
 	public static final int TICKS = 20;
-	/** The steps the hold's progress shows in, in percent. */
-	public static final int STEP = 5;
 
 	/** The ticks the button has been held since the press, or -1 while no hold is counting. */
 	private int held = -1;
@@ -47,8 +45,11 @@ public final class EraseHold {
 		return held >= 0;
 	}
 
-	/** The hold's progress in percent, in steps of {@link #STEP}, rounded down, or -1 while it isn't counting. */
-	public int percent() {
-		return held < 0 ? -1 : held * 100 / TICKS / STEP * STEP;
+	/**
+	 * The ticks the button has been held toward the erase, from 0 at the press to {@link #TICKS} - 1, or -1 while it
+	 * isn't counting; the progress bar fills a {@link #TICKS}th for each.
+	 */
+	public int ticks() {
+		return held;
 	}
 }

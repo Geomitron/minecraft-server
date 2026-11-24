@@ -1002,9 +1002,19 @@ public final class Driver implements ClientModInitializer {
 				// window's pixels) and its text in [ ], separated by " | ", the rows by " / ", or hidden.
 				return modeHud().rectBoxes();
 			}
+			case "erasebar" -> {
+				// erasebar: the erase's progress bar as drawn now, its window box (left top right bottom, in the window's
+				// pixels) and "fill" with the right of its fill, or hidden.
+				return modeHud().eraseBar();
+			}
+			case "markbox" -> {
+				// markbox: Delete's box as it shows: "mark" or "unmark", its lowest and highest corners and its colour,
+				// with "unaimed" while the aim meets nothing, or none.
+				return session().markBox().describe();
+			}
 			case "erasing" -> {
-				// erasing: Delete by aim's hold toward the erase, in percent, or -1 while the left button isn't held to
-				// erase or Aim is off; await erasing <percent> waits for it.
+				// erasing: the ticks Delete's left button has been held toward the erase, or -1 while it isn't held to
+				// erase or Delete is off; await erasing <ticks> waits for it.
 				return String.valueOf(erasing());
 			}
 			case "bindkey" -> {
@@ -1120,15 +1130,11 @@ public final class Driver implements ClientModInitializer {
 					+ " erase=" + RepeatSpeed.ERASING.ticks(BuildingPlannerClient.config());
 			}
 			case "mousemode" -> {
-				// mousemode: Building Planner's mouse mode now (BOX, COPY_AT_AIM, DELETE_AIM), or none.
+				// mousemode: Building Planner's mouse mode now (BOX, COPY_AT_AIM, DELETE), or none.
 				return String.valueOf(session().mouseMode()).replace("null", "none");
 			}
-			case "deletemode" -> {
-				// deletemode: the mode Delete starts in, BOX or AIM.
-				return ClientSession.deleteMode().name();
-			}
 			case "marks" -> {
-				// marks: Delete by aim's marks: how many, how many positions erasing them takes, then each as x,y,z
+				// marks: Delete's marks: how many, how many positions erasing them takes, then each as x,y,z
 				// when there are no more than 40.
 				return MarksProbe.marks(session());
 			}
@@ -1153,7 +1159,7 @@ public final class Driver implements ClientModInitializer {
 			}
 			case "timeaims" -> {
 				// timeaims x1 y1 z1 x2 y2 z2 <repeats>: times a frame's sweep from looking at the first point to looking
-				// at the second, aiming as Delete by aim does, that many times.
+				// at the second, aiming as Delete's sweep does, that many times.
 				return MarksProbe.timeAims(session(), vec(a, 1), vec(a, 4), Integer.parseInt(a[7]));
 			}
 			case "timeoutline" -> {
@@ -1203,10 +1209,9 @@ public final class Driver implements ClientModInitializer {
 		return screen == null ? "none" : screen.getClass().getName();
 	}
 
-	/** Delete by aim's hold toward the erase, in percent, or -1 while it isn't counting or Aim is off. */
+	/** The ticks Delete's left button has been held toward the erase, or -1 while it isn't counting or Delete is off. */
 	private static int erasing() throws Exception {
-		ControlsLine.AimState state = session() == null ? null : session().aimState();
-		return state == null ? -1 : state.erasing();
+		return session() == null ? -1 : session().eraseTicks();
 	}
 
 	/** The build modes' lock, for the driver's {@code lock}. */

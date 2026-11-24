@@ -7,7 +7,6 @@ import dev.buildingplanner.input.BlockTurn;
 import dev.buildingplanner.input.BoxPurpose;
 import dev.buildingplanner.input.CopyColour;
 import dev.buildingplanner.input.CopyPlacement;
-import dev.buildingplanner.input.DeleteMode;
 import dev.buildingplanner.input.DisablePreview;
 import dev.buildingplanner.input.DisableTurn;
 import dev.buildingplanner.input.MouseMode;
@@ -142,11 +141,11 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		CopyOutline.registered(BuildingPlannerClient::outlineShown);
 		// The sweep runs before the marks' outline, which then draws the marks as they stand.
 		DeleteAim.registered(() -> session);
-		MarksOutline.registered(() -> session != null && session.aimOn() ? session.marks() : null);
+		MarksOutline.registered(() -> session != null && session.deleteOn() ? session.marks() : null);
 		modeHud = new ModeHud(BuildingPlannerClient::mouseMode, BuildingPlannerClient::boxShown,
-			BuildingPlannerClient::copyLine, BuildingPlannerClient::aimLines, BuildingPlannerClient::modelessLine,
+			BuildingPlannerClient::copyLine, BuildingPlannerClient::deleteLines, BuildingPlannerClient::modelessLine,
 			() -> effortless && EffortlessShapes.shapeUnderWay(),
-			() -> CopyKeys.names(Minecraft.getInstance()).mode(),
+			() -> session == null ? -1 : session.eraseTicks(),
 			() -> session == null ? List.of() : session.boxList(),
 			() -> effortless && session != null ? EffortlessShapes.modeName() : null);
 		HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(BuildingPlanner.MOD_ID, "mode_controls"),
@@ -319,36 +318,30 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 
 	/**
 	 * The radial menu's Copy button: puts the copy away and starts a box around the ghost blocks and real blocks to copy,
-	 * or ends a box for Copy, or switches a box for Delete or the material list to Copy. Does nothing while Building
-	 * Planner is off.
+	 * or ends a box for Copy, or switches a box for the material list to Copy, or ends Delete and starts the box. Does
+	 * nothing while Building Planner is off.
 	 */
 	static void copy() {
 		boxButton(BoxPurpose.COPY, MouseMode.Action.COPY_BUTTON);
 	}
 
 	/**
-	 * The radial menu's Delete button: in Delete by aim, ends it; otherwise as {@link #copy()}, for a box whose ghost
-	 * blocks are erased, except that with no box drawn and Aim the last Delete mode the player used, it starts Delete by
-	 * aim instead (see "Delete by aim").
+	 * The radial menu's Delete button: ends Delete while it's on; otherwise ends the mouse mode on now, drops a shape
+	 * under way, and starts Delete (see "Delete").
 	 */
 	static void delete() {
 		if (session == null) {
 			return;
 		}
-		if (session.aimOn()) {
-			session.modeAction(MouseMode.Action.DELETE_BUTTON);
-			return;
-		}
-		if (!session.box().on() && ClientSession.deleteMode() == DeleteMode.AIM) {
-			session.modeAction(MouseMode.Action.DELETE_BUTTON);
+		boolean on = session.deleteOn();
+		session.modeAction(MouseMode.Action.DELETE_BUTTON);
+		if (!on) {
 			if (effortless) {
 				ClickRule.cancelShape();
 			}
-			session.startAim();
+			session.startDelete();
 			modeStarted();
-			return;
 		}
-		boxButton(BoxPurpose.DELETE, MouseMode.Action.DELETE_BUTTON);
 	}
 
 	/** The radial menu's "Material list" button: as {@link #copy()}, for a box whose blocks the material list counts. */
@@ -391,10 +384,10 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		return state == null ? null : ControlsLine.copy(state, CopyKeys.names(Minecraft.getInstance()));
 	}
 
-	/** Delete by aim's controls lines, with its keys as the player has them bound, or none while it's off. */
-	private static List<ControlsLine.Line> aimLines() {
-		ControlsLine.AimState state = session == null ? null : session.aimState();
-		return state == null ? List.of() : ControlsLine.deleteAim(state, CopyKeys.names(Minecraft.getInstance()));
+	/** Delete's controls lines, with its keys as the player has them bound, or none while it's off. */
+	private static List<ControlsLine.Line> deleteLines() {
+		ControlsLine.DeleteState state = session == null ? null : session.deleteState();
+		return state == null ? List.of() : ControlsLine.delete(state, CopyKeys.names(Minecraft.getInstance()));
 	}
 
 	/**
@@ -449,7 +442,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		return session != null && session.mouseMode() == MouseMode.BOX && session.box().purpose() == purpose;
 	}
 
-	/** Whether Delete is on, a Delete box or Delete by aim, so the radial menu's Delete button shows selected. */
+	/** Whether Delete is on, so the radial menu's Delete button shows selected. */
 	static boolean deleteOn() {
 		return session != null && session.deleteOn();
 	}
@@ -652,8 +645,8 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 
 	/**
 	 * Hook M1: the left click sets the box's next corner, drops the copy's set or puts the copy at the aim away when no
-	 * set is fixed, or in Delete by aim starts the hold that erases the marks; holding the button then does nothing more,
-	 * even once the box or the copy is gone. Returns whether the click is taken from the game.
+	 * set is fixed, or in Delete starts Delete's box with the sprint key held, or otherwise the hold that erases the
+	 * marks; holding the button then does nothing more, even once the box or the copy is gone. Returns whether the click is taken from the game.
 	 */
 	public static boolean leftClick() {
 		MouseMode mode = mouseMode();
@@ -675,15 +668,16 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 					attackHeld = Minecraft.getInstance().options.keyAttack.isDown();
 				}
 			}
-			// Delete by aim's left click attacks and breaks nothing; held a second, it erases the marks.
-			case DELETE_AIM -> session.pressErase();
+			// Delete's left click attacks and breaks nothing: with the sprint key it draws Delete's box, and alone, held a
+			// second, it erases the marks.
+			case DELETE -> session.deletePress(Minecraft.getInstance().options.keySprint.isDown());
 		}
 		return true;
 	}
 
 	/**
 	 * Hook M2: the right click pastes the copy at the aim (in Line, Wall and Floor, fixes the set's first copy or pastes
-	 * the set); a box ends; in Delete by aim it clears the marks, or with none ends the mode. Returns whether the game's use
+	 * the set); a box ends; in Delete it ends Delete's box, or clears the marks, or with neither ends the mode. Returns whether the game's use
 	 * is skipped, which it is too while the button stays down after a click the mode took or after a mode started or
 	 * ended, so holding it pastes or places no more.
 	 */
