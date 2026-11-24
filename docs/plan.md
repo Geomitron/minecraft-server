@@ -449,7 +449,10 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
   - the copy's Line, Wall and Floor lay up to 10 copies along each direction, so a Wall or a Floor has up to 100
     (1238 Q4 A);
   - any click that finishes a shape ends the lock, placing or erasing (1239 Q1 A);
-  - a locked copy unlocks once it's pasted and follows the aim again (1239 Q2 A).
+  - a locked copy unlocks once it's pasted and follows the aim again (1239 Q2 A);
+  - in Delete, holding Left Control still marks each ghost block the crosshair passes over, alongside the box, but
+    "if the user is actively drawing the delete box, it does *not* mark ghost blocks that the crosshair passes over"
+    (1240 Q1 A, with Geo's comment).
 - The shared layer replaces the decisions above that concern separate plans: named plans that move and turn as a whole
   (411 Q1), plan growth (411 Q2), who deletes a plan (411 Q3, 420 Q9), starting a plan with N (420 Q1, 469 Q1), hiding
   a plan with Litematica or Syncmatica (420 Q2, 469 Q2), the paste's target plan (485 Q3), Litematica's Edit Schematic
@@ -459,9 +462,9 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
 
 **Building Planner 0.7.0** (the bullet "Building Planner 0.7.0" in "Decisions" above: Geo's comments c2 to c19 on 815
 revision 2). [building-planner.md](building-planner.md) is the design; each choice still Geo's is marked `OPEN:` there,
-with the inbox request that asks it: "Marking in Delete" (the Delete request, 1240), and "The settings menu and red
-blocks through walls" (the settings and red blocks request, 1241), each titled "Building Planner 0.7.0:" first. Geo
-has answered "Zoop and the copy's mode" (1238) and "When a lock ends" (1239), in "Decisions" above. A step that waits on a question starts once Geo has answered
+with the inbox request that asks it: "Building Planner 0.7.0: the settings menu and red blocks through walls" (the
+settings and red blocks request, 1241). Geo has answered "Zoop and the copy's mode" (1238), "When a lock ends" (1239)
+and "Marking in Delete" (1240), in "Decisions" above. A step that waits on a question starts once Geo has answered
 it, and builds Geo's answer, updating the spec's `OPEN:` mark to the decision in the same change; the steps marked
 "can start now" wait on nothing.
 
@@ -525,11 +528,13 @@ where a step says so. 0.7.0 keeps protocol version 5 and changes nothing on the 
     covers each mode in each direction and the cap on copies, and `step9.sh` checks pass: a Line of 4 copies upward and
     one eastward, a Wall of 3 by 2 and a Floor of 4 by 4 each paste as one edit, which one undo takes back; R during a
     Line keeps the first copy as a Wall, and at Off drops the set; shots of each mode before the second click.
-11. **Delete as one mode** ("Delete"; c16). Waits on the Delete request, Q1. One mode `DELETE` in place of the box
-    and Aim, the box drawn with Left Control and a held left click marking or unmarking, the one-second erase with the
-    progress bar, and Delete's lines. Needs step 2. Done when `DeleteMarksTest` and `EraseHoldTest` pass and
-    `step9.sh`'s Delete checks, rewritten for one mode, pass: a box of 10 by 4 by 10 marks its ghost blocks; a box
-    started on a marked block unmarks; holding the left click for a second erases the marks as one edit, with the
+11. **Delete as one mode** ("Delete"; c16, 1240 Q1 A). One mode `DELETE` in place of the box
+    and Aim, the box drawn with Left Control and a held left click marking or unmarking, the Left Control sweep
+    alongside it, the one-second erase with the progress bar, and Delete's lines. Needs step 2. Done when
+    `DeleteMarksTest` and `EraseHoldTest` pass and `step9.sh`'s Delete checks, rewritten for one mode, pass: a box of
+    10 by 4 by 10 marks its ghost blocks; a box started on a marked block unmarks; a sweep with Left Control marks the
+    ghost blocks it passes over, and while a box is drawn the crosshair passing over ghost blocks outside the box marks
+    none of them; holding the left click for a second erases the marks as one edit, with the
     bar filling; shots of a marked box, the bar half full, and each line (with GUI scale 4).
 12. **Esc** ("Esc"; c10, c13, c17, 1238 Q3 A). Needs steps 6, 10 and 11. Hook M7 and `EscSteps`.
     Done when `EscStepsTest` covers each step's order, and `step9.sh` checks pass: during a copy's Line, Esc drops the

@@ -889,7 +889,9 @@ their own box. While it's on, the Delete button draws in the menu's blue for a s
 ghost blocks are hidden shows them first, as starting a shape does (see "Show or hide"). R does nothing in Delete.
 
 **Marking by sweeping.** While the player holds Minecraft's sprint key (Left Ctrl unless they change it) without the
-left button, each ghost block the crosshair passes over is marked (981 Q2 A, Q3 A; `OPEN:` the Delete request, Q1).
+left button, each ghost block the crosshair passes over is marked (981 Q2 A, Q3 A; 1240 Q1 A). While a box is drawn,
+the sweep marks nothing (Geo's comment on 1240 Q1: "if the user is actively drawing the delete box, it does *not*
+mark ghost blocks that the crosshair passes over").
 Each frame, Building Planner aims as hook E9 aims (`GhostAim`, ghost blocks only, up to 256 blocks from the eyes, as a
 box's corner): a real block in front of a ghost block stops the aim, and only ghost blocks are marked. So that a quick
 sweep leaves no gap, it also aims along the look directions between the last frame's and this frame's, from eye
