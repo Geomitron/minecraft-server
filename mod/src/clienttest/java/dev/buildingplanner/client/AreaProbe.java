@@ -70,6 +70,18 @@ final class AreaProbe {
 	 * many, and two of the same view by few.
 	 */
 	static String shotDifference(Path folder, String first, String second) throws IOException {
+		return count(folder, first, second, false);
+	}
+
+	/**
+	 * How many pixels of the upper part of the first screenshot are darker than the second's by more than 60 across
+	 * their three colour channels together: something dark drawn over a view, with the rest of the view the same.
+	 */
+	static String shotDarker(Path folder, String first, String second) throws IOException {
+		return count(folder, first, second, true);
+	}
+
+	private static String count(Path folder, String first, String second, boolean darker) throws IOException {
 		BufferedImage a = ImageIO.read(folder.resolve(first + ".png").toFile());
 		BufferedImage b = ImageIO.read(folder.resolve(second + ".png").toFile());
 		if (a.getWidth() != b.getWidth() || a.getHeight() != b.getHeight()) {
@@ -84,7 +96,8 @@ final class AreaProbe {
 				int q = b.getRGB(x, y);
 				int distance = 0;
 				for (int shift = 0; shift < 24; shift += 8) {
-					distance += Math.abs((p >> shift & 0xFF) - (q >> shift & 0xFF));
+					int change = (q >> shift & 0xFF) - (p >> shift & 0xFF);
+					distance += darker ? change : Math.abs(change);
 				}
 				if (distance > 60) {
 					differing++;

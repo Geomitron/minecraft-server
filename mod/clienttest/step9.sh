@@ -508,20 +508,39 @@ check "placing no block, real or ghost, and saying nothing" eval '[[ $(val 1 hol
 	[[ $(val 1 "real 8 -60 19") == minecraft:air ]] && [[ $(val 1 "layer 8 -60 19") == minecraft:air ]] &&
 	(($(chat_lines 1) == lines))'
 
-# The first corner: the space above the block aimed at for its top face, and the block itself for a side.
+# The first corner: the space above the block aimed at for its top face, and the block itself for a side. Until the
+# first click, the top face aimed at shows shaded black, and a side shows nothing. The first click, with the aim held,
+# leaves the same box, so the shots before and after it differ only by the shade: with the animals gone, the view held
+# still and the box's outline and sides light, the shot with the shade has many pixels darker than the one without, and
+# that one hardly any darker than the first (shotdarker).
+drv 1 "cmd kill @e[type=!minecraft:player]" "wait 5" > /dev/null
 copy_button
 drv 1 "lookat 5.5 -59 4.5" "wait 5" > /dev/null
 check "aiming at a block's top face, the box's first corner is the space above it" \
 	box_is "COPY 0 5,-59,4..5,-59,4 white SINGLE"
+check "and the block's top face shows shaded" eval '[[ $(val 1 boxshade) == 5,-60,4 ]]'
+shot 1 box-shade-top
+drv 1 "window 1920 1080 2" "wait 20" > /dev/null
+shot 1 box-shade-top-1920x1080
+drv 1 "window 854 480 2" "wait 20" > /dev/null
 drv 1 "lookat 4.5 -58.5 3.9" "wait 5" > /dev/null
 check "aiming at its side, the block itself" box_is "COPY 0 4,-59,3..4,-59,3 white SINGLE"
+check "with no face shaded" eval '[[ $(val 1 boxshade) == none ]]'
 line_shot line-copy-first
 
 # A box from the space above the stone brick at 5 -60 4 to 3 -60 3, around 6 stone bricks, the stairs and the
 # glowstone. Between clicks it follows the aim, with the corners set so far fixed; it's shot after the first and the
 # second click, once the chat lines that draw over its line have faded.
 drv 1 "lookat 5.5 -59 4.5" "wait 5" > /dev/null
+shot 1 box-shade-before
 attack_click 1
+check "the first click, with the aim held, leaves the same box" box_is "COPY 1 5,-59,4..5,-59,4 white SINGLE"
+check "and no face shaded" eval '[[ $(val 1 boxshade) == none ]]'
+shot 1 box-shade-gone
+shade_darker=$(val 1 "shotdarker box-shade-before box-shade-gone")
+shade_lighter=$(val 1 "shotdarker box-shade-gone box-shade-before")
+echo "  pixels the shade darkens: $shade_darker; pixels darker without it: $shade_lighter" >> /out/checks.log
+check "the shade darkens the view where it's drawn" eval '((shade_darker > 500 && shade_lighter < 200))'
 drv 1 "lookat 6.5 -59 6.5" "wait 5" > /dev/null
 check "the first click sets the first corner, and the box follows the aim on its level" eval \
 	'box_is "COPY 1 5,-59,4..6,-59,6 white SINGLE" && [[ $(val 1 modehud) == "Copy: $second_line[2 × 1 × 3]" ]]'
@@ -530,9 +549,17 @@ check "to the opposite corner" eval 'box_is "COPY 1 3,-59,3..5,-59,4 white SINGL
 	[[ $(val 1 modehud) == "Copy: $second_line[3 × 1 × 2]" ]]'
 check "the list under the crosshair counts the box's blocks: the stairs and the glowstone" eval \
 	'drv 1 "wait 5" > /dev/null && [[ $(val 1 boxlist) == *" | minecraft:glowstone 1, minecraft:oak_stairs 1" ]]'
+# Its row of two cells, from 223 to 261 across and 112 to 130 down at GUI scale 2, sits on a dark background 2 wider at
+# each side and 1 taller at each end, in the window's pixels.
+backgrounds=$(val 1 boxlistbackgrounds)
+echo "  the list's backgrounds: $backgrounds" >> /out/checks.log
+check "and sits on the controls' dark background" eval '[[ $backgrounds == "442 222 526 262" ]]'
 line_shot line-copy-second
 drv 1 "wait 200" > /dev/null
 shot 1 box-copy-first-click
+drv 1 "window 1920 1080 2" "wait 20" > /dev/null
+shot 1 box-copy-first-click-1920x1080
+drv 1 "window 854 480 2" "wait 20" > /dev/null
 attack_click 1
 drv 1 "lookat 3.5 -57.5 3.5" "wait 5" > /dev/null
 check "the second click sets the opposite corner, and the height follows the aim" eval \
@@ -1257,16 +1284,16 @@ drv 1 "lookat 60.5 -9 2.5" "wait 5" > /dev/null
 attack_click 1
 drv 1 "lookat 60.5 -60.5 2.5" "wait 10" > /dev/null
 check "a Delete box over more ghost blocks than the server's limit draws red" \
-	box_is "DELETE 2 60,-61,2..139,-9,51 red SINGLE"
+	box_is "DELETE 2 60,-61,2..139,-9,51 limit SINGLE"
 check "with its line saying so" eval '[[ $(val 1 modehud) == "Too many blocks | $delete_height[80 × 53 × 50]" ]]'
 drv 1 "wait 200" > /dev/null
 shot 1 box-delete-too-many
 attack_click 1
 check "and its click sets no corner and erases nothing" eval 'drv 1 "wait 5" > /dev/null &&
-	box_is "DELETE 2 60,-61,2..139,-9,51 red SINGLE" && [[ $(val 1 holdlog) == *" edits=0 "* ]] &&
+	box_is "DELETE 2 60,-61,2..139,-9,51 limit SINGLE" && [[ $(val 1 holdlog) == *" edits=0 "* ]] &&
 	[[ $(val 2 "get 139 -10 51") == minecraft:stone ]]'
 drv 1 "lookat 60.5 -9.5 2.5" "wait 5" > /dev/null
-check "a box over fewer ghost blocks draws white again" box_is "DELETE 2 60,-10,2..139,-9,51 white SINGLE"
+check "a box over fewer ghost blocks draws in Delete's red again" box_is "DELETE 2 60,-10,2..139,-9,51 red SINGLE"
 use_click 1
 check "a right click ends it" eval 'drv 1 "wait 10" > /dev/null && box_is "none SINGLE"'
 # Erasing Big is another edit of 200,000 blocks, and leaves the layer as the later checks expect it.
@@ -1349,7 +1376,7 @@ radial_click "Material list"
 radial_let_go
 drv 1 "lookat 3.5 -59 3.5" "wait 5" > /dev/null
 check "the Material list button during a box for Copy switches it to the material list, keeping its corner" eval \
-	'box_is "MATERIAL_LIST 1 3,-59,3..5,-59,4 white SINGLE" &&
+	'box_is "MATERIAL_LIST 1 3,-59,3..5,-59,4 blue SINGLE" &&
 	[[ $(val 1 modehud) == "Material list: $second_line[3 × 1 × 2]" ]]'
 # At 854 by 480, GUI scale 2, the box's size is a rectangle of its own at the line's end.
 wrap=$(val 1 modewrap)
@@ -1359,9 +1386,12 @@ check "the box's size is the line's last rectangle, and the rectangles are laid 
 line_shot line-material-list-second
 drv 1 "wait 200" > /dev/null
 shot 1 box-material-list-first-click
+drv 1 "window 1920 1080 2" "wait 20" > /dev/null
+shot 1 box-material-list-first-click-1920x1080
+drv 1 "window 854 480 2" "wait 20" > /dev/null
 attack_click 1
 drv 1 "lookat 3.5 -59.5 3.5" "wait 5" > /dev/null
-check "its second click sets the opposite corner" eval 'box_is "MATERIAL_LIST 2 3,-60,3..5,-59,4 white SINGLE" &&
+check "its second click sets the opposite corner" eval 'box_is "MATERIAL_LIST 2 3,-60,3..5,-59,4 blue SINGLE" &&
 	[[ $(val 1 modehud) == "Material list: $height_line[3 × 2 × 2]" ]]'
 shot 1 box-material-list-second-click
 lines=$(chat_lines 1)
@@ -1384,14 +1414,14 @@ drv 1 "lookat 5.5 -59 4.5" "wait 5" > /dev/null
 attack_click 1
 switch_to Delete
 check "the Delete button during a box for Copy switches it to Delete, keeping its corner" eval \
-	'box_is "DELETE 1 3,-59,3..5,-59,4 white SINGLE" && [[ $(val 1 modehud) == "$delete_second[3 × 1 × 2]" ]]'
+	'box_is "DELETE 1 3,-59,3..5,-59,4 red SINGLE" && [[ $(val 1 modehud) == "$delete_second[3 × 1 × 2]" ]]'
 check "its list counts the ghost blocks in it" eval 'drv 1 "wait 5" > /dev/null &&
 	[[ $(val 1 boxlist) == *" | minecraft:glowstone 1, minecraft:oak_stairs 1" ]]'
 switch_to "Material list"
 check "Material list switches a box for Delete, keeping its corner" \
-	box_is "MATERIAL_LIST 1 3,-59,3..5,-59,4 white SINGLE"
+	box_is "MATERIAL_LIST 1 3,-59,3..5,-59,4 blue SINGLE"
 switch_to Delete
-check "Delete switches it back" box_is "DELETE 1 3,-59,3..5,-59,4 white SINGLE"
+check "Delete switches it back" box_is "DELETE 1 3,-59,3..5,-59,4 red SINGLE"
 switch_to Copy
 check "and Copy switches a box for Delete, keeping its corner" box_is "COPY 1 3,-59,3..5,-59,4 white SINGLE"
 switch_to Delete
@@ -1424,12 +1454,12 @@ check "both clients show the ghost blocks" eval 'drv 2 "await block 200 -60 0 mi
 delete_button
 drv 1 "lookat 200.5 -59.5 39.9" "wait 5" > /dev/null
 check "a Delete box's first corner on a ghost block's side is that block" \
-	box_is "DELETE 0 200,-60,39..200,-60,39 white SINGLE"
+	box_is "DELETE 0 200,-60,39..200,-60,39 red SINGLE"
 attack_click 1
 drv 1 "lookat 239.5 -60 0.5" "wait 5" > /dev/null
 attack_click 1
 drv 1 "lookat 239.5 -50.5 0.5" "wait 10" > /dev/null
-check "its three clicks draw a box of 40 by 40 by 10" eval 'box_is "DELETE 2 200,-60,0..239,-51,39 white SINGLE" &&
+check "its three clicks draw a box of 40 by 40 by 10" eval 'box_is "DELETE 2 200,-60,0..239,-51,39 red SINGLE" &&
 	[[ $(val 1 modehud) == "$delete_height[40 × 10 × 40]" ]]'
 list=$(val 1 boxlist)
 echo "  the Delete box's list: $list" >> /out/checks.log
@@ -1471,7 +1501,7 @@ attack_click 1
 drv 1 "lookat 214.5 -60 48.5" "wait 5" > /dev/null
 attack_click 1
 drv 1 "lookat 214.5 -58.5 48.5" "wait 10" > /dev/null
-check "a Delete box over no ghost blocks" box_is "DELETE 2 210,-60,45..214,-59,48 white SINGLE"
+check "a Delete box over no ghost blocks" box_is "DELETE 2 210,-60,45..214,-59,48 red SINGLE"
 attack_click 1
 check "gives its message" client_said 1 "There are no ghost blocks in that box to erase."
 shot 1 delete-nothing-message
@@ -3125,8 +3155,17 @@ check "a box of 144 by 3 by 144 over 40 kinds of block" box_is "COPY 2 -224,-60,
 read -r right width bottom top _ <<< "$list"
 check "lists them in rows of 10 that end inside the screen and above the controls line, with a +N cell" eval \
 	'((right <= width - 4 && bottom <= top)) && [[ ${list#* | } == "$expected" ]]'
+# Each of the three rows sits on its own dark background, the rows' backgrounds meeting.
+backgrounds=$(val 1 boxlistbackgrounds)
+echo "  the wrapped list's backgrounds: $backgrounds" >> /out/checks.log
+check "each row of the list sits on the dark background" eval \
+	'[[ $backgrounds == "442 222 846 262 | 442 262 846 302 | 442 302 846 342" ]]'
 drv 1 "wait 200" > /dev/null
 shot 1 box-list-wrapped
+drv 1 "window 1920 1080 2" "wait 20" > /dev/null
+shot 1 box-list-wrapped-1920x1080
+echo "  box-list-wrapped-1920x1080 backgrounds: $(val 1 boxlistbackgrounds)" >> /out/checks.log
+drv 1 "window 854 480 2" "wait 20" > /dev/null
 use_click 1
 check "a right click ends the box and its list" eval 'drv 1 "wait 10" > /dev/null && box_is "none SINGLE" &&
 	[[ $(val 1 boxlist) == hidden ]]'
@@ -3152,7 +3191,7 @@ drv 1 "lookat 120.5 -60 64.5" "wait 5" > /dev/null
 check "a first corner on the grass" box_is "COPY 0 120,-60,64..120,-60,64 white SINGLE"
 attack_click 1
 drv 1 "cmd tp @s 330.5 -50 64.5 90 30" "wait 210" "lookat 380.5 -60 64.5" "wait 5" > /dev/null
-check "a box of 261 blocks a side draws red" box_is "COPY 1 120,-60,64..380,-60,64 red SINGLE"
+check "a box of 261 blocks a side draws red" box_is "COPY 1 120,-60,64..380,-60,64 limit SINGLE"
 check "with its line saying which limit" eval \
 	'[[ $(val 1 modehud) == "Too many blocks | Copy: $second_line[261 × 1 × 1]" ]]'
 line_shot line-copy-too-large
@@ -3161,15 +3200,15 @@ check "the warning's rectangle is red, the line's white" eval \
 shot 1 box-too-large
 attack_click 1
 check "and its click sets no corner" eval 'drv 1 "wait 5" > /dev/null &&
-	box_is "COPY 1 120,-60,64..380,-60,64 red SINGLE"'
+	box_is "COPY 1 120,-60,64..380,-60,64 limit SINGLE"'
 drv 1 "lookat 300.5 -60 64.5" "wait 5" > /dev/null
-check "a box over chunks the game hasn't loaded draws red" box_is "COPY 1 120,-60,64..300,-60,64 red SINGLE"
+check "a box over chunks the game hasn't loaded draws red" box_is "COPY 1 120,-60,64..300,-60,64 limit SINGLE"
 check "with its line saying which limit" eval '[[ $(val 1 modehud) == \
 	"Part of the box is too far away to read. Move closer. | Copy: $second_line[181 × 1 × 1]" ]]'
 shot 1 box-not-loaded
 attack_click 1
 check "and its click sets no corner" eval 'drv 1 "wait 5" > /dev/null &&
-	box_is "COPY 1 120,-60,64..300,-60,64 red SINGLE"'
+	box_is "COPY 1 120,-60,64..300,-60,64 limit SINGLE"'
 use_click 1
 check "a right click ends it" eval 'drv 1 "wait 10" > /dev/null && box_is "none SINGLE"'
 drv 1 "cmd tp @s 8.5 -56 9.5 0 30" "wait 40" "fly false" > /dev/null

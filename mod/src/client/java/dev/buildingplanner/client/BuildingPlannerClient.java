@@ -4,6 +4,7 @@ import com.mojang.blaze3d.platform.InputConstants;
 import dev.buildingplanner.BuildingPlanner;
 import dev.buildingplanner.ClientConfig;
 import dev.buildingplanner.input.BlockTurn;
+import dev.buildingplanner.input.BoxPurpose;
 import dev.buildingplanner.input.CopyColour;
 import dev.buildingplanner.input.CopyPlacement;
 import dev.buildingplanner.input.DeleteMode;
@@ -322,7 +323,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	 * Planner is off.
 	 */
 	static void copy() {
-		boxButton(BoxDraw.Purpose.COPY, MouseMode.Action.COPY_BUTTON);
+		boxButton(BoxPurpose.COPY, MouseMode.Action.COPY_BUTTON);
 	}
 
 	/**
@@ -347,12 +348,12 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 			modeStarted();
 			return;
 		}
-		boxButton(BoxDraw.Purpose.DELETE, MouseMode.Action.DELETE_BUTTON);
+		boxButton(BoxPurpose.DELETE, MouseMode.Action.DELETE_BUTTON);
 	}
 
 	/** The radial menu's "Material list" button: as {@link #copy()}, for a box whose blocks the material list counts. */
 	static void materialList() {
-		boxButton(BoxDraw.Purpose.MATERIAL_LIST, MouseMode.Action.MATERIAL_LIST_BUTTON);
+		boxButton(BoxPurpose.MATERIAL_LIST, MouseMode.Action.MATERIAL_LIST_BUTTON);
 	}
 
 	/**
@@ -366,7 +367,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	}
 
 	/** After the button's action on the mouse mode, starts, ends or switches a box, dropping a shape under way. */
-	private static void boxButton(BoxDraw.Purpose purpose, MouseMode.Action button) {
+	private static void boxButton(BoxPurpose purpose, MouseMode.Action button) {
 		if (session == null) {
 			return;
 		}
@@ -437,7 +438,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	}
 
 	/** Whether a box is drawn for that purpose, whose radial menu button then shows selected. */
-	static boolean drawingBoxFor(BoxDraw.Purpose purpose) {
+	static boolean drawingBoxFor(BoxPurpose purpose) {
 		return session != null && session.mouseMode() == MouseMode.BOX && session.box().purpose() == purpose;
 	}
 

@@ -2,6 +2,7 @@ package dev.buildingplanner.client;
 
 import dev.buildingplanner.BuildingPlanner;
 import dev.buildingplanner.ClientConfig;
+import dev.buildingplanner.input.BoxPurpose;
 import dev.buildingplanner.input.CopyColour;
 import dev.buildingplanner.input.CopyMode;
 import dev.buildingplanner.input.CopyPlacement;
@@ -308,7 +309,7 @@ final class ClientSession {
 
 	/** Whether Delete is on: Delete by aim, or a box drawn for Delete. */
 	boolean deleteOn() {
-		return aimOn || box.on() && box.purpose() == BoxDraw.Purpose.DELETE;
+		return aimOn || box.on() && box.purpose() == BoxPurpose.DELETE;
 	}
 
 	/** Whether Delete by aim is on. */
@@ -341,10 +342,10 @@ final class ClientSession {
 			aimOn = false;
 			marks.endSweep();
 			hold.cancel();
-			box.start(BoxDraw.Purpose.DELETE);
+			box.start(BoxPurpose.DELETE);
 			box.update(replica.layer(), tiles.shown());
 			deleteMode = DeleteMode.BOX;
-		} else if (box.on() && box.purpose() == BoxDraw.Purpose.DELETE) {
+		} else if (box.on() && box.purpose() == BoxPurpose.DELETE) {
 			box.end();
 			showForDrawing();
 			aimOn = true;
@@ -442,13 +443,13 @@ final class ClientSession {
 	 * when it's for the same purpose and otherwise switches it to that purpose, keeping its corners. A box for Delete
 	 * shows hidden ghost blocks first, as drawing a shape does. Returns whether a box started.
 	 */
-	boolean boxButton(BoxDraw.Purpose purpose) {
+	boolean boxButton(BoxPurpose purpose) {
 		boolean started = !box.on();
 		if (!started && box.purpose() == purpose) {
 			box.end();
 			return false;
 		}
-		if (purpose == BoxDraw.Purpose.DELETE) {
+		if (purpose == BoxPurpose.DELETE) {
 			showForDrawing();
 			deleteMode = DeleteMode.BOX;
 		}

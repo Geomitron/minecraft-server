@@ -28,7 +28,8 @@ import net.minecraft.util.ARGB;
  * laid out by {@link ControlsRows}; white, with each action in dark aqua and each reason in red. A box's line ends with
  * its size, and a box past a limit has a red line above saying which. A line too wide for the screen goes on in a row
  * below. While a box is drawn, the blocks in it show under the crosshair ({@link BoxList}, laid out by
- * {@link BoxListLayout}), in rows that end above the controls, and in Delete by aim, the marked ghost blocks.
+ * {@link BoxListLayout}), in rows that end above the controls, each row on the controls' dark background, and in
+ * Delete by aim, the marked ghost blocks.
  * They show while a mode is on, with no screen open and the HUD shown (not hidden with F1). With no mode on, Single's
  * line shows in the same place while the one ghost block's controls are active ({@link ControlsLine#single}), or the
  * turning line ({@link ControlsLine#turning}), or in Disable, Disable's line ({@link ControlsLine#disable}); during a
@@ -356,6 +357,25 @@ final class ModeHud implements HudElement {
 	}
 
 	/**
+	 * The dark background under each row of the list under the crosshair as it shows now, its window box (left top
+	 * right bottom, in the window's pixels), top row first, separated by " | "; or {@code hidden}.
+	 */
+	String listBackgrounds() {
+		List<BoxList.Entry> entries = list.get();
+		if (!listed() || !shown() || entries.isEmpty()) {
+			return "hidden";
+		}
+		Minecraft mc = Minecraft.getInstance();
+		int width = mc.getWindow().getGuiScaledWidth();
+		int height = mc.getWindow().getGuiScaledHeight();
+		int top = top(placed(lines(), mc.font, width, height).size(), mc.font, height, false);
+		int scale = scale();
+		return BoxListLayout.of(width, height, entries.size(), top).backgrounds().stream()
+			.map(r -> r.left() * scale + " " + r.top() * scale + " " + r.right() * scale + " " + r.bottom() * scale)
+			.collect(Collectors.joining(" | "));
+	}
+
+	/**
 	 * The top of the controls: {@code count} rows, the last of them starting 58 above the screen's bottom, or while
 	 * {@code raised}, ending 74 above it, over the action bar; with none, of one row there.
 	 */
@@ -382,11 +402,14 @@ final class ModeHud implements HudElement {
 	/**
 	 * The list under the crosshair, drawn as Effortless Building draws its own ({@code RenderHandler.drawItemStack}):
 	 * each item, then its count over it, right-aligned to the item's right edge and starting 9 below its top; the "+N"
-	 * cell's text sits in the middle of its cell.
+	 * cell's text sits in the middle of its cell. Each row sits on the controls' dark background.
 	 */
 	private void drawList(GuiGraphicsExtractor graphics, Font font, int top) {
 		List<BoxList.Entry> entries = list.get();
 		BoxListLayout layout = BoxListLayout.of(graphics.guiWidth(), graphics.guiHeight(), entries.size(), top);
+		for (BoxListLayout.Rect rect : layout.backgrounds()) {
+			graphics.fill(rect.left(), rect.top(), rect.right(), rect.bottom(), BACKGROUND);
+		}
 		int items = layout.more() > 0 ? layout.cells().size() - 1 : layout.cells().size();
 		for (int i = 0; i < items; i++) {
 			BoxListLayout.Cell cell = layout.cells().get(i);

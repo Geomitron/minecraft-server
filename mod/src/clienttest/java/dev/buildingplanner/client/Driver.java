@@ -1009,6 +1009,20 @@ public final class Driver implements ClientModInitializer {
 				// modewrap: the controls as they wrap on the screen now, lines separated by " / ", or hidden.
 				return modeHud().wrappedText();
 			}
+			case "boxlistbackgrounds" -> {
+				// boxlistbackgrounds: the window box (left top right bottom) of the dark background under each row of
+				// the list under the crosshair, top row first, separated by " | ", or hidden.
+				return modeHud().listBackgrounds();
+			}
+			case "boxshade" -> {
+				// boxshade: the block whose top face shows shaded under the box's first corner, as x,y,z, or none.
+				return session().box().describeShade();
+			}
+			case "shotdarker" -> {
+				// shotdarker <shot> <shot>: how many pixels of the first screenshot's upper 6 tenths are darker than the
+				// second's by more than a little, as something dark drawn over the view makes them.
+				return AreaProbe.shotDarker(mc.gameDirectory.toPath().resolve("screenshots"), a[1], a[2]);
+			}
 			case "boxlist" -> {
 				// boxlist: the list under the crosshair: the right edge of its cells, the screen's width, the bottom of
 				// its rows and the top of the controls, in GUI pixels, then its rows; or hidden.

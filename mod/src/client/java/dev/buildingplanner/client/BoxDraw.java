@@ -1,8 +1,11 @@
 package dev.buildingplanner.client;
 
 import dev.buildingplanner.input.BoxCorners;
+import dev.buildingplanner.input.BoxPurpose;
 import dev.buildingplanner.layer.GhostErase;
 import dev.buildingplanner.layer.Layer;
+import dev.buildingplanner.look.BoxLook;
+import java.util.Locale;
 import java.util.OptionalInt;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientChunkCache;
@@ -16,27 +19,25 @@ import net.minecraft.world.phys.Vec3;
 /**
  * Building Planner's box for Copy, Delete or the material list, one of its mouse modes: three left clicks set the first
  * corner, the opposite corner on the same level, and the height ({@link BoxCorners}). Between clicks the box follows the
- * aim, with the corners set so far fixed. A box past a limit draws red, and its click sets no corner; a Delete box's
+ * aim, with the corners set so far fixed, in its purpose's colour ({@link BoxLook}); until the first click, the top
+ * face of the block aimed at shows shaded. A box past a limit draws red, and its click sets no corner; a Delete box's
  * limits include the server's cap for one edit, on the ghost blocks it holds. It uses none of Effortless Building's
  * classes.
  */
 final class BoxDraw {
-	/** What the box is for. */
-	enum Purpose {
-		/** The ghost blocks and real blocks in the box become the copy. */
-		COPY,
-		/** The ghost blocks in the box are erased, as one edit. */
-		DELETE,
-		/** Litematica's material list opens for the blocks in the box. */
-		MATERIAL_LIST
-	}
-
 	/**
 	 * The box as it shows now: what it's for, how many corners are set (0 to 2), its lowest and highest corners for the
-	 * aim now, whether the aim gives the next corner, and the limit it breaks, or null. With no corner set and the player
-	 * aiming at nothing, {@code min} and {@code max} are null.
+	 * aim now, whether the aim gives the next corner, the limit it breaks, or null, and the shaded top face of the block
+	 * aimed at before the first corner is set, or null. With no corner set and the player aiming at nothing, {@code min}
+	 * and {@code max} are null.
 	 */
-	record Shown(Purpose purpose, int corners, BlockPos min, BlockPos max, boolean aimed, BoxCorners.Limit limit) {
+	record Shown(BoxPurpose purpose, int corners, BlockPos min, BlockPos max, boolean aimed, BoxCorners.Limit limit,
+		BoxLook.Square shade) {
+		/** The colour the box draws in. */
+		BoxLook.Colour colour() {
+			return BoxLook.of(purpose, limit != null);
+		}
+
 		/** Whether the next left click sets a corner. */
 		boolean clickable() {
 			return aimed && limit == null;
@@ -44,12 +45,12 @@ final class BoxDraw {
 	}
 
 	/** A finished box, by its lowest and highest corners. */
-	record Finished(Purpose purpose, BlockPos min, BlockPos max) {
+	record Finished(BoxPurpose purpose, BlockPos min, BlockPos max) {
 	}
 
 	/** The server's cap on the blocks of one edit, which a Delete box's ghost blocks may not pass. */
 	private final int maxEditBlocks;
-	private Purpose purpose;
+	private BoxPurpose purpose;
 	private BlockPos first;
 	private BlockPos second;
 	/** The box for the aim at the last update, or null while no box is drawn. */
@@ -73,12 +74,12 @@ final class BoxDraw {
 		return purpose != null;
 	}
 
-	Purpose purpose() {
+	BoxPurpose purpose() {
 		return purpose;
 	}
 
 	/** Starts a box with no corners set. */
-	void start(Purpose purpose) {
+	void start(BoxPurpose purpose) {
 		this.purpose = purpose;
 		first = null;
 		second = null;
@@ -87,11 +88,12 @@ final class BoxDraw {
 	}
 
 	/** The box is for another purpose now, keeping the corners set so far; the next {@link #update} checks its limits. */
-	void switchTo(Purpose purpose) {
+	void switchTo(BoxPurpose purpose) {
 		this.purpose = purpose;
 		cappedMin = null;
 		if (shown != null) {
-			shown = new Shown(purpose, shown.corners(), shown.min(), shown.max(), shown.aimed(), shown.limit());
+			shown = new Shown(purpose, shown.corners(), shown.min(), shown.max(), shown.aimed(), shown.limit(),
+				shown.shade());
 		}
 	}
 
@@ -124,10 +126,14 @@ final class BoxDraw {
 		Vec3 look = aimer.getLookAngle();
 		BlockPos from;
 		BlockPos to;
+		BoxLook.Square shade = null;
 		if (first == null) {
 			BlockHitResult hit = GhostAim.aim(layer, ghostsShown, BoxCorners.REACH);
 			from = hit == null ? null : BoxCorners.first(hit.getBlockPos(), hit.getDirection());
 			to = from;
+			if (hit != null) {
+				shade = BoxLook.shade(hit.getBlockPos(), hit.getDirection()).orElse(null);
+			}
 		} else if (second == null) {
 			from = first;
 			to = BoxCorners.second(eye, look, first);
@@ -143,7 +149,7 @@ final class BoxDraw {
 			to = corners == 2 ? second : from;
 		}
 		if (from == null) {
-			shown = new Shown(purpose, 0, null, null, false, null);
+			shown = new Shown(purpose, 0, null, null, false, null, null);
 			return;
 		}
 		int minY = level.getMinY();
@@ -156,10 +162,10 @@ final class BoxDraw {
 		BlockPos max = BlockPos.max(from, to);
 		BoxCorners.Limit limit = BoxCorners.limit(from, to,
 			(x, z) -> chunks.getChunk(x, z, ChunkStatus.FULL, false) != null);
-		if (limit == null && purpose == Purpose.DELETE && overCap(layer, min, max)) {
+		if (limit == null && purpose == BoxPurpose.DELETE && overCap(layer, min, max)) {
 			limit = BoxCorners.Limit.TOO_MANY_BLOCKS;
 		}
-		shown = new Shown(purpose, corners, min, max, aimed, limit);
+		shown = new Shown(purpose, corners, min, max, aimed, limit, shade);
 		next = to;
 	}
 
@@ -195,7 +201,10 @@ final class BoxDraw {
 		return null;
 	}
 
-	/** The box as the in-game checks read it: what it's for, the corners set, its corners and its colour, or none. */
+	/**
+	 * The box as the in-game checks read it: what it's for, the corners set, its corners and its colour ("white",
+	 * "blue", "red", or "limit" past a limit), or none.
+	 */
 	String describe() {
 		if (shown == null) {
 			return purpose == null ? "none" : purpose + " 0 unaimed";
@@ -204,7 +213,14 @@ final class BoxDraw {
 			return shown.purpose() + " 0 unaimed";
 		}
 		return shown.purpose() + " " + shown.corners() + " " + pos(shown.min()) + ".." + pos(shown.max()) + " "
-			+ (shown.limit() != null ? "red" : "white") + (shown.aimed() ? "" : " unaimed");
+			+ shown.colour().name().toLowerCase(Locale.ROOT) + (shown.aimed() ? "" : " unaimed");
+	}
+
+	/** The block whose top face shows shaded, as the in-game checks read it ("x,y,z"), or none. */
+	String describeShade() {
+		BoxLook.Square square = shown == null ? null : shown.shade();
+		return square == null ? "none"
+			: (int) square.minX() + "," + ((int) Math.floor(square.y()) - 1) + "," + (int) square.minZ();
 	}
 
 	private static String pos(BlockPos pos) {

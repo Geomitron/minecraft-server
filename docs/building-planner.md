@@ -853,9 +853,9 @@ which calls `Floor.findFloor`, and `ThreeClicksBuildMode.findHeight`), with Buil
 
 Between clicks, the box follows the aim: its outline and see-through sides draw each frame through MaLiLib's renderer
 (`RenderUtils.renderAreaOutline` and `renderAreaSides`), with the corners set so far fixed, in the colour of its
-purpose (Geo's comment c8): white for Copy, and blue for the material list, the copy's blue (#00D4FF). Delete's box is
-red (see "Delete"). The player may walk, or fly in creative mode, while the box is drawn, so a far corner is reached by
-walking toward it.
+purpose (`BoxLook`; Geo's comment c8): white for Copy, and blue for the material list, the copy's blue (#00D4FF).
+Delete's box is red (see "Delete"). The player may walk, or fly in creative mode, while the box is drawn, so a far
+corner is reached by walking toward it.
 
 The box's limits: a corner is aimed at up to 256 blocks from the player's eyes; a box is at most 256 blocks a side, and
 its height reaches the world's build limits; and every chunk the box touches must be loaded in the player's game
@@ -2088,8 +2088,13 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   own Page Up key, under a heading of its own, is unbound first, so Controls shows no clash.
 - The Copy button starts a box: the controls line shows "Copy: [Left-click: set the first corner][Right-click:
   cancel]", a right click and a use of the place click places no block, and Effortless Building's preview and mode are
-  as they were. Aiming at a block's top face, the box's first corner is the space above it; aiming at its side, the
-  block itself. The box follows the aim between clicks and the list under the crosshair counts its blocks. The third
+  as they were. The box draws white (the driver's `drawbox`). Aiming at a block's top face, the box's first corner is
+  the space above it, and that face shows shaded (the driver's `boxshade`); aiming at its side, the block itself, with
+  no face shaded. The first click, with the aim held, keeps the same box and drops the shade: the shot before it has
+  more than 500 pixels darker than the shot after it, which has fewer than 200 darker than the one before (the
+  driver's `shotdarker`); the shaded face is shot at 854 by 480 and 1920 by 1080, GUI scale 2. The box follows the aim
+  between clicks and the list under the crosshair counts its blocks, its row on a dark background 2 wider than its
+  cells at each side (the driver's `boxlistbackgrounds`); the box is shot at both sizes after its first click. The third
   click makes the copy, with its message, places no real block, doesn't reach the other player, and leaves
   Effortless Building's mode as it was. The copy rests on the aimed top face, the middle of its bottom on the block
   above, and follows the aim, and Litematica neither selects nor lists it. Against a real wall's side face, it stands
@@ -2098,9 +2103,10 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
 - At 854 by 480, GUI scale 2, the list counts a small box's blocks, most numerous first, and the material list box's
   controls line wraps onto two rows of whole rectangles, the box's size last. A box of 144 by 3 by 144 (as wide as the chunks the dev
   server's view distance of 6 loads around the player allows) over a floor of 40 kinds of block shows the list in rows
-  of 10 that end inside the screen and above the controls line, with a "+11" cell; it's shot. A break shape drawn in
-  Line mode over real grass has an empty break list (E8). A box past the side limit, or over a chunk not loaded, draws
-  red, says which limit, and its click sets no corner.
+  of 10 that end inside the screen and above the controls line, with a "+11" cell, each row on its own dark
+  background, the rows' backgrounds meeting; it's shot at 854 by 480 and 1920 by 1080. A break shape drawn in Line mode
+  over real grass has an empty break list (E8). A box past the side limit, or over a chunk not loaded, draws in the
+  limit's red, says which limit, and its click sets no corner.
 - With the copy at the aim, the controls line shows its controls. A notch up turns it a quarter turn clockwise in place,
   the middle of its bottom staying on the same block, a notch down back, and the hotbar slot stays; a middle click,
   facing south with the crosshair on the copy's blocks, flips it east to west within the same box, with its stairs
@@ -2172,15 +2178,18 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
 - The Copy button during its own box ends it; the "Material list" button during a Copy box switches it, keeping its
   corners, and its line starts "Material list:".
 - The Delete box ("The Delete box"): Copy, Delete and "Material list" each switch a box from the others, keeping its
-  corners, and Delete's line starts "Delete:", its list counting only ghost blocks; Delete during its own box ends it.
+  corners, and Delete's line starts "Delete:", its list counting only ghost blocks; its box draws in the marks' red;
+  Delete during its own box ends it.
   The Delete button with ghost blocks hidden shows them and starts its box. A Delete box of 40 by 40 by 10 over 16,000
   ghost oak planks, with a ghost door in its top layer whose upper half stands above the box and a real stone among the
   planks, lists the planks and the door and not the stone, and is shot at 854 by 480 and 1920 by 1080; its third click
   says "Erased 16,001 ghost blocks.", sends one edit, takes the door's upper half too and leaves the real stone, and the
   other player sees them go, glowing with Planner1's name. One Ctrl+Z brings them all back. A Delete box over grass
-  without ghost blocks gives its message and sends no edit. A Delete box over 200,001 ghost blocks draws red with "Too
-  many blocks", and its click sets no corner and sends no edit.
-- A box for the material list around 10 ghost oak planks, 6 of them built as real oak planks, and 20 real stone
+  without ghost blocks gives its message and sends no edit. A Delete box over 200,001 ghost blocks draws in the
+  limit's red with "Too many blocks", and its click sets no corner and sends no edit; over fewer, it draws in the marks'
+  red again.
+- A box for the material list draws blue, and is shot after its first click at 854 by 480 and 1920 by 1080. A box for
+  the material list around 10 ghost oak planks, 6 of them built as real oak planks, and 20 real stone
   blocks, with ghost blocks shown and a copy at the aim, opens Litematica's material list as "The material list"
   describes, places and erases nothing, and puts the copy away. With ghost blocks hidden, the same box lists only the
   planks and stone that are built, and ghost blocks stay hidden. Litematica's list and the button's hover text are shot

@@ -54,6 +54,19 @@ class BoxListLayoutTest {
 	}
 
 	@Test
+	void eachRowSitsOnABackgroundTwoWiderAtEachSideMeetingTheNextRows() {
+		assertEquals(List.of(new BoxListLayout.Rect(221, 111, 423, 131), new BoxListLayout.Rect(221, 131, 423, 151),
+			new BoxListLayout.Rect(221, 151, 323, 171)), BoxListLayout.of(WIDTH, HEIGHT, 25, CONTROLS_TOP).backgrounds());
+	}
+
+	@Test
+	void aShortRowsBackgroundEndsAtItsLastCell() {
+		assertEquals(List.of(new BoxListLayout.Rect(221, 111, 283, 131)),
+			BoxListLayout.of(WIDTH, HEIGHT, 3, CONTROLS_TOP).backgrounds());
+		assertEquals(List.of(), BoxListLayout.of(WIDTH, HEIGHT, 0, CONTROLS_TOP).backgrounds());
+	}
+
+	@Test
 	void countsKeepToThreeCharacters() {
 		assertEquals("7", BoxListLayout.count(7));
 		assertEquals("999", BoxListLayout.count(999));

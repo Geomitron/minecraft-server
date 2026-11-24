@@ -1,5 +1,6 @@
 package dev.buildingplanner.client;
 
+import dev.buildingplanner.input.BoxPurpose;
 import dev.buildingplanner.input.MouseMode;
 import dev.buildingplanner.input.RepeatSpeed;
 import dev.buildingplanner.look.SmallText;
@@ -93,7 +94,7 @@ public final class RadialMenuWidgets {
 				BuildingPlannerClient.config())));
 		widgets.add(button(SHOW_HIDE_SLOT, BuildingPlannerClient.SHOW_HIDE,
 			() -> BuildingPlannerClient.ghostsShown() ? SHOWN : HIDDEN, () -> false, BuildingPlannerClient::toggleGhosts));
-		widgets.add(button(COPY_SLOT, "copy", COPY, () -> BuildingPlannerClient.drawingBoxFor(BoxDraw.Purpose.COPY),
+		widgets.add(button(COPY_SLOT, "copy", COPY, () -> BuildingPlannerClient.drawingBoxFor(BoxPurpose.COPY),
 			BuildingPlannerClient::copy));
 		widgets.add(button(PASTE_SLOT, "paste", PASTE,
 			() -> BuildingPlannerClient.mouseMode() == MouseMode.COPY_AT_AIM, BuildingPlannerClient::paste));
@@ -101,7 +102,7 @@ public final class RadialMenuWidgets {
 		widgets.add(button(BLOCK_MIX_SLOT, BuildingPlannerClient.BLOCK_MIX, () -> RANDOMIZER_BAG, () -> false,
 			BuildingPlannerClient::blockMix));
 		widgets.add(button(MATERIAL_LIST_SLOT, "material_list", MATERIAL_LIST,
-			() -> BuildingPlannerClient.drawingBoxFor(BoxDraw.Purpose.MATERIAL_LIST), BuildingPlannerClient::materialList));
+			() -> BuildingPlannerClient.drawingBoxFor(BoxPurpose.MATERIAL_LIST), BuildingPlannerClient::materialList));
 		widgets.add(button(MATERIAL_LISTS_SLOT, "material_lists", BOOK_AND_QUILL, () -> false,
 			BuildingPlannerClient::materialLists));
 		return widgets;

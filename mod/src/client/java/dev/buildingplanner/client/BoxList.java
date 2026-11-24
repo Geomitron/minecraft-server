@@ -1,5 +1,6 @@
 package dev.buildingplanner.client;
 
+import dev.buildingplanner.input.BoxPurpose;
 import dev.buildingplanner.layer.BoxCount;
 import dev.buildingplanner.layer.DeleteMarks;
 import dev.buildingplanner.layer.GhostErase;
@@ -36,7 +37,7 @@ final class BoxList {
 	record Entry(ItemStack item, int count) {
 	}
 
-	private BoxDraw.Purpose purpose;
+	private BoxPurpose purpose;
 	private BlockPos min;
 	private BlockPos max;
 	/** The marks last counted, and their version and the layer's then. */
@@ -72,7 +73,7 @@ final class BoxList {
 		purpose = box.purpose();
 		min = box.min();
 		max = box.max();
-		entries = entries(purpose == BoxDraw.Purpose.DELETE ? GhostErase.counts(layer, min, max)
+		entries = entries(purpose == BoxPurpose.DELETE ? GhostErase.counts(layer, min, max)
 			: BoxCount.of(min, max, layer, realSections(level), ghostsShown));
 	}
 
