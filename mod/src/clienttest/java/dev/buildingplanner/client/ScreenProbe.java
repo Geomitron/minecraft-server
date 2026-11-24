@@ -38,6 +38,9 @@ public final class ScreenProbe {
 	/** The same for the components. */
 	private static List<DrawnComponent> currentComponents = new ArrayList<>();
 	private static List<DrawnComponent> lastComponents = List.of();
+	/** The same for the tooltips set for the next frame, each its lines joined by spaces. */
+	private static List<String> currentTooltips = new ArrayList<>();
+	private static List<String> lastTooltips = List.of();
 
 	private ScreenProbe() {
 	}
@@ -52,12 +55,19 @@ public final class ScreenProbe {
 		currentComponents.add(new DrawnComponent(text, x, y, font.width(text)));
 	}
 
+	/** A tooltip of these lines is being set for the next frame. */
+	public static void tooltip(List<Component> lines) {
+		currentTooltips.add(lines.stream().map(Component::getString).collect(Collectors.joining(" ")));
+	}
+
 	/** A frame has been drawn. */
 	public static void frameDrawn() {
 		last = current;
 		current = new ArrayList<>();
 		lastComponents = currentComponents;
 		currentComponents = new ArrayList<>();
+		lastTooltips = currentTooltips;
+		currentTooltips = new ArrayList<>();
 	}
 
 	/**
@@ -106,6 +116,11 @@ public final class ScreenProbe {
 		double scale = mc.getWindow().getGuiScale();
 		return row.isEmpty() ? "none" : row.stream().map(d -> box(scale, d.x() - 2, d.y(), d.x() + d.width() + 2,
 			d.y() + FONT_HEIGHT) + " [" + d.text().getString() + "]").collect(Collectors.joining(" | "));
+	}
+
+	/** Each tooltip the last frame set, in the order set, separated by " | ", or none. */
+	static String tooltips() {
+		return lastTooltips.isEmpty() ? "none" : String.join(" | ", lastTooltips);
 	}
 
 	/** Each string drawn in the last frame, separated by " | ". */

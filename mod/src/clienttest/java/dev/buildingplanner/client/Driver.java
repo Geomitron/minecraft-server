@@ -56,6 +56,7 @@ import net.minecraft.commands.arguments.blocks.BlockStateParser;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.permissions.Permissions;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
@@ -906,6 +907,17 @@ public final class Driver implements ClientModInitializer {
 			case "drawntexts" -> {
 				// drawntexts: each string the last frame drew as plain text, separated by " | ".
 				return ScreenProbe.drawnTexts();
+			}
+			case "operator" -> {
+				// operator: whether the game counts the player an operator, as the radial menu asks before it adds
+				// "Functional Settings": "operator" or "not an operator".
+				return mc.player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER) ? "operator"
+					: "not an operator";
+			}
+			case "tooltips" -> {
+				// tooltips: each tooltip the last frame set (a radial menu button's hover text, say), its lines separated
+				// by spaces, the tooltips by " | ", or none.
+				return ScreenProbe.tooltips();
 			}
 			case "cornertext" -> {
 				// cornertext: the string the last frame drew at the screen's lower right, as Effortless Building's

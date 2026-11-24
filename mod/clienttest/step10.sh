@@ -192,7 +192,7 @@ check "and at GUI scale 4" radial_at 1920 1080 4
 drv 1 "window 854 480 2" "wait 20" > /dev/null
 
 # The menu's buttons' names, which texts lists after the sliders' labels.
-buttons="Show or hide ghost blocks | Block mix | Material list | Copy | Paste | Material lists | Delete"
+buttons="Show or hide ghost blocks | Copy | Paste | Delete | Block mix | Material list | Material lists"
 xdo 1 keydown Alt_L
 check "the radial menu shows both sliders at their first settings" eval 'drv 1 "await screen Build Modes" > /dev/null &&
 	[[ $(val 1 texts) == "Build speed: 5 blocks/s | Break speed: 3.33 blocks/s | $buttons" ]]'

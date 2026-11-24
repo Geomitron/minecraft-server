@@ -277,12 +277,12 @@ check "ghost blocks still show after the hover shots" eval '[[ $(val 1 ghosts) =
 check "and no box started" eval '[[ $(val 1 drawbox) == none* ]]'
 drv 1 "window 854 480 2" "wait 20" > /dev/null
 
-# Without a copy, the menu shows seven buttons, each with its hover text, at its middle from the menu's middle: show or
-# hide, Block mix and Material list in the row 39 above it, Copy, Paste and Material lists in the row 65 above it, at
-# the left, and Delete 91 above it, over Copy.
+# Without a copy, the menu shows seven buttons, each with its hover text, at its middle from the menu's middle, in the
+# columns of the wrench, undo and redo: show or hide 13 below it, under the wrench, Copy, Paste and Delete in the row 39
+# above it, and Block mix, Material list and Material lists in the row 65 above it.
 # Shot with the pointer on the menu's middle, over no button, then with the pointer on Block mix, for its hover text.
-slots="Show or hide ghost blocks [N] @ -157,-39 | Block mix [B] @ -131,-39 | Material list @ -105,-39 | \
-Copy @ -157,-65 | Paste @ -131,-65 | Material lists @ -105,-65 | Delete @ -157,-91"
+slots="Show or hide ghost blocks [N] @ -157,13 | Copy @ -157,-39 | Paste @ -131,-39 | Delete @ -105,-39 | \
+Block mix [B] @ -157,-65 | Material list @ -131,-65 | Material lists @ -105,-65"
 radial_open
 xdo 1 mousemove --window %w 427 240
 drv 1 "wait 10" "notoasts" "wait 5" "notoasts" "shot radial-no-copy" > /dev/null
@@ -301,6 +301,30 @@ drv 1 "wait 10" "notoasts" "shot radial-block-mix-hover" > /dev/null
 xdo 1 mousemove --window %w 5 5
 drv 1 "wait 5" > /dev/null
 check "letting the key go with the pointer moved off Block mix closes the menu and opens nothing" radial_let_go
+
+# Hook E34: under the wrench, where Effortless Building shows operators its "Functional Settings" button, the menu
+# shows the show or hide button alone, for Planner1 an operator and, made one no longer, not. With the pointer there,
+# the frame sets the show or hide button's hover text as its only tooltip, where the menu would set its own button's
+# after it. Planner2, made an operator for the moment, makes Planner1 one again.
+under_wrench() {
+	local tips
+	radial_open
+	radial_point "Show or hide ghost blocks"
+	drv 1 "wait 5" > /dev/null
+	tips=$(val 1 tooltips)
+	echo "  under the wrench, $(val 1 operator): tooltips $tips" >> /out/checks.log
+	xdo 1 mousemove --window %w 5 5
+	drv 1 "wait 5" > /dev/null
+	radial_let_go
+	[[ $tips == "Show or hide ghost blocks [N]" ]]
+}
+check "Planner1 is an operator" eval '[[ $(val 1 operator) == operator ]]'
+check "and the menu shows no \"Functional Settings\" under the wrench, only the show or hide button" under_wrench
+drv 1 "cmd op Planner2" "wait 10" "cmd deop Planner1" "wait 20" > /dev/null
+check "once Planner1 is no operator" eval '[[ $(val 1 operator) == "not an operator" ]]'
+check "the menu shows the show or hide button alone there too" under_wrench
+drv 2 "cmd op Planner1" "wait 10" "cmd deop Planner2" "wait 20" > /dev/null
+check "and Planner2 makes Planner1 an operator again" eval '[[ $(val 1 operator) == operator ]]'
 
 # Controls: Building Planner's keys, the eight of the copy and the one ghost block among them, and Effortless Building's
 # four show under the "Building Planner" heading, in the order Controls sorts them, and no raw key name. The driver's

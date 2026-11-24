@@ -116,10 +116,11 @@ final class EffortlessDriver {
 	 * each other, the speed sliders, and everything Effortless Building 4.3's {@code RadialMenu} draws, wherever the
 	 * pointer is and whichever mode is chosen. Its numbers are that class's: the ring's outer edge 65 from the middle,
 	 * the side buttons 20 across at {@code buttonDistance} 105, the left-hand ones in rows 13 above and below the
-	 * middle, each mode's options at 105 + 26 j right of the middle in rows -13 + 39 i, with their names 96 right and
-	 * -37 + 39 i down, a hovered mode's name 75 out along its slice, as {@code drawTexts} places it, its description 100
-	 * below the middle, and the "Effortless Building" mark in the bottom right corner. The menu has reached its full
-	 * size, as it does a moment after it opens.
+	 * middle (but for "Functional Settings" under the wrench, which hook E34 leaves out during a session), each mode's
+	 * options at 105 + 26 j right of the middle in rows -13 + 39 i, with their names 96 right and -37 + 39 i down, a
+	 * hovered mode's name 75 out along its slice, as {@code drawTexts} places it, its description 100 below the middle,
+	 * and the "Effortless Building" mark in the bottom right corner. The menu has reached its full size, as it does a
+	 * moment after it opens.
 	 */
 	static String radialConflicts(Screen screen) {
 		Font font = Minecraft.getInstance().font;
@@ -135,7 +136,7 @@ final class EffortlessDriver {
 					w.getX() + w.getWidth(), w.getY() + w.getHeight()));
 			}
 		}
-		for (int[] button : new int[][] {{-157, -13}, {-131, -13}, {-105, -13}, {-157, 13}, {-131, 13}, {-105, 13}}) {
+		for (int[] button : new int[][] {{-157, -13}, {-131, -13}, {-105, -13}, {-131, 13}, {-105, 13}}) {
 			theirs.add(new Box("Effortless Building's button at " + button[0] + "," + button[1], mx + button[0] - 10,
 				my + button[1] - 10, mx + button[0] + 10, my + button[1] + 10));
 		}

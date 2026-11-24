@@ -2071,9 +2071,14 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
 - Hidden ghost blocks stay hidden after a restart, until N shows them.
 - At 854 by 480, GUI scale 2, and at 1920 by 1080, GUI scales 2 and 4, the seven buttons meet nothing the menu draws
   in any mode (its ring, buttons, mode options, mode names, descriptions and corner text), the sliders, each other or
-  the screen's edges (the driver's `radialclear`), in their rows' slots (the driver's `slots`), each with its hover
-  text; each is shot, with the buttons' boxes in the log, and so is Delete's hover text. Shots taken 1 and 2 frames
-  after the menu opens show the buttons nearer the middle and smaller than when it's open, as the menu's own are. With
+  the screen's edges (the driver's `radialclear`), in their slots (the driver's `slots`: "Show or hide ghost blocks"
+  under the wrench, Copy, Paste and Delete in the row above it, "Block mix", "Material list" and "Material lists" in
+  the row above that), each with its hover text; each is shot, with the buttons' boxes in the log, and so is Delete's
+  hover text. With the pointer on "Show or hide ghost blocks", its hover text is the frame's only tooltip, with no
+  "Functional Settings" (hook E34), for Planner1 an operator and, once Planner1 makes Planner2 one and itself none,
+  not; Planner2 then makes Planner1 an operator again (the driver's `tooltips` and `operator`). Shots taken 1 and 2
+  frames after the menu opens show the buttons nearer the middle and smaller than when it's open, as the menu's own
+  are. With
   Effortless Building's mode Line, no mode segment shows selected while the copy is at the aim or a box is drawn, and
   Paste, Copy, "Material list" or Delete does; with the box ended, Line's segment does, and no button.
 - The menu's corner text reads "Building Planner", and Controls shows Building Planner's keys, the copy's eight among
