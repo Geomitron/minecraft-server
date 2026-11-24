@@ -2195,8 +2195,11 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   planks and stone that are built, and ghost blocks stay hidden. Litematica's list and the button's hover text are shot
   at 1920 by 1080, GUI scales 2 and 4. A box with no blocks opens an empty list.
 - The material list's screen shows "Refresh", "Hide available", "Info HUD", "Clear ignored", "Clear cache", "Save
-  list", "Saved lists" and "Multiplier", and no "Export", "Write to file" or "Litematica menu" (the driver's
-  `ListScreenProbe` reads the buttons' labels), at 854 by 480 and 1920 by 1080, GUI scale 2, each shot.
+  list", "Saved lists", "Close" and "Multiplier", and no "Export", "Write to file" or "Litematica menu" (the driver's
+  `ListScreenProbe` reads the buttons' labels), with "Close" ending 10 from the screen's right edge and near its
+  bottom, at 854 by 480 and 1920 by 1080, GUI scale 2, each shot. Pointing at the (i) icon (the driver's `infoicon`)
+  draws each line of Building Planner's text and none of Litematica's, shot at both sizes. "Close" closes the screen,
+  back to the game, as Escape does.
 - "Info HUD" shows the panel once the screen closes, with the list's rows in the screen's order and their counts, and
   the label reads "Info HUD: ON"; with the multiplier at 4 the heading and every count change as the screen's do;
   sorting by "Missing" on the screen reorders the panel; "Hide available" leaves out the rows it hides on the screen,
@@ -2212,9 +2215,9 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   "+4 more", with the panel's bottom above the hotbar's top. It's shot at those three sizes, and at 854 by 480 with the
   multiplier at 2 ("Material list ×2"); a box with no blocks shows "No blocks to list.", which is shot too.
 - "Save list" with the name "Planks" keeps the list; "Saved lists" shows "Last counted" first, then "Planks", with
-  their sizes. A new box replaces "Last counted" and leaves "Planks"; opening "Planks" doesn't change "Last counted".
-  "Delete" asks again, then removes it. A name of 65 characters can't be typed, and "Save" is greyed out with an empty
-  name.
+  their sizes, and "Close" at the bottom right, below the rows, which goes back to the list's screen, as Escape does.
+  A new box replaces "Last counted" and leaves "Planks"; opening "Planks" doesn't change "Last counted". "Delete" asks
+  again, then removes it. A name of 65 characters can't be typed, and "Save" is greyed out with an empty name.
 - A box Planner1 counts is in `run/server/world/building-planner/material-lists/<Planner1's UUID>.dat` as
   `last_counted` within 30 seconds, and after the server and Planner1's game restart, Planner1's game has it as the
   current list (read by a driver probe).

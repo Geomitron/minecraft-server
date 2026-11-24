@@ -316,6 +316,10 @@ public final class Driver implements ClientModInitializer {
 				// <text>, or none.
 				return ListScreenProbe.malilibButton(mc, line.substring(a[0].length() + 1));
 			}
+			case "infoicon" -> {
+				// infoicon: the window position of the middle of the (i) icon on the open MaLiLib screen, or none.
+				return ListScreenProbe.infoIcon(mc);
+			}
 			case "widgets" -> {
 				// widgets: each shown widget on the open screen as its text (a text field's value as field=<value>),
 				// "(greyed out)" when it isn't active, and its window box, separated by " | ".

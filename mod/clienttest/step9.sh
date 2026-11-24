@@ -3449,22 +3449,73 @@ both_sizes_shot() {
 }
 
 # The box around the row and the stone beside it opens the list's screen again: "Save list" and "Saved lists" take the
-# place of "Export" and "Write to file", and "Litematica menu" is gone; the rest of Litematica's buttons and the
-# multiplier stay. Shot at 854 by 480 and 1920 by 1080, GUI scale 2.
+# place of "Export" and "Write to file", and "Close" the place of "Litematica menu", at the bottom right, 10 from the
+# screen's right edge as Litematica places that button; the rest of Litematica's buttons and the multiplier stay. Shot
+# at 854 by 480 and 1920 by 1080, GUI scale 2.
 drv 1 "cmd tp @s 24.5 -51 -4.5 180 30" "wait 40" "fly true" > /dev/null
 radial_open
 radial_point "Material list"
 radial_let_go
 material_box
-buttons_re='^Refresh,Hide available: (ON|OFF),Info HUD: (ON|OFF),Clear ignored,Clear cache,Save list,Saved lists$'
+buttons_re='^Refresh,Hide available: (ON|OFF),Info HUD: (ON|OFF),Clear ignored,Clear cache,Save list,Saved lists,Close$'
+# close_at <buttons or widgets> <window width> <window height>: Close's box in the list ends 20 from the window's right
+# edge (10 at GUI scale 2) and in its bottom 60 pixels.
+close_at() {
+	local x y bw bh
+	read -r x y bw bh <<< "$(sed -E 's/.*Close: ([0-9]+ [0-9]+ [0-9]+ [0-9]+).*/\1/' <<< "$1")"
+	((x + bw == $2 - 20 && y + bh <= $3 && y + bh > $3 - 60))
+}
 for size in "854 480" "1920 1080"; do
 	read -r w h <<< "$size"
 	drv 1 "window $w $h 2" "wait 20" "notoasts" "wait 5" "shot material-list-buttons-${w}x$h-gui2" > /dev/null
 	echo "  material-list-buttons-${w}x$h-gui2 buttons: $(val 1 malilibbuttons)" >> /out/checks.log
-	check "at $w by $h, the list's screen shows Save list and Saved lists, and no Export, Write to file or Litematica menu" \
+	check "at $w by $h, the list's screen shows Save list, Saved lists and Close, and no Export, Write to file or Litematica menu" \
 		eval '[[ $(mat_labels) =~ $buttons_re ]] && [[ $(val 1 drawntexts) == *"Multiplier:"* ]]'
+	check "and Close sits at the bottom right" eval 'close_at "$(val 1 malilibbuttons)" $w $h'
 done
 drv 1 "window 854 480 2" "wait 20" > /dev/null
+
+# The (i) icon beside "Multiplier" shows Building Planner's text, one line a point, in place of Litematica's. Pointed
+# at, it's shot at 854 by 480 and 1920 by 1080, GUI scale 2.
+info_lines=("Counts the ghost blocks in the box you drew."
+	"Total: how many of each block the ghost blocks use."
+	"Missing: how many are still to place, where there's air or a different block."
+	"Available: how many you carry."
+	"Info HUD: shows the missing blocks on screen while you build."
+	"Save list keeps this list on the server. Saved lists opens the lists you kept."
+	"The radial menu's Material lists button opens the current list again.")
+# info_shown: the last frame drew each of the (i) text's lines, and none of Litematica's.
+info_shown() {
+	local texts line
+	texts=$(val 1 drawntexts)
+	for line in "${info_lines[@]}"; do
+		[[ $texts == *"$line"* ]] || return 1
+	done
+	[[ $texts != *"Material List hotkey"* ]]
+}
+# The window, as large as the virtual screen at 1920 by 1080, moves to the screen's corner for that size, so the pointer
+# reaches the icon at its top right; it goes back where it was after.
+window_at=$(xdo 1 getwindowgeometry --shell %w | sed -nE 's/^[XY]=//p' | tr '\n' ' ')
+for size in "854 480" "1920 1080"; do
+	read -r w h <<< "$size"
+	drv 1 "window $w $h 2" "wait 20" "notoasts" > /dev/null
+	[[ $w == 1920 ]] && xdo 1 windowmove %w 0 0 > /dev/null
+	xdo 1 mousemove --window %w $(val 1 infoicon) > /dev/null
+	drv 1 "wait 10" "shot material-list-info-${w}x$h-gui2" > /dev/null
+	echo "  material-list-info-${w}x$h-gui2 texts: $(val 1 drawntexts)" >> /out/checks.log
+	check "at $w by $h, pointing at the (i) icon shows Building Planner's text, one line a point" info_shown
+	xdo 1 mousemove --window %w 5 5 > /dev/null
+done
+if [[ -n $window_at ]]; then xdo 1 windowmove %w $window_at > /dev/null; fi
+drv 1 "window 854 480 2" "wait 20" > /dev/null
+
+# "Close" closes the list's screen as Escape does: opened from the game, back to the game.
+mat_click Close
+check "Close closes the list's screen, back to the game" drv 1 "await noscreen"
+drv 1 "openlist" "await screen Material list for the blocks in the box" "wait 10" > /dev/null
+keys 1 key Escape
+check "as Escape does" drv 1 "await noscreen"
+drv 1 "openlist" "await screen Material list for the blocks in the box" "wait 10" > /dev/null
 
 # The material list panel. "Info HUD" on the list's screen turns it on, and it shows once the screen closes, in the
 # top-left corner, with the list's rows in the screen's order. The list here is the row and the stone beside it: 20 stone
@@ -3701,6 +3752,25 @@ echo "  saved lists: $(val 1 savedlists)" >> /out/checks.log
 check "every row has Open, and every row but Last counted has Delete" eval \
 	'[[ $(val 1 widgets | grep -o "Open: " | wc -l) == 4 && $(val 1 widgets | grep -o "Delete: " | wc -l) == 3 ]]'
 both_sizes_shot saved-lists
+# rows_above_close <widgets>: every row's Open button ends above Close's top.
+rows_above_close() {
+	local close_top lowest
+	close_top=$(sed -E 's/.*Close: [0-9]+ ([0-9]+) .*/\1/' <<< "$1")
+	lowest=$(grep -oE "Open: [0-9]+ [0-9]+ [0-9]+ [0-9]+" <<< "$1" | awk '{ print $3 + $5 }' | sort -n | tail -1)
+	((lowest < close_top))
+}
+check "Saved lists has Close at the bottom right, below its rows" eval \
+	'widgets=$(val 1 widgets) && close_at "$widgets" 854 480 && rows_above_close "$widgets"'
+# "Close" goes back to the list's screen it opened from, as Escape does.
+widget_click 0 Close
+check "Close on Saved lists goes back to the list's screen" \
+	drv 1 "await screen Material list for the blocks in the box"
+mat_click "Saved lists"
+drv 1 "await screen Saved lists" > /dev/null
+keys 1 key Escape
+check "as Escape does" drv 1 "await screen Material list for the blocks in the box"
+mat_click "Saved lists"
+drv 1 "await screen Saved lists" "wait 5" > /dev/null
 
 # "Delete" asks again, then deletes; the screen follows the index the server sends back.
 widget_click 0 Delete

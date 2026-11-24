@@ -1,6 +1,7 @@
 package dev.buildingplanner.client;
 
 import fi.dy.masa.litematica.gui.GuiMaterialList;
+import fi.dy.masa.malilib.gui.GuiBase;
 import fi.dy.masa.malilib.gui.button.ButtonBase;
 import fi.dy.masa.malilib.gui.button.ButtonGeneric;
 import fi.dy.masa.malilib.gui.button.IButtonActionListener;
@@ -11,10 +12,14 @@ import net.minecraft.network.chat.Component;
 
 /**
  * Hook L10's buttons on Litematica's material list screen for Building Planner's list: "Save list" and "Saved lists"
- * in place of "Export" and its export type button. Litematica names a button's type only in the listener it gives it,
- * a record of its own, whose {@code type} this reads.
+ * in place of "Export" and its export type button, and "Close" in place of "Litematica menu". Litematica names a
+ * button's type only in the listener it gives it, a record of its own, whose {@code type} this reads. Hook L12's text
+ * for the screen's (i) icon is here too.
  */
 public final class MaterialListButtons {
+	/** Building Planner's text for the screen's (i) icon (hook L12), in place of Litematica's. */
+	public static final String INFO = "buildingplanner.info.material_list";
+
 	/** The gap Litematica leaves between the buttons of a row. */
 	private static final int GAP = 1;
 
@@ -50,6 +55,23 @@ public final class MaterialListButtons {
 			return true;
 		}
 		return false;
+	}
+
+	/**
+	 * For Building Planner's list, takes the place of the "Litematica menu" button the screen is about to add:
+	 * "Close", sized as Litematica sizes that button (its label's width and 20) and with the same right edge, at the
+	 * bottom right. It closes the screen as Escape does, back to the screen it opened over, if any. Returns whether the
+	 * menu button is left out.
+	 */
+	public static boolean replaceMenu(GuiMaterialList gui, ButtonBase menu) {
+		if (!ours(gui)) {
+			return false;
+		}
+		String label = Component.translatable("buildingplanner.ui.material_list.close").getString();
+		int width = Minecraft.getInstance().font.width(label) + 20;
+		ButtonGeneric button = new ButtonGeneric(menu.getX() + menu.getWidth() - width, menu.getY(), width, 20, label);
+		gui.addButton(button, (pressed, mouseButton) -> GuiBase.openGui(gui.getParent()));
+		return true;
 	}
 
 	/** Adds a button as Litematica sizes its own (its label's width and 10), and returns its right edge. */
