@@ -150,7 +150,10 @@ Building Planner as built, from inbox requests 469, 473, 477, 482, 483, 485, 570
 - Before the player guide's section on planning builds is published, Geo walks through every planning feature in the
   game from a runbook with room for feedback (Geo, inbox request 578: "Build a runbook to teach me how it works, walk
   me through using all the features we have available, with space for me to provide feedback and suggestions on how to
-  adjust the experience of using the mod. Once I'm happy with it, we can publish a guide on how to use it.").
+  adjust the experience of using the mod. Once I'm happy with it, we can publish a guide on how to use it."). Geo
+  approved the section "Build Plans" for Building Planner 0.7.0 as drafted (578 revision 2, no edits). It goes to
+  players with 0.7.0's release, so the guide never describes a version players don't have, with the texts from 0.7.0's
+  step 15 in Geo's wording.
 
 From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
 
@@ -564,7 +567,8 @@ where a step says so. 0.7.0 keeps protocol version 5 and changes nothing on the 
     release commit; the GitHub release `building-planner-0.7.0`; then, in one sitting, the server (a backup of the
     world named for 0.7.0, the jar in `mods/` in place of 0.6.0's, and a restart whose log shows Building Planner
     start with no error) and the pack's push to `main`, so both run one version. "Current setup" in this plan is
-    updated to 0.7.0 and the new backup, and the README and the guide are checked against what 0.7.0 changes. Geo's
+    updated to 0.7.0 and the new backup, the README is checked against what 0.7.0 changes, and the guide's section
+    "Build Plans" is replaced by the one Geo approved in 578 revision 2, with step 15's texts in Geo's wording. Geo's
     walkthrough of 0.7.0 follows, once every change Geo asked for in it is approved and released (815 [c1]).
 
 ## Design work: Building Planner
