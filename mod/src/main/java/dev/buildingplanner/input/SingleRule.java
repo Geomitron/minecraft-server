@@ -35,15 +35,6 @@ public final class SingleRule {
 	}
 
 	/**
-	 * Whether the block is drawn at the aim (hook E30): it follows the aim, unlocked, in Single, and in Zoop and Vertical
-	 * before their first click (1128 Q1 A), so the preview draws it where a right click would place it, or where the
-	 * row would start, even as a set of one block.
-	 */
-	public static boolean drawnAtAim(State state) {
-		return !state.locked() && !state.rowFixed();
-	}
-
-	/**
 	 * Whether the place click is Building Planner's: while the block is locked, which places it where it's locked, or in
 	 * Zoop or Vertical, whose clicks fix and place a row. Following the aim in Single, it's Effortless Building's.
 	 */

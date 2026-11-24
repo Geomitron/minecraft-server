@@ -2314,9 +2314,12 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
 - Turning in every mode (step 17): with oak stairs turned a quarter turn in Single, to face east, the turn stays after
   choosing Line in the radial menu, and a Line of 5 places 5 stairs facing east, on both clients, as its preview drew
   each of them (the driver's `previewstate`). In Line, a notch up with Left Ctrl held before the first click turns the
-  stairs to face south, which the preview draws from the first click, since before it the preview draws no set of one
-  block; another notch between the two clicks turns the preview at once, to face west, and the Line places facing
-  west. One shape of the turned stairs in each of Wall, Floor, Cube, Diagonal Line, Diagonal Wall, Slope Floor,
+  stairs to face south. Before the first click, in Wall, Cube, Sphere and Line, the preview draws one stair at the aim,
+  beside the aimed face, facing south, and nothing else (the driver's `preview`); aiming at the sky, it draws nothing;
+  with Effortless Building's array of 2 copies one block apart upward, it draws the stair and its 2 copies once each.
+  The first click's stair is shot in Wall and in Cube at 854 by 480 and 1920 by 1080, GUI scale 2, with its box in the
+  window logged (the driver's `screenbox`). Another notch between the two clicks turns the preview at once, to face
+  west, and the Line places facing west. One shape of the turned stairs in each of Wall, Floor, Cube, Diagonal Line, Diagonal Wall, Slope Floor,
   Circle, Cylinder and Sphere has every ghost block in its box facing west (the driver's `boxstates`, with each
   shape's count in the log); a Floor of oak slabs flipped to the top half has every slab's top half. With Effortless
   Building's mirror across x −52, a Line of 4 turned stairs has its mirror image's stairs facing east, in the preview
@@ -2562,9 +2565,7 @@ The one ghost block's rules have unit tests as pure functions (steps 14 to 17). 
 controls are active (session, Single mode, no mouse mode, an item that places a block), which clicks are Building
 Planner's in each state, and when the turning controls are active (`SingleRule.turning`: every mode but Disable,
 where step 18 adds `DisableTurn`'s rule; none without a session, with a mouse mode on, with an item that places no
-block, or during a shape drawn with the break click, but during one drawn with the place click), and when Single's
-block is drawn at the aim (`SingleRule.drawnAtAim`: following the aim, in Single and in Zoop and Vertical before the
-first click, and not while locked or with a row fixed).
+block, or during a shape drawn with the break click, but during one drawn with the place click).
 `CopyRowTest` covers a 1×1×1 row (step 15):
 every block to the aim east, north and up, the block alone when aimed at itself, and up to 32 blocks, where the copy's
 row stops at 10. `BlockTurnTest` (step 16) covers a

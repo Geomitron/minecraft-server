@@ -520,15 +520,15 @@ public final class EffortlessShapes {
 	}
 
 	/**
-	 * Hook E30: the preview skips a set of one block while no shape is under way, so Effortless Building's Single mode
-	 * draws nothing for the block at the aim; the locked block, which may be far from the aim, a row of one, and the
-	 * block following the aim, in Single and in Zoop and Vertical before their first click, are drawn, and so is
-	 * Disable's block while its preview shows. A set of copies, with the mirror or array on, is already more than
-	 * one block and is drawn once.
+	 * Hook E30: the preview skips a set of one block while no shape is under way, so it would draw nothing before a
+	 * mode's first click; the locked block, which may be far from the aim, and a row of one are drawn, and so is the
+	 * first click's block at the aim in every mode but Disable while the turning controls' conditions hold
+	 * ({@link BuildingPlannerClient#shapesTakeTurn}), and Disable's block while its preview shows. A set of copies,
+	 * with the mirror or array on, is already more than one block and is drawn once.
 	 */
 	public static int previewSize(int size) {
 		boolean drawn = BuildingPlannerClient.shownSingle() != null
-			|| size == 1 && (BuildingPlannerClient.singleAtAim() || BuildingPlannerClient.disablePreviewOn());
+			|| size == 1 && (BuildingPlannerClient.shapesTakeTurn() || BuildingPlannerClient.disablePreviewOn());
 		return size <= 1 && drawn ? 2 : size;
 	}
 

@@ -493,14 +493,6 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	}
 
 	/**
-	 * Whether the one ghost block follows the aim with its controls active, in Single or in Zoop or Vertical before the
-	 * first click ({@link SingleRule#drawnAtAim}), so hook E30 draws it there.
-	 */
-	static boolean singleAtAim() {
-		return singleActive() && SingleRule.drawnAtAim(session.single().state());
-	}
-
-	/**
 	 * Whether the turning controls are active (Left Ctrl with the wheel and the middle click, see "One ghost block":
 	 * "Turning and flipping"): in the modes whose shapes take the turn ({@link #shapesTakeTurn}), or in Disable
 	 * ({@link #disableTurning}).

@@ -57,17 +57,6 @@ class SingleRuleTest {
 	}
 
 	@Test
-	void theBlockFollowingTheAimIsDrawnAtTheAimBeforeARowStarts() {
-		assertTrue(SingleRule.drawnAtAim(new SingleRule.State(CopyMode.SINGLE, false, false)));
-		assertTrue(SingleRule.drawnAtAim(new SingleRule.State(CopyMode.ZOOP, false, false)));
-		assertTrue(SingleRule.drawnAtAim(new SingleRule.State(CopyMode.VERTICAL, false, false)));
-		assertFalse(SingleRule.drawnAtAim(new SingleRule.State(CopyMode.SINGLE, true, false)));
-		assertFalse(SingleRule.drawnAtAim(new SingleRule.State(CopyMode.ZOOP, true, false)));
-		assertFalse(SingleRule.drawnAtAim(new SingleRule.State(CopyMode.ZOOP, false, true)));
-		assertFalse(SingleRule.drawnAtAim(new SingleRule.State(CopyMode.VERTICAL, false, true)));
-	}
-
-	@Test
 	void lockedBothClicksAreBuildingPlanners() {
 		SingleRule.State state = new SingleRule.State(CopyMode.SINGLE, true, false);
 		assertTrue(SingleRule.takesPlace(state));

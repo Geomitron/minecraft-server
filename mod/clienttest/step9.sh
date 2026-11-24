@@ -2318,15 +2318,40 @@ check "placed, the Line's 5 stairs face east, on both clients" eval \
 	box_all 1 -63 -60 -40 -57 -60 -40 "facing=east," 5 && drv 2 "await block -58 -60 -40 minecraft:oak_stairs" > /dev/null &&
 	box_all 2 -63 -60 -40 -57 -60 -40 "facing=east," 5'
 shots line-turned-stairs
-# In Line, a notch up before the first click turns the stairs to face south; Effortless Building's preview draws no set
-# of one block before a shape, so the preview shows the turn once the first click draws it. Another notch between the
-# clicks turns the preview at once, and the Line places with it.
+# In Line, a notch up before the first click turns the stairs to face south. Before the first click, in every mode but
+# Disable, the preview draws the first click's block at the aim, beside the aimed face, as it will be placed (hook
+# E30), and nothing while aiming at nothing; the array's copies draw as before. Another notch between the clicks turns
+# the preview at once, and the Line places with it.
 hold_ctrl
 xdo 1 click 4
 let_go_ctrl
 check "in Line, a notch up with Left Ctrl held before the first click turns the stairs to face south" \
 	turn_is "facing=south,half=bottom"
 aim 1 -62 -60 -42
+# first_block_is <mode>: in that mode, the preview draws only the stair at -62 -60 -42, facing south.
+first_block_is() {
+	drv 1 "ebmode $1" "wait 10" > /dev/null &&
+		echo "  first click's block in $1: $(val 1 preview)" >> /out/checks.log &&
+		[[ $(val 1 preview) == "-62,-60,-42" ]] &&
+		[[ $(val 1 "previewstate -62 -60 -42") == "minecraft:oak_stairs["*"facing=south,half=bottom,"* ]]
+}
+for mode in WALL CUBE SPHERE LINE; do
+	check "in $mode, before the first click, the preview draws one stair at the aim, facing south" first_block_is $mode
+	if [[ $mode == WALL || $mode == CUBE ]]; then
+		name=first-click-${mode,,}
+		drv 1 "wait 210" "notoasts" "wait 5" "shot $name-854x480" > /dev/null
+		echo "  $name-854x480: stair $(val 1 "screenbox -62 -60 -42 -62 -60 -42")" >> /out/checks.log
+		drv 1 "window 1920 1080 2" "wait 20" "notoasts" "wait 5" "shot $name-1920x1080" > /dev/null
+		echo "  $name-1920x1080: stair $(val 1 "screenbox -62 -60 -42 -62 -60 -42")" >> /out/checks.log
+		drv 1 "window 854 480 2" "wait 20" > /dev/null
+	fi
+done
+drv 1 "lookat -58.5 100 -34.6" "wait 10" > /dev/null
+check "aiming at the sky, the preview draws nothing" eval '[[ $(val 1 preview) == none ]]'
+aim 1 -62 -60 -42
+check "with the array of 2 copies one block apart upward, it draws the stair and its 2 copies once each" eval \
+	'drv 1 "ebarray 2 0 1 0" "wait 10" "await preview -62,-60,-42 -62,-59,-42 -62,-58,-42" > /dev/null'
+drv 1 "ebarray 0" "wait 10" > /dev/null
 use_click 1
 aim 1 -58 -60 -42
 check "the first click's preview draws the stairs facing south" eval \
