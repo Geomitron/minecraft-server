@@ -259,7 +259,7 @@ Minecraft 26.3, read in the client jar Loom maps (`minecraft-clientonly-deobf-26
 
 | # | File, method | Hook | Purpose |
 |---|---|---|---|
-| M1 | `Minecraft.java`, `startAttack()` | `@Inject` at head, cancellable, returning false | While a box is drawn, the left click sets its next corner; while the copy is at the aim, it drops the copy's set, or puts the copy away when no set is fixed (`OPEN:` the Zoop request, Q2); in Delete, it starts the box with Left Ctrl held, and the one-second hold that erases the marks without it. None attacks or breaks. `handleKeybinds` calls it once for each press of the attack key. |
+| M1 | `Minecraft.java`, `startAttack()` | `@Inject` at head, cancellable, returning false | While a box is drawn, the left click sets its next corner; while the copy is at the aim, it drops the copy's set, or puts the copy away when no set is fixed (1238 Q2 A); in Delete, it starts the box with Left Ctrl held, and the one-second hold that erases the marks without it. None attacks or breaks. `handleKeybinds` calls it once for each press of the attack key. |
 | M2 | `Minecraft.java`, `startUseItem()` | `@Inject` at head, cancellable | While the copy is at the aim, the right click pastes it, fixes its set's first copy, or pastes the set; while a box is drawn, it leaves that mode and uses nothing. In Delete it clears the marks, or leaves the mode when there are none. `handleKeybinds` also calls `startUseItem` every 4 ticks while the use key stays down (`rightClickDelay`), so the use key does nothing more until it's let go. |
 | M3 | `Minecraft.java`, `continueAttack(boolean)` | `@Inject` at head, cancellable | Holding the left click breaks nothing while a box is drawn, the copy is at the aim, or Delete is on. In Delete, the client tick reads the attack key's state each tick (`KeyMapping.isDown`) for the box's second corner, which it sets when the key is let go, and for the erase's hold. |
 | M4 | `Minecraft.java`, `pickBlockOrEntity()` | `@Inject` at head, cancellable | While the copy is at the aim, the middle click (the pick block key) mirrors the copy; while a box is drawn or Delete is on, it does nothing. While the turning controls are active (every mode, Disable's as "Turning real blocks in Disable" describes), with a block in hand that flips and Minecraft's sprint key held, it flips the block (see "Locking and the first click"). |
@@ -694,7 +694,7 @@ hooks M1 to M5 take the clicks and the wheel. The build modes' lock (see "Lockin
 mode: it acts only while no mouse mode is on. A mode ends when the player:
 
 - right-clicks (M2) during a box, or in Delete once no ghost block is marked;
-- left-clicks (M1) with the copy at the aim and no set fixed (`OPEN:` the Zoop request, Q2);
+- left-clicks (M1) with the copy at the aim and no set fixed (1238 Q2 A);
 - presses Esc, one step at a time (see "Esc");
 - chooses a mode in the radial menu (E21), even the one they had;
 - shows or hides ghost blocks;
@@ -736,7 +736,7 @@ The copy at the aim's line names its mode and its keys, as the player has them b
 words that stay clear, and one name for each action, as in Geo's edits: "Too many blocks", the panel's column headings
 "All", "Hold" and "Need", and "[Arrow keys + Page Up/Down: nudge]", where "nudge" names what all six keys do. R's
 control names what it changes, "Mode", the key's name being "Change copy mode" (proposed). The copy's close is its
-left click, as `OPEN:` the Zoop request, Q2, recommends:
+left click (1238 Q2 A):
 
 - Off, following the aim: "[Right-click: paste][Scroll: turn][Middle-click: mirror][H: Lock (Off)][R: Mode
   (Off)][Esc/Left-click: close]";
@@ -803,8 +803,8 @@ pause"). Hook M7 runs the first step that applies (`EscSteps`, a pure function o
 1. a box for Copy or the material list ends, as its right click ends it;
 2. in Delete: a box being drawn with Left Ctrl ends and marks nothing; otherwise the marks clear, as the right click
    clears them; with no marks, Delete ends;
-3. the copy at the aim: its set, after its first click, drops, and the copy follows the aim in the same mode (`OPEN:`
-   the Zoop request, Q3); with no set fixed, the copy is put away;
+3. the copy at the aim: its set, after its first click, drops, and the copy follows the aim in the same mode (1238
+   Q3 A); with no set fixed, the copy is put away;
 4. a shape under way in a build mode is cancelled, as Effortless Building's left click cancels it
    (`BuildPipelineClient.cancelCurrentSequence`), keeping a position locked before its first click, as that click
    does;
@@ -1218,7 +1218,7 @@ forgets the pastes.
   at the world position where Litematica draws it, with its state mirrored and turned as the copy is, so the server's
   order, the glow for other players, undo, redo and the block cap work as they do for shapes. The copy's empty space
   leaves the layer's blocks as they are. The copy stays at the aim for more pastes, and a locked copy unlocks once
-  pasted, as a build mode's lock ends once its blocks are placed (Geo's comment c5; `OPEN:` the locking request, Q2).
+  pasted, as a build mode's lock ends once its blocks are placed (Geo's comment c5; 1239 Q2 A).
 - Each notch of the scroll wheel (M5) gives the copy a quarter turn around its middle: clockwise, seen from above, for
   a notch up, and counterclockwise for a notch down, as Satisfactory's "Rotate Hologram Right" is the wheel up (806 Q2
   B).
@@ -1243,7 +1243,7 @@ forgets the pastes.
 - A left click (M1), Esc, or anything else that ends the mode, puts the copy away: Building Planner removes its
   placement from Litematica and keeps the schematic, with its turn and mirror, as the most recent copy. During a set of
   copies, after its first click, a left click or Esc drops the set and leaves the copy at the aim, as Effortless
-  Building's left click cancels a shape (`OPEN:` the Zoop request, Q2 and Q3).
+  Building's left click cancels a shape (1238 Q2 A, Q3 A).
 
 **The copy's mode.** The copy's mode starts as Off each time the game starts and stays as the player last set it
 while the game runs, as Satisfactory keeps a build mode until R changes it. Line, Wall and Floor lay copies as
@@ -1263,8 +1263,8 @@ follows the aim again for a new set.
 - Floor: a grid of copies on the first copy's level, from the first copy to the copy that holds the block Effortless
   Building's Floor gives (`Floor.findFloor`).
 
-Each direction has up to 10 copies, as Satisfactory zoops up to 10, so a Wall or a Floor has up to 100 (`OPEN:` the
-Zoop request, Q4). `findLine`, `findWall` and `findFloor` use Effortless Building's reach (32 in survival, 200
+Each direction has up to 10 copies, as Satisfactory zoops up to 10, so a Wall or a Floor has up to 100 (1238 Q4
+A). `findLine`, `findWall` and `findFloor` use Effortless Building's reach (32 in survival, 200
 in creative) and aim from the camera (hooks E25 and E26); where they find no block, the copies stay as they were. A
 pure function (`CopyGrid`) turns the block they give into the number of copies along each direction, counting from
 the first copy's middle by the turned copy's size. Each copy's box joins the recent pastes the copy snaps to, as a
@@ -1360,7 +1360,7 @@ erases in Single and starts an erasing shape in the others, and its shapes, mirr
 and undo work as they do without the lock (c5: "the lock is just about setting the position of that first item; the
 rest of what you can do should continue to work normally"). Single places one ghost block a click, as Effortless
 Building's Single does; Line lays a row of blocks along any of the three directions, up and down into open air too,
-so Single has no row modes of its own (Geo's comment c6; `OPEN:` the Zoop request, Q1). Left Ctrl doesn't
+so Single has no row modes of its own (Geo's comment c6; 1238 Q1 A). Left Ctrl doesn't
 line the block up: it turns and flips the block instead (below), in every one of Effortless Building's modes (1009 Q2
 C), and in Disable the real block a right click places while Left Ctrl is held (1029 Q1 A, see "Turning real blocks
 in Disable").
@@ -1406,7 +1406,7 @@ they are, as without the lock.
 
 The lock ends once the click that finishes a shape has placed it (c5: "Once blocks have been placed after a lock, the
 block should no longer be locked"): in Single after each right click, and in the other modes after the shape's last
-click. A click that erases ends the lock too (`OPEN:` the locking request, Q1). Cancelling a shape with Effortless
+click. A click that erases ends the lock too (1239 Q1 A). Cancelling a shape with Effortless
 Building's left click keeps a position locked before the first click, so the player can start again from it. Hold to
 repeat in Single places the first block at the locked position and the rest where the player aims, since the lock
 ends with the first.
