@@ -76,7 +76,7 @@ public final class ControlsLine {
 
 	/**
 	 * The copy's keys, each by its name as the game gives it, or null while it has no key: "Lock or unlock", "Change
-	 * Zoop or Delete mode", the four nudges along the ground (forward, back, left and right), whether those four are on
+	 * copy mode", the four nudges along the ground (forward, back, left and right), whether those four are on
 	 * the arrow keys (Up, Down, Left and Right in that order), the nudges up and down, and Minecraft's sprint key, which
 	 * lines the copy up.
 	 */
@@ -85,11 +85,11 @@ public final class ControlsLine {
 	}
 
 	/**
-	 * The copy at the aim as its line tells it: its mode, whether it's locked, the number of copies in a zoop's fixed
-	 * row (0 before the first click), whether the player has pasted in this dimension (so the copy can line up with the
-	 * latest paste), and why the server would refuse its paste, or null.
+	 * The copy at the aim as its line tells it: its mode, whether it's locked, the number of copies in a fixed set (0
+	 * before the first click in Line, Wall or Floor), whether the player has pasted in this dimension (so the copy can
+	 * line up with the latest paste), and why the server would refuse its paste, or null.
 	 */
-	public record CopyState(CopyMode mode, boolean locked, int row, boolean pasted, CopyColour.Refusal refusal) {
+	public record CopyState(CopyMode mode, boolean locked, int set, boolean pasted, CopyColour.Refusal refusal) {
 	}
 
 	/**
@@ -296,24 +296,23 @@ public final class ControlsLine {
 	}
 
 	/**
-	 * The copy at the aim's line. With a zoop's row fixed: the mode, the right click that pastes the row (or why it
-	 * can't), and Esc and the left click, which drop the row. Otherwise: the mode, or "Locked", the right click (paste,
-	 * or why it can't, in Single; in Zoop and Vertical the reason if there is one, then setting the row's start), the
-	 * nudge keys while it's locked, the wheel, the middle click, the sprint key while it's unlocked and there's a paste
-	 * to line up with (a locked copy doesn't line up), the lock key, the mode key, and Esc and the left click, which
-	 * close it. A key with no key bound is left out.
+	 * The copy at the aim's line (see "Building Planner's mouse modes"): the mode outside Off, "Locked", or both, as the
+	 * label; the right click (in Off the paste; in Line, Wall and Floor before the first click setting the start, and
+	 * after it the set's paste with its count), with the reason in red in the paste's place, or before setting the
+	 * start, while the copy is red; the nudge keys while it's locked; the wheel; the middle click; the sprint key while
+	 * the copy follows the aim and there's a paste to line up with (a locked copy, and a set's fixed first copy, don't
+	 * line up); the lock key with the lock's state; the mode key with the mode; and Esc and the left click, which close
+	 * the copy, or cancel the set after its first click. A key with no key bound is left out.
 	 */
 	public static Line copy(CopyState state, Keys keys) {
 		List<Text> rects = new ArrayList<>();
-		if (state.row() > 0) {
+		boolean set = state.set() > 0;
+		if (set) {
 			rects.add(state.refusal() != null ? refusal(state.refusal())
-				: hint(RIGHT, state.row() == 1 ? Translated.of(COPY + ".paste_row_one", Look.ACTION)
-					: Translated.of(COPY + ".paste_row", Look.ACTION, new Literal(String.valueOf(state.row())))));
-			rects.add(hint(ESC_LEFT, COPY + ".cancel"));
-			return labelled(modeName(state.mode()), rects);
-		}
-		if (state.mode() != CopyMode.SINGLE) {
-			// A zoop's first click still fixes the row while the copy is red, so it stays, after the reason.
+				: hint(RIGHT, state.set() == 1 ? Translated.of(COPY + ".paste_set_one", Look.ACTION)
+					: Translated.of(COPY + ".paste_set", Look.ACTION, new Literal(String.valueOf(state.set())))));
+		} else if (state.mode() != CopyMode.OFF) {
+			// The first click still fixes the first copy while the copy is red, so it stays, after the reason.
 			if (state.refusal() != null) {
 				rects.add(refusal(state.refusal()));
 			}
@@ -329,16 +328,16 @@ public final class ControlsLine {
 		}
 		rects.add(hint(SCROLL, COPY + ".turn"));
 		rects.add(hint(MIDDLE, COPY + ".mirror"));
-		if (!state.locked() && state.pasted() && keys.sprint() != null) {
+		if (!set && !state.locked() && state.pasted() && keys.sprint() != null) {
 			rects.add(hint(held(keys.sprint()), COPY + ".line_up"));
 		}
 		if (keys.lock() != null) {
-			rects.add(hint(new Literal(keys.lock()), state.locked() ? COPY + ".unlock" : COPY + ".lock"));
+			rects.add(hint(new Literal(keys.lock()), state.locked() ? SHAPE + ".lock_on" : SHAPE + ".lock_off"));
 		}
 		if (keys.mode() != null) {
-			rects.add(hint(new Literal(keys.mode()), MODE + ".zoop_mode"));
+			rects.add(hint(new Literal(keys.mode()), COPY + ".mode_" + state.mode().name().toLowerCase(Locale.ROOT)));
 		}
-		rects.add(hint(ESC_LEFT, COPY + ".put_away"));
+		rects.add(hint(ESC_LEFT, set ? COPY + ".cancel" : COPY + ".put_away"));
 		return labelled(title(state.mode(), state.locked()), rects);
 	}
 
@@ -390,13 +389,13 @@ public final class ControlsLine {
 		return rects.isEmpty() ? null : new Line(null, List.copyOf(rects));
 	}
 
-	/** The label of a line that follows the aim: the mode outside Single, "Locked" or both, or none. */
+	/** The label of the copy's line: the mode outside Off, "Locked" or both, or none. */
 	private static Text title(CopyMode mode, boolean locked) {
 		if (locked) {
-			return mode == CopyMode.SINGLE ? Translated.of(COPY + ".locked", Look.PLAIN)
+			return mode == CopyMode.OFF ? Translated.of(COPY + ".locked", Look.PLAIN)
 				: Translated.of(COPY + ".mode_locked", Look.PLAIN, modeName(mode));
 		}
-		return mode == CopyMode.SINGLE ? null : modeName(mode);
+		return mode == CopyMode.OFF ? null : modeName(mode);
 	}
 
 	/** The four nudges along the ground: "Arrow keys" while they're on them, otherwise their keys' names. */

@@ -43,8 +43,8 @@ class ControlsLineTest {
 	private static final Keys UNBOUND = new Keys(null, null, Arrays.asList(null, null, null, null), false, null, null,
 		null);
 	private static final String TURN_MIRROR = "[Scroll: turn][Middle-click: mirror]";
-	private static final String COPY_END = TURN_MIRROR + "[H: lock][R: Zoop mode][Esc/Left-click: close]";
-	private static final String LOCKED_END = TURN_MIRROR + "[H: unlock][R: Zoop mode][Esc/Left-click: close]";
+	private static final String COPY_END = TURN_MIRROR + "[H: Lock (Off)][R: Mode (Off)][Esc/Left-click: close]";
+	private static final String LOCKED_END = TURN_MIRROR + "[H: Lock (On)][R: Mode (Off)][Esc/Left-click: close]";
 	private static final String NUDGES = "[Arrow keys + Page Up/Down: nudge]";
 
 	private static JsonObject lang;
@@ -59,140 +59,146 @@ class ControlsLineTest {
 	}
 
 	@Test
-	void singleFollowingTheAim() {
-		assertEquals("[Right-click: paste]" + COPY_END, copy(state(CopyMode.SINGLE, false, 0, false, null), DEFAULT));
+	void offFollowingTheAim() {
+		assertEquals("[Right-click: paste]" + COPY_END, copy(state(CopyMode.OFF, false, 0, false, null), DEFAULT));
 	}
 
 	@Test
 	void afterAPasteHoldingTheSprintKeyLinesUp() {
-		assertEquals("[Right-click: paste]" + TURN_MIRROR + "[Hold Left Control: line up][H: lock][R: Zoop mode]"
-			+ "[Esc/Left-click: close]", copy(state(CopyMode.SINGLE, false, 0, true, null), DEFAULT));
+		assertEquals("[Right-click: paste]" + TURN_MIRROR + "[Hold Left Control: line up][H: Lock (Off)][R: Mode (Off)]"
+			+ "[Esc/Left-click: close]", copy(state(CopyMode.OFF, false, 0, true, null), DEFAULT));
 	}
 
 	@Test
 	void locked() {
 		assertEquals("Locked: [Right-click: paste]" + NUDGES + LOCKED_END,
-			copy(state(CopyMode.SINGLE, true, 0, false, null), DEFAULT));
+			copy(state(CopyMode.OFF, true, 0, false, null), DEFAULT));
 	}
 
 	@Test
 	void lockedTheSprintKeyLinesNothingUpSoTheLineLeavesItOut() {
 		assertEquals("Locked: [Right-click: paste]" + NUDGES + LOCKED_END,
-			copy(state(CopyMode.SINGLE, true, 0, true, null), DEFAULT));
-		assertFalse(copy(state(CopyMode.ZOOP, true, 0, true, null), DEFAULT).contains("line up"));
+			copy(state(CopyMode.OFF, true, 0, true, null), DEFAULT));
+		assertFalse(copy(state(CopyMode.LINE, true, 0, true, null), DEFAULT).contains("line up"));
 	}
 
 	@Test
-	void zoopAndVerticalBeforeTheFirstClick() {
-		assertEquals("Zoop: [Right-click: set the start]" + COPY_END,
-			copy(state(CopyMode.ZOOP, false, 0, false, null), DEFAULT));
-		assertEquals("Vertical: [Right-click: set the start]" + COPY_END,
-			copy(state(CopyMode.VERTICAL, false, 0, false, null), DEFAULT));
-		assertEquals("Zoop, locked: [Right-click: set the start]" + NUDGES + LOCKED_END,
-			copy(state(CopyMode.ZOOP, true, 0, false, null), DEFAULT));
-		assertEquals("Vertical, locked: [Right-click: set the start]" + NUDGES + LOCKED_END,
-			copy(state(CopyMode.VERTICAL, true, 0, false, null), DEFAULT));
+	void lineWallAndFloorBeforeTheFirstClick() {
+		assertEquals("Line: [Right-click: set the start]" + TURN_MIRROR
+			+ "[H: Lock (Off)][R: Mode (Line)][Esc/Left-click: close]",
+			copy(state(CopyMode.LINE, false, 0, false, null), DEFAULT));
+		assertEquals("Wall: [Right-click: set the start]" + TURN_MIRROR
+			+ "[H: Lock (Off)][R: Mode (Wall)][Esc/Left-click: close]",
+			copy(state(CopyMode.WALL, false, 0, false, null), DEFAULT));
+		assertEquals("Floor: [Right-click: set the start]" + TURN_MIRROR + "[Hold Left Control: line up]"
+			+ "[H: Lock (Off)][R: Mode (Floor)][Esc/Left-click: close]",
+			copy(state(CopyMode.FLOOR, false, 0, true, null), DEFAULT));
+		assertEquals("Line, locked: [Right-click: set the start]" + NUDGES + TURN_MIRROR
+			+ "[H: Lock (On)][R: Mode (Line)][Esc/Left-click: close]",
+			copy(state(CopyMode.LINE, true, 0, true, null), DEFAULT));
 	}
 
 	@Test
-	void afterTheFirstClickTheRowsPasteWithItsCount() {
-		assertEquals("Zoop: [Right-click: paste 4 copies][Esc/Left-click: cancel]",
-			copy(state(CopyMode.ZOOP, false, 4, true, null), DEFAULT));
-		assertEquals("Zoop: [Right-click: paste 1 copy][Esc/Left-click: cancel]",
-			copy(state(CopyMode.ZOOP, false, 1, true, null), DEFAULT));
-		assertEquals("Vertical: [Right-click: paste 1 copy][Esc/Left-click: cancel]",
-			copy(state(CopyMode.VERTICAL, true, 1, false, null), DEFAULT));
+	void afterTheFirstClickTheSetsPasteWithItsCount() {
+		assertEquals("Line: [Right-click: paste 4 copies]" + TURN_MIRROR
+			+ "[H: Lock (Off)][R: Mode (Line)][Esc/Left-click: cancel]",
+			copy(state(CopyMode.LINE, false, 4, true, null), DEFAULT));
+		assertEquals("Wall: [Right-click: paste 1 copy]" + TURN_MIRROR
+			+ "[H: Lock (Off)][R: Mode (Wall)][Esc/Left-click: cancel]",
+			copy(state(CopyMode.WALL, false, 1, false, null), DEFAULT));
+		assertEquals("Floor, locked: [Right-click: paste 16 copies]" + NUDGES + TURN_MIRROR
+			+ "[H: Lock (On)][R: Mode (Floor)][Esc/Left-click: cancel]",
+			copy(state(CopyMode.FLOOR, true, 16, true, null), DEFAULT));
 	}
 
 	@Test
 	void whileRedTheReasonTakesThePastesPlace() {
 		assertEquals("[Can't paste: part of the copy is outside the world]" + COPY_END,
-			copy(state(CopyMode.SINGLE, false, 0, false, Refusal.BUILD_HEIGHT), DEFAULT));
+			copy(state(CopyMode.OFF, false, 0, false, Refusal.BUILD_HEIGHT), DEFAULT));
 		assertEquals("Locked: [Can't paste: part of the copy is outside the world]" + NUDGES + LOCKED_END,
-			copy(state(CopyMode.SINGLE, true, 0, false, Refusal.WORLD_BORDER), DEFAULT));
-		assertEquals("Zoop: [Can't paste: too many blocks][Esc/Left-click: cancel]",
-			copy(state(CopyMode.ZOOP, false, 10, false, Refusal.TOO_MANY_BLOCKS), DEFAULT));
-		// A zoop's first click still fixes the row while the copy is red, so it stays, after the reason.
-		assertEquals("Zoop: [Can't paste: part of the copy is outside the world][Right-click: set the start]" + COPY_END,
-			copy(state(CopyMode.ZOOP, false, 0, false, Refusal.BUILD_HEIGHT), DEFAULT));
-		assertEquals("Zoop, locked: [Can't paste: part of the copy is outside the world][Right-click: set the start]"
-			+ NUDGES + LOCKED_END, copy(state(CopyMode.ZOOP, true, 0, false, Refusal.WORLD_BORDER), DEFAULT));
-		assertEquals("Vertical: [Can't paste: too many blocks][Esc/Left-click: cancel]",
-			copy(state(CopyMode.VERTICAL, true, 6, false, Refusal.TOO_MANY_BLOCKS), DEFAULT));
-		assertEquals("Vertical, locked: [Can't paste: too many blocks][Right-click: set the start]" + NUDGES + LOCKED_END,
-			copy(state(CopyMode.VERTICAL, true, 0, false, Refusal.TOO_MANY_BLOCKS), DEFAULT));
+			copy(state(CopyMode.OFF, true, 0, false, Refusal.WORLD_BORDER), DEFAULT));
+		assertEquals("Wall: [Can't paste: too many blocks]" + TURN_MIRROR
+			+ "[H: Lock (Off)][R: Mode (Wall)][Esc/Left-click: cancel]",
+			copy(state(CopyMode.WALL, false, 10, false, Refusal.TOO_MANY_BLOCKS), DEFAULT));
+		// The first click still fixes the first copy while the copy is red, so it stays, after the reason.
+		assertEquals("Line: [Can't paste: too many blocks][Right-click: set the start]" + TURN_MIRROR
+			+ "[H: Lock (Off)][R: Mode (Line)][Esc/Left-click: close]",
+			copy(state(CopyMode.LINE, false, 0, false, Refusal.TOO_MANY_BLOCKS), DEFAULT));
+		assertEquals("Floor, locked: [Can't paste: part of the copy is outside the world][Right-click: set the start]"
+			+ NUDGES + TURN_MIRROR + "[H: Lock (On)][R: Mode (Floor)][Esc/Left-click: close]",
+			copy(state(CopyMode.FLOOR, true, 0, false, Refusal.WORLD_BORDER), DEFAULT));
 	}
 
 	@Test
 	void theReasonIsARectangleInRedAndTheActionsAreActions() {
-		Line line = ControlsLine.copy(state(CopyMode.SINGLE, false, 0, false, Refusal.BUILD_HEIGHT), DEFAULT);
+		Line line = ControlsLine.copy(state(CopyMode.OFF, false, 0, false, Refusal.BUILD_HEIGHT), DEFAULT);
 		assertEquals(Look.WARNING, ((ControlsLine.Translated) line.rects().getFirst()).look());
 		assertEquals(List.of("Can't paste: part of the copy is outside the world"), collect(line, Look.WARNING));
-		assertEquals(List.of("turn", "mirror", "lock", "Zoop mode", "close"), collect(line, Look.ACTION));
+		assertEquals(List.of("turn", "mirror", "Lock (Off)", "Mode (Off)", "close"), collect(line, Look.ACTION));
 	}
 
 	@Test
 	void eachControlIsARectangleOfItsOwnAfterTheLabel() {
-		Line line = ControlsLine.copy(state(CopyMode.ZOOP, true, 0, false, null), DEFAULT);
-		assertEquals("Zoop, locked:", read(line.label()));
+		Line line = ControlsLine.copy(state(CopyMode.LINE, true, 0, false, null), DEFAULT);
+		assertEquals("Line, locked:", read(line.label()));
 		assertEquals(List.of("Right-click: set the start", "Arrow keys + Page Up/Down: nudge", "Scroll: turn",
-			"Middle-click: mirror", "H: unlock", "R: Zoop mode", "Esc/Left-click: close"),
+			"Middle-click: mirror", "H: Lock (On)", "R: Mode (Line)", "Esc/Left-click: close"),
 			line.rects().stream().map(ControlsLineTest::read).toList());
 		assertEquals(8, line.all().size());
-		assertNull(ControlsLine.copy(state(CopyMode.SINGLE, false, 0, false, null), DEFAULT).label());
+		assertNull(ControlsLine.copy(state(CopyMode.OFF, false, 0, false, null), DEFAULT).label());
 	}
 
 	@Test
 	void reboundKeysAreNamedAsBound() {
-		assertEquals("[Right-click: paste]" + TURN_MIRROR + "[Hold Left Alt: line up][K: lock][G: Zoop mode]"
-			+ "[Esc/Left-click: close]", copy(state(CopyMode.SINGLE, false, 0, true, null), REBOUND));
+		assertEquals("[Right-click: paste]" + TURN_MIRROR + "[Hold Left Alt: line up][K: Lock (Off)][G: Mode (Off)]"
+			+ "[Esc/Left-click: close]", copy(state(CopyMode.OFF, false, 0, true, null), REBOUND));
 		assertEquals("Locked: [Right-click: paste][I/J/U/O + Y/N: nudge]" + TURN_MIRROR
-			+ "[K: unlock][G: Zoop mode][Esc/Left-click: close]", copy(state(CopyMode.SINGLE, true, 0, true, null), REBOUND));
+			+ "[K: Lock (On)][G: Mode (Off)][Esc/Left-click: close]", copy(state(CopyMode.OFF, true, 0, true, null), REBOUND));
 	}
 
 	@Test
 	void theArrowKeysInAnotherOrderAreNamedOneByOne() {
 		Keys swapped = new Keys("H", "R", List.of("Down Arrow", "Up Arrow", "Left Arrow", "Right Arrow"), false,
 			"Page Up", "Page Down", "Left Control");
-		assertTrue(copy(state(CopyMode.SINGLE, true, 0, false, null), swapped)
+		assertTrue(copy(state(CopyMode.OFF, true, 0, false, null), swapped)
 			.contains("[Down Arrow/Up Arrow/Left Arrow/Right Arrow + Page Up/Down: nudge]"));
 	}
 
 	@Test
 	void unboundKeysAreLeftOut() {
 		assertEquals("[Right-click: paste]" + TURN_MIRROR + "[Esc/Left-click: close]",
-			copy(state(CopyMode.SINGLE, false, 0, true, null), UNBOUND));
+			copy(state(CopyMode.OFF, false, 0, true, null), UNBOUND));
 		assertEquals("Locked: [Right-click: paste]" + TURN_MIRROR + "[Esc/Left-click: close]",
-			copy(state(CopyMode.SINGLE, true, 0, true, null), UNBOUND));
+			copy(state(CopyMode.OFF, true, 0, true, null), UNBOUND));
 		Keys some = new Keys("H", "R", Arrays.asList("Up Arrow", null, null, "Right Arrow"), false, null, "Page Down",
 			"Left Control");
-		assertTrue(copy(state(CopyMode.SINGLE, true, 0, false, null), some)
+		assertTrue(copy(state(CopyMode.OFF, true, 0, false, null), some)
 			.contains("[Up Arrow/Right Arrow + Page Down: nudge]"));
 		Keys onlyAlong = new Keys("H", "R", List.of("Up Arrow", "Down Arrow", "Left Arrow", "Right Arrow"), true, null,
 			null, "Left Control");
-		assertTrue(copy(state(CopyMode.SINGLE, true, 0, false, null), onlyAlong).contains("[Arrow keys: nudge]"));
+		assertTrue(copy(state(CopyMode.OFF, true, 0, false, null), onlyAlong).contains("[Arrow keys: nudge]"));
 		Keys allUnbound = new Keys("H", "R", Arrays.asList(null, null, null, null), false, null, null, "Left Control");
-		assertFalse(copy(state(CopyMode.SINGLE, true, 0, false, null), allUnbound).contains("nudge"));
+		assertFalse(copy(state(CopyMode.OFF, true, 0, false, null), allUnbound).contains("nudge"));
 	}
 
 	@Test
 	void theUpAndDownKeysShareTheirFirstWordOnlyOnce() {
 		Keys keypad = new Keys("H", "R", List.of("Up Arrow", "Down Arrow", "Left Arrow", "Right Arrow"), true,
 			"Keypad 8", "Keypad 2", "Left Control");
-		assertTrue(copy(state(CopyMode.SINGLE, true, 0, false, null), keypad).contains("[Arrow keys + Keypad 8/2: nudge]"));
+		assertTrue(copy(state(CopyMode.OFF, true, 0, false, null), keypad).contains("[Arrow keys + Keypad 8/2: nudge]"));
 		Keys letters = new Keys("H", "R", List.of("Up Arrow", "Down Arrow", "Left Arrow", "Right Arrow"), true, "U", "J",
 			"Left Control");
-		assertTrue(copy(state(CopyMode.SINGLE, true, 0, false, null), letters).contains("[Arrow keys + U/J: nudge]"));
+		assertTrue(copy(state(CopyMode.OFF, true, 0, false, null), letters).contains("[Arrow keys + U/J: nudge]"));
 		Keys mixed = new Keys("H", "R", List.of("Up Arrow", "Down Arrow", "Left Arrow", "Right Arrow"), true,
 			"Page Up", "Left Shift", "Left Control");
-		assertTrue(copy(state(CopyMode.SINGLE, true, 0, false, null), mixed)
+		assertTrue(copy(state(CopyMode.OFF, true, 0, false, null), mixed)
 			.contains("[Arrow keys + Page Up/Left Shift: nudge]"));
 	}
 
 	@Test
 	void reboundArrowKeysAreNamedOneByOneBesideTheUpAndDownKeys() {
 		Keys rebound = new Keys("H", "R", List.of("W", "S", "A", "D"), false, "Page Up", "Page Down", "Left Control");
-		assertTrue(copy(state(CopyMode.SINGLE, true, 0, false, null), rebound).contains("[W/S/A/D + Page Up/Down: nudge]"));
+		assertTrue(copy(state(CopyMode.OFF, true, 0, false, null), rebound).contains("[W/S/A/D + Page Up/Down: nudge]"));
 	}
 
 	@Test
@@ -518,8 +524,8 @@ class ControlsLineTest {
 		return ControlsLine.deleteAim(state, keys).stream().map(ControlsLineTest::read).toList();
 	}
 
-	private static CopyState state(CopyMode mode, boolean locked, int row, boolean pasted, Refusal refusal) {
-		return new CopyState(mode, locked, row, pasted, refusal);
+	private static CopyState state(CopyMode mode, boolean locked, int set, boolean pasted, Refusal refusal) {
+		return new CopyState(mode, locked, set, pasted, refusal);
 	}
 
 	private static String copy(CopyState state, Keys keys) {

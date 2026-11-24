@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 
 /**
- * Hook L6: Litematica draws no box or origin marker for a tile, the copy or its row; Building Planner draws the copy's
+ * Hook L6: Litematica draws no box or origin marker for a tile, the copy or its set; Building Planner draws the copy's
  * box itself, in its colours ({@code CopyOutline}). This leaves Litematica's own switch for those boxes as the player
  * set it.
  */

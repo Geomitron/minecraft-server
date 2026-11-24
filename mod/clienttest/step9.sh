@@ -1,11 +1,9 @@
 # Step 9's in-game checks: showing and hiding ghost blocks with N and the radial menu's button, drawing while they're
 # hidden, the choice kept across a restart, where the radial menu's buttons sit, with screenshots, the menu's corner
-# text, the key headings in Controls, the box with its
-# list under the crosshair, copy and paste with the copy at the aim worked by the mouse and its keys, the copy's
-# colours, the Delete box, Delete by aim's marking with what its marks cost, its erasing and its lines,
-# the material
-# list, the counted
-# list kept on the server across restarts, the list screen's buttons, saving, opening and deleting lists, the lists
+# text, the key headings in Controls, the box with its list under the crosshair, copy and paste with the copy at the
+# aim worked by the mouse and its keys, its Line, Wall and Floor, the copy's colours, the Delete box, Delete by aim's
+# marking with what its marks cost, its erasing and its lines, the material list, the counted list kept on the server
+# across restarts, the list screen's buttons, saving, opening and deleting lists, the lists
 # across restarts and on another computer, a damaged lists file, the server's limits, Refresh far from the box, and N on
 # a server without Building Planner. Sourced by inside.sh, which provides drv, val,
 # check, keys, xdo, click, use_click, attack_click, client_said, start_server, stop_server, start_client, stop_client,
@@ -333,7 +331,7 @@ check "and Planner2 makes Planner1 an operator again" eval '[[ $(val 1 operator)
 # the heading's, the keys' and each key row's window boxes (left top right bottom) in the log.
 drv 1 "unbindprobe" "keybinds" "wait 10" > /dev/null
 echo "  controls: $(val 1 keybindlist)" >> /out/checks.log
-planner_keys="Block mix, Change Zoop or Delete mode, Lock or unlock, Nudge back, Nudge down, Nudge forward, Nudge left, \
+planner_keys="Block mix, Change copy mode, Lock or unlock, Nudge back, Nudge down, Nudge forward, Nudge left, \
 Nudge right, Nudge up, Open Modifier Settings, Open Radial Menu, Redo, Show or hide ghost blocks, Undo"
 check "Controls shows the eight keys of the copy and the one ghost block, and Effortless Building's four under \"Building Planner\", with its own" \
 	eval '[[ $(val 1 keybindlist) == *"Building Planner: $planner_keys ; "* ]]'
@@ -409,21 +407,36 @@ drv 1 "cmd execute as Planner2 at @s run tp @s ~ ~10 ~" > /dev/null
 drv 2 "wait 5" "fly true" > /dev/null
 
 # The copy at the aim's controls lines, with the copy's keys as bound by default, and a box's controls for each click.
-# Before the player's first paste, the copy's line in Single; after it, with the sprint key, which lines the copy up
-# while the copy follows the aim; a locked copy doesn't line up, so its lines leave the sprint key out. R changes the
-# copy's mode locked or not, so every line but a fixed row's has R's "Zoop mode".
+# Before the player's first paste, the copy's line in Off; after it, with the sprint key, which lines the copy up
+# while the copy follows the aim; a locked copy and a set don't line up, so their lines leave the sprint key out. H
+# names the lock's state and R the copy's mode, in every line.
 turn_mirror="[Scroll: turn][Middle-click: mirror]"
-controls="[Right-click: paste]$turn_mirror[H: lock][R: Zoop mode][Esc/Left-click: close]"
+lock_off="[H: Lock (Off)]"
+lock_on="[H: Lock (On)]"
+controls="[Right-click: paste]$turn_mirror$lock_off[R: Mode (Off)][Esc/Left-click: close]"
 line_up="[Hold Left Control: line up]"
-controls_ctrl="[Right-click: paste]$turn_mirror$line_up[H: lock][R: Zoop mode][Esc/Left-click: close]"
+controls_ctrl="[Right-click: paste]$turn_mirror$line_up$lock_off[R: Mode (Off)][Esc/Left-click: close]"
 nudges="[Arrow keys + Page Up/Down: nudge]"
-locked_line="Locked: [Right-click: paste]$nudges$turn_mirror[H: unlock][R: Zoop mode][Esc/Left-click: close]"
+locked_line="Locked: [Right-click: paste]$nudges$turn_mirror$lock_on[R: Mode (Off)][Esc/Left-click: close]"
 outside="[Can't paste: part of the copy is outside the world]"
-locked_red="Locked: $outside$nudges$turn_mirror[H: unlock][R: Zoop mode][Esc/Left-click: close]"
-zoop_locked_red="Zoop, locked: $outside[Right-click: set the start]$nudges$turn_mirror[H: unlock][R: Zoop mode][Esc/Left-click: close]"
-zoop_line="Zoop: [Right-click: set the start]$turn_mirror$line_up[H: lock][R: Zoop mode][Esc/Left-click: close]"
-vertical_line="Vertical: [Right-click: set the start]$turn_mirror$line_up[H: lock][R: Zoop mode][Esc/Left-click: close]"
-zoop_locked="Zoop, locked: [Right-click: set the start]$nudges$turn_mirror[H: unlock][R: Zoop mode][Esc/Left-click: close]"
+locked_red="Locked: $outside$nudges$turn_mirror$lock_on[R: Mode (Off)][Esc/Left-click: close]"
+# start_line <Mode> [locked] [<reason>]: the copy's line in Line, Wall or Floor before the first click, locked or not,
+# with the reason before setting the start while the copy is red.
+start_line() {
+	if [[ ${2:-} == locked ]]; then
+		echo "$1, locked: ${3:-}[Right-click: set the start]$nudges$turn_mirror$lock_on[R: Mode ($1)][Esc/Left-click: close]"
+	else
+		echo "$1: [Right-click: set the start]$turn_mirror$line_up$lock_off[R: Mode ($1)][Esc/Left-click: close]"
+	fi
+}
+# set_line <Mode> <paste> [locked]: the copy's line after the first click, with the paste (or the reason) given.
+set_line() {
+	if [[ ${3:-} == locked ]]; then
+		echo "$1, locked: $2$nudges$turn_mirror$lock_on[R: Mode ($1)][Esc/Left-click: cancel]"
+	else
+		echo "$1: $2$turn_mirror$lock_off[R: Mode ($1)][Esc/Left-click: cancel]"
+	fi
+}
 first_line="[Left-click: set the first corner][Right-click: cancel]"
 second_line="[Left-click: set the opposite corner][Right-click: cancel]"
 height_line="[Left-click: set the height][Right-click: cancel]"
@@ -861,16 +874,18 @@ line_shot line-locked-red-854x480-gui2 854 480 2
 line_shot line-locked-red-1920x1080-gui2 1920 1080 2
 check "at 854 by 480, GUI scale 2, the locked line goes on in a row below, moving whole rectangles" eval \
 	'[[ $(val 1 modewrap) == "[Locked:]"*"] / ["*"[Esc/Left-click: close]" ]] && rects_ok 854 2'
-# R changes a locked copy's mode, and a red Zoop copy before its first click says why in the reason's place, keeping
-# "Right-click: set the start", since that click still fixes the row; R twice more is back to Single.
+# R changes a locked copy's mode, and a red copy in Line, Wall or Floor before its first click says why before
+# "Right-click: set the start", since that click still fixes the first copy; R at Floor is back to Off.
+for mode in Line Wall Floor; do
+	press 1 r
+	check "R changes the locked red copy's mode to $mode, its line giving the reason before setting the start" eval \
+		'[[ $(val 1 copymode) == ${mode^^} ]] && [[ $(val 1 copylock) == locked ]] &&
+		[[ $(val 1 modehud) == "$(start_line $mode locked "$outside")" ]]'
+	line_shot "line-${mode,,}-red"
+done
 press 1 r
-check "R changes the locked red copy's mode to Zoop, its line giving the reason before setting the start" eval \
-	'[[ $(val 1 copymode) == ZOOP ]] && [[ $(val 1 copylock) == locked ]] && [[ $(val 1 modehud) == "$zoop_locked_red" ]]'
-line_shot line-locked-zoop-red-before-first-click
-press 1 r
-press 1 r
-check "R twice more is back to Single, the locked red line as before" eval \
-	'[[ $(val 1 copymode) == SINGLE ]] && [[ $(val 1 modehud) == "$locked_red" ]]'
+check "R at Floor is back to Off, the locked red line as before" eval \
+	'[[ $(val 1 copymode) == OFF ]] && [[ $(val 1 modehud) == "$locked_red" ]]'
 drv 1 "cmd worldborder center 0.0 0.0" "cmd worldborder set 59999968" > /dev/null
 check "with the border back, it's blue" drv 1 "await copycolour BLUE"
 press 1 h
@@ -885,134 +900,210 @@ rebind() {
 }
 rebind key.keyboard.k key.keyboard.g key.keyboard.i key.keyboard.right.control
 check "with the keys rebound, the controls line names them as bound" eval '[[ $(val 1 modehud) == \
-	"[Right-click: paste]$turn_mirror[Hold Right Control: line up][K: lock][G: Zoop mode][Esc/Left-click: close]" ]]'
+	"[Right-click: paste]$turn_mirror[Hold Right Control: line up][K: Lock (Off)][G: Mode (Off)][Esc/Left-click: close]" ]]'
 line_shot line-rebound
 press 1 k
 check "K then locks the copy, and the locked line names the nudge keys one by one" eval \
-	'[[ $(val 1 copylock) == locked ]] && [[ $(val 1 modehud) == "Locked: [Right-click: paste][I/Down Arrow/Left Arrow/Right Arrow + Page Up/Down: nudge]$turn_mirror[K: unlock][G: Zoop mode][Esc/Left-click: close]" ]]'
+	'[[ $(val 1 copylock) == locked ]] && [[ $(val 1 modehud) == "Locked: [Right-click: paste][I/Down Arrow/Left Arrow/Right Arrow + Page Up/Down: nudge]$turn_mirror[K: Lock (On)][G: Mode (Off)][Esc/Left-click: close]" ]]'
 press 1 k
 rebind key.keyboard.h key.keyboard.r key.keyboard.up key.keyboard.left.control
 check "and with the keys back, K has unlocked it and the line names H and R again" eval \
 	'[[ $(val 1 copylock) == unlocked ]] && [[ $(val 1 modehud) == "$controls_ctrl" ]]'
 
-# Zoop and Vertical, on the grass west of the locking checks. Aimed from the south at -45 -61 34's top, the copy, 2 by
-# 2 by 3 blocks as it's turned, fills -45..-44 east to west and 33..35 north to south. R cycles the copy's mode.
+# Line, Wall and Floor, on the grass west of the locking checks. Aimed from the south at -45 -61 34's top, the copy, 2
+# by 2 by 3 blocks as it's turned, fills -45..-44 east to west and 33..35 north to south; its middle block, from which
+# Effortless Building's Line, Wall and Floor find the set's far end, is -45 -60 34. R cycles the copy's mode, and H
+# locks the copy in each.
 drv 1 "cmd tp @s -44.5 -55 42.5 180 30" "wait 40" > /dev/null
 aim 1 -45 -60 34
-check "the copy's mode starts as Single" eval '[[ $(val 1 copymode) == SINGLE ]] &&
+check "the copy's mode starts as Off" eval '[[ $(val 1 copymode) == OFF ]] &&
 	drv 1 "await copy at -45,-60,33..-44,-59,35 FRONT_BACK COUNTERCLOCKWISE_90" > /dev/null'
+for mode in Line Wall Floor; do
+	press 1 r
+	check "R switches the copy to $mode, with its controls line" eval '[[ $(val 1 copymode) == ${mode^^} ]] &&
+		[[ $(val 1 modehud) == "$(start_line $mode)" ]]'
+	press 1 h
+	check "locked in $mode, its line says both" eval '[[ $(val 1 copylock) == locked ]] &&
+		[[ $(val 1 modehud) == "$(start_line $mode locked)" ]]'
+	line_shot "line-${mode,,}-locked"
+	press 1 h
+	check "and H unlocks it again" eval '[[ $(val 1 copylock) == unlocked ]] &&
+		[[ $(val 1 modehud) == "$(start_line $mode)" ]]'
+done
 press 1 r
-check "R switches the copy to Zoop, with its controls line" eval '[[ $(val 1 copymode) == ZOOP ]] &&
-	[[ $(val 1 modehud) == "$zoop_line" ]]'
-line_shot line-zoop
+check "then R is back to Off" eval '[[ $(val 1 copymode) == OFF ]] && [[ $(val 1 modehud) == "$controls_ctrl" ]]'
 press 1 r
-check "then to Vertical" eval '[[ $(val 1 copymode) == VERTICAL ]] && [[ $(val 1 modehud) == "$vertical_line" ]]'
-line_shot line-vertical
-press 1 r
-check "then back to Single" eval '[[ $(val 1 copymode) == SINGLE ]] && [[ $(val 1 modehud) == "$controls_ctrl" ]]'
-press 1 r
-check "and to Zoop again, the copy still following the aim" eval '[[ $(val 1 copymode) == ZOOP ]] &&
-	copy_is 1 "^at -45,-60,33\.\.-44,-59,35 FRONT_BACK COUNTERCLOCKWISE_90 " && [[ $(val 1 copyrow) == none ]]'
-press 1 h
-check "locked in Zoop, its line says both" eval '[[ $(val 1 copylock) == locked ]] &&
-	[[ $(val 1 modehud) == "$zoop_locked" ]]'
-line_shot line-zoop-locked
-press 1 h
-check "and H unlocks it again" eval '[[ $(val 1 copylock) == unlocked ]] && [[ $(val 1 modehud) == "$zoop_line" ]]'
-# In Zoop the first click fixes the copy as the row's start and sends no edit.
-use_click 1
-check "in Zoop the first click fixes the copy as the start of a row, sending no edit" eval \
+check "and to Line again, the copy still following the aim" eval '[[ $(val 1 copymode) == LINE ]] &&
+	copy_is 1 "^at -45,-60,33\.\.-44,-59,35 FRONT_BACK COUNTERCLOCKWISE_90 " && [[ $(val 1 copyset) == none ]]'
+# first_click: aimed at -45 -61 34's top, the right click that fixes the copy there as the set's first copy.
+first_click() {
+	aim 1 -45 -60 34
+	drv 1 "await copy at -45,-60,33..-44,-59,35" > /dev/null
+	use_click 1
+}
+# undo_paste <block>...: Ctrl+Z, and client 2 sees air at each of the blocks (x y z).
+undo_paste() {
+	drv 1 "close" > /dev/null
+	keys 1 keydown ctrl key z sleep 0.3 keyup ctrl
+	local args=() pos
+	for pos in "$@"; do args+=("await block $pos minecraft:air"); done
+	drv 2 "${args[@]}"
+}
+# The first click fixes the copy as the set's first copy and sends no edit. Aimed at the copy's own top, Line's block
+# is in the first copy, so the set is that copy alone.
+first_click
+check "in Line the first click fixes the copy as the set's first copy, sending no edit" eval \
 	'[[ $(val 1 holdlog) == *" edits=0 "* ]] &&
-	drv 1 "await row 1 copies, 1 placements FRONT_BACK COUNTERCLOCKWISE_90: -45,-60,33..-44,-59,35" > /dev/null'
-check "and its controls line offers to paste the row, with its count" eval \
-	'[[ $(val 1 modehud) == "Zoop: [Right-click: paste 1 copy][Esc/Left-click: cancel]" ]]'
-# Aimed 9 blocks north, the row runs north from the first copy, end to end, each 3 blocks (the copy's length north to
-# south) from the one before, to the copy that holds the aim: 4 copies, each one of Litematica's placements.
-row4="-45,-60,33..-44,-59,35 ; -45,-60,30..-44,-59,32 ; -45,-60,27..-44,-59,29 ; -45,-60,24..-44,-59,26"
-aim 1 -45 -60 25
-check "aimed north, the row follows the aim: 4 copies end to end, each the copy's length from the one before" \
-	drv 1 "await row 4 copies, 4 placements FRONT_BACK COUNTERCLOCKWISE_90: $row4"
+	drv 1 "await set 1 copies, 1 placements FRONT_BACK COUNTERCLOCKWISE_90: -45,-60,33..-44,-59,35" > /dev/null'
+echo "  the set after the first click: $(val 1 copyset)" >> /out/checks.log
+check "and its controls line offers to paste the set, with its count" eval \
+	'[[ $(val 1 modehud) == "$(set_line Line "[Right-click: paste 1 copy]")" ]]'
+# Looking up past the first copy, the view crosses the upright line through its middle at -53.5: Line's block is at
+# -54, in the fourth copy, each copy 2 blocks (its height) above the one before.
+up4="-45,-60,33..-44,-59,35 ; -45,-58,33..-44,-57,35 ; -45,-56,33..-44,-55,35 ; -45,-54,33..-44,-53,35"
+drv 1 "lookat -44.5 -53.5 34.5" "wait 5" > /dev/null
+check "looking up, the Line goes up: 4 copies, each the copy's height above the one before" \
+	drv 1 "await set 4 copies, 4 placements FRONT_BACK COUNTERCLOCKWISE_90: $up4"
+echo "  the Line looking up: $(val 1 copyset)" >> /out/checks.log
 check "the first copy stays where the first click fixed it" copy_is 1 "^at -45,-60,33\.\.-44,-59,35 "
 check "Litematica draws each copy, the fourth's stairs at its north west corner" eval \
-	'[[ $(val 1 "get -45 -59 24") == minecraft:oak_stairs ]] && [[ $(val 1 "get -45 -59 33") == minecraft:oak_stairs ]]'
-check "Litematica draws no box for the row's copies, and Building Planner draws them blue" eval \
+	'[[ $(val 1 "get -45 -53 33") == minecraft:oak_stairs ]] && [[ $(val 1 "get -45 -59 33") == minecraft:oak_stairs ]]'
+check "Litematica draws no box for the set's copies, and Building Planner draws them blue" eval \
 	'[[ $(val 1 boxes) == *"others: none" ]] && [[ $(val 1 copycolour) == BLUE ]]'
-check "the controls line counts the row's 4 copies" eval \
-	'[[ $(val 1 modehud) == "Zoop: [Right-click: paste 4 copies][Esc/Left-click: cancel]" ]]'
-shots zoop-row
-line_shot line-zoop-row
-aim 1 -45 -60 0
-check "aimed farther, the row stops at 10 copies" \
-	drv 1 "await row 10 copies, 10 placements FRONT_BACK COUNTERCLOCKWISE_90: -45,-60,33..-44,-59,35 ; "
-check "the tenth 27 blocks north of the first" eval '[[ $(val 1 copyrow) == *" ; -45,-60,6..-44,-59,8" ]] &&
-	[[ $(val 1 modehud) == "Zoop: [Right-click: paste 10 copies][Esc/Left-click: cancel]" ]]'
-aim 1 -45 -60 25
-check "aimed back, the row shrinks to 4 copies" \
-	drv 1 "await row 4 copies, 4 placements FRONT_BACK COUNTERCLOCKWISE_90: $row4"
+check "the controls line counts the set's 4 copies" eval \
+	'[[ $(val 1 modehud) == "$(set_line Line "[Right-click: paste 4 copies]")" ]]'
+shots copy-line-up
+line_shot line-line-set
+# Looking farther up, Line's block is at -40, 11 copies up; the set stops at 10, the tenth 18 blocks above the first.
+drv 1 "lookat -44.5 -40 34.5" "wait 5" > /dev/null
+check "looking farther up, the set stops at 10 copies" \
+	drv 1 "await set 10 copies, 10 placements FRONT_BACK COUNTERCLOCKWISE_90: -45,-60,33..-44,-59,35 ; "
+check "the tenth 18 blocks above the first" eval '[[ $(val 1 copyset) == *" ; -45,-42,33..-44,-41,35" ]] &&
+	[[ $(val 1 modehud) == "$(set_line Line "[Right-click: paste 10 copies]")" ]]'
+drv 1 "lookat -44.5 -53.5 34.5" "wait 5" > /dev/null
+check "looking back, the set shrinks to 4 copies" \
+	drv 1 "await set 4 copies, 4 placements FRONT_BACK COUNTERCLOCKWISE_90: $up4"
 # A notch up turns every copy a quarter turn clockwise: the first in place, around its middle -45 -60 34, now 3 blocks
-# east to west and 2 north to south; the row, laid again at the turned length, reaches the aim with 6 copies.
+# east to west and 2 north to south; the others are laid again above it, still 2 blocks apart.
 xdo 1 click 4
-check "a notch of the wheel up turns every copy in the row, laid again end to end at the turned length" \
-	drv 1 "await row 6 copies, 6 placements FRONT_BACK NONE: -46,-60,34..-44,-59,35 ; -46,-60,32..-44,-59,33 ; -46,-60,30..-44,-59,31 ; -46,-60,28..-44,-59,29 ; -46,-60,26..-44,-59,27 ; -46,-60,24..-44,-59,25"
+check "a notch of the wheel up turns every copy in the set, laid again at the turned size" \
+	drv 1 "await set 4 copies, 4 placements FRONT_BACK NONE: -46,-60,34..-44,-59,35 ; -46,-58,34..-44,-57,35 ; -46,-56,34..-44,-55,35 ; -46,-54,34..-44,-53,35"
 xdo 1 click 5
-check "and a notch down turns them back" drv 1 "await row 4 copies, 4 placements FRONT_BACK COUNTERCLOCKWISE_90: $row4"
-check "H and the nudge keys act on nothing while the row is fixed" eval 'press 1 h && press 1 Up &&
-	[[ $(val 1 copylock) == unlocked ]] && [[ $(val 1 copyrow) == "4 copies, 4 placements FRONT_BACK COUNTERCLOCKWISE_90: $row4" ]]'
-# A left click after the first click drops the row and leaves the copy at the aim, following it again.
+check "and a notch down turns them back" drv 1 "await set 4 copies, 4 placements FRONT_BACK COUNTERCLOCKWISE_90: $up4"
+# H locks the first copy, and a nudge forward moves it a block north, the set with it; the far end still follows the
+# aim, which crosses the line through the moved middle, -45 -60 33, at -53.5 again.
+press 1 h
+check "H locks the set's first copy, its line naming the nudge keys" eval '[[ $(val 1 copylock) == locked ]] &&
+	[[ $(val 1 modehud) == "$(set_line Line "[Right-click: paste 4 copies]" locked)" ]]'
+press 1 Up
+check "a nudge moves the first copy and the set with it" \
+	drv 1 "await set 4 copies, 4 placements FRONT_BACK COUNTERCLOCKWISE_90: -45,-60,32..-44,-59,34 ; -45,-58,32..-44,-57,34 ; -45,-56,32..-44,-55,34 ; -45,-54,32..-44,-53,34"
+press 1 Down
+check "and the nudge back returns them" drv 1 "await set 4 copies, 4 placements FRONT_BACK COUNTERCLOCKWISE_90: $up4"
+press 1 h
+check "H unlocks it again" eval '[[ $(val 1 copylock) == unlocked ]] &&
+	[[ $(val 1 modehud) == "$(set_line Line "[Right-click: paste 4 copies]")" ]]'
+# A left click after the first click drops the set and leaves the copy at the aim, following it again.
 attack_click 1
-check "a left click after the first click drops the row" eval \
-	'drv 1 "wait 10" > /dev/null && [[ $(val 1 copyrow) == none ]] && [[ $(val 1 holdlog) == *" edits=0 "* ]]'
-check "and leaves the copy at the aim, following it again" \
-	drv 1 "await copy at -45,-60,24..-44,-59,26 FRONT_BACK COUNTERCLOCKWISE_90"
-check "still in Zoop" eval '[[ $(val 1 copymode) == ZOOP ]]'
-# A row of 4 pastes as one edit, which the other player sees, and one Ctrl+Z takes back.
-aim 1 -45 -60 34
-drv 1 "await copy at -45,-60,33..-44,-59,35" > /dev/null
+check "a left click after the first click drops the set" eval \
+	'drv 1 "wait 10" > /dev/null && [[ $(val 1 copyset) == none ]] && [[ $(val 1 holdlog) == *" edits=0 "* ]]'
+check "and leaves the copy at the aim, following it again, still in Line" eval \
+	'copy_is 1 "^at " && [[ $(val 1 copymode) == LINE ]] && [[ $(val 1 modehud) == "$(start_line Line)" ]]'
+# The Line of 4 up pastes as one edit, which the other player sees, and one Ctrl+Z takes back.
+first_click
+drv 1 "lookat -44.5 -53.5 34.5" "wait 5" "await set 4 copies, 4 placements FRONT_BACK COUNTERCLOCKWISE_90: $up4" \
+	> /dev/null
 use_click 1
-aim 1 -45 -60 25
-drv 1 "await row 4 copies, 4 placements FRONT_BACK COUNTERCLOCKWISE_90: $row4" > /dev/null
-use_click 1
-check "the second click pastes the row of 4 as one edit" eval '[[ $(val 1 holdlog) == *" edits=1 "* ]]'
+check "the second click pastes the Line of 4 up as one edit" eval '[[ $(val 1 holdlog) == *" edits=1 "* ]]'
 check "which the other player sees, every copy's blocks" drv 2 "await block -45 -59 33 minecraft:oak_stairs" \
-	"await block -45 -59 30 minecraft:oak_stairs" "await block -45 -59 27 minecraft:oak_stairs" \
-	"await block -45 -59 24 minecraft:oak_stairs" "await block -44 -60 26 minecraft:stone_bricks"
-check "and the copy is at the aim again with no row, for a new row" eval '[[ $(val 1 copyrow) == none ]] &&
-	copy_is 1 "^at "'
-# Each copy of the row is a paste of its own. Aimed at the east face of the stone bricks at -44 -60 29, in the third
-# copy's box (z 27..29), the copy sits flush against that copy's east face, -43..-42, its edges in line with the
-# copy's at the corner nearest the aim, 27..29 north to south; against the whole row's box (24..35) it would stand at
-# 24..26.
-drv 1 "cmd tp @s -38.5 -58 29.5 90 0" "wait 40" "lookat -43.0 -59.5 29.5" "wait 5" > /dev/null
-check "aimed at the row's third copy, the copy sits flush beside that copy, not beside the row's end" \
-	drv 1 "await copy at -43,-60,27..-42,-59,29 FRONT_BACK COUNTERCLOCKWISE_90"
-drv 1 "cmd tp @s -44.5 -55 42.5 180 30" "wait 40" > /dev/null
-drv 1 "close" > /dev/null
-keys 1 keydown ctrl key z sleep 0.3 keyup ctrl
-check "one Ctrl+Z takes back the whole row" drv 2 "await block -45 -59 33 minecraft:air" \
-	"await block -45 -59 30 minecraft:air" "await block -45 -59 27 minecraft:air" \
-	"await block -45 -59 24 minecraft:air" "await block -44 -60 26 minecraft:air"
-# Vertical: the row goes up or down from the first copy, the way the view is, each copy 2 blocks (its height) apart.
-press 1 r
-aim 1 -45 -60 34
-drv 1 "await copy at -45,-60,33..-44,-59,35" > /dev/null
+	"await block -45 -57 33 minecraft:oak_stairs" "await block -45 -55 33 minecraft:oak_stairs" \
+	"await block -45 -53 33 minecraft:oak_stairs" "await block -44 -54 35 minecraft:stone_bricks"
+check "and the copy is at the aim again with no set, for a new set, still in Line" eval \
+	'[[ $(val 1 copyset) == none ]] && copy_is 1 "^at " && [[ $(val 1 copymode) == LINE ]]'
+check "one Ctrl+Z takes back the whole Line" undo_paste "-45 -59 33" "-45 -57 33" "-45 -55 33" "-45 -53 33" \
+	"-44 -54 35"
+# A Line east: aimed at -38.5 -59.5 34.5, the view crosses the east-west line through the middle at -38.1, in the
+# fourth copy, each copy 2 blocks (its length east to west) from the one before.
+east4="-45,-60,33..-44,-59,35 ; -43,-60,33..-42,-59,35 ; -41,-60,33..-40,-59,35 ; -39,-60,33..-38,-59,35"
+first_click
+drv 1 "lookat -38.5 -59.5 34.5" "wait 5" > /dev/null
+check "aimed east, the Line goes east: 4 copies, each the copy's length from the one before" \
+	drv 1 "await set 4 copies, 4 placements FRONT_BACK COUNTERCLOCKWISE_90: $east4"
+echo "  the Line aimed east: $(val 1 copyset)" >> /out/checks.log
+shots copy-line-east
 use_click 1
-check "in Vertical the first click fixes the row's start too" eval '[[ $(val 1 copymode) == VERTICAL ]] &&
-	drv 1 "await row 1 copies, 1 placements FRONT_BACK COUNTERCLOCKWISE_90: -45,-60,33..-44,-59,35" > /dev/null'
-# Looking up past the copy's middle, the view crosses the line above it at -50.5: 5 copies up to -52..-51.
-drv 1 "lookat -44.5 -50.5 34.5" "wait 5" > /dev/null
-check "looking up, the row goes up: 5 copies, each the copy's height above the one before" \
-	drv 1 "await row 5 copies, 5 placements FRONT_BACK COUNTERCLOCKWISE_90: -45,-60,33..-44,-59,35 ; -45,-58,33..-44,-57,35 ; -45,-56,33..-44,-55,35 ; -45,-54,33..-44,-53,35 ; -45,-52,33..-44,-51,35"
-check "with its controls line" eval \
-	'[[ $(val 1 modehud) == "Vertical: [Right-click: paste 5 copies][Esc/Left-click: cancel]" ]]'
-shots vertical-row
-line_shot line-vertical-row
-drv 1 "lookat -44.5 -63.5 34.5" "wait 5" > /dev/null
-check "looking down, it goes down: 3 copies, to the bottom of the world" \
-	drv 1 "await row 3 copies, 3 placements FRONT_BACK COUNTERCLOCKWISE_90: -45,-60,33..-44,-59,35 ; -45,-62,33..-44,-61,35 ; -45,-64,33..-44,-63,35"
-attack_click 1
-check "a left click drops it" eval 'drv 1 "wait 10" > /dev/null && [[ $(val 1 copyrow) == none ]] && copy_is 1 "^at "'
+check "the second click pastes the Line of 4 east as one edit" eval '[[ $(val 1 holdlog) == *" edits=1 "* ]]'
+check "which the other player sees" drv 2 "await block -45 -59 33 minecraft:oak_stairs" \
+	"await block -43 -59 33 minecraft:oak_stairs" "await block -41 -59 33 minecraft:oak_stairs" \
+	"await block -39 -59 33 minecraft:oak_stairs" "await block -38 -60 35 minecraft:stone_bricks"
+check "one Ctrl+Z takes it back" undo_paste "-45 -59 33" "-43 -59 33" "-41 -59 33" "-39 -59 33" "-38 -60 35"
+# R during a set switches the mode and keeps the first copy: the Line east becomes a Wall, which from the same aim is
+# the same 4 copies, in the upright plane through the middle north to south. Aimed at -40.5 -57.5 34.5, the view crosses
+# that plane at -40.3 -57.8: 3 copies east and 2 up.
+first_click
+drv 1 "lookat -38.5 -59.5 34.5" "wait 5" "await set 4 copies, 4 placements FRONT_BACK COUNTERCLOCKWISE_90: $east4" \
+	> /dev/null
 press 1 r
-check "R then switches back to Single" eval '[[ $(val 1 copymode) == SINGLE ]]'
+check "R during a Line switches to Wall and keeps the first copy, the same 4 copies from this aim" eval \
+	'[[ $(val 1 copymode) == WALL ]] && copy_is 1 "^at -45,-60,33\.\.-44,-59,35 " &&
+	drv 1 "await set 4 copies, 4 placements FRONT_BACK COUNTERCLOCKWISE_90: $east4" > /dev/null &&
+	[[ $(val 1 modehud) == "$(set_line Wall "[Right-click: paste 4 copies]")" ]]'
+wall6="-45,-60,33..-44,-59,35 ; -43,-60,33..-42,-59,35 ; -41,-60,33..-40,-59,35 ; -45,-58,33..-44,-57,35 ; -43,-58,33..-42,-57,35 ; -41,-58,33..-40,-57,35"
+drv 1 "lookat -40.5 -57.5 34.5" "wait 5" > /dev/null
+check "aimed up and east, the Wall is 3 copies by 2, row by row from the first" \
+	drv 1 "await set 6 copies, 6 placements FRONT_BACK COUNTERCLOCKWISE_90: $wall6"
+echo "  the Wall: $(val 1 copyset)" >> /out/checks.log
+check "with its controls line" eval '[[ $(val 1 modehud) == "$(set_line Wall "[Right-click: paste 6 copies]")" ]]'
+shots copy-wall
+line_shot line-wall-set
+use_click 1
+check "the second click pastes the Wall of 3 by 2 as one edit" eval '[[ $(val 1 holdlog) == *" edits=1 "* ]]'
+check "which the other player sees" drv 2 "await block -45 -59 33 minecraft:oak_stairs" \
+	"await block -41 -59 33 minecraft:oak_stairs" "await block -45 -57 33 minecraft:oak_stairs" \
+	"await block -41 -57 33 minecraft:oak_stairs" "await block -40 -58 35 minecraft:stone_bricks"
+check "still in Wall" eval '[[ $(val 1 copymode) == WALL ]] && [[ $(val 1 copyset) == none ]]'
+check "one Ctrl+Z takes back the whole Wall" undo_paste "-45 -59 33" "-41 -59 33" "-45 -57 33" "-41 -57 33" \
+	"-40 -58 35"
+# A Floor, on the first copy's level: aimed at the copy's own top, Floor's block is the first copy's middle, so the
+# set is the first copy alone; aimed at the grass's top at -38.5 -60 25.5, Floor's block is -39 -60 25, in the fourth
+# copy east and the fourth north, 2 blocks east to west and 3 north to south apart.
+first_click
+echo "  the Wall after the first click: $(val 1 copyset)" >> /out/checks.log
+press 1 r
+check "R during a Wall switches to Floor and keeps the first copy" eval '[[ $(val 1 copymode) == FLOOR ]] &&
+	drv 1 "await set 1 copies, 1 placements FRONT_BACK COUNTERCLOCKWISE_90: -45,-60,33..-44,-59,35" > /dev/null'
+floor16=$(for z in 33 30 27 24; do for x in -45 -43 -41 -39; do printf '%s' "$x,-60,$z..$((x + 1)),-59,$((z + 2)) ; "; done; done)
+floor16=${floor16% ; }
+drv 1 "lookat -38.5 -60 25.5" "wait 5" > /dev/null
+check "aimed north east on the grass, the Floor is 4 copies by 4, row by row from the first" \
+	drv 1 "await set 16 copies, 16 placements FRONT_BACK COUNTERCLOCKWISE_90: $floor16"
+echo "  the Floor: $(val 1 copyset)" >> /out/checks.log
+check "with its controls line" eval '[[ $(val 1 modehud) == "$(set_line Floor "[Right-click: paste 16 copies]")" ]]'
+shots copy-floor
+line_shot line-floor-set
+use_click 1
+check "the second click pastes the Floor of 4 by 4 as one edit" eval '[[ $(val 1 holdlog) == *" edits=1 "* ]]'
+check "which the other player sees" drv 2 "await block -45 -59 33 minecraft:oak_stairs" \
+	"await block -39 -59 33 minecraft:oak_stairs" "await block -45 -59 24 minecraft:oak_stairs" \
+	"await block -39 -59 24 minecraft:oak_stairs" "await block -38 -60 26 minecraft:stone_bricks"
+# Each copy of the set is a paste of its own. Aimed at the east face of the stone bricks at -38 -60 29, in the east
+# copy of the third row (z 27..29), the copy sits flush against that copy's east face, -37..-36, its edges in line with
+# the copy's at the corner nearest the aim, 27..29 north to south; against the whole Floor's box (24..35) it would
+# stand at 24..26.
+drv 1 "cmd tp @s -32.5 -58 29.5 90 0" "wait 40" "lookat -37.0 -59.5 29.5" "wait 5" > /dev/null
+check "aimed at a copy of the Floor, the copy sits flush beside that copy, not beside the Floor's edge" \
+	drv 1 "await copy at -37,-60,27..-36,-59,29 FRONT_BACK COUNTERCLOCKWISE_90"
+drv 1 "cmd tp @s -44.5 -55 42.5 180 30" "wait 40" > /dev/null
+check "one Ctrl+Z takes back the whole Floor" undo_paste "-45 -59 33" "-39 -59 33" "-45 -59 24" "-39 -59 24" \
+	"-38 -60 26"
+# R at Off drops the set and leaves the copy following the aim.
+first_click
+drv 1 "lookat -38.5 -60 25.5" "wait 5" "await set 16 copies" > /dev/null
+press 1 r
+check "R during a Floor switches to Off, which drops the set" eval 'drv 1 "wait 5" > /dev/null &&
+	[[ $(val 1 copymode) == OFF ]] && [[ $(val 1 copyset) == none ]] && [[ $(val 1 holdlog) == *" edits=0 "* ]]'
+check "and leaves the copy following the aim" eval 'drv 1 "await copy at -39,-60,24..-38,-59,26" > /dev/null &&
+	[[ $(val 1 modehud) == "$controls_ctrl" ]]'
 
 # The controls line over light ghost blocks: a floor of ghost white wool, birch planks and glowstone in stripes 2
 # blocks wide, from -79 -60 30 to -62 -60 60, under Planner1, who looks down at it with the copy on it, so the line
@@ -1086,9 +1177,9 @@ drv 1 "cmd fill 50 -60 10 52 -58 12 minecraft:oak_planks hollow" "cmd setblock 5
 	"cmd tp @s 46.5 -56 6.5 0 30" "wait 40" > /dev/null
 check "the house is real" eval '[[ $(val 1 "real 51 -59 10") == minecraft:glass ]] &&
 	[[ $(val 1 "real 51 -59 11") == minecraft:air ]] && [[ $(val 1 "layer 50 -60 10") == minecraft:air ]]'
-# The copy's mode, set to Zoop here, stays for the next copy.
+# The copy's mode, set to Line here, stays for the next copy.
 press 1 r
-check "with the copy at the aim, R sets Zoop" eval '[[ $(val 1 copymode) == ZOOP ]]'
+check "with the copy at the aim, R sets Line" eval '[[ $(val 1 copymode) == LINE ]]'
 radial_open
 radial_click "Copy"
 check "the radial menu's Copy button puts the copy away and starts a box" eval \
@@ -1096,15 +1187,16 @@ check "the radial menu's Copy button puts the copy away and starts a box" eval \
 radial_let_go
 house_box copy-real-box
 check "a box around only real blocks copies them: the house's 26 blocks" client_said 1 "Copied 26 blocks."
-check "the new copy keeps the mode, Zoop" eval '[[ $(val 1 copymode) == ZOOP ]]'
+check "the new copy keeps the mode, Line" eval '[[ $(val 1 copymode) == LINE ]]'
 use_click 1
-check "and its first click fixes a row, sending no edit" eval '[[ $(val 1 holdlog) == *" edits=0 "* ]] &&
-	drv 1 "await row 1 copies, 1 placements NONE NONE: " > /dev/null'
+check "and its first click fixes a set's first copy, sending no edit" eval 'drv 1 "wait 5" > /dev/null &&
+	[[ $(val 1 holdlog) == *" edits=0 "* ]] && [[ $(val 1 copyset) =~ ^[0-9]+\ copies,\ [0-9]+\ placements\ NONE\ NONE: ]]'
 attack_click 1
-check "a left click drops the row" eval 'drv 1 "wait 10" > /dev/null && [[ $(val 1 copyrow) == none ]] && copy_is 1 "^at "'
+check "a left click drops the set" eval 'drv 1 "wait 10" > /dev/null && [[ $(val 1 copyset) == none ]] && copy_is 1 "^at "'
 press 1 r
 press 1 r
-check "R twice sets Single again" eval '[[ $(val 1 copymode) == SINGLE ]]'
+press 1 r
+check "R three times sets Off again" eval '[[ $(val 1 copymode) == OFF ]]'
 
 # Two ghost blocks on the house: a gold block inside, where the world has air, and stone at its top corner, over the
 # real oak planks there. The same box copies the ghost blocks and the real blocks together: 27 blocks, taking the
@@ -1313,10 +1405,11 @@ check "erasing all of Big reaches both games" eval 'drv 2 "await block 60 -60 2 
 	"await block 139 -11 51 minecraft:air" "await block 139 -10 51 minecraft:air" &&
 	drv 1 "await block 139 -11 51 minecraft:air"'
 
-# A row over the block cap draws red, and its click pastes nothing. Ghost stone from 60 -60 2 to 123 -36 65, 64 by 25
-# by 64 blocks, is 102,400 blocks: one copy is under the cap and a row of two is over it. A box from the space above
-# its top corner copies it, and the copy rests on its top, from 60 -35 2 to 123 -11 65, and draws blue. In Vertical,
-# looking down at the stone's top, the row goes down 2 copies, 204,800 blocks.
+# A set over the block cap draws red, and its click pastes nothing. Ghost stone from 60 -60 2 to 123 -36 65, 64 by 25
+# by 64 blocks, is 102,400 blocks: one copy is under the cap and a set of two is over it. A box from the space above
+# its top corner copies it, and the copy rests on its top, from 60 -35 2 to 123 -11 65, and draws blue; its middle
+# block is 91 -23 33. In Line, looking down past the copy's side, the view crosses the upright line through the middle
+# at about -42: the set goes down 2 copies, 204,800 blocks.
 drv 1 "edit 60 -60 2 123 -36 65 minecraft:stone" > /dev/null
 check "client 1 sees the 102,400 ghost stone" drv 1 "await block 60 -60 2 minecraft:stone" \
 	"await block 123 -36 65 minecraft:stone"
@@ -1328,34 +1421,36 @@ check "the copy rests on the stone's top, under the block cap, blue" eval \
 	'drv 1 "await copy at 60,-35,2..123,-11,65 NONE NONE unselected 102400 blocks" > /dev/null &&
 	drv 1 "await copycolour BLUE" > /dev/null'
 press 1 r
-press 1 r
 use_click 1
-check "in Vertical, the first click fixes the row's start, still blue" eval '[[ $(val 1 copymode) == VERTICAL ]] &&
-	drv 1 "await row 1 copies, 1 placements NONE NONE: 60,-35,2..123,-11,65" > /dev/null &&
+check "in Line, the first click fixes the set's first copy, still blue" eval '[[ $(val 1 copymode) == LINE ]] &&
+	drv 1 "await set 1 copies, 1 placements NONE NONE: 60,-35,2..123,-11,65" > /dev/null &&
 	[[ $(val 1 copycolour) == BLUE ]]'
-drv 1 "lookat 91.5 -36.5 33.5" "wait 5" > /dev/null
-check "a row of two copies, 204,800 blocks, is over the block cap and draws red" eval \
-	'drv 1 "await row 2 copies, 2 placements NONE NONE: 60,-35,2..123,-11,65 ; 60,-60,2..123,-36,65" > /dev/null &&
+drv 1 "lookat 91.5 -45 33.5" "wait 5" > /dev/null
+check "a set of two copies, 204,800 blocks, is over the block cap and draws red" eval \
+	'drv 1 "await set 2 copies, 2 placements NONE NONE: 60,-35,2..123,-11,65 ; 60,-60,2..123,-36,65" > /dev/null &&
 	drv 1 "await copycolour RED TOO_MANY_BLOCKS" > /dev/null'
+echo "  the Line over the cap: $(val 1 copyset)" >> /out/checks.log
 check "its controls line says why in place of the paste" eval \
-	'[[ $(val 1 modehud) == "Vertical: [Can'"'"'t paste: too many blocks][Esc/Left-click: cancel]" ]]'
-check "Litematica draws no box for the copy or its row" eval '[[ $(val 1 boxes) == *"others: none" ]]'
+	'[[ $(val 1 modehud) == "$(set_line Line "[Can'"'"'t paste: too many blocks]")" ]]'
+check "Litematica draws no box for the copy or its set" eval '[[ $(val 1 boxes) == *"others: none" ]]'
 drv 1 "wait 200" > /dev/null
-shots copy-red-row-over-cap
-line_shot line-row-red
+shots copy-red-set-over-cap
+line_shot line-line-red-set
 lines=$(chat_lines 1)
 use_click 1
 check "its click pastes nothing and sends no edit" eval 'drv 1 "wait 20" > /dev/null &&
 	[[ $(val 1 holdlog) == *" edits=0 "* ]] && [[ $(val 2 "get 60 -35 2") == minecraft:air ]] &&
 	(($(chat_lines 1) == lines))'
-check "and leaves the row fixed" drv 1 "await row 2 copies"
+check "and leaves the set fixed" drv 1 "await set 2 copies"
 drv 1 "lookat 91.5 -20 33.5" "wait 5" > /dev/null
-check "aimed back into the first copy, the row is one copy again, and blue" eval \
-	'drv 1 "await row 1 copies" > /dev/null && drv 1 "await copycolour BLUE" > /dev/null'
+check "aimed back into the first copy, the set is one copy again, and blue" eval \
+	'drv 1 "await set 1 copies" > /dev/null && drv 1 "await copycolour BLUE" > /dev/null'
 attack_click 1
 press 1 r
-check "a left click drops the row, and R switches back to Single" eval '[[ $(val 1 copyrow) == none ]] &&
-	[[ $(val 1 copymode) == SINGLE ]]'
+press 1 r
+press 1 r
+check "a left click drops the set, and R three times sets Off again" eval '[[ $(val 1 copyset) == none ]] &&
+	[[ $(val 1 copymode) == OFF ]]'
 attack_click 1
 drv 1 "edit 60 -60 2 123 -36 65 minecraft:air" > /dev/null
 check "a left click puts the copy away, and the stone is erased" eval 'drv 1 "wait 10" > /dev/null &&
@@ -2021,7 +2116,7 @@ check "in Single with stone bricks, Single's line shows" eval '[[ $(val 1 modehu
 press 1 r
 check "R does nothing in Single: the line, the lock and the copy's mode stay" eval 'drv 1 "wait 5" > /dev/null &&
 	[[ $(val 1 modehud) == "$single_line" ]] && [[ $(val 1 lock) == "unlocked active" ]] &&
-	[[ $(val 1 copymode) == SINGLE ]]'
+	[[ $(val 1 copymode) == OFF ]]'
 use_click 1
 check "and a right click places one block, as one edit" eval \
 	'drv 1 "await block -64 -60 -40 minecraft:stone_bricks" > /dev/null && [[ $(val 1 holdlog) == *" edits=1 "* ]] &&
@@ -3376,12 +3471,12 @@ check "a box Planner1 counts is Last counted in their file on the server within 
 	((SECONDS - list_counted <= 31))'
 echo "  seconds from the count to the file: $((SECONDS - list_counted)); the file's Last counted: $(val 1 "listfile $lists_file")" \
 	>> /out/checks.log
-# The copy's mode, set to Zoop before the restart, starts as Single again after it, and Delete, last used in Aim, starts
+# The copy's mode, set to Line before the restart, starts as Off again after it, and Delete, last used in Aim, starts
 # in a box again.
 paste_button
 press 1 r
-check "before the restart, R sets the copy's mode to Zoop, and Delete was last used in Aim" eval \
-	'[[ $(val 1 copymode) == ZOOP ]] && [[ $(val 1 deletemode) == AIM ]]'
+check "before the restart, R sets the copy's mode to Line, and Delete was last used in Aim" eval \
+	'[[ $(val 1 copymode) == LINE ]] && [[ $(val 1 deletemode) == AIM ]]'
 cp /out/client1.log /out/client1-before-lists-restart.log
 cp /out/server.log /out/server-before-lists-restart.log
 stop_client 1
@@ -3390,7 +3485,7 @@ start_server "" server-lists
 start_client 1
 check "after the server and Planner1's game restart, the game has the list it counted as its current list" eval \
 	'drv 1 "await session" "await noscreen" "wait 20" > /dev/null && [[ $(val 1 currentlist) == "$counted_list" ]]'
-check "and the copy's mode is Single again" eval '[[ $(val 1 copymode) == SINGLE ]]'
+check "and the copy's mode is Off again" eval '[[ $(val 1 copymode) == OFF ]]'
 delete_button
 check "and the Delete button starts a box" eval '[[ $(val 1 drawbox) == "DELETE 0 "* ]] && [[ $(val 1 mousemode) == BOX ]]'
 use_click 1

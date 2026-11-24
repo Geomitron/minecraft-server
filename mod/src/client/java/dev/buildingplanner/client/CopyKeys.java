@@ -15,12 +15,12 @@ import net.minecraft.world.entity.Entity;
 
 /**
  * The copy's eight keys (see "Keys"): "Lock or unlock" (H), the six "Nudge" keys (the arrow keys, Page Up and Page
- * Down) and "Change Zoop or Delete mode" (R), Satisfactory's keys for its hologram. They need no hook: the client tick
- * reads them, with no screen open, while the copy is at the aim and no zoop's row is fixed, and otherwise empties their
- * presses, so a press made before the copy came to the aim doesn't act once it does. A nudge key acts only while the
- * copy is locked, and held down it acts again ({@link KeyRepeat}). H and the nudge keys act the same way for the build
- * modes' lock while its controls are active, in every mode but Disable (see "Locking and the first click"), where R does
- * nothing. R also acts while Delete is on, switching a Delete box and Delete by aim into each other.
+ * Down) and "Change copy mode" (R), Satisfactory's keys for its hologram. They need no hook: the client tick reads
+ * them, with no screen open, while the copy is at the aim, with a set fixed too, and otherwise empties their presses, so
+ * a press made before the copy came to the aim doesn't act once it does. A nudge key acts only while the copy is locked,
+ * and held down it acts again ({@link KeyRepeat}); during a set it moves the first copy, and the set with it. H and the
+ * nudge keys act the same way for the build modes' lock while its controls are active, in every mode but Disable (see
+ * "Locking and the first click"), where R does nothing. R also acts while Delete is on, switching a Delete box and Delete by aim into each other.
  */
 final class CopyKeys {
 	static final KeyMapping LOCK =
@@ -80,8 +80,7 @@ final class CopyKeys {
 	 * Delete, or empties their presses.
 	 */
 	void tick(Minecraft mc, ClientSession session) {
-		boolean acting = session != null && session.clipboard().atAim() && !session.clipboard().rowFixed()
-			&& mc.gui.screen() == null;
+		boolean acting = session != null && session.clipboard().atAim() && mc.gui.screen() == null;
 		boolean locking = !acting && session != null && mc.gui.screen() == null && BuildingPlannerClient.lockActive();
 		int lockPresses = presses(LOCK);
 		int modePresses = presses(MODE);

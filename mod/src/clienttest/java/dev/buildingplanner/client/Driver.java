@@ -231,7 +231,7 @@ public final class Driver implements ClientModInitializer {
 				return copy();
 			}
 			case "copymode" -> {
-				// copymode: the copy's build mode, SINGLE, ZOOP or VERTICAL.
+				// copymode: the copy's mode, OFF, LINE, WALL or FLOOR.
 				return ClientSession.copyMode().name();
 			}
 			case "copycolour" -> {
@@ -240,9 +240,9 @@ public final class Driver implements ClientModInitializer {
 				// none.
 				return copyColour();
 			}
-			case "copyrow" -> {
-				// copyrow: the zoop's row at the copy (see row()).
-				return row();
+			case "copyset" -> {
+				// copyset: the copy's set (see set()).
+				return set();
 			}
 			case "pastehere" -> {
 				// pastehere x1 y1 z1 x2 y2 z2: copies the box, as Copy does, and pastes the copy at once where it was
@@ -1237,7 +1237,7 @@ public final class Driver implements ClientModInitializer {
 			case "tile" -> String.valueOf(tile(Integer.parseInt(a[1]), Integer.parseInt(a[2]))).equals(a[3]);
 			case "glow" -> glows().contains(what.substring(5));
 			case "copy" -> copy().startsWith(what.substring(5));
-			case "row" -> row().startsWith(what.substring(4));
+			case "set" -> set().startsWith(what.substring(4));
 			case "copycolour" -> copyColour().equals(what.substring(11));
 			case "sprint" -> mc.options.keySprint.isDown() == Boolean.parseBoolean(a[1]);
 			case "preview" -> PreviewProbe.positions().equals(what.substring(8));
@@ -1267,7 +1267,7 @@ public final class Driver implements ClientModInitializer {
 				case "glow" -> glows();
 				case "erasing" -> String.valueOf(erasing());
 				case "copy" -> copy();
-				case "row" -> row();
+				case "set" -> set();
 				case "copycolour" -> copyColour();
 				case "layer" -> LayerProbe.compare(Minecraft.getInstance().gameDirectory.toPath().resolve(a[2]));
 				case "listfile" -> "file " + ListProbe.lastCounted(Minecraft.getInstance().gameDirectory.toPath()
@@ -1488,20 +1488,20 @@ public final class Driver implements ClientModInitializer {
 	}
 
 	/**
-	 * The zoop's row at the copy: {@code none} while no row is fixed, otherwise how many copies it has, how many of
-	 * Litematica's placements are the copy's or its row's, with the mirrors and rotations they have (one, when every copy
+	 * The copy's set: {@code none} while no set is fixed, otherwise how many copies it has, how many of
+	 * Litematica's placements are the copy's or its set's, with the mirrors and rotations they have (one, when every copy
 	 * is turned alike), then each copy's box, the first's first: {@code 2 copies, 2 placements NONE NONE:
 	 * 4,-60,20..6,-59,21 ; 7,-60,20..9,-59,21}.
 	 */
-	private static String row() throws Exception {
+	private static String set() throws Exception {
 		if (session() == null) {
 			return "nosession";
 		}
 		Clipboard clipboard = clipboard();
-		if (!clipboard.rowFixed()) {
+		if (!clipboard.setFixed()) {
 			return "none";
 		}
-		List<CopyPlacement.Spot> spots = clipboard.rowSpots();
+		List<CopyPlacement.Spot> spots = clipboard.setSpots();
 		List<SchematicPlacement> placements = DataManager.getSchematicPlacementManager().getAllSchematicsPlacements()
 			.stream().filter(clipboard::holds).toList();
 		String turns = placements.stream().map(p -> p.getMirror() + " " + p.getRotation()).distinct()

@@ -2129,41 +2129,46 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   up again, and follows the aim; it's shot following the aim at 854 by 480 and 1920 by 1080. With the paste erased and
   the copy locked again where it was, with Freecam's camera on and facing east while Planner1 faces north, Up moves it
   east, away from the camera.
-- The copy's mode starts as Single, and R switches it to Zoop, Vertical, Single and Zoop again. In Zoop the first right
-  click fixes the copy as the row's start and sends no edit. Aimed 9 blocks north, the row has 4 copies end to end,
-  each the copy's length north to south from the one before, each one of Litematica's placements, which Litematica
-  draws; the first stays where the click fixed it. It's shot at 854 by 480 and 1920 by 1080. Aimed farther, the row
-  stops at 10 copies; aimed back, it shrinks to 4. A notch of the wheel up turns every copy a quarter turn, the row
-  laid again at the turned length (6 copies), and a notch down turns them back. H and the nudge keys act on nothing
-  while the row is fixed. A left click drops the row, sending no edit, and leaves the copy following the aim, still in
-  Zoop. A row of 4 pastes as one edit, which the other player sees, every copy's blocks; the copy is then at the aim
-  with no row, and aimed at the east face of the row's third copy it sits flush beside that copy, not beside the row's
-  end. One Ctrl+Z takes back the whole row. In Vertical, looking up past the copy, the row goes up 5
-  copies, each the copy's height above the one before, and is shot at both sizes; looking down, it goes down 3, to the
-  bottom of the world.
-- With Zoop set, a new copy made with the Copy button keeps the mode, and its first click fixes a row. After Planner1's
-  game restarts, the mode is Single again.
+- The copy's mode starts as Off, and R switches it to Line, Wall, Floor and Off, H locking and unlocking the copy in
+  each, and to Line again. In Line the first right click fixes the copy as the set's first copy and sends no edit.
+  Looking up past the copy, the set has 4 copies, each the copy's height above the one before, each one of
+  Litematica's placements, which Litematica draws; the first stays where the click fixed it. It's shot at 854 by 480
+  and 1920 by 1080. Looking farther up, the set stops at 10 copies; looking back, it shrinks to 4. A notch of the
+  wheel up turns every copy a quarter turn, the set laid again at the turned size, and a notch down turns them back.
+  H locks the first copy, and a nudge moves it and the set with it, which the nudge back returns. A left click drops
+  the set, sending no edit, and leaves the copy following the aim, still in Line. The Line of 4 up pastes as one edit,
+  which the other player sees, every copy's blocks, and one Ctrl+Z takes it back; so does a Line of 4 east, shot at
+  both sizes. R during that Line switches to Wall with the same first copy and, from the same aim, the same 4 copies;
+  aimed up and east, the Wall is 3 copies by 2, shot at both sizes, and pastes as one edit, which one Ctrl+Z takes
+  back. R during a Wall switches to Floor with the same first copy; aimed north east on the grass, the Floor is 4
+  copies by 4, shot at both sizes, and pastes as one edit; aimed at the east face of one of its copies, the copy sits
+  flush beside that copy, not beside the Floor's edge; and one Ctrl+Z takes back the whole Floor. R during a Floor
+  switches to Off, which drops the set and leaves the copy following the aim.
+- With Line set, a new copy made with the Copy button keeps the mode, and its first click fixes a set's first copy.
+  After Planner1's game restarts, the mode is Off again.
 - The copy's colours (the driver's `copycolour`): on the grass it's blue, and Litematica draws no box for it or for a
-  zoop row's copies (hook L6, the driver's `boxes`), which are blue too; over a ghost gold block its stone bricks would
+  set's copies (hook L6, the driver's `boxes`), which are blue too; over a ghost gold block its stone bricks would
   replace, it's yellow, and its click still pastes. Locked and nudged down to the world's bottom it's blue, and one
   block lower, partly below the build height, it's red; then, back on the grass, with a world border whose edge
   crosses it, it's red again. Each red click pastes nothing, sends no edit and adds no chat line, and the copy stays
-  locked where it was; with the border back, it's blue. A copy of 102,400 ghost stone blocks is blue, and a Vertical
-  row of two of them, 204,800 blocks, is red; its click sends no edit and leaves the row, and aimed back to one copy
-  the row is blue. The copy is shot blue on the grass, yellow over the ghost blocks, red at the border, and the red row
+  locked where it was; with the border back, it's blue. A copy of 102,400 ghost stone blocks is blue, and a Line of two
+  of them going down, 204,800 blocks, is red; its click sends no edit and leaves the set, and aimed back to one copy
+  the set is blue. The copy is shot blue on the grass, yellow over the ghost blocks, red at the border, and the red set
   over the cap, each at 854 by 480 and 1920 by 1080, GUI scale 2.
-- The controls lines, each checked word for word (the driver's `modehud`): Single before the first paste, and with
-  "[Hold Left Control: line up]" after it; locked after a paste, with the nudges, "[R: Zoop mode]" and no "line up";
+- The controls lines, each checked word for word (the driver's `modehud`): Off before the first paste, and with
+  "[Hold Left Control: line up]" after it; locked after a paste, with the nudges, "[H: Lock (On)]" and no "line up";
   locked and red below the build height and at the border, with the reason in place of the paste, and the paste back
-  once it's blue; R on that locked red copy, which makes it a red Zoop before its first click, with the reason before
-  "[Right-click: set the start]", and R twice more back to Single; Zoop and Vertical before the first click, and Zoop
-  locked; a fixed row of 1, 4, 10 and 5 copies; the red row over the cap, with "[Can't paste: too many blocks]"; and each
-  box's line, Delete's among them. With the lock key bound to K, the mode key to G, the nudge forward to I and the
+  once it's blue; R on that locked red copy, which makes it a red Line, Wall and Floor in turn before its first
+  click, each with the reason before "[Right-click: set the start]", and R once more back to Off; Line, Wall and Floor
+  before the first click, each locked too; a set of 1, 4 and 10 copies in Line, and of 4 locked, with the nudges; a
+  Wall of 4 and of 6 copies and a Floor of 16; the red set over the cap, with "[Can't paste: too many blocks]"; and
+  each box's line, Delete's among them. With the lock key bound to K, the mode key to G, the nudge forward to I and the
   sprint key to Right Control (the driver's `bindkey`), the line names K, G and Right Control, K locks the copy, and
   the locked line names the four nudges one by one beside "Page Up/Down", K and G; with the keys back, it names H and R
   again. Each line is shot at noon at 1920 by 1080, GUI scale 4, the longest (the locked copy, and locked and red) at
-  854 by 480, GUI scale 2, locked and red at 1920 by 1080, GUI scale 2, too, and Single's over a floor of ghost white
-  wool, birch planks and glowstone at GUI scales 2 and 4, with the lines as they wrap, every rectangle's window box, and the union of their backgrounds in the log (the driver's `modewrap`, `moderects` and
+  854 by 480, GUI scale 2, locked and red at 1920 by 1080, GUI scale 2, too, and Off's over a floor of ghost white
+  wool, birch planks and glowstone at GUI scales 2 and 4, with the lines as they wrap, every rectangle's window box,
+  and the union of their backgrounds in the log (the driver's `modewrap`, `moderects` and
   `modebox`). In each shot every rectangle is one line of text high with 2 GUI pixels of background at each side, the
   rectangles in a row are 4 GUI pixels apart, the rows 11 apart, and each row is centred and inside the screen less 4
   GUI pixels at each side; at 854 by 480, GUI scale 2, the locked line wraps onto a second row. The reason's
@@ -2518,25 +2523,25 @@ nearest compass direction, back its opposite, left and right its sides, up and d
 covers a key's repeat: a press acts at once, a held key again after 4 ticks and then every 4 (5 a second), the
 computer's own key repeat not counting while the key stays down, and each new press acting at once.
 
-The zoop's row has unit tests as a pure function too. `CopyRowTest` covers R's order of the modes; Single as the first
-copy alone; Zoop in each compass direction, the copies touching without overlapping, the direction the aim is
-farthest along with a tie going east or west, the row ending with the copy that holds the aim, at most 10 copies, and a
-turned copy its turned length apart; Vertical up and down its height apart, whatever the aim's distance to the side;
-the view's height for Vertical, looking up, down, away and straight up; and the box around the row.
+The copy's set has unit tests as a pure function too. `CopyGridTest` covers R's order of the modes; Off as the first
+copy alone; a Line up and down its height apart, and east, west, north and south its length apart; a block within the
+first copy as the first copy alone; a Wall as a grid in its upright plane and a Floor as a grid on the first copy's
+level, each row by row from the first, in each direction; at most 10 copies along each direction, so 100 in a Wall or
+a Floor; a turned copy its turned size apart, the copies touching without overlapping; and the box around the set.
 
 The copy's colour has unit tests as a pure function too. `CopyColourTest` covers a copy on clear ground and one beside
 ghost blocks, blue; a copy whose block would replace a ghost block, yellow, but not over a ghost block the same as its
-own; a row yellow when any of its copies is; a copy partly above or below the build height and one partly outside the
-border, red, and one just inside each, blue; red over yellow; a row over the block cap, red, and one at the cap, blue;
-a row reaching past the build height while its first copy doesn't; the cap checked first, as on the server; and ghost
+own; a set yellow when any of its copies is; a copy partly above or below the build height and one partly outside the
+border, red, and one just inside each, blue; red over yellow; a set over the block cap, red, and one at the cap, blue;
+a set reaching past the build height while its first copy doesn't; the cap checked first, as on the server; and ghost
 blocks read only while no red check fails. `LayerTest` covers the layer's version, which changes with each change and
 only then.
 
 The controls lines have unit tests as a pure function too. `ControlsLineTest` reads each line in English from
-`en_us.json`: Single before and after the first paste, locked with and without a paste to line up with (no "line up",
-and "R: Zoop mode"), Zoop, Vertical, Zoop locked and Vertical locked before the first click, a fixed row of 4 and of 1 (no "R:
-Zoop mode"), each red reason in place of the paste (and a red Zoop or Vertical, locked or not, giving its reason before "set
-the start"), each control as a rectangle of its own after the label, the reason as a warning and the actions as actions, a
+`en_us.json`: Off before and after the first paste, locked with and without a paste to line up with (no "line up",
+and "H: Lock (On)"), Line, Wall and Floor before the first click, locked or not, a set of 4, of 1 and of 16, locked or
+not, after it (no "line up"), each red reason in place of the paste or the set's (and a red Line or Floor, locked or
+not, giving its reason before "set the start"), each control as a rectangle of its own after the label, the reason as a warning and the actions as actions, a
 warning above the controls as a line of its own in red, keys a player rebound, the nudge keys off the arrow
 keys named one by one, the up and down keys named with their shared first word dropped ("Page Up/Down", "Keypad
 8/2") or in full ("U/J"), the nudge phrase with only one of its two parts, unbound keys left out and the phrase gone
@@ -2665,7 +2670,7 @@ other in the game's own copy of the layer, again after a restart, which doesn't 
   milliseconds for a few hundred lists, not measured.
 - A real 0.5.0 game on a 0.6.0 server: `step8.sh` hands the client a made-up `hello` of protocol version 4.
 - How long the copy's yellow check takes for a large copy moving over ghost blocks: each time the copy moves over a
-  column of the layer, it reads the blocks of every copy in the row until one would replace a ghost block, up to the
+  column of the layer, it reads the blocks of every copy in the set until one would replace a ghost block, up to the
   block cap of 200,000; expected a few milliseconds, not measured.
 - That Ctrl with the middle click in creative mode picks a block with its contents in Minecraft 26.3 (expected, from
   earlier versions; the client's `pickBlockOrEntity` not read for it), which hook M4 stops while it flips the block

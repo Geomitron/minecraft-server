@@ -13,8 +13,9 @@ public enum MouseMode {
 	 */
 	BOX,
 	/**
-	 * The copy at the aim: a right click pastes it (in Zoop and Vertical, the first fixes a row and the second pastes the
-	 * row), the scroll wheel turns it, a middle click mirrors it, and a left click puts it away, or drops a fixed row.
+	 * The copy at the aim: a right click pastes it (in Line, Wall and Floor, the first fixes the first copy and the second
+	 * pastes the set), the scroll wheel turns it, a middle click mirrors it, and a left click puts it away, or drops a
+	 * fixed set.
 	 */
 	COPY_AT_AIM,
 	/**
@@ -52,8 +53,8 @@ public enum MouseMode {
 	 * another switches it to that purpose, keeping its corners. A box ends too at its third left click, which finishes
 	 * it. Delete by aim ends at each of the three, and Delete then starts nothing; its right click ends it only once no
 	 * ghost block is marked, which the session decides before asking. The copy at the aim ends at a left click, its
-	 * right click being the paste, and the box and Delete by aim at a right click; a left click during a zoop's row
-	 * drops the row instead, which the session decides before asking.
+	 * right click being the paste, and the box and Delete by aim at a right click; a left click during a set
+	 * drops the set instead, which the session decides before asking.
 	 */
 	public boolean endedBy(Action action) {
 		return switch (action) {

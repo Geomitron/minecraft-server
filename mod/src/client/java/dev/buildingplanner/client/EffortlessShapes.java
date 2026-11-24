@@ -2,6 +2,7 @@ package dev.buildingplanner.client;
 
 import dev.buildingplanner.input.BlockTurn;
 import dev.buildingplanner.input.CopyColour;
+import dev.buildingplanner.input.CopyMode;
 import dev.buildingplanner.input.DisablePreview;
 import dev.buildingplanner.input.MixRule;
 import dev.buildingplanner.input.ShapeLock;
@@ -38,6 +39,9 @@ import net.minecraft.world.phys.Vec3;
 import nl.requios.effortlessbuilding.buildmode.BuildModeEnum;
 import nl.requios.effortlessbuilding.buildmode.BuildModes;
 import nl.requios.effortlessbuilding.buildmode.IBuildMode;
+import nl.requios.effortlessbuilding.buildmode.buildmodes.Floor;
+import nl.requios.effortlessbuilding.buildmode.buildmodes.Line;
+import nl.requios.effortlessbuilding.buildmode.buildmodes.Wall;
 import nl.requios.effortlessbuilding.buildpipeline.BuildPipeline;
 import nl.requios.effortlessbuilding.buildpipeline.BuildPipelineClient;
 import nl.requios.effortlessbuilding.config.ServerConfig;
@@ -65,6 +69,25 @@ public final class EffortlessShapes {
 	/** Whether the player has started a shape that isn't finished yet, read once a client tick. */
 	public static boolean shapeUnderWay() {
 		return BuildPipelineClient.getBuildState() != null;
+	}
+
+	/**
+	 * The block a set of copies reaches in Line, Wall or Floor: the block Effortless Building's {@code Line.findLine},
+	 * {@code Wall.findWall} or {@code Floor.findFloor} gives from {@code first}, the first copy's middle, with its reach
+	 * and its aim from the camera (hooks E25 and E26), as its preview finds a shape's second position; or null where it
+	 * finds none, and in Off.
+	 */
+	static BlockPos copyReach(CopyMode mode, BlockPos first) {
+		Player player = Minecraft.getInstance().player;
+		if (player == null) {
+			return null;
+		}
+		return switch (mode) {
+			case OFF -> null;
+			case LINE -> Line.findLine(player, first, true);
+			case WALL -> Wall.findWall(player, first, true);
+			case FLOOR -> Floor.findFloor(player, first, true);
+		};
 	}
 
 	/** Which shape is under way, for the build modes' line: none, one drawn with the place click, or the break click. */

@@ -17,7 +17,7 @@ import net.minecraft.util.profiling.ProfilerFiller;
 import org.joml.Vector4f;
 
 /**
- * Draws the box of the copy at the aim, and of each copy in its row, each frame through MaLiLib's renderer, as the box
+ * Draws the box of the copy at the aim, and of each copy in its set, each frame through MaLiLib's renderer, as the box
  * for Copy is drawn (an outline and see-through sides), in Satisfactory's hologram colours ({@link CopyColour}): blue, yellow or red. Hook L6 leaves these
  * placements out of Litematica's own boxes. The build modes' lock's box is drawn the same way, around each locked
  * position (see "Locking and the first click": "Colours").

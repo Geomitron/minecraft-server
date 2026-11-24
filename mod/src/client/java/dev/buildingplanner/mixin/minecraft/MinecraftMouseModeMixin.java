@@ -19,7 +19,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(value = Minecraft.class, priority = 900)
 abstract class MinecraftMouseModeMixin {
 	/**
-	 * Hook M1: the left click sets the box's next corner, puts the copy away or drops its row, or starts Delete by aim's
+	 * Hook M1: the left click sets the box's next corner, puts the copy away or drops its set, or starts Delete by aim's
 	 * hold to erase, and attacks and breaks nothing.
 	 */
 	@Inject(method = "startAttack", at = @At("HEAD"), cancellable = true)

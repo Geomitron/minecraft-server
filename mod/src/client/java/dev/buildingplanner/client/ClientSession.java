@@ -6,7 +6,7 @@ import dev.buildingplanner.input.BoxPurpose;
 import dev.buildingplanner.input.CopyColour;
 import dev.buildingplanner.input.CopyMode;
 import dev.buildingplanner.input.CopyPlacement;
-import dev.buildingplanner.input.CopyRow;
+import dev.buildingplanner.input.CopyGrid;
 import dev.buildingplanner.input.DeleteMode;
 import dev.buildingplanner.input.EraseHold;
 import dev.buildingplanner.input.MouseMode;
@@ -42,7 +42,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 
@@ -53,10 +52,10 @@ import net.minecraft.world.phys.BlockHitResult;
  */
 final class ClientSession {
 	/**
-	 * The copy's build mode, which starts as Single each time the game starts and stays as the player last set it while
+	 * The copy's mode, which starts as Off each time the game starts and stays as the player last set it while
 	 * the game runs, across copies, servers and dimensions, as Satisfactory keeps a build mode until R changes it.
 	 */
-	private static CopyMode copyMode = CopyMode.SINGLE;
+	private static CopyMode copyMode = CopyMode.OFF;
 	/**
 	 * Delete's mode, which starts as Box each time the game starts and stays as the player last used it while the game
 	 * runs, as the copy's mode does.
@@ -72,9 +71,9 @@ final class ClientSession {
 	private final ShapeLock lock = new ShapeLock();
 	/** The player's recent pastes in this dimension, which the copy snaps to. */
 	private final PasteBoxes pastes = new PasteBoxes();
-	/** Whether the copy was over ghost blocks, for these row boxes, these blocks and this layer at this version. */
+	/** Whether the copy was over ghost blocks, for these set boxes, these blocks and this layer at this version. */
 	private boolean overGhosts;
-	private List<CopyPlacement.Spot> ghostsRow;
+	private List<CopyPlacement.Spot> ghostsSet;
 	private Map<BlockPos, BlockState> ghostsBlocks;
 	private Layer ghostsLayer;
 	private long ghostsVersion;
@@ -215,11 +214,11 @@ final class ClientSession {
 	/**
 	 * Moves the copy at the aim against the face the player aims at, flush to a recent paste aimed at, and in line with
 	 * the most recent paste while the sprint key is held ({@link PasteBoxes#place}); aiming at nothing, or the copy locked,
-	 * leaves it. With a row fixed, the copy stays and the row follows the aim instead.
+	 * leaves it. With a set fixed, the first copy stays and the set follows the aim instead.
 	 */
 	private void followAim() {
-		if (clipboard.rowFixed()) {
-			followAimWithRow();
+		if (clipboard.setFixed()) {
+			followAimWithSet();
 			return;
 		}
 		if (!clipboard.atAim() || clipboard.locked()) {
@@ -233,48 +232,45 @@ final class ClientSession {
 	}
 
 	/**
-	 * Lays the fixed row from the copy toward the aim ({@link CopyRow#row}): in Zoop toward where the copy would rest
-	 * against the aimed face, leaving the row as it was while the player aims at nothing; in Vertical toward the view's
-	 * height above or below the copy ({@link CopyRow#verticalAim}).
+	 * Lays the fixed set from the first copy to the block Effortless Building's Line, Wall or Floor gives from the first
+	 * copy's middle ({@link EffortlessShapes#copyReach}, with its reach and aiming from the camera, hooks E25 and E26),
+	 * as {@link CopyGrid#of} counts the copies; where it gives no block, the set stays as it was.
 	 */
-	private void followAimWithRow() {
+	private void followAimWithSet() {
 		CopyPlacement.Spot first = clipboard.spot();
-		BlockPos toward = null;
-		if (copyMode == CopyMode.VERTICAL) {
-			Entity view = Aim.entity();
-			if (view != null) {
-				toward = CopyRow.verticalAim(first, view.getEyePosition(), view.getLookAngle(), GhostAim.COPY_REACH);
-			}
-		} else {
-			BlockHitResult hit = GhostAim.aim(replica.layer(), tiles.shown(), GhostAim.COPY_REACH);
-			if (hit != null) {
-				toward = CopyPlacement.againstFace(hit.getBlockPos(), hit.getDirection(), first.size()).middle();
-			}
-		}
-		if (toward != null) {
-			clipboard.showRow(CopyRow.row(copyMode, first, toward, CopyRow.MAX_COPIES));
+		BlockPos reached = EffortlessShapes.copyReach(copyMode, first.middle());
+		if (reached != null) {
+			clipboard.showSet(CopyGrid.of(copyMode, first, reached, CopyGrid.MAX_COPIES));
 		}
 	}
 
-	/** The copy's build mode. */
+	/** The copy's mode. */
 	static CopyMode copyMode() {
 		return copyMode;
 	}
 
-	/** "Change Zoop or Delete mode" with the copy at the aim: Single, Zoop and Vertical, in that order. */
+	/**
+	 * "Change copy mode" with the copy at the aim: Off, Line, Wall and Floor, in that order. During a set, after its
+	 * first click, the next mode keeps the same first copy; at Off the set drops and the copy follows the aim.
+	 */
 	void cycleCopyMode() {
 		copyMode = copyMode.next();
+		if (copyMode == CopyMode.OFF) {
+			dropSet();
+		} else {
+			followAim();
+		}
 	}
 
 	/**
-	 * The left click during a zoop, after its first click: drops the row and leaves the copy at the aim, which follows
-	 * the aim again unless it's locked. Returns whether there was a row.
+	 * The left click during a set, after its first click: drops the set and leaves the copy at the aim in the same mode,
+	 * ready for a new set, following the aim again unless it's locked. Returns whether there was a set.
 	 */
-	boolean dropRow() {
-		if (!clipboard.rowFixed()) {
+	boolean dropSet() {
+		if (!clipboard.setFixed()) {
 			return false;
 		}
-		clipboard.dropRow();
+		clipboard.dropSet();
 		followAim();
 		return true;
 	}
@@ -641,19 +637,20 @@ final class ClientSession {
 	}
 
 	/**
-	 * The right click with the copy at the aim. In Single it pastes the copy as one shape edit. In Zoop and Vertical the
-	 * first click fixes the copy as the row's first, and the second pastes the whole row as one shape edit, which one
+	 * The right click with the copy at the aim. In Off it pastes the copy as one shape edit. In Line, Wall and Floor the
+	 * first click fixes the copy as the set's first, and the second pastes the whole set as one shape edit, which one
 	 * undo takes back. A paste names only the copies' blocks, so their empty space leaves the layer's, and each copy's
-	 * box joins the recent pastes the copy snaps to, as a paste of its own; the copy stays at the aim, unlocked, and
-	 * follows the aim for the next paste. While the copy, or its row, is red ({@link #copyShown}), the click that would
-	 * paste pastes nothing and sends no edit; a zoop's first click, which pastes nothing anyway, still fixes the row.
+	 * box joins the recent pastes the copy snaps to, as a paste of its own, in the set's order; the copy stays at the
+	 * aim, unlocked, and follows the aim for the next paste. While the copy, or its set, is red ({@link #copyShown}), the
+	 * click that would paste pastes nothing and sends no edit; a set's first click, which pastes nothing anyway, still
+	 * fixes the first copy.
 	 */
 	void paste() {
 		if (!clipboard.atAim()) {
 			return;
 		}
 		boolean red = copyShown().red();
-		if (copyMode == CopyMode.SINGLE) {
+		if (copyMode == CopyMode.OFF) {
 			if (red) {
 				return;
 			}
@@ -662,24 +659,24 @@ final class ClientSession {
 				clipboard.unlock();
 				followAim();
 			}
-		} else if (!clipboard.rowFixed()) {
-			clipboard.fixRow();
+		} else if (!clipboard.setFixed()) {
+			clipboard.fixSet();
 			followAim();
 		} else if (!red) {
-			List<CopyPlacement.Spot> copies = clipboard.rowSpots();
-			if (sendShape(EditKind.SHAPE, clipboard.rowBlocks())) {
+			List<CopyPlacement.Spot> copies = clipboard.setSpots();
+			if (sendShape(EditKind.SHAPE, clipboard.setBlocks())) {
 				pastes.addAll(copies);
 				clipboard.unlock();
-				dropRow();
+				dropSet();
 			}
 		}
 	}
 
 	/**
-	 * The colour of the copy at the aim and its row, if one is fixed ({@link CopyColour}), against the world's build
+	 * The colour of the copy at the aim and its set, if one is fixed ({@link CopyColour}), against the world's build
 	 * height and border and the server's block cap, and the player's copy of the layer whether or not ghost blocks show,
 	 * since a paste shows them again and replaces them. Asked each frame to draw it and at each paste, so whether the
-	 * copy is over ghost blocks, which reads each of its blocks, is kept until the row's boxes, the copy, its turn or
+	 * copy is over ghost blocks, which reads each of its blocks, is kept until the set's boxes, the copy, its turn or
 	 * the layer change. Null while the copy isn't at the aim.
 	 */
 	CopyColour.Shown copyShown() {
@@ -687,14 +684,14 @@ final class ClientSession {
 		if (!clipboard.atAim() || level == null) {
 			return null;
 		}
-		List<CopyPlacement.Spot> row = clipboard.rowSpots();
+		List<CopyPlacement.Spot> set = clipboard.setSpots();
 		Map<BlockPos, BlockState> blocks = clipboard.blocksFromCorner();
 		Layer layer = replica.layer();
-		return CopyColour.of(row, blocks.size(), world(level), maxEditBlocks, () -> {
-			if (!row.equals(ghostsRow) || blocks != ghostsBlocks || layer != ghostsLayer
+		return CopyColour.of(set, blocks.size(), world(level), maxEditBlocks, () -> {
+			if (!set.equals(ghostsSet) || blocks != ghostsBlocks || layer != ghostsLayer
 				|| layer.version() != ghostsVersion) {
-				overGhosts = CopyColour.overGhosts(row, blocks, layer);
-				ghostsRow = row;
+				overGhosts = CopyColour.overGhosts(set, blocks, layer);
+				ghostsSet = set;
 				ghostsBlocks = blocks;
 				ghostsLayer = layer;
 				ghostsVersion = layer.version();
@@ -729,7 +726,7 @@ final class ClientSession {
 
 	/**
 	 * The copy at the aim as its controls line tells it ({@link ControlsLine#copy}): its mode, whether it's locked, the
-	 * copies in a fixed row, whether the player has pasted in this dimension, and why its paste would be refused. Null
+	 * copies in a fixed set, whether the player has pasted in this dimension, and why its paste would be refused. Null
 	 * while the copy isn't at the aim.
 	 */
 	ControlsLine.CopyState copyState() {
@@ -738,7 +735,7 @@ final class ClientSession {
 			return null;
 		}
 		return new ControlsLine.CopyState(copyMode, clipboard.locked(),
-			clipboard.rowFixed() ? clipboard.rowSpots().size() : 0, pastes.latest() != null, shown.refusal());
+			clipboard.setFixed() ? clipboard.setSpots().size() : 0, pastes.latest() != null, shown.refusal());
 	}
 
 	/**
@@ -757,8 +754,8 @@ final class ClientSession {
 
 	/**
 	 * Gives the copy at the aim a quarter turn around its middle, clockwise or counterclockwise seen from above, and sets
-	 * it against the aim again unless it's locked; with a row fixed, the copy turns in place and the row's other copies
-	 * turn with it, laid end to end again at their turned length.
+	 * it against the aim again unless it's locked; with a set fixed, the first copy turns in place and the set's other
+	 * copies turn with it, laid side by side again at their turned size.
 	 */
 	void turnCopy(boolean clockwise) {
 		if (clipboard.atAim()) {

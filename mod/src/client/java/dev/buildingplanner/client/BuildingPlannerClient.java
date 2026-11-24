@@ -398,7 +398,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	}
 
 	/**
-	 * The box {@link CopyOutline} draws, in its colour: the copy at the aim's, with its row's boxes; the lock's while it's
+	 * The box {@link CopyOutline} draws, in its colour: the copy at the aim's, with its set's boxes; the lock's while it's
 	 * on and its controls are active, around each locked position; or null.
 	 */
 	static CopyOutline.Shown outlineShown() {
@@ -407,7 +407,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		}
 		CopyColour.Shown colour = session.copyShown();
 		if (colour != null) {
-			return new CopyOutline.Shown(colour, session.clipboard().rowSpots());
+			return new CopyOutline.Shown(colour, session.clipboard().setSpots());
 		}
 		List<BlockPos> locked = lockedShown();
 		return locked.isEmpty() ? null
@@ -651,8 +651,8 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	}
 
 	/**
-	 * Hook M1: the left click sets the box's next corner, drops the zoop's row or puts the copy at the aim away when no
-	 * row is fixed, or in Delete by aim starts the hold that erases the marks; holding the button then does nothing more,
+	 * Hook M1: the left click sets the box's next corner, drops the copy's set or puts the copy at the aim away when no
+	 * set is fixed, or in Delete by aim starts the hold that erases the marks; holding the button then does nothing more,
 	 * even once the box or the copy is gone. Returns whether the click is taken from the game.
 	 */
 	public static boolean leftClick() {
@@ -668,7 +668,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 				}
 			}
 			case COPY_AT_AIM -> {
-				if (!session.dropRow()) {
+				if (!session.dropSet()) {
 					session.modeAction(MouseMode.Action.LEFT_CLICK);
 				}
 				if (session.mouseMode() == null) {
@@ -682,8 +682,8 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	}
 
 	/**
-	 * Hook M2: the right click pastes the copy at the aim (in Zoop and Vertical, fixes the row's first copy or pastes the
-	 * row); a box ends; in Delete by aim it clears the marks, or with none ends the mode. Returns whether the game's use
+	 * Hook M2: the right click pastes the copy at the aim (in Line, Wall and Floor, fixes the set's first copy or pastes
+	 * the set); a box ends; in Delete by aim it clears the marks, or with none ends the mode. Returns whether the game's use
 	 * is skipped, which it is too while the button stays down after a click the mode took or after a mode started or
 	 * ended, so holding it pastes or places no more.
 	 */
@@ -764,7 +764,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	}
 
 	/**
-	 * Hooks L4 and L5: whether the placement is a tile or the copy or one of its row's, which Litematica never selects
+	 * Hooks L4 and L5: whether the placement is a tile or the copy or one of its set's, which Litematica never selects
 	 * or lists.
 	 */
 	public static boolean isOurs(SchematicPlacement placement) {
@@ -776,7 +776,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		return session != null && session.tiles().holds(container);
 	}
 
-	/** Hooks L5 and L6: the placements without the tiles, the copy and its row. */
+	/** Hooks L5 and L6: the placements without the tiles, the copy and its set. */
 	public static List<SchematicPlacement> withoutOurs(Collection<SchematicPlacement> placements) {
 		if (session == null) {
 			return placements instanceof List<SchematicPlacement> list ? list : List.copyOf(placements);
