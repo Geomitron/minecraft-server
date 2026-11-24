@@ -6,7 +6,6 @@ import dev.buildingplanner.ClientConfig;
 import dev.buildingplanner.input.BlockTurn;
 import dev.buildingplanner.input.BoxPurpose;
 import dev.buildingplanner.input.CopyColour;
-import dev.buildingplanner.input.CopyMode;
 import dev.buildingplanner.input.CopyPlacement;
 import dev.buildingplanner.input.DeleteMode;
 import dev.buildingplanner.input.DisablePreview;
@@ -248,9 +247,6 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 					}
 					heldClicks.tick(client);
 				}
-				if (singleActive() && session.single().rowFixed()) {
-					EffortlessShapes.followRow(session.single());
-				}
 			}
 			copyKeys.tick(client, session);
 		});
@@ -402,9 +398,8 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	}
 
 	/**
-	 * The box {@link CopyOutline} draws, in its colour: the copy at the aim's, with its row's boxes; the one ghost
-	 * block's row's while it's fixed and its controls are active, around each block of the row; the lock's while it's on
-	 * and its controls are active, around each locked position; or null.
+	 * The box {@link CopyOutline} draws, in its colour: the copy at the aim's, with its row's boxes; the lock's while it's
+	 * on and its controls are active, around each locked position; or null.
 	 */
 	static CopyOutline.Shown outlineShown() {
 		if (session == null) {
@@ -413,10 +408,6 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		CopyColour.Shown colour = session.copyShown();
 		if (colour != null) {
 			return new CopyOutline.Shown(colour, session.clipboard().rowSpots());
-		}
-		SingleBlock block = shownSingle();
-		if (block != null) {
-			return new CopyOutline.Shown(EffortlessShapes.singleColour(block), spots(block.row()));
 		}
 		List<BlockPos> locked = lockedShown();
 		return locked.isEmpty() ? null
@@ -482,25 +473,11 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	}
 
 	/**
-	 * Hook M3: whether holding the attack button breaks nothing: while a mouse mode is on, while the one ghost block's
-	 * row is fixed, and while the button stays down after the click that finished a box or dropped the block's row.
+	 * Hook M3: whether holding the attack button breaks nothing: while a mouse mode is on, and while the button stays
+	 * down after the click that finished a box.
 	 */
 	public static boolean holdingAttackTaken() {
-		return session != null && (attackHeld || session.mouseMode() != null || singleTakesBreak());
-	}
-
-	/**
-	 * Whether the one ghost block's controls are active ({@link SingleRule#active}): a session, Effortless Building's
-	 * Single mode, no mouse mode, and an item that places a block in the main hand.
-	 */
-	static boolean singleActive() {
-		return effortless && SingleRule.active(session != null, EffortlessShapes.singleMode(), mouseModeOn(),
-			ClickRule.holdsPlaceable());
-	}
-
-	/** The one ghost block while its row is fixed and its controls are active (hooks E27, E28 and E30), or null. */
-	static SingleBlock shownSingle() {
-		return singleActive() && session.single().rowFixed() ? session.single() : null;
+		return session != null && (attackHeld || session.mouseMode() != null);
 	}
 
 	/**
@@ -528,8 +505,8 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	}
 
 	/**
-	 * Whether the turning controls are active (Left Ctrl with the wheel and the middle click, see "One ghost block":
-	 * "Turning and flipping"): in the modes whose shapes take the turn ({@link #shapesTakeTurn}), or in Disable
+	 * Whether the turning controls are active (Left Ctrl with the wheel and the middle click, see "Locking and the first
+	 * click": "Turning and flipping"): in the modes whose shapes take the turn ({@link #shapesTakeTurn}), or in Disable
 	 * ({@link #disableTurning}).
 	 */
 	static boolean turningActive() {
@@ -611,9 +588,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	/**
 	 * The line that shows with no mouse mode on, with the keys as the player has them bound: while the lock's controls
 	 * are active, in every one of Effortless Building's modes but Disable, the build modes' line
-	 * ({@link ControlsLine#shape}), with the reason in red while the locked position is red, or in the one ghost block's
-	 * Zoop and Vertical, their line ({@link ControlsLine#single}), red while the box of the row or the lock is; in
-	 * Disable, while its turning controls are active, Disable's line ({@link ControlsLine#disable}), with whether the
+	 * ({@link ControlsLine#shape}), with the reason in red while the locked position is red; in Disable, while its turning controls are active, Disable's line ({@link ControlsLine#disable}), with whether the
 	 * block a right click would place hangs on the block behind it and whether the turned block can stay; or null.
 	 */
 	private static ControlsLine.Line modelessLine() {
@@ -630,11 +605,6 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		if (lock) {
 			CopyOutline.Shown boxed = outlineShown();
 			boolean red = boxed != null && boxed.colour().red();
-			SingleBlock block = session.single();
-			if (EffortlessShapes.singleMode() && (SingleBlock.mode() != CopyMode.SINGLE || block.rowFixed())) {
-				return ControlsLine.single(new ControlsLine.SingleState(SingleBlock.mode(), session.lock().on(),
-					block.rowFixed() ? block.row().size() : 0, red, turn), keys);
-			}
 			return ControlsLine.shape(new ControlsLine.ShapeState(EffortlessShapes.singleMode(), session.lock().on(), red,
 				EffortlessShapes.underway(), turn), keys);
 		}
@@ -647,16 +617,6 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	/** Hook L11: whether the middle click flips the block in hand, so Litematica picks no block with it. */
 	public static boolean flipTakesMiddle() {
 		return effortless && turnTakes(BlockTurn::flips);
-	}
-
-	/** Hooks E14 and M2: whether the place click is the one ghost block's ({@link SingleRule#takesPlace}). */
-	public static boolean singleTakesPlace() {
-		return singleActive() && SingleRule.takesPlace(session.single().state());
-	}
-
-	/** Hooks E14, M1 and M3: whether the break click is the one ghost block's ({@link SingleRule#takesBreak}). */
-	public static boolean singleTakesBreak() {
-		return singleActive() && SingleRule.takesBreak(session.single().state());
 	}
 
 	/**
@@ -692,18 +652,12 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 
 	/**
 	 * Hook M1: the left click sets the box's next corner, pastes the copy at the aim, or in Delete by aim starts the hold
-	 * that erases the marks; with the one ghost block's row fixed, it drops the row; holding the button then does
-	 * nothing more. Returns whether the click is taken from the game.
+	 * that erases the marks; holding the button then does nothing more. Returns whether the click is taken from the game.
 	 */
 	public static boolean leftClick() {
 		MouseMode mode = mouseMode();
 		if (mode == null) {
-			if (!singleTakesBreak()) {
-				return false;
-			}
-			EffortlessShapes.leftClick(session.single());
-			attackHeld = Minecraft.getInstance().options.keyAttack.isDown();
-			return true;
+			return false;
 		}
 		switch (mode) {
 			case BOX -> {
@@ -721,9 +675,8 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 
 	/**
 	 * Hook M2: the right click puts the copy away, or during a zoop, after its first click, drops the row and leaves the
-	 * copy at the aim; in Delete by aim it clears the marks, or with none ends the mode. With the one ghost block in Zoop
-	 * or Vertical, it fixes the row's start or places the row ({@link EffortlessShapes#rightClick}). Returns whether the game's use is skipped, which it is too while the button
-	 * stays down after a mode started or ended or the block's click acted, so holding it does no more.
+	 * copy at the aim; in Delete by aim it clears the marks, or with none ends the mode. Returns whether the game's use is
+	 * skipped, which it is too while the button stays down after a mode started or ended, so holding it does no more.
 	 */
 	public static boolean rightClick() {
 		if (session == null) {
@@ -733,11 +686,6 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 			if (!session.dropRow() && !session.clearMarks()) {
 				session.modeAction(MouseMode.Action.RIGHT_CLICK);
 			}
-			useHeld = true;
-			return true;
-		}
-		if (!useHeld && singleTakesPlace()) {
-			EffortlessShapes.rightClick(session.single());
 			useHeld = true;
 			return true;
 		}

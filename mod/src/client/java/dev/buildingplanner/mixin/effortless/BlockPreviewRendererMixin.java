@@ -25,8 +25,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * Hook E6: while the mix applies, the preview draws each position's block from the mix. Hook E22: no preview while a
  * mouse mode is on. Hook E24: the preview's first block aims, and faces, from Freecam's camera while it's on. Hooks
  * E28 and E30: the first click's block is drawn, at a locked position in the state the hit it was locked with gives
- * it, and so are the one ghost block's fixed row, in the state its hit gives it, and Disable's block, in the state a
- * right click would place.
+ * it, and so is Disable's block, in the state a right click would place.
  */
 @Mixin(value = BlockPreviewRenderer.class, remap = false)
 abstract class BlockPreviewRendererMixin {
@@ -77,8 +76,8 @@ abstract class BlockPreviewRendererMixin {
 	}
 
 	/**
-	 * Hook E28: while a first position is locked, or the one ghost block's row is fixed, the preview's block takes its
-	 * state from the hit it was locked or fixed with, as a right click places it, not from the aim. In Disable, while its preview shows,
+	 * Hook E28: while a first position is locked, the preview's block takes its state from the hit it was locked with,
+	 * as a right click places it, not from the aim. In Disable, while its preview shows,
 	 * the state a right click would place, turned.
 	 */
 	@ModifyReturnValue(method = PLACEMENT_STATE, at = @At("RETURN"))

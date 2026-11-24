@@ -205,60 +205,6 @@ public final class ControlsLine {
 		return rects;
 	}
 
-	/**
-	 * The one ghost block as its line tells it: its own mode, whether it's locked, the number of blocks in a Zoop or
-	 * Vertical row fixed by its first click (0 before it), whether the block or the row is red (outside the world's build
-	 * height or its border), and the block in hand as the turning line tells it.
-	 */
-	public record SingleState(CopyMode mode, boolean locked, int row, boolean red, TurnState turn) {
-	}
-
-	/**
-	 * The line of the one ghost block's Zoop and Vertical (see "One ghost block": "Controls line"); Single's own mode has
-	 * the build modes' line ({@link #shape}). With a row fixed: the mode, the right click that places the
-	 * row with its count (or in red why it can't), the turning controls, and the left click that cancels the row, locked
-	 * or not. Otherwise: the mode, "Locked" or both, the right click (placing, or in red why it can't; in Zoop and
-	 * Vertical the reason if there is one, then setting the row's start), the nudge keys while it's locked, the left
-	 * click that erases, the turning controls, the lock key and the mode key. ", turned" follows the mode and the lock
-	 * once the block is turned or flipped, or "Turned" alone in Single. A key with no key bound is left out.
-	 */
-	public static Line single(SingleState state, Keys keys) {
-		List<Text> turning = turnParts(state.turn(), keys.sprint());
-		List<Text> rects = new ArrayList<>();
-		if (state.row() > 0) {
-			rects.add(state.red() ? reason(SINGLE + ".outside")
-				: hint(RIGHT, state.row() == 1 ? Translated.of(SINGLE + ".place_row_one", Look.ACTION)
-					: Translated.of(SINGLE + ".place_row", Look.ACTION, new Literal(String.valueOf(state.row())))));
-			rects.addAll(turning);
-			rects.add(hint(LEFT, COPY + ".cancel"));
-			return labelled(turned(modeName(state.mode()), state.turn().turned()), rects);
-		}
-		if (state.mode() != CopyMode.SINGLE) {
-			// The first click still fixes the row's start while the block is red, so it stays, after the reason.
-			if (state.red()) {
-				rects.add(reason(SINGLE + ".outside"));
-			}
-			rects.add(hint(RIGHT, COPY + ".start"));
-		} else {
-			rects.add(state.red() ? reason(SINGLE + ".outside") : hint(RIGHT, TURN + ".place"));
-		}
-		if (state.locked()) {
-			Text nudge = nudge(keys);
-			if (nudge != null) {
-				rects.add(hint(nudge, COPY + ".nudge"));
-			}
-		}
-		rects.add(hint(LEFT, DELETE + ".erase"));
-		rects.addAll(turning);
-		if (keys.lock() != null) {
-			rects.add(hint(new Literal(keys.lock()), state.locked() ? COPY + ".unlock" : COPY + ".lock"));
-		}
-		if (keys.mode() != null) {
-			rects.add(hint(new Literal(keys.mode()), MODE + ".zoop_mode"));
-		}
-		return labelled(turned(title(state.mode(), state.locked()), state.turn().turned()), rects);
-	}
-
 	/** Which of Effortless Building's shapes is under way: none, one drawn with the place click, or with the break click. */
 	public enum Underway {
 		NONE, PLACING, BREAKING

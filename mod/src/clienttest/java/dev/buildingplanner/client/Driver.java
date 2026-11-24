@@ -235,8 +235,8 @@ public final class Driver implements ClientModInitializer {
 				return ClientSession.copyMode().name();
 			}
 			case "copycolour" -> {
-				// copycolour: the colour Building Planner draws the box of the copy at the aim, or of the one ghost block
-				// locked or in a fixed row, in: BLUE, YELLOW or RED with the server's reason (RED BUILD_HEIGHT, say), or
+				// copycolour: the colour Building Planner draws the box of the copy at the aim, or around the build modes'
+				// locked positions, in: BLUE, YELLOW or RED with the server's reason (RED BUILD_HEIGHT, say), or
 				// none.
 				return copyColour();
 			}
@@ -673,11 +673,6 @@ public final class Driver implements ClientModInitializer {
 				// its clicks have set, its first first), or "unlocked", then whether its controls are active now; await
 				// lock <text> waits for it.
 				return lock();
-			}
-			case "singlerow" -> {
-				// singlerow: the one ghost block's mode, then its fixed row's length and ends, "<n> x,y,z..x,y,z", or none;
-				// await singlerow <text> waits for it.
-				return singleRow();
 			}
 			case "preview" -> {
 				// preview: the positions Effortless Building's preview drew in the last whole frame, as x,y,z, or none;
@@ -1224,19 +1219,6 @@ public final class Driver implements ClientModInitializer {
 		return text.append(BuildingPlannerClient.lockActive() ? " active" : " inactive").toString();
 	}
 
-	/** The one ghost block's mode and its fixed row, for the driver's {@code singlerow}. */
-	private static String singleRow() throws Exception {
-		SingleBlock block = session().single();
-		if (!block.rowFixed()) {
-			return SingleBlock.mode() + " none";
-		}
-		List<BlockPos> row = block.row();
-		BlockPos first = row.getFirst();
-		BlockPos last = row.getLast();
-		return SingleBlock.mode() + " " + row.size() + " " + first.getX() + "," + first.getY() + "," + first.getZ() + ".."
-			+ last.getX() + "," + last.getY() + "," + last.getZ();
-	}
-
 	/** The conditions {@code await} takes. */
 	private static boolean holds(String what) throws Exception {
 		String[] a = what.split(" ");
@@ -1260,7 +1242,6 @@ public final class Driver implements ClientModInitializer {
 			case "sprint" -> mc.options.keySprint.isDown() == Boolean.parseBoolean(a[1]);
 			case "preview" -> PreviewProbe.positions().equals(what.substring(8));
 			case "lock" -> lock().equals(what.substring(5));
-			case "singlerow" -> singleRow().equals(what.substring(10));
 			case "turned" -> FrameProbe.turned();
 			case "framestimed" -> FrameProbe.timed();
 			case "erasing" -> String.valueOf(erasing()).equals(a[1]);
@@ -1494,7 +1475,7 @@ public final class Driver implements ClientModInitializer {
 	}
 
 	/**
-	 * The colour of the box Building Planner draws for the copy at the aim or the one ghost block, as
+	 * The colour of the box Building Planner draws for the copy at the aim or the build modes' locked positions, as
 	 * {@code copycolour} gives it.
 	 */
 	private static String copyColour() throws Exception {

@@ -83,34 +83,6 @@ class CopyRowTest {
 		assertEquals(10, CopyRow.row(CopyMode.VERTICAL, FIRST, new BlockPos(11, -500, 22), CopyRow.MAX_COPIES).size());
 	}
 
-	/** The one ghost block, as a copy of one block at 5 64 5. */
-	private static final Spot BLOCK = new Spot(new BlockPos(5, 64, 5), new Vec3i(1, 1, 1));
-
-	@Test
-	void aBlocksRowIsEveryBlockToTheAim() {
-		assertEquals(List.of(new BlockPos(5, 64, 5), new BlockPos(6, 64, 5), new BlockPos(7, 64, 5), new BlockPos(8, 64, 5)),
-			mins(CopyRow.row(CopyMode.ZOOP, BLOCK, new BlockPos(8, 64, 6), CopyRow.MAX_BLOCKS)));
-		assertEquals(List.of(new BlockPos(5, 64, 5), new BlockPos(5, 64, 4), new BlockPos(5, 64, 3)),
-			mins(CopyRow.row(CopyMode.ZOOP, BLOCK, new BlockPos(6, 64, 3), CopyRow.MAX_BLOCKS)));
-		assertEquals(List.of(new BlockPos(5, 64, 5), new BlockPos(5, 65, 5), new BlockPos(5, 66, 5)),
-			mins(CopyRow.row(CopyMode.VERTICAL, BLOCK, new BlockPos(5, 66, 5), CopyRow.MAX_BLOCKS)));
-		// Aimed at the block itself, the row is the block alone.
-		assertEquals(List.of(BLOCK), CopyRow.row(CopyMode.ZOOP, BLOCK, BLOCK.min(), CopyRow.MAX_BLOCKS));
-	}
-
-	@Test
-	void aBlocksRowStopsAt32AndTheCopysAt10() {
-		List<Spot> row = CopyRow.row(CopyMode.ZOOP, BLOCK, new BlockPos(5, 64, 500), CopyRow.MAX_BLOCKS);
-		assertEquals(32, row.size());
-		assertEquals(new BlockPos(5, 64, 36), row.getLast().min());
-		assertEquals(32, CopyRow.row(CopyMode.VERTICAL, BLOCK, new BlockPos(5, 300, 5), CopyRow.MAX_BLOCKS).size());
-		assertEquals(10, CopyRow.row(CopyMode.ZOOP, BLOCK, new BlockPos(5, 64, 500), CopyRow.MAX_COPIES).size());
-		// 31 blocks beyond the first is 32 in all; 32 beyond is still 32.
-		assertEquals(32, CopyRow.row(CopyMode.ZOOP, BLOCK, new BlockPos(36, 64, 5), CopyRow.MAX_BLOCKS).size());
-		assertEquals(32, CopyRow.row(CopyMode.ZOOP, BLOCK, new BlockPos(37, 64, 5), CopyRow.MAX_BLOCKS).size());
-		assertEquals(31, CopyRow.row(CopyMode.ZOOP, BLOCK, new BlockPos(35, 64, 5), CopyRow.MAX_BLOCKS).size());
-	}
-
 	@Test
 	void aTurnedCopyIsItsTurnedLengthApart() {
 		// The same copy given a quarter turn is 5 east to west.

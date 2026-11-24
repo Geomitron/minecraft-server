@@ -2293,28 +2293,19 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   click locks both positions the clicks set, Up moves both north with the preview, and the third click places the cube
   from the moved positions and ends the lock. The locked Wall corner and the nudged Cube are shot at 854 by 480 and
   1920 by 1080, GUI scale 2.
-- One ghost block, Zoop and Vertical (step 15): in Single mode with stone bricks, R switches the block to Zoop,
-  Vertical and Single (the driver's `singlerow`), and the copy's mode stays Single. In Zoop, a right click fixes the
-  row's start and sends no edit, and the preview draws the start alone; aimed 11 blocks east of the start, the row is
-  12 blocks and the preview draws them (the driver's `preview`). While the row is fixed, H, R and the nudge keys act on
-  nothing, and aimed at the sky, the row stays as it was. A second right click places the 12 ghost blocks as one edit,
-  which Planner2 sees and one Ctrl+Z takes back, and the block follows the aim again, still in Zoop. Aimed 40 blocks
-  east of the start, the row stops at 32. A left click aimed at a ghost block with the row fixed drops the row and
-  erases nothing. The right button held a second for each of the two clicks places one row. With the block mix of
-  stone and andesite on, each block of the row is the mix's for its position, as the preview's is, and both kinds
-  show. With Effortless Building's mirror on (the driver's `ebmirror`), the preview draws the row and its mirror image,
-  24 blocks, and the click places both. In Zoop, H locks the block and Up nudges it; a row started then starts where
-  it's locked, and once placed, the lock ends. In Vertical, looking up into open air on the line above
-  the start, the row rises 8 blocks and the preview draws them; the second click places them as one edit. A Zoop row
-  and a Vertical row are shot before the second click at 854 by 480 and 1920 by 1080, GUI scale 2.
+- Single without row modes, and a Line from a locked position: in Single mode with stone bricks, R leaves Single's
+  line, the lock and the copy's mode as they are (the driver's `modehud`, `lock` and `copymode`), and a right click
+  places one ghost block as one edit. In Line mode with oak stairs, H locks the first click's position; the first
+  click, aimed elsewhere, starts the Line there and sends no edit; looking up into open air on the line above the
+  start, the preview draws a Line of 12 (the driver's `preview`), and the second click places the 12 stairs as one
+  edit, on both clients, and ends the lock. The Line is shot before the second click at 854 by 480 and 1920 by 1080,
+  GUI scale 2.
 - One ghost block, turning and flipping (step 16): with oak stairs in Single mode, facing north, a notch up with Left
   Ctrl held turns the stair a quarter turn clockwise, to face east (the driver's `heldturn`), and the hotbar slot
   stays; locked, the preview draws the stair facing east (the driver's `previewstate`); the stair placed then faces
   east, and so does one placed after Planner1 turns to face south. The middle click with Left Ctrl held, aimed at a
   ghost block, makes the stair's top half, with no block picked, from the game or Litematica; locked, the preview
-  draws it so, and placed, it is so on both clients; unlocked, no preview draws it. A Zoop row of 8 turned stairs
-  faces one way, as its preview drew it. With the mix of oak and spruce stairs, a row's stairs of both kinds take the
-  turn. The same stairs in a second slot keep the turn; with stone in hand, Left Ctrl and the wheel change the hotbar
+  draws it so, and placed, it is so on both clients; unlocked, no preview draws it. The same stairs in a second slot keep the turn; with stone in hand, Left Ctrl and the wheel change the hotbar
   slot, and back on the stairs, the turn is gone. An oak log aimed at a side flips to standing and back. Without Left
   Ctrl, the wheel changes the hotbar slot and the middle click picks the aimed block. The checks log what an unlocked
   left click erases with Effortless Building's array and mirror on. Turned and flipped stairs are shot before placing,
@@ -2337,9 +2328,7 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   Ctrl held flips the stairs to their top half and picks no block, and with stone in hand it picks the aimed block. In Single, unlocked, with the turned stairs in hand, the preview draws one stair at the aim,
   facing east, and nothing else (the driver's `preview` and `previewstate`); with Effortless Building's array of 2
   copies one block apart upward, it draws the stair and its 2 copies once each; a turned stair at the aim is shot at 854
-  by 480 and 1920 by 1080, GUI scale 2, with the stair outlined in red. In Zoop and in Vertical before the first click,
-  the preview draws the one stair at the aim, facing east, as in Single (1128 Q1 A); the Zoop block is shot at 1920 by
-  1080, GUI scale 2, with its box in the window logged (the driver's `screenbox`) for outlining it in red. During a Line drawn with the break click, the line shows only the lock and Left Ctrl with the
+  by 480 and 1920 by 1080, GUI scale 2, with the stair outlined in red. During a Line drawn with the break click, the line shows only the lock and Left Ctrl with the
   wheel changes the hotbar slot; a right click cancels it, erasing nothing. Line's line, checked word for word (the
   driver's `modehud`): before the first click with stairs, with Left Ctrl held, turned, with and without Left Ctrl, for
   a chest (turn only) and a slab (flip only), each with Left Ctrl held too, and for stone with no turning control;
@@ -2403,17 +2392,15 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   sprint key on Right Control, they name Right Control; F1 hides them. The preview of a turned stair and the red
   torch are shot at 854 by 480 and 1920 by 1080, GUI scale 2, and each line at 1920 by 1080, GUI scale 4, with the
   changes outlined in red.
-- One ghost block, colours and its line (step 20): locked over grass the block is blue (the driver's `copycolour`);
-  nudged into a ghost gold block it's yellow and its click still places and ends the lock; locked again over the stair
-  placed there it's blue; nudged below the world's bottom it's red, and its click sends no edit and ends the lock; a Zoop row crossing ghost blocks is yellow; with a world border crossing a row, it's red and
-  places nothing. With Planner1 following the aim, no box shows. The lines, each checked word for word: Single's line
-  following the aim, with Left Ctrl held, for a chest (turn only), a slab (flip only) and stone (neither), turned and
-  locked, with "Lock (Off)" or "Lock (On)" and Esc; Zoop and Vertical before the first click, Zoop locked, a row of
-  12 and of 1, and red; with the lock key on K, the mode key on G, the nudge forward on I and the sprint key on Right
-  Control, the lines name them. No line shows with a stick in hand or with the copy at the aim (the copy's line shows),
-  and in Line mode Line's line shows; F1 hides it. Each line is shot at 1920 by
-  1080, GUI scale 4, the locked line at 854 by 480 and 1920 by 1080, GUI scale 2, and a yellow row crossing ghost
-  blocks and a red one across the world border at 1920 by 1080, GUI scale 2.
+- The locked block's colours and Single's line (step 20): locked over grass the block is blue (the driver's
+  `copycolour`); nudged into a ghost gold block it's yellow and its click still places and ends the lock; locked again
+  over the stair placed there it's blue; nudged below the world's bottom it's red, and its click sends no edit and
+  ends the lock. With Planner1 following the aim, no box shows. The lines, each checked word for word: Single's line
+  following the aim, with Left Ctrl held, for a chest (turn only), a slab (flip only) and stone (neither), turned,
+  locked and red, with "Lock (Off)" or "Lock (On)" and Esc; with the lock key on K, the nudge forward on I and the
+  sprint key on Right Control, the lines name them. No line shows with a stick in hand or with the copy at the aim (the
+  copy's line shows), and in Line mode Line's line shows; F1 hides it. Each line is shot at 1920 by 1080, GUI scale 4,
+  and the locked line and the locked block at 854 by 480 and 1920 by 1080, GUI scale 2.
 
 `step10.sh`, hold to repeat, editing from Freecam and the settings Building Planner changes once, with Freecam 1.5.1 (Modrinth version
 `lwrkvqym`, the pack's) on both clients. The driver counts the ticks each mouse button was down and
@@ -2559,8 +2546,7 @@ and without it, the sprint key as a player rebound it, the actions as actions, a
 turns nor flips or with the sprint key unbound), Disable's lines (without Left Control and with no "Turned:", with
 it held, turned, each turn phrase, the red "Can't place here" as a warning, the actions as actions, the sprint key as a player rebound it, no line
 without Left Control for a block that hangs on the block behind it, and none for a block that neither turns nor
-flips or with the sprint key unbound), the one ghost block's lines for each state
-above, with each turn phrase and title, and the build modes' lines (Single's and the other modes' before the first
+flips or with the sprint key unbound), and the build modes' lines (Single's and the other modes' before the first
 click, locked, each turn phrase with and without Left Control, "Turned:" and "Locked, turned:", the red reason as a
 warning in place of the right click, during a shape drawn with the place click and with the break click, locked or
 not, with no "Turned:" during the break shape, keys a player rebound, and unbound keys left out).
@@ -2575,25 +2561,21 @@ actions end Delete by aim. `EraseHoldTest` (step 13) covers the hold: 19 ticks e
 nothing more, a release starts the count again, a hold cancelled when its marks go erases nothing, and the progress
 shown in steps of 5%.
 
-The one ghost block's rules have unit tests as pure functions (steps 14 to 17). `SingleRuleTest` covers when its
-controls are active (session, Single mode, no mouse mode, an item that places a block), which clicks are Building
-Planner's in each state (in Single both are Effortless Building's), and when the turning controls are active
-(`SingleRule.turning`: every mode but Disable, where step 18 adds `DisableTurn`'s rule; none without a session, with a
+The build modes' turning and lock rules have unit tests as pure functions (steps 14 to 17). `SingleRuleTest` covers
+when the turning controls are active (`SingleRule.turning`: every mode but Disable, where step 18 adds `DisableTurn`'s rule; none without a session, with a
 mouse mode on, with an item that places no block, or during a shape drawn with the break click, but during one drawn
 with the place click). `ShapeLockTest` covers when the lock's controls are active (a session, any mode but Disable, no
 mouse mode, an item that places a block), when the first click's block alone is drawn, the lock off until H, the
 locked position and hit taking the first click, no click taken during a shape or while the controls aren't active, a
 nudge moving the position and the hit point one block, unlocking, and a shape's first click moving with a nudge.
-`CopyRowTest` covers a 1×1×1 row (step 15):
-every block to the aim east, north and up, the block alone when aimed at itself, and up to 32 blocks, where the copy's
-row stops at 10. `BlockTurnTest` (step 16) covers a
+`BlockTurnTest` (step 16) covers a
 quarter turn each way for stairs, logs, chests and signs, and two turns adding up; the flips' order for a log, a
 stair, a slab (a double slab flipping to bottom), a piston (one placed facing up flipping to the way it would face on
 its side, and a turn while flipped up turning the way it goes back to), a button and a lantern; the turn kept as
 property values and set on another block of the mix that has them, leaving a door's upper or lower half and
 waterlogging; which blocks turn and which flip; a block that neither turns nor flips; and the turn dropping when the
-item in hand changes. `CopyColourTest` covers a 1×1×1
-spot blue, yellow and red.
+item in hand changes. `CopyColourTest` covers a locked
+position blue, yellow and red.
 
 Disable's turn has unit tests as pure functions (steps 18 and 19). `DisableTurnTest` covers when Disable's turning
 controls are active (a session, Disable, no mouse mode, a block that turns or flips) and when not; the turn M6 sends:

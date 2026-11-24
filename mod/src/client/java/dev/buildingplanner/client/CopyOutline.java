@@ -19,8 +19,8 @@ import org.joml.Vector4f;
 /**
  * Draws the box of the copy at the aim, and of each copy in its row, each frame through MaLiLib's renderer, as the box
  * for Copy is drawn (an outline and see-through sides), in Satisfactory's hologram colours ({@link CopyColour}): blue, yellow or red. Hook L6 leaves these
- * placements out of Litematica's own boxes. The one ghost block's box is drawn the same way, around the locked block or
- * each block of its fixed row (see "One ghost block": "Colours").
+ * placements out of Litematica's own boxes. The build modes' lock's box is drawn the same way, around each locked
+ * position (see "Locking and the first click": "Colours").
  */
 final class CopyOutline implements IRenderer {
 	/** #00D4FF. */
@@ -34,7 +34,7 @@ final class CopyOutline implements IRenderer {
 	private static final Color4f YELLOW_SIDES = new Color4f(1f, 225 / 255f, 0f, 0.15f);
 	private static final Color4f RED_SIDES = new Color4f(1f, 112 / 255f, 112 / 255f, 0.2f);
 
-	/** The copy's colour and the boxes of the copies, the copy's own first, or the one ghost block's and its blocks'. */
+	/** The copy's colour and the boxes of the copies, the copy's own first, or the lock's and its locked positions'. */
 	record Shown(CopyColour.Shown colour, List<Spot> boxes) {
 	}
 

@@ -36,8 +36,7 @@ import org.spongepowered.asm.mixin.injection.At;
  * Effortless Building's client pipeline, on a server with Building Planner: a finished shape goes into the layer
  * instead of to the server as real blocks (hooks E1 to E3), the mix starts shapes (E6), the preview has no "missing
  * items" tint and a break shape no list of real blocks (E8), shapes can start on ghost blocks (E9), and clicks without
- * a placeable item stay vanilla's and a mouse mode's go to it (E14), as do the one ghost block's in Zoop or Vertical,
- * whose preview draws its row (E27). A shape's first click and its preview aim from Freecam's camera while it's on
+ * a placeable item stay vanilla's and a mouse mode's go to it (E14). A shape's first click and its preview aim from Freecam's camera while it's on
  * (E24), and take a locked first position (E9, E32). In Disable, the preview draws the real block a right click would
  * place while Left Ctrl turns it (E29).
  */
@@ -87,29 +86,22 @@ abstract class BuildPipelineClientMixin {
 	 * have them. With anything but a placeable item in the main hand, and no shape under way, Effortless Building takes
 	 * neither click either, so both act as without mods (its client tick, its cancelling of vanilla's use, attack and
 	 * held attack, and hold to repeat all ask these first). A shape under way still takes the click that finishes or
-	 * cancels it. In Single mode, the one ghost block's clicks in Zoop or Vertical are Building Planner's
-	 * ({@code SingleRule}), so hooks M1 and M2 take them; a click on a locked position stays Effortless Building's.
+	 * cancels it. A click on a locked position stays Effortless Building's.
 	 */
 	@ModifyReturnValue(method = "shouldInterceptPlacing", at = @At("RETURN"))
 	private static boolean buildingplanner$placingOnlyWithPlaceables(boolean intercept) {
-		return intercept && !BuildingPlannerClient.singleTakesPlace() && onlyWithPlaceables();
+		return intercept && onlyWithPlaceables();
 	}
 
 	/** Hook E14, for the break click. */
 	@ModifyReturnValue(method = "shouldInterceptBreaking", at = @At("RETURN"))
 	private static boolean buildingplanner$breakingOnlyWithPlaceables(boolean intercept) {
-		return intercept && !BuildingPlannerClient.singleTakesBreak() && onlyWithPlaceables();
+		return intercept && onlyWithPlaceables();
 	}
 
 	private static boolean onlyWithPlaceables() {
 		return !BuildingPlannerClient.mouseTaken() && (!BuildingPlannerClient.ownsShapes()
 			|| BuildPipelineClient.getBuildState() != null || ClickRule.holdsPlaceable());
-	}
-
-	/** Hook E27: while the one ghost block's row is fixed, the preview draws the row. */
-	@ModifyReturnValue(method = "getPreviewBlocks", at = @At("RETURN"))
-	private static BlockSet buildingplanner$shownPreview(BlockSet blocks) {
-		return BuildingPlannerClient.active() ? EffortlessShapes.previewBlocks(blocks) : blocks;
 	}
 
 	/**

@@ -6,8 +6,8 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * The turn of the block in hand and the item it was set for (see "One ghost block": "Turning and flipping"), kept
- * apart from the one ghost block's state since the turn reaches every mode. It uses none of Effortless Building's
+ * The turn of the block in hand and the item it was set for (see "Locking and the first click": "Turning and
+ * flipping"), kept apart from the lock's state since the turn reaches every mode. It uses none of Effortless Building's
  * classes. Only the client thread uses it.
  */
 final class HeldTurn {

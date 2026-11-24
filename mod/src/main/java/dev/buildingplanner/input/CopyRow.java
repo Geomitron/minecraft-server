@@ -9,15 +9,12 @@ import net.minecraft.world.phys.Vec3;
 
 /**
  * A zoop's row, as Satisfactory zoops foundations: copies end to end from the first, each the copy's own length (as
- * it's turned) from the one before, so they touch without overlapping, up to 10 copies, or 32 for the one ghost block
- * (a 1×1×1 copy). In Zoop the row goes along whichever of the four compass directions from the first copy the aim is
+ * it's turned) from the one before, so they touch without overlapping, up to 10 copies. In Zoop the row goes along whichever of the four compass directions from the first copy the aim is
  * farthest along; in Vertical, up or down.
  */
 public final class CopyRow {
 	/** The most copies in a row of the copy, as Satisfactory zoops up to 10. */
 	public static final int MAX_COPIES = 10;
-	/** The most blocks in a row of the one ghost block (Geo's answer to inbox request 980, Q2). */
-	public static final int MAX_BLOCKS = 32;
 
 	private CopyRow() {
 	}

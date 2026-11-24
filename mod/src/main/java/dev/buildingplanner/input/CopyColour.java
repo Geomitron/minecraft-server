@@ -114,14 +114,14 @@ public final class CopyColour {
 	}
 
 	/**
-	 * The one ghost block's colour (see "One ghost block": "Colours"), the locked block or its fixed row as copies of
-	 * one block: {@code row} its positions, and {@code placed} the blocks a right click would place at them, by their
-	 * positions in the world, which may differ along the row, as the block mix's do. Red while {@link #refusal} finds a
-	 * reason, otherwise yellow where a block would replace a different ghost block, otherwise blue.
+	 * The colour of the locked positions (see "Locking and the first click": "Colours"), as copies of one block:
+	 * {@code own} the positions, and {@code placed} the blocks a right click would place at them, by their positions in
+	 * the world, which may differ between positions, as the block mix's do. Red while {@link #refusal} finds a reason,
+	 * otherwise yellow where a block would replace a different ghost block, otherwise blue.
 	 */
-	public static Shown ofBlocks(List<BlockPos> row, Map<BlockPos, BlockState> placed, World world, int maxEditBlocks,
+	public static Shown ofBlocks(List<BlockPos> own, Map<BlockPos, BlockState> placed, World world, int maxEditBlocks,
 		Layer layer) {
-		List<Spot> spots = row.stream().map(pos -> new Spot(pos, ONE)).toList();
+		List<Spot> spots = own.stream().map(pos -> new Spot(pos, ONE)).toList();
 		return of(spots, 1, world, maxEditBlocks, () -> placed.entrySet().stream().anyMatch(block -> {
 			BlockState ghost = layer.get(block.getKey());
 			return !ghost.isAir() && ghost != block.getValue();

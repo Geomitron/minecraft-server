@@ -19,9 +19,8 @@ import net.minecraft.world.entity.Entity;
  * reads them, with no screen open, while the copy is at the aim and no zoop's row is fixed, and otherwise empties their
  * presses, so a press made before the copy came to the aim doesn't act once it does. A nudge key acts only while the
  * copy is locked, and held down it acts again ({@link KeyRepeat}). H and the nudge keys act the same way for the build
- * modes' lock while its controls are active, in every mode but Disable, and no row of the one ghost block is fixed (see
- * "Locking and the first click"); R then switches the one ghost block's own mode in Single (see "One ghost block"). R
- * also acts while Delete is on, switching a Delete box and Delete by aim into each other.
+ * modes' lock while its controls are active, in every mode but Disable (see "Locking and the first click"), where R does
+ * nothing. R also acts while Delete is on, switching a Delete box and Delete by aim into each other.
  */
 final class CopyKeys {
 	static final KeyMapping LOCK =
@@ -77,16 +76,13 @@ final class CopyKeys {
 	}
 
 	/**
-	 * Once a client tick, after the session's: acts on the keys for the copy at the aim or the one ghost block, or
-	 * empties their presses.
+	 * Once a client tick, after the session's: acts on the keys for the copy at the aim, the build modes' lock or
+	 * Delete, or empties their presses.
 	 */
 	void tick(Minecraft mc, ClientSession session) {
 		boolean acting = session != null && session.clipboard().atAim() && !session.clipboard().rowFixed()
 			&& mc.gui.screen() == null;
-		// While the one ghost block's row is fixed, H, R and the nudge keys act on nothing, as for the copy's row.
-		boolean rowFixed = session != null && BuildingPlannerClient.singleActive() && session.single().rowFixed();
-		boolean locking = !acting && session != null && mc.gui.screen() == null && BuildingPlannerClient.lockActive()
-			&& !rowFixed;
+		boolean locking = !acting && session != null && mc.gui.screen() == null && BuildingPlannerClient.lockActive();
 		int lockPresses = presses(LOCK);
 		int modePresses = presses(MODE);
 		if (acting) {
@@ -99,11 +95,6 @@ final class CopyKeys {
 		} else if (locking) {
 			for (int i = 0; i < lockPresses; i++) {
 				BuildingPlannerClient.toggleLock();
-			}
-			if (BuildingPlannerClient.singleActive()) {
-				for (int i = 0; i < modePresses; i++) {
-					SingleBlock.cycleMode();
-				}
 			}
 		} else if (session != null && session.deleteOn() && mc.gui.screen() == null) {
 			for (int i = 0; i < modePresses; i++) {

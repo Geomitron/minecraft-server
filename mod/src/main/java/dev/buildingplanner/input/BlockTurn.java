@@ -14,7 +14,7 @@ import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.level.block.state.properties.SlabType;
 
 /**
- * Turning and flipping the block in hand (see "One ghost block": "Turning and flipping"), as pure functions of block
+ * Turning and flipping the block in hand (see "Locking and the first click": "Turning and flipping"), as pure functions of block
  * states. A turn is the values of the block's orientation properties, which {@link #apply} sets on every block placed
  * that has the property, after its placement rules, which still set the rest.
  */

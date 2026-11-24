@@ -68,8 +68,6 @@ final class ClientSession {
 	private final SelfCheck check;
 	private final LayerReplica replica;
 	private final Clipboard clipboard = new Clipboard();
-	/** The one ghost block's controls in Effortless Building's Single mode. */
-	private final SingleBlock single = new SingleBlock();
 	/** The build modes' lock on the first click's position (see "Locking and the first click"). */
 	private final ShapeLock lock = new ShapeLock();
 	/** The player's recent pastes in this dimension, which the copy snaps to. */
@@ -149,11 +147,6 @@ final class ClientSession {
 		return clipboard;
 	}
 
-	/** The one ghost block's mode and row in Single (see "One ghost block"). */
-	SingleBlock single() {
-		return single;
-	}
-
 	/** The build modes' lock (see "Locking and the first click"). */
 	ShapeLock lock() {
 		return lock;
@@ -180,7 +173,6 @@ final class ClientSession {
 		box.end();
 		endAim();
 		clipboard.clear();
-		single.clear();
 		lock.unlock();
 		pastes.clear();
 		glow.clear();
@@ -190,7 +182,7 @@ final class ClientSession {
 	 * Once a client tick: removes old plans' placements when due, asks for the columns that loaded and lets go of those
 	 * that unloaded, runs the self-check's comparisons that are due, counts Delete by aim's hold of the left button
 	 * ({@code attackDown}) and erases the marks once it's held a second, moves the box being drawn and the copy at the
-	 * aim to where the player aims, unlocks the one ghost block and drops its row once a mouse mode is on, and sends the
+	 * aim to where the player aims, ends the build modes' lock once a mouse mode is on, and sends the
 	 * current material list when it changed.
 	 */
 	void tick(boolean attackDown) {
@@ -215,7 +207,6 @@ final class ClientSession {
 		}
 		followAim();
 		if (mouseMode() != null) {
-			single.clear();
 			lock.unlock();
 		}
 		lists.tick(System.currentTimeMillis());
@@ -296,11 +287,10 @@ final class ClientSession {
 
 	/**
 	 * The player did something that may end the mouse mode ({@link MouseMode#endedBy}): ending it ends the box, or puts
-	 * the copy away. Choosing a build mode also ends the lock and drops the one ghost block's row.
+	 * the copy away. Choosing a build mode also ends the lock.
 	 */
 	void modeAction(MouseMode.Action action) {
 		if (action == MouseMode.Action.CHOOSE_BUILD_MODE) {
-			single.clear();
 			lock.unlock();
 		}
 		MouseMode mode = mouseMode();
@@ -508,7 +498,6 @@ final class ClientSession {
 		box.end();
 		endAim();
 		clipboard.clear();
-		single.clear();
 		lock.unlock();
 		tiles.clear();
 		check.clear();
@@ -712,12 +701,12 @@ final class ClientSession {
 	}
 
 	/**
-	 * The one ghost block's colour ({@link CopyColour#ofBlocks}): its own positions {@code row} and the blocks a right
+	 * The colour of the locked positions ({@link CopyColour#ofBlocks}): the positions {@code own} and the blocks a right
 	 * click would place there, against the world's build height and border, the server's block cap, and the player's
 	 * copy of the layer whether or not ghost blocks show.
 	 */
-	CopyColour.Shown singleColour(List<BlockPos> row, Map<BlockPos, BlockState> placed) {
-		return CopyColour.ofBlocks(row, placed, world(Minecraft.getInstance().level), maxEditBlocks, replica.layer());
+	CopyColour.Shown lockColour(List<BlockPos> own, Map<BlockPos, BlockState> placed) {
+		return CopyColour.ofBlocks(own, placed, world(Minecraft.getInstance().level), maxEditBlocks, replica.layer());
 	}
 
 	/** The world's limits on where a block may go, as the server checks an edit's positions. */
