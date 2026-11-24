@@ -22,6 +22,7 @@ public final class ControlsLine {
 	private static final String DELETE = MODE + ".delete";
 	private static final String TURN = MODE + ".turn";
 	private static final String SINGLE = MODE + ".single";
+	private static final String SHAPE = MODE + ".shape";
 
 	private ControlsLine() {
 	}
@@ -169,10 +170,10 @@ public final class ControlsLine {
 	}
 
 	/**
-	 * The turning line (see "One ghost block": "Controls line"): with the sprint key held, the wheel that turns and the
-	 * middle click that flips, otherwise the sprint key held to turn or flip; each part only for a block that turns or
-	 * flips, and "Turned:" before them once the block is turned or flipped. Null for a block that does neither, and
-	 * while the sprint key has no key bound.
+	 * The turning line, Disable's line without the sprint key held (see "Turning real blocks in Disable": "Controls
+	 * line"): with the sprint key held, the wheel that turns and the middle click that flips, otherwise the sprint key
+	 * held to turn or flip; each part only for a block that turns or flips, and "Turned:" before them once the block is
+	 * turned or flipped. Null for a block that does neither, and while the sprint key has no key bound.
 	 */
 	public static Line turning(TurnState state, String sprint) {
 		List<Text> rects = turnParts(state, sprint);
@@ -213,7 +214,8 @@ public final class ControlsLine {
 	}
 
 	/**
-	 * Single's line (see "One ghost block": "Controls line"). With a row fixed: the mode, the right click that places the
+	 * The line of the one ghost block's Zoop and Vertical (see "One ghost block": "Controls line"); Single's own mode has
+	 * the build modes' line ({@link #shape}). With a row fixed: the mode, the right click that places the
 	 * row with its count (or in red why it can't), the turning controls, and the left click that cancels the row, locked
 	 * or not. Otherwise: the mode, "Locked" or both, the right click (placing, or in red why it can't; in Zoop and
 	 * Vertical the reason if there is one, then setting the row's start), the nudge keys while it's locked, the left
@@ -255,6 +257,57 @@ public final class ControlsLine {
 			rects.add(hint(new Literal(keys.mode()), MODE + ".zoop_mode"));
 		}
 		return labelled(turned(title(state.mode(), state.locked()), state.turn().turned()), rects);
+	}
+
+	/** Which of Effortless Building's shapes is under way: none, one drawn with the place click, or with the break click. */
+	public enum Underway {
+		NONE, PLACING, BREAKING
+	}
+
+	/**
+	 * A build mode as its line tells it (see "Locking and the first click": "Controls line"): whether the mode is Single,
+	 * whether a position is locked, whether the locked position is red (outside the world's build height or its border),
+	 * which shape is under way, and the block in hand as the turning line tells it.
+	 */
+	public record ShapeState(boolean single, boolean locked, boolean red, Underway underway, TurnState turn) {
+	}
+
+	/**
+	 * A build mode's line, in every mode but Disable (see "Locking and the first click": "Controls line"). Before the
+	 * first click: "Locked" or "Turned" or both as the label, the right click (placing in Single, starting a shape in the
+	 * others, or in red why the locked position can't place), the nudge keys while it's locked, the left click (erasing in
+	 * Single, starting an erasing shape in the others), the turning controls, the lock key with the lock's state, and Esc,
+	 * which leaves the mode. During a shape, beside Effortless Building's own line, only the lock and the turning controls:
+	 * "Locked" or "Turned" or both, the nudge keys while it's locked, the turning controls during a shape drawn with the
+	 * place click, and the lock key. A key with no key bound is left out.
+	 */
+	public static Line shape(ShapeState state, Keys keys) {
+		boolean breaking = state.underway() == Underway.BREAKING;
+		List<Text> turning = breaking ? List.of() : turnParts(state.turn(), keys.sprint());
+		boolean turned = !breaking && state.turn().turned();
+		List<Text> rects = new ArrayList<>();
+		boolean before = state.underway() == Underway.NONE;
+		if (before) {
+			rects.add(state.red() ? reason(SINGLE + ".outside")
+				: hint(RIGHT, state.single() ? TURN + ".place" : SHAPE + ".start_placing"));
+		}
+		if (state.locked()) {
+			Text nudge = nudge(keys);
+			if (nudge != null) {
+				rects.add(hint(nudge, COPY + ".nudge"));
+			}
+		}
+		if (before) {
+			rects.add(hint(LEFT, state.single() ? DELETE + ".erase" : SHAPE + ".start_erasing"));
+		}
+		rects.addAll(turning);
+		if (keys.lock() != null) {
+			rects.add(hint(new Literal(keys.lock()), state.locked() ? SHAPE + ".lock_on" : SHAPE + ".lock_off"));
+		}
+		if (before) {
+			rects.add(hint(Translated.of(SHAPE + ".esc", Look.PLAIN), SHAPE + ".exit_mode"));
+		}
+		return labelled(turned(state.locked() ? Translated.of(COPY + ".locked", Look.PLAIN) : null, turned), rects);
 	}
 
 	/** The label's text with ", turned" after it once the block is turned or flipped, or "Turned" alone with none. */

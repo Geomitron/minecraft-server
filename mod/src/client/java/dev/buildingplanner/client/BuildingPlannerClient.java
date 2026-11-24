@@ -6,6 +6,7 @@ import dev.buildingplanner.ClientConfig;
 import dev.buildingplanner.input.BlockTurn;
 import dev.buildingplanner.input.BoxPurpose;
 import dev.buildingplanner.input.CopyColour;
+import dev.buildingplanner.input.CopyMode;
 import dev.buildingplanner.input.CopyPlacement;
 import dev.buildingplanner.input.DeleteMode;
 import dev.buildingplanner.input.DisablePreview;
@@ -608,17 +609,17 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	}
 
 	/**
-	 * The line that shows with no mouse mode on, with the keys as the player has them bound: while the one ghost block's
-	 * controls are active, Single's line ({@link ControlsLine#single}), red while the box of its row or the lock is; in
-	 * Effortless Building's modes other than Single and Disable, while the turning controls are active and the block in
-	 * hand turns or flips, the turning line ({@link ControlsLine#turning}); in Disable, while its turning controls are
-	 * active, Disable's line ({@link ControlsLine#disable}), with whether the block a right click would place hangs on
-	 * the block behind it and whether the turned block can stay; or null.
+	 * The line that shows with no mouse mode on, with the keys as the player has them bound: while the lock's controls
+	 * are active, in every one of Effortless Building's modes but Disable, the build modes' line
+	 * ({@link ControlsLine#shape}), with the reason in red while the locked position is red, or in the one ghost block's
+	 * Zoop and Vertical, their line ({@link ControlsLine#single}), red while the box of the row or the lock is; in
+	 * Disable, while its turning controls are active, Disable's line ({@link ControlsLine#disable}), with whether the
+	 * block a right click would place hangs on the block behind it and whether the turned block can stay; or null.
 	 */
 	private static ControlsLine.Line modelessLine() {
-		boolean single = singleActive();
+		boolean lock = lockActive();
 		boolean disable = disableTurning();
-		if (!single && !disable && (!shapesTakeTurn() || EffortlessShapes.singleMode())) {
+		if (!lock && !disable) {
 			return null;
 		}
 		Minecraft mc = Minecraft.getInstance();
@@ -626,16 +627,18 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		ControlsLine.TurnState turn = new ControlsLine.TurnState(heldCan(BlockTurn::turns), heldCan(BlockTurn::flips),
 			sprint, HeldTurn.of(mc.player.getMainHandItem().getItem()) != null);
 		ControlsLine.Keys keys = CopyKeys.names(mc);
-		if (single) {
-			SingleBlock block = session.single();
+		if (lock) {
 			CopyOutline.Shown boxed = outlineShown();
-			return ControlsLine.single(new ControlsLine.SingleState(SingleBlock.mode(), session.lock().on(),
-				block.rowFixed() ? block.row().size() : 0, boxed != null && boxed.colour().red(), turn), keys);
+			boolean red = boxed != null && boxed.colour().red();
+			SingleBlock block = session.single();
+			if (EffortlessShapes.singleMode() && (SingleBlock.mode() != CopyMode.SINGLE || block.rowFixed())) {
+				return ControlsLine.single(new ControlsLine.SingleState(SingleBlock.mode(), session.lock().on(),
+					block.rowFixed() ? block.row().size() : 0, red, turn), keys);
+			}
+			return ControlsLine.shape(new ControlsLine.ShapeState(EffortlessShapes.singleMode(), session.lock().on(), red,
+				EffortlessShapes.underway(), turn), keys);
 		}
 		String sprintKey = keys.sprint();
-		if (!disable) {
-			return ControlsLine.turning(turn, sprintKey);
-		}
 		EffortlessShapes.DisableShown shown = sprint ? EffortlessShapes.disableShown() : null;
 		return ControlsLine.disable(new ControlsLine.DisableState(turn, EffortlessShapes.placedHangs(),
 			shown == null || shown.goes()), sprintKey);

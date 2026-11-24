@@ -2339,16 +2339,18 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   copies one block apart upward, it draws the stair and its 2 copies once each; a turned stair at the aim is shot at 854
   by 480 and 1920 by 1080, GUI scale 2, with the stair outlined in red. In Zoop and in Vertical before the first click,
   the preview draws the one stair at the aim, facing east, as in Single (1128 Q1 A); the Zoop block is shot at 1920 by
-  1080, GUI scale 2, with its box in the window logged (the driver's `screenbox`) for outlining it in red. During a Line drawn with the break click, no turning line shows and Left Ctrl with the wheel
-  changes the hotbar slot; a right click cancels it, erasing nothing. The turning line, checked word for word (the
-  driver's `modehud`): in Line with stairs, with Left Ctrl held, turned, with and without Left Ctrl, and during a
-  Line's shape, for a chest (turn only) and a slab (flip only), each with Left Ctrl held too; none for stone,
-  during a break shape, or with a stick in hand; in Disable, Disable's line in its place (step 19); with the copy at the aim, the copy's line shows; with the
-  sprint key on Right Control, it names Right Control; F1 hides it. During a Line after its first click, the turning
-  line ends 2 GUI pixels above the action bar's text, which shows the shape's block count (the driver's `modebox` and
-  `actionbar`), at 854 by 480, GUI scale 2, and at 1920 by 1080, GUI scale 2 and 4, each shot. The turning line is
-  shot in Line before a shape at 1920 by 1080, GUI scale 4, and 854 by 480, GUI scale 2, and a placed Line of turned
-  stairs at 854 by 480 and 1920 by 1080, GUI scale 2.
+  1080, GUI scale 2, with its box in the window logged (the driver's `screenbox`) for outlining it in red. During a Line drawn with the break click, the line shows only the lock and Left Ctrl with the
+  wheel changes the hotbar slot; a right click cancels it, erasing nothing. Line's line, checked word for word (the
+  driver's `modehud`): before the first click with stairs, with Left Ctrl held, turned, with and without Left Ctrl, for
+  a chest (turn only) and a slab (flip only), each with Left Ctrl held too, and for stone with no turning control;
+  locked before the first click; during a Line drawn with the place click, locked and not, turned, with and without
+  Left Ctrl; during one drawn with the break click, locked and not, with no turning control; a cancelled shape keeps
+  the lock. No line shows with a stick in hand; in Disable, Disable's line in its place (step 19); with the copy at the
+  aim, the copy's line shows; with the sprint key on Right Control, it names Right Control; F1 hides it. During a Line
+  after its first click, the line ends 2 GUI pixels above the action bar's text, which shows the shape's block count
+  (the driver's `modebox` and `actionbar`), at 854 by 480, GUI scale 2, and at 1920 by 1080, GUI scale 2 and 4, each
+  shot. Each of Line's lines is shot at 1920 by 1080, GUI scale 4, turned before a shape at 854 by 480, GUI scale 2,
+  too, and a placed Line of turned stairs at 854 by 480 and 1920 by 1080, GUI scale 2.
 - The build mode's name and the held item's name, at 854 by 480, GUI scale 2, with oak stairs in hand: choosing Wall
   in the radial menu (a real pointer on its segment of the ring, the driver's `ringat`) puts nothing in the action bar
   (hook E35). The mode's name, as the last frame drew it (the driver's `drawnbox`), shows once, its rectangle ending 4
@@ -2356,15 +2358,15 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   Building's own name ("Diagonal Wall", say); in Disable no name shows. With a shield in the off hand, the rectangle
   ends 4 left of the off hand's slot, shot at 854 by 480 and 1920 by 1080, GUI scale 2; without it, 4 left of the
   hotbar again. The held item's name (hook M8), shown again by switching to stone and back, ends 2 GUI pixels above the
-  top of the controls' highest row: in survival mode, over the turning line of one row in Line, shot at 854 by 480 and
-  1920 by 1080, GUI scale 2 (Geo's image 1); in creative mode, over Single's line of two rows.
+  top of the controls' highest row: in survival mode, over Line's line, shot at 854 by 480 and 1920 by 1080, GUI scale
+  2 (Geo's image 1); in creative mode, over Single's line.
 - Effortless Building's own line during a shape (hook E31), word for word and colour by colour as the last frame drew
   it 58 above the screen's bottom (the driver's `ebline`, `eblinecolours` and `eblinerects`, from every component the
   frame drew there): during a Line drawn with the place click, "[Left-click: cancel][Right-click: place]", each
   rectangle white with its action in dark aqua; with an iron pickaxe, a tool, in hand during that shape, "[Left-click:
   cancel][Right-click: interact]", in the same colours; during a Line drawn with the break click, "[Left-click:
-  break][Right-click: cancel]", each rectangle white with its action in red; and once a click cancels the shape, only
-  the turning line shows there. Each is shot at noon at 1920 by 1080, GUI scale 4, and at 854 by 480, GUI scale 2,
+  break][Right-click: cancel]", each rectangle white with its action in red; and once a click cancels the shape, Effortless
+  Building's line is gone and Line's line shows again. Each is shot at noon at 1920 by 1080, GUI scale 4, and at 854 by 480, GUI scale 2,
   with every rectangle's window box in the log for the shots' outlines, and in each the rectangles are laid out as the
   controls' are, in a centred row starting 58 GUI pixels above the bottom.
 - Turning real blocks in Disable (step 18), with Planner1 3 blocks south of each block, facing north, first in
@@ -2404,11 +2406,12 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
 - One ghost block, colours and its line (step 20): locked over grass the block is blue (the driver's `copycolour`);
   nudged into a ghost gold block it's yellow and its click still places and ends the lock; locked again over the stair
   placed there it's blue; nudged below the world's bottom it's red, and its click sends no edit and ends the lock; a Zoop row crossing ghost blocks is yellow; with a world border crossing a row, it's red and
-  places nothing. With Planner1 following the aim, no box shows. The lines, each checked word for word: following the
-  aim, with Left Ctrl held, for a chest (turn only), a slab (flip only) and stone (neither), turned, locked, Zoop and
-  Vertical before the first click, Zoop locked, a row of 12 and of 1, and red; with the lock key on K, the mode key on
-  G, the nudge forward on I and the sprint key on Right Control, the lines name them. No line shows with a stick in
-  hand or with the copy at the aim (the copy's line shows), and in Line mode only the turning line shows; F1 hides it. Each line is shot at 1920 by
+  places nothing. With Planner1 following the aim, no box shows. The lines, each checked word for word: Single's line
+  following the aim, with Left Ctrl held, for a chest (turn only), a slab (flip only) and stone (neither), turned and
+  locked, with "Lock (Off)" or "Lock (On)" and Esc; Zoop and Vertical before the first click, Zoop locked, a row of
+  12 and of 1, and red; with the lock key on K, the mode key on G, the nudge forward on I and the sprint key on Right
+  Control, the lines name them. No line shows with a stick in hand or with the copy at the aim (the copy's line shows),
+  and in Line mode Line's line shows; F1 hides it. Each line is shot at 1920 by
   1080, GUI scale 4, the locked line at 854 by 480 and 1920 by 1080, GUI scale 2, and a yellow row crossing ghost
   blocks and a red one across the world border at 1920 by 1080, GUI scale 2.
 
@@ -2556,8 +2559,11 @@ and without it, the sprint key as a player rebound it, the actions as actions, a
 turns nor flips or with the sprint key unbound), Disable's lines (without Left Control and with no "Turned:", with
 it held, turned, each turn phrase, the red "Can't place here" as a warning, the actions as actions, the sprint key as a player rebound it, no line
 without Left Control for a block that hangs on the block behind it, and none for a block that neither turns nor
-flips or with the sprint key unbound), and the one ghost block's lines for each state
-above, with each turn phrase and title.
+flips or with the sprint key unbound), the one ghost block's lines for each state
+above, with each turn phrase and title, and the build modes' lines (Single's and the other modes' before the first
+click, locked, each turn phrase with and without Left Control, "Turned:" and "Locked, turned:", the red reason as a
+warning in place of the right click, during a shape drawn with the place click and with the break click, locked or
+not, with no "Turned:" during the break shape, keys a player rebound, and unbound keys left out).
 
 Delete by aim's marks have unit tests as pure functions (step 12). `DeleteMarksTest` covers a sweep between two aims
 10 blocks apart marking all 10 ghost blocks between them, and none behind a real block; at most 65 aims for a frame's

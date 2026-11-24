@@ -32,18 +32,18 @@ import net.minecraft.world.entity.HumanoidArm;
  * below. While a box is drawn, the blocks in it show under the crosshair ({@link BoxList}, laid out by
  * {@link BoxListLayout}), in rows that end above the controls, each row on the controls' dark background, and in
  * Delete by aim, the marked ghost blocks.
- * They show while a mode is on, with no screen open and the HUD shown (not hidden with F1). With no mode on, Single's
- * line shows in the same place while the one ghost block's controls are active ({@link ControlsLine#single}), or the
- * turning line ({@link ControlsLine#turning}), or in Disable, Disable's line ({@link ControlsLine#disable}); during a
- * shape drawn with the place click, while Effortless Building draws its own line there and the shape's block count in
- * the action bar above it, it shows above the action bar. While the HUD shows, Effortless Building's mode's name shows
+ * They show while a mode is on, with no screen open and the HUD shown (not hidden with F1). With no mode on, the build
+ * modes' line shows in the same place while the lock's controls are active ({@link ControlsLine#shape}), or the one
+ * ghost block's Zoop and Vertical line ({@link ControlsLine#single}), or in Disable, Disable's line
+ * ({@link ControlsLine#disable}); during a shape, while Effortless Building draws its own line there and the shape's
+ * block count in the action bar above it, it shows above the action bar, its last row ending 2 pixels above it. While the HUD shows, Effortless Building's mode's name shows
  * just left of the hotbar, in a rectangle of the same look ({@link ModeName}), but in Disable.
  */
 final class ModeHud implements HudElement {
 	private static final int BOTTOM = 58;
 	/**
-	 * Where the turning line ends during a shape: 2 above the top of the action bar's text, which the game draws from 72
-	 * to 63 above the screen's bottom ({@code Hud.extractOverlayMessage}).
+	 * Where the build modes' line ends during a shape: 2 above the top of the action bar's text, which the game draws
+	 * from 72 to 63 above the screen's bottom ({@code Hud.extractOverlayMessage}).
 	 */
 	private static final int ABOVE_ACTION_BAR = 74;
 	private static final int WHITE = -1;
@@ -87,8 +87,9 @@ final class ModeHud implements HudElement {
 	/**
 	 * {@code mode} is the mouse mode now, or null, {@code box} the box drawn now, or null, {@code copy} the copy at the
 	 * aim's line ({@link ControlsLine#copy}), or null, {@code aim} Delete by aim's lines ({@link ControlsLine#deleteAim}),
-	 * {@code modeless} the line with no mouse mode on, Single's ({@link ControlsLine#single}), the turning line
-	 * ({@link ControlsLine#turning}) or Disable's ({@link ControlsLine#disable}), or null, {@code shape} whether Effortless
+	 * {@code modeless} the line with no mouse mode on, the build modes' ({@link ControlsLine#shape}), the one ghost
+	 * block's Zoop and Vertical line ({@link ControlsLine#single}) or Disable's ({@link ControlsLine#disable}), or
+	 * null, {@code shape} whether Effortless
 	 * Building's shape is under way, {@code modeKey} the name of the key that switches a Delete box to Aim, or null
 	 * while it has none, {@code list} the kinds of block in the box, or the marks, and {@code modeName} the name of
 	 * Effortless Building's mode during a session, or null in Disable or without one.
@@ -129,7 +130,7 @@ final class ModeHud implements HudElement {
 		return lines.stream().map(line -> new Line(components(line), line.label() != null)).toList();
 	}
 
-	/** The line with no mouse mode on, Single's, the turning line or Disable's, while it shows, or none. */
+	/** The line with no mouse mode on, the build modes', Zoop and Vertical's or Disable's, while it shows, or none. */
 	private List<ControlsLine.Line> modelessLines() {
 		ControlsLine.Line line = modeless.get();
 		return line == null ? List.of() : List.of(line);
@@ -142,8 +143,8 @@ final class ModeHud implements HudElement {
 	}
 
 	/**
-	 * Whether the lines end above the action bar: the turning line during a shape, while Effortless Building draws its
-	 * own line where the lines otherwise end.
+	 * Whether the lines end above the action bar: the build modes' line during a shape, while Effortless Building draws
+	 * its own line where the lines otherwise end.
 	 */
 	private boolean raised() {
 		return mode.get() == null && shape.get();

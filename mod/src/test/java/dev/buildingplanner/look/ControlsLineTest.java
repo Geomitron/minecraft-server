@@ -17,9 +17,11 @@ import dev.buildingplanner.look.ControlsLine.Keys;
 import dev.buildingplanner.look.ControlsLine.Line;
 import dev.buildingplanner.look.ControlsLine.Look;
 import dev.buildingplanner.look.ControlsLine.Part;
+import dev.buildingplanner.look.ControlsLine.ShapeState;
 import dev.buildingplanner.look.ControlsLine.SingleState;
 import dev.buildingplanner.look.ControlsLine.Text;
 import dev.buildingplanner.look.ControlsLine.TurnState;
+import dev.buildingplanner.look.ControlsLine.Underway;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -381,6 +383,90 @@ class ControlsLineTest {
 	private static final String SINGLE_END = "[Left-click: erase]" + HOLD + "[H: lock][R: Zoop mode]";
 	private static final String SINGLE_LOCKED_END = NUDGES + "[Left-click: erase]" + HOLD + "[H: unlock][R: Zoop mode]";
 
+	private static final String ESC = "[Esc: exit mode]";
+
+	@Test
+	void singleBeforeAClickPlacesErasesTurnsLocksAndExits() {
+		assertEquals("[Right-click: place][Left-click: erase][Hold Left Control: turn or flip][H: Lock (Off)][Esc: exit mode]",
+			shape(new ShapeState(true, false, false, Underway.NONE, STAIRS), DEFAULT));
+	}
+
+	@Test
+	void theOtherModesBeforeTheFirstClickStartPlacingAndErasing() {
+		assertEquals("[Right-click: start placing][Left-click: start erasing][Hold Left Control: turn or flip]"
+			+ "[H: Lock (Off)][Esc: exit mode]", shape(new ShapeState(false, false, false, Underway.NONE, STAIRS), DEFAULT));
+	}
+
+	@Test
+	void lockedBeforeTheFirstClickNamesTheNudgesAndTheLockOn() {
+		assertEquals("Locked: [Right-click: place][Arrow keys + Page Up/Down: nudge][Left-click: erase]"
+			+ "[Hold Left Control: turn or flip][H: Lock (On)][Esc: exit mode]",
+			shape(new ShapeState(true, true, false, Underway.NONE, STAIRS), DEFAULT));
+		assertEquals("Locked: [Right-click: start placing][Arrow keys + Page Up/Down: nudge][Left-click: start erasing]"
+			+ "[Hold Left Control: turn or flip][H: Lock (On)][Esc: exit mode]",
+			shape(new ShapeState(false, true, false, Underway.NONE, STAIRS), DEFAULT));
+	}
+
+	@Test
+	void theBuildModesLineNamesTheWheelAndTheMiddleClickWithTheSprintKeyHeldForTheBlocksTurnPhrases() {
+		String end = "[H: Lock (Off)]" + ESC;
+		String start = "[Right-click: start placing][Left-click: start erasing]";
+		assertEquals(start + "[Scroll: turn][Middle-click: flip]" + end,
+			shape(new ShapeState(false, false, false, Underway.NONE, new TurnState(true, true, true, false)), DEFAULT));
+		assertEquals(start + "[Hold Left Control: turn]" + end,
+			shape(new ShapeState(false, false, false, Underway.NONE, new TurnState(true, false, false, false)), DEFAULT));
+		assertEquals(start + "[Scroll: turn]" + end,
+			shape(new ShapeState(false, false, false, Underway.NONE, new TurnState(true, false, true, false)), DEFAULT));
+		assertEquals(start + "[Hold Left Control: flip]" + end,
+			shape(new ShapeState(false, false, false, Underway.NONE, new TurnState(false, true, false, false)), DEFAULT));
+		assertEquals(start + "[Middle-click: flip]" + end,
+			shape(new ShapeState(false, false, false, Underway.NONE, new TurnState(false, true, true, false)), DEFAULT));
+		assertEquals(start + end,
+			shape(new ShapeState(false, false, false, Underway.NONE, new TurnState(false, false, false, false)), DEFAULT));
+	}
+
+	@Test
+	void onceTurnedTheBuildModesLineSaysSoAfterTheLock() {
+		TurnState turned = new TurnState(true, true, false, true);
+		assertEquals("Turned: [Right-click: start placing][Left-click: start erasing]" + HOLD + "[H: Lock (Off)]" + ESC,
+			shape(new ShapeState(false, false, false, Underway.NONE, turned), DEFAULT));
+		assertEquals("Locked, turned: [Right-click: place]" + NUDGES + "[Left-click: erase]" + HOLD + "[H: Lock (On)]"
+			+ ESC, shape(new ShapeState(true, true, false, Underway.NONE, turned), DEFAULT));
+	}
+
+	@Test
+	void whileTheLockedPositionIsRedItsReasonTakesTheRightClicksPlace() {
+		assertEquals("Locked: [Can't place: outside the world]" + NUDGES + "[Left-click: erase]" + HOLD + "[H: Lock (On)]"
+			+ ESC, shape(new ShapeState(true, true, true, Underway.NONE, STAIRS), DEFAULT));
+		assertEquals("Locked: [Can't place: outside the world]" + NUDGES + "[Left-click: start erasing]" + HOLD
+			+ "[H: Lock (On)]" + ESC, shape(new ShapeState(false, true, true, Underway.NONE, STAIRS), DEFAULT));
+		assertEquals(List.of("Can't place: outside the world"),
+			collect(ControlsLine.shape(new ShapeState(false, true, true, Underway.NONE, STAIRS), DEFAULT), Look.WARNING));
+	}
+
+	@Test
+	void duringAShapeDrawnWithThePlaceClickOnlyTheLockAndTheTurningControls() {
+		assertEquals("[Hold Left Control: turn or flip][H: Lock (Off)]",
+			shape(new ShapeState(false, false, false, Underway.PLACING, STAIRS), DEFAULT));
+		assertEquals("Locked: [Arrow keys + Page Up/Down: nudge][Hold Left Control: turn or flip][H: Lock (On)]",
+			shape(new ShapeState(false, true, false, Underway.PLACING, STAIRS), DEFAULT));
+	}
+
+	@Test
+	void duringAShapeDrawnWithTheBreakClickTheLockWithoutTheTurningControl() {
+		assertEquals("[H: Lock (Off)]", shape(new ShapeState(false, false, false, Underway.BREAKING, STAIRS), DEFAULT));
+		assertEquals("Locked: [Arrow keys + Page Up/Down: nudge][H: Lock (On)]",
+			shape(new ShapeState(false, true, false, Underway.BREAKING, new TurnState(true, true, false, true)), DEFAULT));
+	}
+
+	@Test
+	void theBuildModesLineNamesTheKeysAsBoundAndLeavesOutAKeyWithNone() {
+		assertEquals("Locked: [Right-click: place][I/J/U/O + Y/N: nudge][Left-click: erase][Hold Left Alt: turn or flip]"
+			+ "[K: Lock (On)][Esc: exit mode]", shape(new ShapeState(true, true, false, Underway.NONE, STAIRS), REBOUND));
+		assertEquals("Locked: [Right-click: place][Left-click: erase][Esc: exit mode]",
+			shape(new ShapeState(true, true, false, Underway.NONE, STAIRS), UNBOUND));
+	}
+
 	@Test
 	void singleFollowingTheAimPlacesErasesTurnsLocksAndSwitchesToZoop() {
 		assertEquals("[Right-click: place]" + SINGLE_END,
@@ -510,6 +596,10 @@ class ControlsLineTest {
 		assertNull(ControlsLine.effortless(List.of(new Part("Left-click to ", "red"), new Part("cancel", "dark_aqua"))));
 		assertNull(ControlsLine.effortless(List.of(new Part("Left-click to ", "white"), new Part("can", "dark_aqua"),
 			new Part("cel", "red"))));
+	}
+
+	private static String shape(ShapeState state, Keys keys) {
+		return read(ControlsLine.shape(state, keys));
 	}
 
 	private static String single(SingleState state, Keys keys) {

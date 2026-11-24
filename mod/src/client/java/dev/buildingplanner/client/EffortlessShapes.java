@@ -11,6 +11,7 @@ import dev.buildingplanner.input.ShapeLock;
 import dev.buildingplanner.input.SingleRule;
 import dev.buildingplanner.layer.GhostErase;
 import dev.buildingplanner.layer.OtherHalf;
+import dev.buildingplanner.look.ControlsLine;
 import dev.buildingplanner.mixin.effortless.BuildPipelineClientAccessor;
 import dev.buildingplanner.mixin.effortless.ThreeClicksBuildModeAccessor;
 import dev.buildingplanner.mixin.effortless.TwoClicksBuildModeAccessor;
@@ -71,6 +72,15 @@ public final class EffortlessShapes {
 	/** Whether the player has started a shape that isn't finished yet, read once a client tick. */
 	public static boolean shapeUnderWay() {
 		return BuildPipelineClient.getBuildState() != null;
+	}
+
+	/** Which shape is under way, for the build modes' line: none, one drawn with the place click, or the break click. */
+	static ControlsLine.Underway underway() {
+		BuildPipeline.BuildState state = BuildPipelineClient.getBuildState();
+		if (state == null) {
+			return ControlsLine.Underway.NONE;
+		}
+		return state == BuildPipeline.BuildState.BREAKING ? ControlsLine.Underway.BREAKING : ControlsLine.Underway.PLACING;
 	}
 
 	/**
