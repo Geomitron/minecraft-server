@@ -15,6 +15,7 @@ import dev.buildingplanner.input.PlaceTurn;
 import dev.buildingplanner.input.ShapeLock;
 import dev.buildingplanner.input.SingleRule;
 import dev.buildingplanner.layer.Layer;
+import dev.buildingplanner.layer.WrongBlocks;
 import dev.buildingplanner.look.ControlsLine;
 import dev.buildingplanner.look.GhostsShown;
 import dev.buildingplanner.server.PlaceTurns;
@@ -70,6 +71,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	 * class never loads their classes then.
 	 */
 	private static EditGlow glow;
+	private static WrongBlocksOutline wrongBlocks;
 	/** The player's block mix, kept while the game runs, across servers. */
 	private static final BlockMix MIX = new BlockMix();
 
@@ -143,6 +145,8 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		// The sweep runs before the marks' outline, which then draws the marks as they stand.
 		DeleteAim.registered(() -> session);
 		MarksOutline.registered(() -> session != null && session.deleteOn() ? session.marks() : null);
+		wrongBlocks = WrongBlocksOutline.registered(
+			() -> session != null && session.ghostsShown() ? session.replica().layer() : null);
 		modeHud = new ModeHud(BuildingPlannerClient::mouseMode, BuildingPlannerClient::boxShown,
 			BuildingPlannerClient::copyLine, BuildingPlannerClient::deleteLines, BuildingPlannerClient::modelessLine,
 			() -> effortless && EffortlessShapes.shapeUnderWay(),
@@ -303,6 +307,11 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		BlockMixScreen.open(MIX,
 			() -> ClientSession.show(PlayerMessage.mixOn(BLOCK_MIX.getTranslatedKeyMessage().getString())),
 			() -> ClientSession.show(PlayerMessage.mixOff()));
+	}
+
+	/** The wrong blocks the last frame drew through walls, or none. */
+	static WrongBlocks.Found wrongBlocksDrawn() {
+		return wrongBlocks == null ? WrongBlocks.Found.NONE : wrongBlocks.drawn();
 	}
 
 	/** Whether ghost blocks show for this player, as the switch is set, with or without a session. */
@@ -741,24 +750,6 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	}
 
 	/**
-	 * Hook M8: the top of the held item's name, which the game gives as {@code drawnAt}: 2 above the top of the highest
-	 * row of Building Planner's lines above the hotbar while one shows, or {@code drawnAt}.
-	 */
-	public static int itemNameTop(int drawnAt) {
-		return modeHud == null ? drawnAt : modeHud.itemNameTop(drawnAt);
-	}
-
-	/** Whether Building Planner is on for this server, so Effortless Building's hooks draw ghost blocks. */
-	public static boolean active() {
-		return session != null;
-	}
-
-	/** Whether the placement is one of the tiles that hand the layer to Litematica. */
-	public static boolean isTile(SchematicPlacement placement) {
-		return session != null && session.tiles().holds(placement);
-	}
-
-	/**
 	 * Hook M7: Esc with no screen open takes the next step out of the modes ({@link EscSteps#next}), each as the click
 	 * or button that takes it does, and returns whether the game pauses: without a session, or with no step left. A
 	 * {@code repeat} of a held Esc takes no step, so each step needs a press of its own.
@@ -784,6 +775,24 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 			}
 		}
 		return false;
+	}
+
+	/**
+	 * Hook M8: the top of the held item's name, which the game gives as {@code drawnAt}: 2 above the top of the highest
+	 * row of Building Planner's lines above the hotbar while one shows, or {@code drawnAt}.
+	 */
+	public static int itemNameTop(int drawnAt) {
+		return modeHud == null ? drawnAt : modeHud.itemNameTop(drawnAt);
+	}
+
+	/** Whether Building Planner is on for this server, so Effortless Building's hooks draw ghost blocks. */
+	public static boolean active() {
+		return session != null;
+	}
+
+	/** Whether the placement is one of the tiles that hand the layer to Litematica. */
+	public static boolean isTile(SchematicPlacement placement) {
+		return session != null && session.tiles().holds(placement);
 	}
 
 	/**

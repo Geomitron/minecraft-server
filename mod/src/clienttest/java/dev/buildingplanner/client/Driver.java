@@ -1122,6 +1122,15 @@ public final class Driver implements ClientModInitializer {
 					+ " tiles, " + DataManager.getSchematicPlacementManager().getAllSchematicsPlacements().size()
 					+ " placements";
 			}
+			case "wrongblocks" -> {
+				// wrongblocks: the wrong blocks the last frame drew through walls, as "red x,y,z ... orange x,y,z ...",
+				// or none.
+				return WrongBlocksProbe.drawn();
+			}
+			case "wrongscan" -> {
+				// wrongscan <times>: how long finding the wrong blocks takes with ghost blocks filling its range.
+				return WrongBlocksProbe.scanCost(Integer.parseInt(a[1]));
+			}
 			case "toolitem" -> {
 				// toolitem: whether Litematica's tool item is on.
 				return String.valueOf(Configs.Generic.TOOL_ITEM_ENABLED.getBooleanValue());

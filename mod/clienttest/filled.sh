@@ -162,6 +162,54 @@ check "the wall's real blocks remove their ghost blocks, and the rest stay" eval
 drv 2 "notoasts" "wait 40" "shot wall-after-1920x1080" "wait 10" "window 854 480 2" "wait 40" \
 	"shot wall-after-854x480" "wait 10" > /dev/null
 
+# Wrong blocks through walls: a ghost stone brick at 154 -60 156 with a real cobblestone in it, and a ghost oak stair
+# facing east at 152 -60 156 with a real oak stair facing north in it, 4 blocks behind a real stone wall from 139 -60 160
+# to 169 -49 160 that fills Planner2's view from the south. The animals the flat world starts with are killed so
+# nothing else moves in the view, and Planner1 stands out of it, west of the blocks.
+drv 1 "cmd tp @s 120 -60 156 -90 0" "cmd tp Planner2 154.5 -60 166.5 180 10" "wait 40" \
+	"cmd kill @e[type=!minecraft:player]" "cmd time set noon" "cmd fill 139 -60 160 169 -49 160 minecraft:stone" \
+	"edit 154 -60 156 154 -60 156 minecraft:stone_bricks" "edit 152 -60 156 152 -60 156 minecraft:oak_stairs[facing=east]" \
+	> /dev/null
+check "Planner2 sees the two ghost blocks behind the wall" drv 2 "await block 154 -60 156 minecraft:stone_bricks" \
+	"await block 152 -60 156 minecraft:oak_stairs" "await real 154 -59 160 minecraft:stone" "await noglow"
+drv 1 "cmd setblock 154 -60 156 minecraft:cobblestone" "cmd setblock 152 -60 156 minecraft:oak_stairs[facing=north]" \
+	> /dev/null
+check "a cobblestone and an oak stair facing north leave the ghost blocks they don't fill" eval \
+	'drv 2 "await real 154 -60 156 minecraft:cobblestone" "await real 152 -60 156 minecraft:oak_stairs" "wait 5" \
+	> /dev/null && both_layer 154 -60 156 minecraft:stone_bricks && both_layer 152 -60 156 minecraft:oak_stairs'
+check "through the wall from 10 blocks, the cobblestone's ghost block draws red and the stair's orange" eval \
+	'drv 2 "wait 20" > /dev/null && [[ $(val 2 wrongblocks) == "red 154,-60,156 orange 152,-60,156" ]]'
+drv 2 "window 854 480 2" "notoasts" "wait 40" "shot wrong-blocks-through-wall-854x480" "wait 10" \
+	"window 1920 1080 2" "wait 40" "notoasts" "shot wrong-blocks-through-wall-1920x1080" "wait 10" > /dev/null
+keys 2 key n
+check "with ghost blocks hidden, nothing draws" eval \
+	'drv 2 "wait 20" > /dev/null && [[ $(val 2 ghosts) == hidden* ]] && [[ $(val 2 wrongblocks) == none ]]'
+drv 2 "notoasts" "wait 40" "shot wrong-blocks-hidden-1920x1080" "wait 10" > /dev/null
+through=$(val 2 "shotdiff wrong-blocks-through-wall-1920x1080 wrong-blocks-hidden-1920x1080")
+echo "  pixels the wrong blocks change through the wall: $through" >> /out/checks.log
+check "the view through the wall differs from the view with ghost blocks hidden, where the two blocks draw" eval \
+	'((through > 500))'
+keys 2 key n
+check "shown again, they draw again" eval \
+	'drv 2 "wait 20" > /dev/null && [[ $(val 2 wrongblocks) == "red 154,-60,156 orange 152,-60,156" ]]'
+# The cost of finding them: 20 scans with a ghost block at every position within 32 blocks of Planner2's camera.
+cost=$(val 2 "wrongscan 20")
+echo "  finding the wrong blocks: $cost" >> /out/checks.log
+check "a scan with ghost blocks filling its range runs" eval '[[ $cost == "20 scans of 274625 ghost blocks, "* ]]'
+# Planner2's camera is in block z 188 here, 32 blocks from the blocks' z, and in z 189 farther back, 33 blocks away.
+drv 1 "cmd tp Planner2 154.5 -60 189.5 180 10" > /dev/null
+check "from 33 blocks, beyond 32, nothing draws" eval \
+	'drv 2 "wait 40" > /dev/null && [[ $(val 2 wrongblocks) == none ]]'
+drv 1 "cmd tp Planner2 154.5 -60 188.5 180 10" > /dev/null
+check "from 32 blocks, both draw" eval \
+	'drv 2 "wait 40" > /dev/null && [[ $(val 2 wrongblocks) == "red 154,-60,156 orange 152,-60,156" ]]'
+# From the north side, in front of the wall, the faint colours draw over Litematica's own overlay.
+drv 1 "cmd tp Planner2 154.5 -60 150.5 0 10" > /dev/null
+check "from the wall's other side, both draw" eval \
+	'drv 2 "wait 40" > /dev/null && [[ $(val 2 wrongblocks) == "red 154,-60,156 orange 152,-60,156" ]]'
+drv 2 "notoasts" "wait 40" "shot wrong-blocks-in-view-1920x1080" "wait 10" "window 854 480 2" "wait 40" \
+	"notoasts" "shot wrong-blocks-in-view-854x480" "wait 10" > /dev/null
+
 # Ghost blocks saved over matching real blocks while the server ran without the add-on: ghost gold blocks at 300 -60 300
 # and 301 -60 300 and a ghost oak stair facing north at 302 -60 300, far from where the players stand.
 drv 1 "cmd tp @s 300 -60 295 0 30" "wait 60" "edit 300 -60 300 301 -60 300 minecraft:gold_block" \

@@ -593,10 +593,12 @@ Building Planner draws the red and orange ones through walls itself (Geo's comme
 each ghost block whose real block is a different block, or the same block in another state, by Litematica's rule
 (neither air nor a fluid), within 32 blocks of the camera (1241 Q2 C), gets a faint outline and sides through any
 block in front of it, in Litematica's red (#FF3333) or orange (#FF9010), the outline at 0.4 alpha and the sides at
-0.1, drawn through MaLiLib's renderer with the depth test off, after the world. Faces between two such blocks aren't drawn, as for
-Delete's marks (`MarksOutline`'s shape). The positions come from a pure function of the player's copy of the layer
+0.1, drawn through MaLiLib's renderer with the depth test off, after the world (`WrongBlocksOutline`). Faces between two
+such blocks of the same colour aren't drawn, as for Delete's marks (`OutlineMesh`, the shape `MarksOutline` draws too),
+so each colour shows as one shape. The positions come from a pure function of the player's copy of the layer
 and the real blocks (`WrongBlocks`), worked out again every 10 ticks over the 16-block sections within reach that hold
-ghost blocks, so a block built or broken shows within half a second. Where the player sees the ghost block itself, the
+ghost blocks, so a block built or broken shows within half a second. In the test harness, a scan with a ghost block at
+all 274,625 positions in range takes 4.5 ms at the median of 20 scans, and 26.9 ms at the slowest. Where the player sees the ghost block itself, the
 faint colour draws over Litematica's overlay of the same colour. Nothing draws while ghost blocks are hidden or without a session.
 
 ### The client
@@ -2520,6 +2522,14 @@ world's spawn, where Planner2, who isn't an operator, may build:
 - Neither client's log has a self-check warning, checked before the restarts and at the end.
 - Planner2 is shot at 854 by 480 and 1920 by 1080, GUI scale 2, looking at a ghost wall before and after real blocks
   fill half of it.
+- Wrong blocks through walls ("Wrong blocks through walls"): a real cobblestone in a ghost stone brick and a real oak
+  stair facing north in a ghost oak stair facing east, 4 blocks behind a real stone wall that fills Planner2's view,
+  leave their ghost blocks. From 10 blocks, on the wall's other side, the stone brick draws red and the stair orange
+  (the driver's `wrongblocks`, what the last frame drew), and the view differs from the same view with ghost blocks
+  hidden by more than 500 pixels; with ghost blocks hidden nothing draws, and shown again both draw. From 33 blocks
+  nothing draws, and from 32 both do. Both are shot at 854 by 480 and 1920 by 1080, GUI scale 2, through the wall from
+  10 blocks and from in front of it. The driver's `wrongscan` times 20 scans with a ghost block at every position
+  within 32 blocks of Planner2's camera, and writes the figures to the checks' log.
 
 The copy's placement has unit tests as pure functions. `CopyPlacementTest` covers the copy against each of the six
 faces, with sides of odd and even lengths, the origin for each turn and mirror filling the turned box, and a turn or
@@ -2621,7 +2631,10 @@ another face, a sign turned another way and a hopper, piston, dripstone tip and 
 stair of another shape or waterlogged, a fence or wall with other connections, a waterlogged slab, a crop of another
 age, an open or powered door, an occupied bed, a lit furnace and an extended piston fill it; a top or double slab
 doesn't fill a bottom one; air fills nothing; and for each of candles, sea pickles, snow layers, turtle eggs, pink
-petals and leaf litter, a block of another count stays and one of the same count fills. `LayerFillTest` covers the end-of-tick edit (by the nil author with no
+petals and leaf litter, a block of another count stays and one of the same count fills. `WrongBlocksTest` covers which
+ghost blocks draw through walls: over another block red, over the same block facing another way orange, and over the
+same block, air, water or lava, or with no ghost block, nothing; and the range, a block 10 away and one 32 away on
+every axis drawing, and one 33 away on any axis not. `LayerFillTest` covers the end-of-tick edit (by the nil author with no
 client sequence, to every watcher, only for blocks still filled when the tick ends, split at the block cap), an edit's
 filter (a position a real block fills takes air instead of the new ghost block, unless the server hasn't loaded its
 chunk, so a ghost block drawn over a real block that fills it removes the older ghost block there, one undo brings it
@@ -2701,8 +2714,10 @@ other in the game's own copy of the layer, again after a restart, which doesn't 
   seen doing so.
 - That Effortless Building's "Functional Settings" button is the only one the radial menu gives operators alone
   (source read); Planner1 and Planner2 are made operators for the check of hook E34.
-- What drawing the wrong blocks through walls costs (`WrongBlocks`, rescanned every 10 ticks within 32 blocks, up to
-  65 by 65 by 65 positions a scan in the sections that hold ghost blocks): not measured.
+- What drawing the wrong blocks through walls costs on players' computers (`WrongBlocks`, rescanned every 10 ticks
+  within 32 blocks, up to 65 by 65 by 65 positions a scan in the sections that hold ghost blocks): measured only in the
+  test harness's container, where a scan with a ghost block at all 274,625 positions takes 4.5 ms at the median of 20
+  scans and 26.9 ms at the slowest; building and drawing the shapes weren't timed.
 - That a two-part block placed with "Match ghost blocks" on (a door, a bed) takes the ghost block's facing for both
   parts, as one turned with Left Ctrl does; read, not run.
 - That no Litematica or MaLiLib hotkey acts on Left Ctrl with the wheel or the middle button while Litematica's tool
