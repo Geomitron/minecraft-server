@@ -493,7 +493,7 @@ public final class EffortlessShapes {
 	}
 
 	/**
-	 * "Match ghost blocks" (see "Settings"): with the setting on, where the player's copy of the layer has a ghost block
+	 * "Match ghost blocks" (see "Settings"): with the setting on and ghost blocks shown, where the player's copy of the layer has a ghost block
 	 * of the block Minecraft would place ({@code placed}, {@link GhostMatch#turn}), the ghost block's turn when the block
 	 * turned so can stay (hook S2's step, {@link PlaceTurns#place}, and {@code BlockItem.canPlace}); otherwise
 	 * {@code otherwise}, the turn the click takes with the setting off.
@@ -504,7 +504,7 @@ public final class EffortlessShapes {
 		if (session == null) {
 			return otherwise;
 		}
-		BlockTurn.Held ghost = GhostMatch.turn(BuildingPlannerClient.matchGhost(),
+		BlockTurn.Held ghost = GhostMatch.turn(BuildingPlannerClient.matchGhost(), session.ghostsShown(),
 			session.replica().layer().get(context.getClickedPos()), placed, item);
 		if (ghost.turn() == null) {
 			return otherwise;

@@ -34,7 +34,7 @@ class GhostMatchTest {
 
 	@Test
 	void aStairPlacedFacingSouthIntoAGhostStairFacingEastTakesTheGhostStairsTurn() {
-		BlockTurn.Held turn = GhostMatch.turn(true, oakStairs(Direction.EAST), oakStairs(Direction.SOUTH), Items.OAK_STAIRS);
+		BlockTurn.Held turn = GhostMatch.turn(true, true, oakStairs(Direction.EAST), oakStairs(Direction.SOUTH), Items.OAK_STAIRS);
 		assertSame(Items.OAK_STAIRS, turn.item());
 		assertEquals(Map.of("facing", "east", "half", "bottom"), turn.turn().values());
 		BlockState placed = PlaceTurn.turned(oakStairs(Direction.SOUTH), turn, Items.OAK_STAIRS, true);
@@ -44,36 +44,42 @@ class GhostMatchTest {
 	@Test
 	void withTheSettingOffTheStairFacesAsThePlayerDoes() {
 		assertSame(BlockTurn.Held.NONE,
-			GhostMatch.turn(false, oakStairs(Direction.EAST), oakStairs(Direction.SOUTH), Items.OAK_STAIRS));
+			GhostMatch.turn(false, true, oakStairs(Direction.EAST), oakStairs(Direction.SOUTH), Items.OAK_STAIRS));
+	}
+
+	@Test
+	void withGhostBlocksHiddenTheStairFacesAsThePlayerDoes() {
+		assertSame(BlockTurn.Held.NONE,
+			GhostMatch.turn(true, false, oakStairs(Direction.EAST), oakStairs(Direction.SOUTH), Items.OAK_STAIRS));
 	}
 
 	@Test
 	void aDifferentBlockOrNoGhostBlockTakesNoTurn() {
 		BlockState spruce = Blocks.SPRUCE_STAIRS.defaultBlockState()
 			.setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.EAST);
-		assertSame(BlockTurn.Held.NONE, GhostMatch.turn(true, spruce, oakStairs(Direction.SOUTH), Items.OAK_STAIRS));
+		assertSame(BlockTurn.Held.NONE, GhostMatch.turn(true, true, spruce, oakStairs(Direction.SOUTH), Items.OAK_STAIRS));
 		assertSame(BlockTurn.Held.NONE,
-			GhostMatch.turn(true, Blocks.AIR.defaultBlockState(), oakStairs(Direction.SOUTH), Items.OAK_STAIRS));
-		assertSame(BlockTurn.Held.NONE, GhostMatch.turn(true, null, oakStairs(Direction.SOUTH), Items.OAK_STAIRS));
+			GhostMatch.turn(true, true, Blocks.AIR.defaultBlockState(), oakStairs(Direction.SOUTH), Items.OAK_STAIRS));
+		assertSame(BlockTurn.Held.NONE, GhostMatch.turn(true, true, null, oakStairs(Direction.SOUTH), Items.OAK_STAIRS));
 		// Minecraft's own right click places nothing there.
-		assertSame(BlockTurn.Held.NONE, GhostMatch.turn(true, oakStairs(Direction.EAST), null, Items.OAK_STAIRS));
+		assertSame(BlockTurn.Held.NONE, GhostMatch.turn(true, true, oakStairs(Direction.EAST), null, Items.OAK_STAIRS));
 		// A ghost block with no orientation property has no turn to give.
 		assertSame(BlockTurn.Held.NONE,
-			GhostMatch.turn(true, Blocks.STONE.defaultBlockState(), Blocks.STONE.defaultBlockState(), Items.STONE));
+			GhostMatch.turn(true, true, Blocks.STONE.defaultBlockState(), Blocks.STONE.defaultBlockState(), Items.STONE));
 	}
 
 	@Test
 	void aTorchPlacedOnAWallMatchesAGhostWallTorchAndNotAGhostTorch() {
-		BlockTurn.Held turn = GhostMatch.turn(true, wallTorch(Direction.EAST), wallTorch(Direction.NORTH), Items.TORCH);
+		BlockTurn.Held turn = GhostMatch.turn(true, true, wallTorch(Direction.EAST), wallTorch(Direction.NORTH), Items.TORCH);
 		assertSame(Items.TORCH, turn.item());
 		assertEquals(Map.of("facing", "east"), turn.turn().values());
 		assertSame(BlockTurn.Held.NONE,
-			GhostMatch.turn(true, Blocks.TORCH.defaultBlockState(), wallTorch(Direction.NORTH), Items.TORCH));
+			GhostMatch.turn(true, true, Blocks.TORCH.defaultBlockState(), wallTorch(Direction.NORTH), Items.TORCH));
 	}
 
 	@Test
 	void aTurnThatCantStayLeavesTheClickAsItIsWithTheSettingOff() {
-		BlockTurn.Held ghost = GhostMatch.turn(true, wallTorch(Direction.EAST), wallTorch(Direction.NORTH), Items.TORCH);
+		BlockTurn.Held ghost = GhostMatch.turn(true, true, wallTorch(Direction.EAST), wallTorch(Direction.NORTH), Items.TORCH);
 		BlockTurn.Held leftCtrl = PlaceTurn.accepted(Items.TORCH, Map.of("facing", "west"));
 		assertSame(leftCtrl, GhostMatch.clickTakes(ghost, false, leftCtrl));
 		assertSame(BlockTurn.Held.NONE, GhostMatch.clickTakes(ghost, false, BlockTurn.Held.NONE));

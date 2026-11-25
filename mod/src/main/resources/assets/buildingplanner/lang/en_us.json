@@ -28,7 +28,7 @@
 	"buildingplanner.ui.material_list.close": "Close",
 	"buildingplanner.info.material_list": "Counts the ghost blocks in the box you drew.\nTotal: how many of each block the ghost blocks use.\nMissing: how many are still to place, where there's air or a different block.\nAvailable: how many you carry.\nInfo HUD: shows the missing blocks on screen while you build.\nSave list keeps this list on the server. Saved lists opens the lists you kept.\nThe radial menu's Material lists button opens the current list again.",
 	"buildingplanner.ui.visual_settings.match_ghost_turn": "Match ghost blocks",
-	"buildingplanner.ui.visual_settings.match_ghost_turn.tooltip": "Places a block turned as the ghost block it fills, whichever way you face",
+	"buildingplanner.ui.visual_settings.match_ghost_turn.tooltip": "Automatically flips and turns a block you place to match a ghost block you're filling in",
 	"buildingplanner.ui.lists.date_time": "MMM d, h:mm a",
 	"buildingplanner.ui.save_list.title": "Save list",
 	"buildingplanner.ui.save_list.name": "Name",

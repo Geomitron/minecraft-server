@@ -26,14 +26,14 @@ public final class GhostMatch {
 	}
 
 	/**
-	 * The ghost block's turn a right click takes with the setting {@code on}: for {@code item}, the ghost block's values
-	 * of the orientation properties {@link BlockTurn} sets, where the block Minecraft would place there
-	 * ({@code placed}) is the ghost block's block, so a torch placed as a wall torch matches a ghost wall torch and not a
-	 * ghost torch. None with the setting off, no ghost block there, nothing placed, another block, or a ghost block with
-	 * none of those properties.
+	 * The ghost block's turn a right click takes with the setting {@code on} while ghost blocks show ({@code shown}):
+	 * for {@code item}, the ghost block's values of the orientation properties {@link BlockTurn} sets, where the block
+	 * Minecraft would place there ({@code placed}) is the ghost block's block, so a torch placed as a wall torch matches
+	 * a ghost wall torch and not a ghost torch. None with the setting off, ghost blocks hidden, no ghost block there,
+	 * nothing placed, another block, or a ghost block with none of those properties.
 	 */
-	public static BlockTurn.Held turn(boolean on, BlockState ghost, BlockState placed, Item item) {
-		if (!on || ghost == null || ghost.isAir() || placed == null || placed.getBlock() != ghost.getBlock()) {
+	public static BlockTurn.Held turn(boolean on, boolean shown, BlockState ghost, BlockState placed, Item item) {
+		if (!on || !shown || ghost == null || ghost.isAir() || placed == null || placed.getBlock() != ghost.getBlock()) {
 			return BlockTurn.Held.NONE;
 		}
 		Map<String, String> values = BlockTurn.values(ghost);

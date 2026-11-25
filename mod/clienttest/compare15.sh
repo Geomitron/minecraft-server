@@ -1,6 +1,6 @@
-# Step 15's comparison shots, for Geo's questions: the wrong blocks through a wall, red and orange, from Planner2's
-# side as filled.sh sets them up; and "Match ghost blocks" acting while ghost blocks are hidden: Planner1, with ghost
-# blocks hidden and the setting on, places oak stairs into a hidden ghost stair facing east, shot from Planner2's side.
+# Step 15's comparison shots: the wrong blocks through a wall, red and orange, from Planner2's side as filled.sh sets
+# them up; and "Match ghost blocks" with ghost blocks hidden: Planner1, with ghost blocks hidden and the setting on,
+# places oak stairs into a hidden ghost stair facing east, which face as Planner1 does, shot from Planner2's side.
 # Each shot's .boxes file and the placed stair's window box go to /out. Sourced by inside.sh.
 
 check "client 1 starts a session on hello" drv 1 "await session" "await noscreen"

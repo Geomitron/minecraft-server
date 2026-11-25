@@ -3,7 +3,7 @@
 # block; a block placed several to a spot fills its ghost block only at the same count; ghost blocks drawn over real
 # blocks that fill them remove the older ghost block there, and undo and redo bring it back and remove it again;
 # breaking a filled block brings none back; a paste onto built blocks changes nothing; a stair placed with "Match ghost
-# blocks" on faces as its ghost stair does and fills it, and the setting stays as saved after the game restarts; and
+# blocks" on faces as its ghost stair does and fills it, but only while ghost blocks show, and the setting stays as saved after the game restarts; and
 # ghost blocks saved over matching real blocks while the server ran without the add-on go once their chunk loads. Shots
 # of a wall half built, before and after, and of "Visual Settings", without and with the row's tooltip, and the stairs
 # placed with the setting on and off, at 854 by 480 and 1920 by 1080, GUI scale 2. Sourced by inside.sh, which provides drv, val, check,
@@ -269,7 +269,7 @@ visual_settings_shots() {
 }
 label_hover
 check "the row's label shows its tooltip" eval 'drv 1 "wait 5" > /dev/null &&
-	[[ $(val 1 tooltips) == "Places a block turned as the ghost block it fills, whichever way you face" ]]'
+	[[ $(val 1 tooltips) == "Automatically flips and turns a block you place to match a ghost block you'"'"'re filling in" ]]'
 visual_settings_shots 854x480
 drv 1 "window 1920 1080 2" "wait 20" > /dev/null
 visual_settings_shots 1920x1080
@@ -294,6 +294,22 @@ check "the server's world has it facing east" server_has 220 -60 220 "minecraft:
 	matched-stair-east
 check "Planner2 sees it facing east" real_has 2 220 -60 220 minecraft:oak_stairs "facing=east,"
 check "and it fills the ghost stair on both clients" eval 'drv 2 "wait 5" > /dev/null && both_layer 220 -60 220 minecraft:air'
+# With ghost blocks hidden, the setting doesn't act: a stair placed into a hidden ghost stair facing east at 224 -60 220
+# faces as Planner1 does, south, and leaves the ghost stair.
+drv 1 "edit 224 -60 220 224 -60 220 minecraft:oak_stairs[facing=east]" "await block 224 -60 220 minecraft:oak_stairs" \
+	"cmd tp @s 224.5 -60 217.5 0 30" "wait 10" > /dev/null
+keys 1 key n
+check "with Planner1's ghost blocks hidden" eval 'drv 1 "wait 20" > /dev/null && [[ $(val 1 ghosts) == hidden* ]]'
+drv 1 "lookat 224.5 -60 220.5" "wait 5" > /dev/null
+use_click 1
+check "with the setting on and ghost blocks hidden, the stair faces south, as Planner1 does" eval \
+	'real_has 1 224 -60 220 minecraft:oak_stairs "facing=south," &&
+	server_has 224 -60 220 "minecraft:oak_stairs[facing=south]" hidden-stair-south &&
+	real_has 2 224 -60 220 minecraft:oak_stairs "facing=south,"'
+check "and leaves its ghost stair on both clients" eval 'drv 2 "wait 5" > /dev/null &&
+	both_layer 224 -60 220 minecraft:oak_stairs'
+keys 1 key n
+check "Planner1's ghost blocks show again" eval 'drv 1 "wait 20" > /dev/null && [[ $(val 1 ghosts) == shown* ]]'
 visual_settings 1
 match_switch 1
 save_settings 1
