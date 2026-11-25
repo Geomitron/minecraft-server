@@ -364,17 +364,17 @@ public final class ControlsLine {
 	}
 
 	/**
-	 * The left click's key and its cancel in Effortless Building's own line, which it writes in English in its code
-	 * ({@code RenderHandler.PLACING_TEXT} and {@code INTERACTING_TEXT}).
+	 * The cancel in Effortless Building's own line, which it writes in English in its code
+	 * ({@code RenderHandler.PLACING_TEXT}, {@code INTERACTING_TEXT} and {@code BREAKING_TEXT}).
 	 */
-	private static final String EFFORTLESS_LEFT = "Left-click";
 	private static final String EFFORTLESS_CANCEL = "cancel";
 
 	/**
 	 * Effortless Building's own line during a shape (hook E31), as Building Planner's rectangles: each of its clauses,
 	 * "key to action", separated by ", ", becomes the control "[key: action]", in Effortless Building's own words and
-	 * colours, with Esc before the left click that cancels, since Esc cancels the shape too (hook M7): "Left-click to
-	 * cancel, Right-click to place" is "[Esc/Left-click: cancel][Right-click: place]". The key and
+	 * colours, with Esc before the click that cancels, since Esc cancels the shape too (hook M7): "Left-click to
+	 * cancel, Right-click to place" is "[Esc/Left-click: cancel][Right-click: place]", and "Left-click to break,
+	 * Right-click to cancel" is "[Left-click: break][Esc/Right-click: cancel]". The key and
 	 * the colon are white; the action stays dark aqua, or red as Effortless Building draws a shape that breaks blocks.
 	 * Null for a text of another form, or in other colours (a key not white, an action neither dark aqua nor red, or in
 	 * more than one colour), which Effortless Building then draws as it is.
@@ -411,7 +411,7 @@ public final class ControlsLine {
 			}
 			String key = text.substring(start, to);
 			String does = text.substring(action, end);
-			Text named = key.equals(EFFORTLESS_LEFT) && does.equals(EFFORTLESS_CANCEL)
+			Text named = does.equals(EFFORTLESS_CANCEL)
 				? Translated.of(MODE + ".esc_click", Look.PLAIN, new Literal(key)) : new Literal(key);
 			rects.add(hint(named, new Literal(does, look)));
 			start = end + 2;

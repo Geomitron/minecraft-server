@@ -2678,9 +2678,9 @@ check "a right click cancels the shape, erasing nothing, and Line's line shows a
 	[[ $(val 1 modehud) == "$line_start[Hold Left Control: turn or flip]$line_end" ]]'
 # Effortless Building's own line during a shape (hook E31) is drawn in Building Planner's rectangles where Effortless
 # Building draws it, 58 above the screen's bottom (the driver's ebline reads what the last frame drew there), in its
-# words and colours, with Esc before the left click that cancels: during a Line drawn with the place click
+# words and colours, with Esc before the click that cancels: during a Line drawn with the place click
 # "[Esc/Left-click: cancel][Right-click: place]", each action in dark aqua; with a pickaxe, a tool, in hand during that
-# shape, "interact" in place of "place"; during a Line drawn with the break click "[Left-click: break][Right-click:
+# shape, "interact" in place of "place"; during a Line drawn with the break click "[Left-click: break][Esc/Right-click:
 # cancel]", each action in red. Each is shot at noon, once the chat has faded.
 # ebline_shots <name>: Planner1's view as <name>-1920x1080-gui4 and <name>-854x480-gui2, each with the line's
 # rectangles' window boxes in the log for the shots' outlines, and a check that they're laid out as the controls' are,
@@ -2719,8 +2719,8 @@ check "a left click cancels the shape, and Line's line shows there again" eval \
 aim 1 -54 -60 -36
 attack_click 1
 aim 1 -51 -60 -36
-check "during a Line drawn with the break click, it reads [Left-click: break][Right-click: cancel]" eval \
-	'[[ $(val 1 ebline) == "[Left-click: break][Right-click: cancel]" ]]'
+check "during a Line drawn with the break click, it reads [Left-click: break][Esc/Right-click: cancel]" eval \
+	'[[ $(val 1 ebline) == "[Left-click: break][Esc/Right-click: cancel]" ]]'
 check "each rectangle white, with its action in red" eval '[[ $(val 1 eblinecolours) == "white+red white+red" ]]'
 ebline_shots effortless-line-break
 use_click 1

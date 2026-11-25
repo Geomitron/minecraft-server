@@ -786,7 +786,7 @@ form shows too (`ControlsLine.effortless`):
 - during a shape drawn with the place click: "[Esc/Left-click: cancel][Right-click: place]";
 - with a tool in hand during that shape (an item with Minecraft's `TOOL` component, such as a pickaxe):
   "[Esc/Left-click: cancel][Right-click: interact]";
-- during a shape drawn with the break click: "[Left-click: break][Right-click: cancel]".
+- during a shape drawn with the break click: "[Left-click: break][Esc/Right-click: cancel]".
 
 The key and its colon are white, and each action keeps Effortless Building's colour: dark aqua, and red during a shape
 drawn with the break click, where Effortless Building draws both actions red and the keys white. The rectangles are
@@ -796,8 +796,9 @@ Effortless Building as it is, and so is the line in a singleplayer world or on a
 The game's "Text Background" accessibility setting ("Chat" or "Everywhere") doesn't change it: the setting works only
 through `Options.getBackgroundColor`, which the game's own text (the action bar, subtitles, the player list) calls and
 the controls line doesn't, so the background is always there at that opacity. Effortless Building's "Left-click to
-cancel" reads "[Esc/Left-click: cancel]", since Esc cancels the shape too (see "Esc"); Effortless Building writes its
-line in English in its code, so `ControlsLine.effortless` knows that clause by its words.
+cancel" reads "[Esc/Left-click: cancel]", and its "Right-click to cancel" "[Esc/Right-click: cancel]", since Esc
+cancels the shape too (see "Esc"); Effortless Building writes its line in English in its code, so
+`ControlsLine.effortless` knows the action "cancel" by its word.
 
 #### Esc
 
@@ -810,8 +811,9 @@ pause"). Hook M7 runs the first step that applies (`EscSteps`, a pure function o
    clears them; with no marks, Delete ends;
 3. the copy at the aim: its set, after its first click, drops, and the copy follows the aim in the same mode (1238
    Q3 A); with no set fixed, the copy is put away;
-4. a shape under way in a build mode is cancelled, as Effortless Building's left click cancels it
-   (`BuildPipelineClient.cancelCurrentSequence`), keeping a position locked before its first click, as that click
+4. a shape under way in a build mode is cancelled, as the click that cancels it in Effortless Building's line does
+   (the left click for a shape drawn with the place click, the right click for one drawn with the break click;
+   `BuildPipelineClient.cancelCurrentSequence`), keeping a position locked before its first click, as that click
    does;
 5. a build mode other than Disable becomes Disable (`BuildModes.setBuildMode`), which also ends its lock (E21);
 6. the game pauses.
@@ -2371,7 +2373,7 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   frame drew there): during a Line drawn with the place click, "[Esc/Left-click: cancel][Right-click: place]", each
   rectangle white with its action in dark aqua; with an iron pickaxe, a tool, in hand during that shape,
   "[Esc/Left-click: cancel][Right-click: interact]", in the same colours; during a Line drawn with the break click, "[Left-click:
-  break][Right-click: cancel]", each rectangle white with its action in red; and once a click cancels the shape, Effortless
+  break][Esc/Right-click: cancel]", each rectangle white with its action in red; and once a click cancels the shape, Effortless
   Building's line is gone and Line's line shows again. Esc cancels a Line drawn with either click too, sending no
   edit, opening no screen, and leaving Line chosen with its line. Each is shot at noon at 1920 by 1080, GUI scale 4, and at 854 by 480, GUI scale 2,
   with every rectangle's window box in the log for the shots' outlines, and in each the rectangles are laid out as the
@@ -2577,8 +2579,8 @@ flips or with the sprint key unbound), and the build modes' lines (Single's and 
 click, locked, each turn phrase with and without Left Control, "Turned:" and "Locked, turned:", the red reason as a
 warning in place of the right click, during a shape drawn with the place click and with the break click, locked or
 not, with no "Turned:" during the break shape, keys a player rebound, and unbound keys left out), with Esc before
-the left click that cancels a shape drawn with the place click ("[Esc/Left-click: cancel]") and before each box's
-right click.
+the click that cancels a shape, the left click for one drawn with the place click ("[Esc/Left-click: cancel]") and the
+right click for one drawn with the break click ("[Esc/Right-click: cancel]"), and before each box's right click.
 
 Delete's marks have unit tests as pure functions. `DeleteMarksTest` covers a sweep between two aims
 10 blocks apart marking all 10 ghost blocks between them, and none behind a real block; at most 65 aims for a frame's

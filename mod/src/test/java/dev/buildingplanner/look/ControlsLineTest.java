@@ -469,7 +469,7 @@ class ControlsLineTest {
 		assertEquals(List.of("cancel", "place"), collect(ControlsLine.effortless(PLACING), Look.ACTION));
 		Line breaking = ControlsLine.effortless(List.of(new Part("Left-click to ", "white"), new Part("break", "red"),
 			new Part(", Right-click to ", "white"), new Part("cancel", "red")));
-		assertEquals("[Left-click: break][Right-click: cancel]", read(breaking));
+		assertEquals("[Left-click: break][Esc/Right-click: cancel]", read(breaking));
 		assertEquals(List.of("break", "cancel"), collect(breaking, Look.WARNING));
 		assertEquals(List.of(), collect(breaking, Look.ACTION));
 		// A key with no colour of its own is drawn white, as Effortless Building draws it.
