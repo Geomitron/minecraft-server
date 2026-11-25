@@ -38,7 +38,9 @@ import net.minecraft.world.entity.HumanoidArm;
  * modes' line shows in the same place while the lock's controls are active ({@link ControlsLine#shape}), or in Disable, Disable's line
  * ({@link ControlsLine#disable}); during a shape, while Effortless Building draws its own line there and the shape's
  * block count in the action bar above it, it shows above the action bar, its last row ending 2 pixels above it. While the HUD shows, Effortless Building's mode's name shows
- * just left of the hotbar, in a rectangle of the same look ({@link ModeName}), but in Disable.
+ * just left of the hotbar, in a rectangle of the same look ({@link ModeName}), but in Disable; while a box for Copy or
+ * the material list is drawn, or Delete is on, the tool's name shows there in its place ({@link ControlsLine#toolName}),
+ * in Disable too.
  */
 final class ModeHud implements HudElement {
 	private static final int BOTTOM = 58;
@@ -96,8 +98,9 @@ final class ModeHud implements HudElement {
 	 * {@code modeless} the line with no mouse mode on, the build modes' ({@link ControlsLine#shape}) or Disable's
 	 * ({@link ControlsLine#disable}), or null, {@code shape} whether Effortless
 	 * Building's shape is under way, {@code eraseTicks} the ticks the left button has been held in Delete toward the
-	 * erase, or -1, {@code list} the kinds of block in the box, or the marks, and {@code modeName} the name of
-	 * Effortless Building's mode during a session, or null in Disable or without one.
+	 * erase, or -1, {@code list} the kinds of block in the box, or the marks, and {@code modeName} the name beside
+	 * the hotbar during a session: the tool's while a box or Delete is on, otherwise Effortless Building's mode's, or
+	 * null in Disable or without a session.
 	 */
 	ModeHud(Supplier<MouseMode> mode, Supplier<BoxDraw.Shown> box, Supplier<ControlsLine.Line> copy,
 		Supplier<List<ControlsLine.Line>> delete, Supplier<ControlsLine.Line> modeless, Supplier<Boolean> shape,
@@ -122,7 +125,7 @@ final class ModeHud implements HudElement {
 		List<ControlsLine.Line> lines = now == null ? modelessLines() : switch (now) {
 			case BOX -> {
 				BoxDraw.Shown shown = box.get();
-				yield shown == null ? List.of() : ControlsLine.box(shown.purpose().name(), shown.corners(),
+				yield shown == null ? List.of() : ControlsLine.box(shown.corners(),
 					shown.corners() > 0 && shown.min() != null ? BoxCorners.size(shown.min(), shown.max()) : null,
 					shown.limit());
 			}
@@ -170,7 +173,7 @@ final class ModeHud implements HudElement {
 	}
 
 	/** The game's component for a part of a line, in its look: an action in dark aqua and a warning in red. */
-	private static MutableComponent component(ControlsLine.Text text) {
+	static MutableComponent component(ControlsLine.Text text) {
 		return switch (text) {
 			case ControlsLine.Translated translated -> looked(Component.translatable(translated.key(),
 				translated.args().stream().map(ModeHud::component).toArray()), translated.look());

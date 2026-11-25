@@ -417,33 +417,33 @@ controls="[Right-click: paste]$turn_mirror$lock_off[R: Mode (Off)][Esc/Left-clic
 line_up="[Hold Left Control: line up]"
 controls_ctrl="[Right-click: paste]$turn_mirror$line_up$lock_off[R: Mode (Off)][Esc/Left-click: close]"
 nudges="[Arrow keys + Page Up/Down: nudge]"
-locked_line="Locked: [Right-click: paste]$nudges$turn_mirror$lock_on[R: Mode (Off)][Esc/Left-click: close]"
+locked_line="[Right-click: paste]$nudges$turn_mirror$lock_on[R: Mode (Off)][Esc/Left-click: close]"
 outside="[Can't paste: part of the copy is outside the world]"
-locked_red="Locked: $outside$nudges$turn_mirror$lock_on[R: Mode (Off)][Esc/Left-click: close]"
+locked_red="$outside$nudges$turn_mirror$lock_on[R: Mode (Off)][Esc/Left-click: close]"
 # start_line <Mode> [locked] [<reason>]: the copy's line in Line, Wall or Floor before the first click, locked or not,
 # with the reason before setting the start while the copy is red.
 start_line() {
 	if [[ ${2:-} == locked ]]; then
-		echo "$1, locked: ${3:-}[Right-click: set the start]$nudges$turn_mirror$lock_on[R: Mode ($1)][Esc/Left-click: close]"
+		echo "${3:-}[Right-click: set the start]$nudges$turn_mirror$lock_on[R: Mode ($1)][Esc/Left-click: close]"
 	else
-		echo "$1: [Right-click: set the start]$turn_mirror$line_up$lock_off[R: Mode ($1)][Esc/Left-click: close]"
+		echo "[Right-click: set the start]$turn_mirror$line_up$lock_off[R: Mode ($1)][Esc/Left-click: close]"
 	fi
 }
 # set_line <Mode> <paste> [locked]: the copy's line after the first click, with the paste (or the reason) given.
 set_line() {
 	if [[ ${3:-} == locked ]]; then
-		echo "$1, locked: $2$nudges$turn_mirror$lock_on[R: Mode ($1)][Esc/Left-click: cancel]"
+		echo "$2$nudges$turn_mirror$lock_on[R: Mode ($1)][Esc/Left-click: cancel]"
 	else
-		echo "$1: $2$turn_mirror$lock_off[R: Mode ($1)][Esc/Left-click: cancel]"
+		echo "$2$turn_mirror$lock_off[R: Mode ($1)][Esc/Left-click: cancel]"
 	fi
 }
 first_line="[Left-click: set the first corner][Esc/Right-click: cancel]"
 second_line="[Left-click: set the opposite corner][Esc/Right-click: cancel]"
 height_line="[Left-click: set the height][Esc/Right-click: cancel]"
 # Delete's lines with no marks, with marks, and during a hold of Left Ctrl that unmarks.
-delete_none="Delete: [Hold Left Control: mark][Hold Left Control + Left-click: mark a box][Esc/Right-click: close]"
-delete_marked="Delete: [Hold Left-click: erase][Hold Left Control: mark][Hold Left Control + Left-click: mark a box][Esc/Right-click: clear]"
-delete_unmarking="Delete: [Hold Left-click: erase][Hold Left Control: unmark][Hold Left Control + Left-click: unmark a box][Esc/Right-click: clear]"
+delete_none="[Hold Left Control: mark][Hold Left Control + Left-click: mark a box][Esc/Right-click: close]"
+delete_marked="[Hold Left-click: erase][Hold Left Control: mark][Hold Left Control + Left-click: mark a box][Esc/Right-click: clear]"
+delete_unmarking="[Hold Left-click: erase][Hold Left Control: unmark][Hold Left Control + Left-click: unmark a box][Esc/Right-click: clear]"
 # copy_button, delete_button and paste_button: a click on the radial menu's Copy, Delete or Paste button.
 copy_button() {
 	radial_open
@@ -486,6 +486,17 @@ rects_ok() {
 		}
 		END { exit bad || NR == 0 }'
 }
+# The name beside the hotbar: the build mode's, or the tool's while a box for Copy or the material list is drawn or
+# Delete is on. At 854 by 480, GUI scale 2, the hotbar runs from 122 to 304 GUI pixels across and from 218 to 240 down,
+# and the off hand's slot from 93 to 122 across: the name's text ends 2 inside its rectangle, which ends 4 left of
+# either, and runs from 224 to 233 down, centred on the hotbar.
+# mode_name_at <name> <right>: the name shows once, its text ending at <right> in the window's pixels.
+mode_name_at() {
+	local box
+	box=$(val 1 "drawnbox $1")
+	echo "  mode name $1: $box" >> /out/checks.log
+	[[ $box != *"|"* ]] && [[ $(cut -d" " -f2- <<< "$box") == "448 $2 466" ]]
+}
 # line_shot <name> [<width> <height> <gui scale> [<part>]]: Planner1's view at noon at that size (1920 by 1080, GUI
 # scale 4, unless given) as <name>, once the chat lines that draw over the controls line have faded, with the
 # controls' rows and their window box (left top right bottom) in the log, and that of the rectangle holding <part> if
@@ -512,7 +523,8 @@ lines=$(chat_lines 1)
 copy_button
 check "the radial menu's Copy button starts a box, leaving Effortless Building's mode as it was" eval \
 	'drv 1 "wait 5" > /dev/null && [[ $(val 1 drawbox) == "COPY 0 "*" white SINGLE" ]]'
-check "with its controls line" eval '[[ $(val 1 modehud) == "Copy: $first_line" ]]'
+check "with its controls line" eval '[[ $(val 1 modehud) == "$first_line" ]]'
+check "and the name Copy shows left of the hotbar, in Single's place" mode_name_at Copy 232
 check "and no message in chat" eval '(($(chat_lines 1) == lines))'
 use_click 1
 check "a right click ends the box, and Single's line shows again" eval 'drv 1 "wait 10" > /dev/null &&
@@ -562,10 +574,10 @@ echo "  pixels the shade darkens: $shade_darker; pixels darker without it: $shad
 check "the shade darkens the view where it's drawn" eval '((shade_darker > 500 && shade_lighter < 200))'
 drv 1 "lookat 6.5 -59 6.5" "wait 5" > /dev/null
 check "the first click sets the first corner, and the box follows the aim on its level" eval \
-	'box_is "COPY 1 5,-59,4..6,-59,6 white SINGLE" && [[ $(val 1 modehud) == "Copy: $second_line[2 × 1 × 3]" ]]'
+	'box_is "COPY 1 5,-59,4..6,-59,6 white SINGLE" && [[ $(val 1 modehud) == "$second_line[2 × 1 × 3]" ]]'
 drv 1 "lookat 3.5 -59 3.5" "wait 5" > /dev/null
 check "to the opposite corner" eval 'box_is "COPY 1 3,-59,3..5,-59,4 white SINGLE" &&
-	[[ $(val 1 modehud) == "Copy: $second_line[3 × 1 × 2]" ]]'
+	[[ $(val 1 modehud) == "$second_line[3 × 1 × 2]" ]]'
 check "the list under the crosshair counts the box's blocks: the stairs and the glowstone" eval \
 	'drv 1 "wait 5" > /dev/null && [[ $(val 1 boxlist) == *" | minecraft:glowstone 1, minecraft:oak_stairs 1" ]]'
 # Its row of two cells, from 223 to 261 across and 112 to 130 down at GUI scale 2, sits on a dark background 2 wider at
@@ -582,10 +594,10 @@ drv 1 "window 854 480 2" "wait 20" > /dev/null
 attack_click 1
 drv 1 "lookat 3.5 -57.5 3.5" "wait 5" > /dev/null
 check "the second click sets the opposite corner, and the height follows the aim" eval \
-	'box_is "COPY 2 3,-59,3..5,-58,4 white SINGLE" && [[ $(val 1 modehud) == "Copy: $height_line[3 × 2 × 2]" ]]'
+	'box_is "COPY 2 3,-59,3..5,-58,4 white SINGLE" && [[ $(val 1 modehud) == "$height_line[3 × 2 × 2]" ]]'
 drv 1 "lookat 3.5 -59.5 3.5" "wait 5" > /dev/null
 check "down to the stone bricks" eval 'box_is "COPY 2 3,-60,3..5,-59,4 white SINGLE" &&
-	[[ $(val 1 modehud) == "Copy: $height_line[3 × 2 × 2]" ]]'
+	[[ $(val 1 modehud) == "$height_line[3 × 2 × 2]" ]]'
 check "and the list counts the stone bricks too, most numerous first" eval 'drv 1 "wait 5" > /dev/null &&
 	[[ $(val 1 boxlist) == *" | minecraft:stone_bricks 6, minecraft:glowstone 1, minecraft:oak_stairs 1" ]]'
 line_shot line-copy-height
@@ -874,12 +886,12 @@ check "Litematica draws no box for the copy" eval '[[ $(val 1 boxes) == *"others
 drv 1 "lookat -24.5 -60 33.5" > /dev/null
 shots copy-red-border
 line_shot line-locked-red
-check "the label's rectangle and the controls' are white, and the reason's red" eval \
-	'[[ $(val 1 modecolours) == "white red white white white white white white" ]]'
+check "the reason's rectangle is red, and the controls' white" eval \
+	'[[ $(val 1 modecolours) == "red white white white white white white" ]]'
 line_shot line-locked-red-854x480-gui2 854 480 2
 line_shot line-locked-red-1920x1080-gui2 1920 1080 2
 check "at 854 by 480, GUI scale 2, the locked line goes on in a row below, moving whole rectangles" eval \
-	'[[ $(val 1 modewrap) == "[Locked:]"*"] / ["*"[Esc/Left-click: close]" ]] && rects_ok 854 2'
+	'[[ $(val 1 modewrap) == "$outside"*"] / ["*"[Esc/Left-click: close]" ]] && rects_ok 854 2'
 # R changes a locked copy's mode, and a red copy in Line, Wall or Floor before its first click says why before
 # "Right-click: set the start", since that click still fixes the first copy; R at Floor is back to Off.
 for mode in Line Wall Floor; do
@@ -910,7 +922,7 @@ check "with the keys rebound, the controls line names them as bound" eval '[[ $(
 line_shot line-rebound
 press 1 k
 check "K then locks the copy, and the locked line names the nudge keys one by one" eval \
-	'[[ $(val 1 copylock) == locked ]] && [[ $(val 1 modehud) == "Locked: [Right-click: paste][I/Down Arrow/Left Arrow/Right Arrow + Page Up/Down: nudge]$turn_mirror[K: Lock (On)][G: Mode (Off)][Esc/Left-click: close]" ]]'
+	'[[ $(val 1 copylock) == locked ]] && [[ $(val 1 modehud) == "[Right-click: paste][I/Down Arrow/Left Arrow/Right Arrow + Page Up/Down: nudge]$turn_mirror[K: Lock (On)][G: Mode (Off)][Esc/Left-click: close]" ]]'
 press 1 k
 rebind key.keyboard.h key.keyboard.r key.keyboard.up key.keyboard.left.control
 check "and with the keys back, K has unlocked it and the line names H and R again" eval \
@@ -1500,7 +1512,7 @@ radial_let_go
 drv 1 "lookat 3.5 -59 3.5" "wait 5" > /dev/null
 check "the Material list button during a box for Copy switches it to the material list, keeping its corner" eval \
 	'box_is "MATERIAL_LIST 1 3,-59,3..5,-59,4 blue SINGLE" &&
-	[[ $(val 1 modehud) == "Material list: $second_line[3 × 1 × 2]" ]]'
+	[[ $(val 1 modehud) == "$second_line[3 × 1 × 2]" ]]'
 # At 854 by 480, GUI scale 2, the box's size is a rectangle of its own at the line's end.
 wrap=$(val 1 modewrap)
 echo "  the material list's controls as they wrap: $wrap" >> /out/checks.log
@@ -1515,7 +1527,7 @@ drv 1 "window 854 480 2" "wait 20" > /dev/null
 attack_click 1
 drv 1 "lookat 3.5 -59.5 3.5" "wait 5" > /dev/null
 check "its second click sets the opposite corner" eval 'box_is "MATERIAL_LIST 2 3,-60,3..5,-59,4 blue SINGLE" &&
-	[[ $(val 1 modehud) == "Material list: $height_line[3 × 2 × 2]" ]]'
+	[[ $(val 1 modehud) == "$height_line[3 × 2 × 2]" ]]'
 shot 1 box-material-list-second-click
 lines=$(chat_lines 1)
 use_click 1
@@ -1545,6 +1557,7 @@ check "the Delete button during a box ends it and starts Delete" eval '[[ $(val 
 use_click 1
 check "a right click with no marks ends Delete, leaving the player's mode" eval 'drv 1 "wait 10" > /dev/null &&
 	[[ $(val 1 mousemode) == none ]] && box_is "none SINGLE"'
+check "and the name Single shows left of the hotbar again" mode_name_at Single 232
 
 drv 1 "cmd tp Planner2 101.5 0 26.5 0 30" "wait 40" > /dev/null
 
@@ -1565,6 +1578,7 @@ check "both clients show the ghost wall and its door" eval 'drv 2 "await block 1
 delete_button
 check "the Delete button starts Delete" eval '[[ $(val 1 mousemode) == DELETE ]] && box_is "none SINGLE"'
 check "whose line with no marks names marking, marking a box and closing" eval '[[ $(val 1 modehud) == "$delete_none" ]]'
+check "and the name Delete shows left of the hotbar, in Single's place" mode_name_at Delete 232
 line_shot line-delete
 press 1 r
 check "R does nothing in Delete" eval 'drv 1 "wait 5" > /dev/null && [[ $(val 1 mousemode) == DELETE ]] &&
@@ -1721,7 +1735,7 @@ check "unmarked, with Delete still on" eval 'drv 1 "wait 10" > /dev/null && [[ $
 # With the sprint key on Right Control, Delete's line names it; then it goes back.
 drv 1 "bindkey key.sprint key.keyboard.right.control" "wait 2" > /dev/null
 check "with the sprint key rebound, Delete's line names Right Control" eval \
-	'[[ $(val 1 modehud) == "Delete: [Hold Right Control: mark][Hold Right Control + Left-click: mark a box][Esc/Right-click: close]" ]]'
+	'[[ $(val 1 modehud) == "[Hold Right Control: mark][Hold Right Control + Left-click: mark a box][Esc/Right-click: close]" ]]'
 line_shot line-delete-rebound
 drv 1 "bindkey key.sprint key.keyboard.left.control" "wait 2" > /dev/null
 check "and with the key back, it names Left Control" eval '[[ $(val 1 modehud) == "$delete_none" ]]'
@@ -1763,11 +1777,11 @@ hold_ctrl
 xdo 1 mousedown 1
 check "Left Ctrl and the left button start the box at the block aimed at" eval \
 	'drv 1 "wait 5" > /dev/null && [[ $(val 1 markbox) == "mark 100,-60,20..100,-60,20 red" ]] &&
-	[[ $(val 1 modehud) == "Delete: [Release Left-click: mark the box][Esc: cancel][1 × 1 × 1]" ]]'
+	[[ $(val 1 modehud) == "[Release Left-click: mark the box][Esc: cancel][1 × 1 × 1]" ]]'
 drv 1 "lookat 109.5 -56 29.5" "wait 10" > /dev/null
 check "aimed at the far top block, the box is 10 by 4 by 10" eval \
 	'[[ $(val 1 markbox) == "mark 100,-60,20..109,-57,29 red" ]] &&
-	[[ $(val 1 modehud) == "Delete: [Release Left-click: mark the box][Esc: cancel][10 × 4 × 10]" ]]'
+	[[ $(val 1 modehud) == "[Release Left-click: mark the box][Esc: cancel][10 × 4 × 10]" ]]'
 check "and the list under the crosshair counts its 400 ghost bricks" eval \
 	'[[ $(val 1 boxlist) == *" | minecraft:stone_bricks 400" ]]'
 shots delete-box
@@ -1792,7 +1806,7 @@ hold_ctrl
 xdo 1 mousedown 1
 drv 1 "lookat 104.5 -56 24.5" "wait 10" > /dev/null
 check "a box started on a marked block unmarks" eval '[[ $(val 1 markbox) == "unmark 100,-60,20..104,-57,24 red" ]] &&
-	[[ $(val 1 modehud) == "Delete: [Release Left-click: unmark the box][Esc: cancel][5 × 4 × 5]" ]]'
+	[[ $(val 1 modehud) == "[Release Left-click: unmark the box][Esc: cancel][5 × 4 × 5]" ]]'
 line_shot line-delete-box-unmark
 xdo 1 mouseup 1
 drv 1 "wait 5" > /dev/null
@@ -1891,7 +1905,7 @@ xdo 1 mousedown 1
 drv 1 "lookat 141.5 -10 51.5" "wait 10" > /dev/null
 check "a box that would take the marks past the cap draws red" eval \
 	'[[ $(val 1 markbox) == "mark 140,-11,51..141,-11,51 limit" ]] &&
-	[[ $(val 1 modehud) == "Too many blocks | Delete: [Release Left-click: mark the box][Esc: cancel][2 × 1 × 1]" ]]'
+	[[ $(val 1 modehud) == "Too many blocks | [Release Left-click: mark the box][Esc: cancel][2 × 1 × 1]" ]]'
 line_shot line-delete-box-too-many
 xdo 1 mouseup 1
 drv 1 "wait 5" > /dev/null
@@ -2422,10 +2436,10 @@ xdo 1 click 4
 check "another notch between the two clicks turns the preview at once, to face west" eval \
 	'drv 1 "wait 3" > /dev/null && preview_faces -60 -42 -62 -58 "facing=west,half=bottom"'
 check "with Left Ctrl held during the shape, the build modes' line names the wheel, the middle click and the lock" \
-	eval '[[ $(val 1 modehud) == "Turned: [Scroll: turn][Middle-click: flip][H: Lock (Off)]" ]]'
+	eval '[[ $(val 1 modehud) == "[Scroll: turn][Middle-click: flip][H: Lock (Off)]" ]]'
 let_go_ctrl
 check "and without it, the sprint key and the lock" eval \
-	'[[ $(val 1 modehud) == "Turned: [Hold Left Control: turn or flip][H: Lock (Off)]" ]]'
+	'[[ $(val 1 modehud) == "[Hold Left Control: turn or flip][H: Lock (Off)]" ]]'
 # During the shape, the build modes' line ends 2 GUI pixels above the action bar's text (72 to 63 above the screen's bottom),
 # which shows the shape's block count above Effortless Building's own line (58 above the bottom). Each shot comes once
 # the chat has faded, with the line's end moved between -57 and -58 first, so Effortless Building shows the count again.
@@ -2495,7 +2509,7 @@ xdo 1 click 5
 check "in Disable, Left Ctrl with a notch down turns the stairs to face south, and the hotbar slot stays" eval \
 	'turn_is "facing=south,half=bottom" && [[ $(val 1 slot) == "4 minecraft:oak_stairs" ]]'
 check "and Disable's line shows there in place of the build modes' line" eval \
-	'[[ $(val 1 modehud) == "Turned: [Right-click: place][Scroll: turn][Middle-click: flip]" ]]'
+	'[[ $(val 1 modehud) == "[Right-click: place][Scroll: turn][Middle-click: flip]" ]]'
 let_go_ctrl
 drv 1 "ebmode LINE" "wait 5" > /dev/null
 check "back in Line, the stairs keep the turn made in Disable" turn_is "facing=south,half=bottom"
@@ -2514,12 +2528,12 @@ check "in Line with stairs in hand, the line starts placing and erasing, turns o
 line_shot build-line-line
 press 1 h
 check "locked, it names the nudges and the lock on" eval '[[ $(val 1 lock) == "locked "+([-0-9]),+([-0-9]),+([-0-9])" active" ]] &&
-	[[ $(val 1 modehud) == "Locked: [Right-click: start placing]$line_nudge[Left-click: start erasing][Hold Left Control: turn or flip][H: Lock (On)][Esc: exit mode]" ]]'
+	[[ $(val 1 modehud) == "[Right-click: start placing]$line_nudge[Left-click: start erasing][Hold Left Control: turn or flip][H: Lock (On)][Esc: exit mode]" ]]'
 line_shot build-line-line-locked
 use_click 1
 aim 1 -51 -60 -36
 check "during a Line drawn with the place click, locked, only the nudges, the turning control and the lock" eval \
-	'drv 1 "wait 5" > /dev/null && [[ $(val 1 modehud) == "Locked: $line_nudge[Hold Left Control: turn or flip][H: Lock (On)]" ]]'
+	'drv 1 "wait 5" > /dev/null && [[ $(val 1 modehud) == "$line_nudge[Hold Left Control: turn or flip][H: Lock (On)]" ]]'
 line_shot build-line-shape-locked
 press 1 h
 check "unlocked during it, the turning control and the lock" eval \
@@ -2528,11 +2542,11 @@ line_shot build-line-shape
 press 1 h
 attack_click 1
 check "a left click cancels the shape, and the locked line shows again" eval 'drv 1 "wait 5" > /dev/null &&
-	[[ $(val 1 lock) == "locked "+([-0-9]),+([-0-9]),+([-0-9])" active" ]] && [[ $(val 1 modehud) == "Locked: "*"[H: Lock (On)][Esc: exit mode]" ]]'
+	[[ $(val 1 lock) == "locked "+([-0-9]),+([-0-9]),+([-0-9])" active" ]] && [[ $(val 1 modehud) == "[Right-click: start placing]"*"[H: Lock (On)][Esc: exit mode]" ]]'
 attack_click 1
 aim 1 -51 -60 -36
 check "during a Line drawn with the break click, locked, only the nudges and the lock" eval \
-	'drv 1 "wait 5" > /dev/null && [[ $(val 1 modehud) == "Locked: $line_nudge[H: Lock (On)]" ]]'
+	'drv 1 "wait 5" > /dev/null && [[ $(val 1 modehud) == "$line_nudge[H: Lock (On)]" ]]'
 line_shot build-line-break-locked
 press 1 h
 check "unlocked during it, the lock alone" eval '[[ $(val 1 modehud) == "[H: Lock (Off)]" ]]'
@@ -2542,16 +2556,7 @@ check "a right click cancels it, erasing nothing, and the line before the first 
 	'drv 1 "wait 10" > /dev/null && [[ $(val 1 lock) == "unlocked active" ]] &&
 	[[ $(val 1 modehud) == "$line_start[Hold Left Control: turn or flip]$line_end" ]]'
 aim 1 -54 -60 -36
-# The build mode's name beside the hotbar and the held item's name. At 854 by 480, GUI scale 2, the hotbar runs from
-# 122 to 304 GUI pixels across and from 218 to 240 down, and the off hand's slot from 93 to 122 across: the name's text
-# ends 2 inside its rectangle, which ends 4 left of either, and runs from 224 to 233 down, centred on the hotbar.
-# mode_name_at <name> <right>: the mode's name shows once, its text ending at <right> in the window's pixels.
-mode_name_at() {
-	local box
-	box=$(val 1 "drawnbox $1")
-	echo "  mode name $1: $box" >> /out/checks.log
-	[[ $box != *"|"* ]] && [[ $(cut -d" " -f2- <<< "$box") == "448 $2 466" ]]
-}
+# The build mode's name beside the hotbar and the held item's name.
 # item_name_above <scale>: the held item's name, Oak Stairs, ends 2 GUI pixels above the top of the controls' highest
 # row.
 item_name_above() {
@@ -2613,11 +2618,11 @@ check "with Left Ctrl held, to scroll to turn and middle-click to flip" eval \
 	'[[ $(val 1 modehud) == "$line_start[Scroll: turn][Middle-click: flip]$line_end" ]]'
 line_shot build-line-line-held
 xdo 1 click 4
-check "turned, it starts with Turned" eval 'drv 1 "wait 5" > /dev/null &&
-	[[ $(val 1 modehud) == "Turned: $line_start[Scroll: turn][Middle-click: flip]$line_end" ]]'
+check "turned, it stays the same, with no label" eval 'drv 1 "wait 5" > /dev/null &&
+	[[ $(val 1 modehud) == "$line_start[Scroll: turn][Middle-click: flip]$line_end" ]]'
 let_go_ctrl
 check "and so it does without Left Ctrl" eval \
-	'[[ $(val 1 modehud) == "Turned: $line_start[Hold Left Control: turn or flip]$line_end" ]]'
+	'[[ $(val 1 modehud) == "$line_start[Hold Left Control: turn or flip]$line_end" ]]'
 line_shot build-line-line-turned-1920x1080-gui4
 line_shot build-line-line-turned-854x480-gui2 854 480 2
 press 1 8
@@ -3021,8 +3026,8 @@ check "and the preview draws the stair where a right click would place it, facin
 	preview_is "-54,-60,-31" "minecraft:oak_stairs[facing=north,half=bottom,"
 line_shot disable-line-held
 xdo 1 click 4
-check "a notch up turns it: the line starts \"Turned:\"" \
-	disable_line_is "Turned: [Right-click: place][Scroll: turn][Middle-click: flip]"
+check "a notch up turns it, and the line stays the same, with no label" \
+	disable_line_is "[Right-click: place][Scroll: turn][Middle-click: flip]"
 check "and the preview draws the stair facing east, not red" eval \
 	'preview_is "-54,-60,-31" "minecraft:oak_stairs[facing=east,half=bottom," && [[ $(val 1 previewred) == none ]]'
 line_shot disable-line-turned
@@ -3032,7 +3037,7 @@ ctrl_click
 check "the stair placed matches the preview" eval 'drv 1 "await real -54 -60 -31 minecraft:oak_stairs" > /dev/null &&
 	placed=$(val 1 "realstate -54 -60 -31") && placed=${placed#Block\{} && placed=${placed/\}/} &&
 	echo "  drawn: $drawn; placed: $placed" >> /out/checks.log && [[ $placed == "$drawn" ]]'
-check "without Left Ctrl, the line has no \"Turned:\", since a right click places as Minecraft does" \
+check "without Left Ctrl, the line names Left Ctrl, since a right click places as Minecraft does" \
 	disable_line_is "[Hold Left Control: turn or flip]"
 # Short grass, which a block replaces, aimed at on its south side: the preview takes the grass's place, not the space
 # south of it.
@@ -3053,9 +3058,9 @@ check "and the preview draws the wall torch on the stone, not red" eval \
 xdo 1 click 4
 check "turned away from the stone, the preview draws the torch red" eval \
 	'preview_is "-42,-60,-31" "minecraft:wall_torch[facing=west]" && [[ $(val 1 previewred) == "-42,-60,-31" ]]'
-check "and the line says in red that it can't be placed" disable_line_is "Turned: [Can't place here][Scroll: turn]"
+check "and the line says in red that it can't be placed" disable_line_is "[Can't place here][Scroll: turn]"
 line_shot disable-line-red 1920 1080 4 "Can't place here"
-check "the reason's rectangle is red, the others white" eval '[[ $(val 1 modecolours) == "white red white" ]]'
+check "the reason's rectangle is red, the other white" eval '[[ $(val 1 modecolours) == "red white" ]]'
 disable_shots disable-preview-torch-red "-42 -60 -31"
 let_go_ctrl
 check "without Left Ctrl, no line shows, though the torch is turned" disable_line_is hidden
@@ -3160,11 +3165,11 @@ check "with Left Ctrl held, the wheel and the middle click take its place" \
 	single_line_is "[Right-click: place][Left-click: erase][Scroll: turn][Middle-click: flip]$single_end"
 line_shot single-line-held
 xdo 1 click 4
-check "a notch up turns the stairs, and the line starts \"Turned:\"" single_line_is \
-	"Turned: [Right-click: place][Left-click: erase][Scroll: turn][Middle-click: flip]$single_end"
+check "a notch up turns the stairs, and the line stays the same, with no label" single_line_is \
+	"[Right-click: place][Left-click: erase][Scroll: turn][Middle-click: flip]$single_end"
 let_go_ctrl
-check "and so it does without Left Ctrl" single_line_is \
-	"Turned: [Right-click: place][Left-click: erase][Hold Left Control: turn or flip]$single_end"
+check "and without Left Ctrl, it names Left Ctrl, with no label" single_line_is \
+	"[Right-click: place][Left-click: erase][Hold Left Control: turn or flip]$single_end"
 line_shot single-line-turned
 press 1 6
 check "for a chest, which turns but doesn't flip, it names only the turn" \
@@ -3196,7 +3201,7 @@ press 1 h
 check "H locks the block, and Building Planner draws its box blue over the grass" eval \
 	'[[ $(val 1 lock) == "locked -50,-60,-31 active" ]] && drv 1 "await copycolour BLUE" > /dev/null'
 locked_line="[Arrow keys + Page Up/Down: nudge][Left-click: erase][Hold Left Control: turn or flip][H: Lock (On)][Esc: exit mode]"
-check "the locked line names the nudges and the lock on" single_line_is "Locked: [Right-click: place]$locked_line"
+check "the locked line names the nudges and the lock on" single_line_is "[Right-click: place]$locked_line"
 line_shot single-line-locked
 line_shot single-line-locked-854x480-gui2 854 480 2
 single_shot single-locked 854 480 "-50 -60 -31" "-50 -60 -31"
@@ -3219,7 +3224,7 @@ press 1 Next
 check "one block lower, below the build height, it's red" eval \
 	'[[ $(val 1 lock) == "locked -50,-65,-32 active" ]] && drv 1 "await copycolour RED BUILD_HEIGHT" > /dev/null'
 check "and the line says why in red, in place of the right click" \
-	single_line_is "Locked: [Can't place: outside the world]$locked_line"
+	single_line_is "[Can't place: outside the world]$locked_line"
 line_shot single-line-red 1920 1080 4 "Can't place: outside the world"
 use_click 1
 check "its click places nothing and sends no edit, and, finishing the shape, ends the lock with no box" eval \
@@ -3231,7 +3236,7 @@ rebind key.keyboard.k key.keyboard.g key.keyboard.i key.keyboard.right.control
 check "with the keys rebound, Single's line names them as bound" \
 	single_line_is "[Right-click: place][Left-click: erase][Hold Right Control: turn or flip][K: Lock (Off)][Esc: exit mode]"
 press 1 k
-check "and locked, the nudges one by one" single_line_is "Locked: [Right-click: place][I/Down Arrow/Left Arrow/Right Arrow + Page Up/Down: nudge][Left-click: erase][Hold Right Control: turn or flip][K: Lock (On)][Esc: exit mode]"
+check "and locked, the nudges one by one" single_line_is "[Right-click: place][I/Down Arrow/Left Arrow/Right Arrow + Page Up/Down: nudge][Left-click: erase][Hold Right Control: turn or flip][K: Lock (On)][Esc: exit mode]"
 press 1 k
 rebind key.keyboard.h key.keyboard.r key.keyboard.up key.keyboard.left.control
 check "with the keys back, K has unlocked it" eval '[[ $(val 1 lock) == "unlocked active" ]]'
@@ -3339,10 +3344,10 @@ attack_click 1
 drv 1 "cmd tp @s 330.5 -50 64.5 90 30" "wait 210" "lookat 380.5 -60 64.5" "wait 5" > /dev/null
 check "a box of 261 blocks a side draws red" box_is "COPY 1 120,-60,64..380,-60,64 limit SINGLE"
 check "with its line saying which limit" eval \
-	'[[ $(val 1 modehud) == "Too many blocks | Copy: $second_line[261 × 1 × 1]" ]]'
+	'[[ $(val 1 modehud) == "Too many blocks | $second_line[261 × 1 × 1]" ]]'
 line_shot line-copy-too-large
 check "the warning's rectangle is red, the line's white" eval \
-	'[[ $(val 1 modecolours) == "red white white white white" ]]'
+	'[[ $(val 1 modecolours) == "red white white white" ]]'
 shot 1 box-too-large
 attack_click 1
 check "and its click sets no corner" eval 'drv 1 "wait 5" > /dev/null &&
@@ -3350,7 +3355,7 @@ check "and its click sets no corner" eval 'drv 1 "wait 5" > /dev/null &&
 drv 1 "lookat 300.5 -60 64.5" "wait 5" > /dev/null
 check "a box over chunks the game hasn't loaded draws red" box_is "COPY 1 120,-60,64..300,-60,64 limit SINGLE"
 check "with its line saying which limit" eval '[[ $(val 1 modehud) == \
-	"Part of the box is too far away to read. Move closer. | Copy: $second_line[181 × 1 × 1]" ]]'
+	"Part of the box is too far away to read. Move closer. | $second_line[181 × 1 × 1]" ]]'
 shot 1 box-not-loaded
 attack_click 1
 check "and its click sets no corner" eval 'drv 1 "wait 5" > /dev/null &&
@@ -3421,7 +3426,8 @@ radial_point "Material list"
 radial_let_go
 check "letting the menu's key go over its Material list button starts a box for it" eval \
 	'[[ $(val 1 drawbox) == "MATERIAL_LIST 0 "* ]]'
-check "with its controls line" eval '[[ $(val 1 modehud) == "Material list: $first_line" ]]'
+check "with its controls line" eval '[[ $(val 1 modehud) == "$first_line" ]]'
+check "and the name Material list shows left of the hotbar" mode_name_at "Material list" 232
 material_box
 echo "  the material list with ghost blocks hidden: $(val 1 matlist)" >> /out/checks.log
 check "with ghost blocks hidden, the box lists the real blocks: 6 planks and 20 stone blocks, none missing" eval \
@@ -3621,13 +3627,14 @@ drv 1 "window 854 480 2" "wait 20" > /dev/null
 
 # The (i) icon beside "Multiplier" shows Building Planner's text, one line a point, in place of Litematica's. Pointed
 # at, it's shot at 854 by 480 and 1920 by 1080, GUI scale 2.
-info_lines=("Counts the ghost blocks in the box you drew."
-	"Total: how many of each block the ghost blocks use."
+info_lines=("Counts the ghost blocks and real blocks in the box you drew."
+	"Total: how many of each block are in the box."
 	"Missing: how many are still to place, where there's air or a different block."
 	"Available: how many you carry."
-	"Info HUD: shows the missing blocks on screen while you build."
-	"Save list keeps this list on the server. Saved lists opens the lists you kept."
-	"The radial menu's Material lists button opens the current list again.")
+	"Info HUD: pins this list to the screen while you build."
+	"Save list: keeps this list on the server."
+	"Saved lists: opens the lists you kept."
+	"The radial menu's \"Material lists\" button opens the current list again.")
 # info_shown: the last frame drew each of the (i) text's lines, and none of Litematica's.
 info_shown() {
 	local texts line

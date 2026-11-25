@@ -47,6 +47,7 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
@@ -154,7 +155,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 			() -> effortless && EffortlessShapes.shapeUnderWay(),
 			() -> session == null ? -1 : session.eraseTicks(),
 			() -> session == null ? List.of() : session.boxList(),
-			() -> effortless && session != null ? EffortlessShapes.modeName() : null);
+			BuildingPlannerClient::nameBesideHotbar);
 		HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(BuildingPlanner.MOD_ID, "mode_controls"),
 			modeHud);
 		HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(BuildingPlanner.MOD_ID, "material_panel"),
@@ -464,6 +465,19 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		return session != null && session.deleteOn();
 	}
 
+	/**
+	 * The name beside the hotbar during a session: "Copy" or "Material list" while a box for it is drawn, "Delete" while
+	 * Delete is on ({@link ControlsLine#toolName}), in Disable too; otherwise Effortless Building's mode's name, or null
+	 * in Disable.
+	 */
+	private static Component nameBesideHotbar() {
+		if (session == null) {
+			return null;
+		}
+		ControlsLine.Text tool = ControlsLine.toolName(session.mouseMode(), session.box().purpose());
+		return tool != null ? ModeHud.component(tool) : effortless ? EffortlessShapes.modeName() : null;
+	}
+
 	/** Building Planner's mode that takes over the mouse now, or null. */
 	static MouseMode mouseMode() {
 		return session == null ? null : session.mouseMode();
@@ -615,7 +629,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		Minecraft mc = Minecraft.getInstance();
 		boolean sprint = mc.options.keySprint.isDown();
 		ControlsLine.TurnState turn = new ControlsLine.TurnState(heldCan(BlockTurn::turns), heldCan(BlockTurn::flips),
-			sprint, HeldTurn.of(mc.player.getMainHandItem().getItem()) != null);
+			sprint);
 		ControlsLine.Keys keys = CopyKeys.names(mc);
 		if (lock) {
 			CopyOutline.Shown boxed = outlineShown();

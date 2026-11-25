@@ -1,8 +1,10 @@
 package dev.buildingplanner.look;
 
 import dev.buildingplanner.input.BoxCorners;
+import dev.buildingplanner.input.BoxPurpose;
 import dev.buildingplanner.input.CopyColour;
 import dev.buildingplanner.input.CopyMode;
+import dev.buildingplanner.input.MouseMode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -10,8 +12,10 @@ import java.util.Locale;
 /**
  * The lines of a mouse mode's controls (see "Building Planner's mouse modes"), as texts from the language file with
  * the keys' names in them, worked out from the mode's state and the keys as the player has them bound. Each line is a
- * row of rectangles: its label (the mode and its state, such as "Delete:"), if it has one, then each control as "key:
- * action", a red reason in place of a control that can't act, and a box's size. The game turns them into its own
+ * row of rectangles: each control as "key: action", a red reason in place of a control that can't act, and a box's
+ * size. No line has a label: the lock's and the copy's mode's states show in their controls ("[H: Lock (On)]", "[R:
+ * Mode (Line)]"), a turned block in its preview, and the tool ("Copy", "Delete") beside the hotbar ({@link #toolName}).
+ * A warning above the controls ("Too many blocks") is a line of its label alone. The game turns them into its own
  * components and lays the rectangles out ({@code ModeHud}, {@link ControlsRows}): white, with each action in dark aqua
  * and each reason in red.
  */
@@ -104,11 +108,23 @@ public final class ControlsLine {
 	}
 
 	/**
-	 * A box's lines: a warning naming the limit the aimed corner breaks, if one does, then its controls for the next
-	 * click, with its size once a corner is set ({@code size} is null before). {@code purpose} is the box's purpose's
-	 * name (COPY or MATERIAL_LIST).
+	 * The name beside the hotbar, in the build mode's name's place, while a box for Copy or the material list is drawn
+	 * ("Copy", "Material list", by the box's {@code purpose}) or Delete is on ("Delete"); null in the other modes, where
+	 * the build mode's name shows.
 	 */
-	public static List<Line> box(String purpose, int corners, int[] size, BoxCorners.Limit limit) {
+	public static Text toolName(MouseMode mode, BoxPurpose purpose) {
+		if (mode == MouseMode.DELETE) {
+			return Translated.of(DELETE + ".title", Look.PLAIN);
+		}
+		return mode == MouseMode.BOX ? Translated.of(BOX + "." + purpose.name().toLowerCase(Locale.ROOT), Look.PLAIN)
+			: null;
+	}
+
+	/**
+	 * A box's lines: a warning naming the limit the aimed corner breaks, if one does, then its controls for the next
+	 * click, with its size once a corner is set ({@code size} is null before).
+	 */
+	public static List<Line> box(int corners, int[] size, BoxCorners.Limit limit) {
 		String next = switch (corners) {
 			case 0 -> BOX + ".first";
 			case 1 -> BOX + ".second";
@@ -124,7 +140,7 @@ public final class ControlsLine {
 		if (limit != null) {
 			lines.add(limitWarning(limit));
 		}
-		lines.add(labelled(Translated.of(BOX + "." + purpose.toLowerCase(Locale.ROOT), Look.PLAIN), rects));
+		lines.add(new Line(null, List.copyOf(rects)));
 		return lines;
 	}
 
@@ -136,7 +152,6 @@ public final class ControlsLine {
 	 * which clears the marks, or with none closes Delete. The sprint key's controls go while it has no key bound.
 	 */
 	public static List<Line> delete(DeleteState state, Keys keys) {
-		Text title = Translated.of(DELETE + ".title", Look.PLAIN);
 		List<Line> lines = new ArrayList<>(2);
 		List<Text> rects = new ArrayList<>(4);
 		DeleteBox box = state.box();
@@ -148,7 +163,7 @@ public final class ControlsLine {
 				box.unmarks() ? DELETE + ".unmark_the_box" : DELETE + ".mark_the_box"));
 			rects.add(hint(Translated.of(SHAPE + ".esc", Look.PLAIN), COPY + ".cancel"));
 			rects.add(size(box.size()));
-			lines.add(labelled(title, rects));
+			lines.add(new Line(null, List.copyOf(rects)));
 			return lines;
 		}
 		if (state.full()) {
@@ -164,7 +179,7 @@ public final class ControlsLine {
 		}
 		rects.add(hint(Translated.of(MODE + ".esc_click", Look.PLAIN, RIGHT),
 			state.marked() ? DELETE + ".clear" : COPY + ".put_away"));
-		lines.add(labelled(title, rects));
+		lines.add(new Line(null, List.copyOf(rects)));
 		return lines;
 	}
 
@@ -184,21 +199,20 @@ public final class ControlsLine {
 
 	/**
 	 * The block in hand as the turning line tells it: whether it turns and whether it flips (or a block of the mix
-	 * does), whether Minecraft's sprint key is held, and whether the block has been turned or flipped.
+	 * does), and whether Minecraft's sprint key is held.
 	 */
-	public record TurnState(boolean turns, boolean flips, boolean held, boolean turned) {
+	public record TurnState(boolean turns, boolean flips, boolean held) {
 	}
 
 	/**
 	 * The turning line, Disable's line without the sprint key held (see "Turning real blocks in Disable": "Controls
 	 * line"): with the sprint key held, the wheel that turns and the middle click that flips, otherwise the sprint key
-	 * held to turn or flip; each part only for a block that turns or flips, and "Turned:" before them once the block is
-	 * turned or flipped. Null for a block that does neither, and while the sprint key has no key bound.
+	 * held to turn or flip; each part only for a block that turns or flips. Null for a block that does neither, and
+	 * while the sprint key has no key bound.
 	 */
 	public static Line turning(TurnState state, String sprint) {
 		List<Text> rects = turnParts(state, sprint);
-		return rects.isEmpty() ? null
-			: labelled(state.turned() ? Translated.of(TURN + ".turned", Look.PLAIN) : null, rects);
+		return rects.isEmpty() ? null : new Line(null, List.copyOf(rects));
 	}
 
 	/**
@@ -240,17 +254,16 @@ public final class ControlsLine {
 
 	/**
 	 * A build mode's line, in every mode but Disable (see "Locking and the first click": "Controls line"). Before the
-	 * first click: "Locked" or "Turned" or both as the label, the right click (placing in Single, starting a shape in the
+	 * first click: the right click (placing in Single, starting a shape in the
 	 * others, or in red why the locked position can't place), the nudge keys while it's locked, the left click (erasing in
 	 * Single, starting an erasing shape in the others), the turning controls, the lock key with the lock's state, and Esc,
 	 * which leaves the mode. During a shape, beside Effortless Building's own line, only the lock and the turning controls:
-	 * "Locked" or "Turned" or both, the nudge keys while it's locked, the turning controls during a shape drawn with the
-	 * place click, and the lock key. A key with no key bound is left out.
+	 * the nudge keys while it's locked, the turning controls during a shape drawn with the place click, and the lock key.
+	 * The line has no label. A key with no key bound is left out.
 	 */
 	public static Line shape(ShapeState state, Keys keys) {
 		boolean breaking = state.underway() == Underway.BREAKING;
 		List<Text> turning = breaking ? List.of() : turnParts(state.turn(), keys.sprint());
-		boolean turned = !breaking && state.turn().turned();
 		List<Text> rects = new ArrayList<>();
 		boolean before = state.underway() == Underway.NONE;
 		if (before) {
@@ -273,16 +286,7 @@ public final class ControlsLine {
 		if (before) {
 			rects.add(hint(Translated.of(SHAPE + ".esc", Look.PLAIN), SHAPE + ".exit_mode"));
 		}
-		return labelled(turned(state.locked() ? Translated.of(COPY + ".locked", Look.PLAIN) : null, turned), rects);
-	}
-
-	/** The label's text with ", turned" after it once the block is turned or flipped, or "Turned" alone with none. */
-	private static Text turned(Text title, boolean turned) {
-		if (!turned) {
-			return title;
-		}
-		return title == null ? Translated.of(TURN + ".turned", Look.PLAIN)
-			: Translated.of(SINGLE + ".turned_title", Look.PLAIN, title);
+		return new Line(null, List.copyOf(rects));
 	}
 
 	/**
@@ -294,14 +298,13 @@ public final class ControlsLine {
 
 	/**
 	 * Disable's line (see "Turning real blocks in Disable": "Controls line"): without the sprint key held, the turning
-	 * line with no "Turned:", since a right click then places as in Minecraft, and no line for a block that hangs on the
-	 * block behind it; with it held, the right click that places the turned block, or in red why it can't, then the
-	 * turning line's controls, after "Turned:" once the block is turned or flipped. Null as for the turning line.
+	 * line, and no line for a block that hangs on the block behind it; with it held, the right click that places the
+	 * turned block, or in red why it can't, then the turning line's controls. Null as for the turning line.
 	 */
 	public static Line disable(DisableState state, String sprint) {
 		TurnState turn = state.turn();
 		if (!turn.held()) {
-			return state.hangs() ? null : turning(new TurnState(turn.turns(), turn.flips(), false, false), sprint);
+			return state.hangs() ? null : turning(turn, sprint);
 		}
 		Line turning = turning(turn, sprint);
 		if (turning == null) {
@@ -310,12 +313,11 @@ public final class ControlsLine {
 		List<Text> rects = new ArrayList<>(3);
 		rects.add(state.stays() ? hint(RIGHT, TURN + ".place") : reason(TURN + ".cant_place"));
 		rects.addAll(turning.rects());
-		return new Line(turning.label(), List.copyOf(rects));
+		return new Line(null, List.copyOf(rects));
 	}
 
 	/**
-	 * The copy at the aim's line (see "Building Planner's mouse modes"): the mode outside Off, "Locked", or both, as the
-	 * label; the right click (in Off the paste; in Line, Wall and Floor before the first click setting the start, and
+	 * The copy at the aim's line (see "Building Planner's mouse modes"), with no label: the right click (in Off the paste; in Line, Wall and Floor before the first click setting the start, and
 	 * after it the set's paste with its count), with the reason in red in the paste's place, or before setting the
 	 * start, while the copy is red; the nudge keys while it's locked; the wheel; the middle click; the sprint key while
 	 * the copy follows the aim and there's a paste to line up with (a locked copy, and a set's fixed first copy, don't
@@ -356,7 +358,7 @@ public final class ControlsLine {
 			rects.add(hint(new Literal(keys.mode()), COPY + ".mode_" + state.mode().name().toLowerCase(Locale.ROOT)));
 		}
 		rects.add(hint(ESC_LEFT, set ? COPY + ".cancel" : COPY + ".put_away"));
-		return labelled(title(state.mode(), state.locked()), rects);
+		return new Line(null, List.copyOf(rects));
 	}
 
 	/** A run of Effortless Building's line in one colour: its text and the colour's name ("dark_aqua"), or null. */
@@ -419,15 +421,6 @@ public final class ControlsLine {
 		return rects.isEmpty() ? null : new Line(null, List.copyOf(rects));
 	}
 
-	/** The label of the copy's line: the mode outside Off, "Locked" or both, or none. */
-	private static Text title(CopyMode mode, boolean locked) {
-		if (locked) {
-			return mode == CopyMode.OFF ? Translated.of(COPY + ".locked", Look.PLAIN)
-				: Translated.of(COPY + ".mode_locked", Look.PLAIN, modeName(mode));
-		}
-		return mode == CopyMode.OFF ? null : modeName(mode);
-	}
-
 	/** The four nudges along the ground: "Arrow keys" while they're on them, otherwise their keys' names. */
 	private static Text along(Keys keys) {
 		if (keys.nudgesOnArrows()) {
@@ -468,11 +461,6 @@ public final class ControlsLine {
 		return one == null ? null : new Literal(one);
 	}
 
-	/** A line with its label ("Delete:"), or with none while {@code title} is null. */
-	private static Line labelled(Text title, List<Text> rects) {
-		return new Line(title == null ? null : Translated.of(MODE + ".label", Look.PLAIN, title), List.copyOf(rects));
-	}
-
 	/** A warning above the controls, in red, alone on its line. */
 	private static Line warning(String key) {
 		return new Line(Translated.of(key, Look.WARNING), List.of());
@@ -502,9 +490,5 @@ public final class ControlsLine {
 			case TOO_MANY_BLOCKS -> COPY + ".too_many";
 			case BUILD_HEIGHT, WORLD_BORDER -> COPY + ".outside";
 		});
-	}
-
-	private static Text modeName(CopyMode mode) {
-		return Translated.of(COPY + "." + mode.name().toLowerCase(Locale.ROOT), Look.PLAIN);
 	}
 }
