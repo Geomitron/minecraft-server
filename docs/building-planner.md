@@ -781,9 +781,9 @@ one of three texts (`RenderHandler`'s `PLACING_TEXT`, `INTERACTING_TEXT` and `BR
 action" becomes the control "[key: action]", in Effortless Building's own words, so a line it adds or rewords in that
 form shows too (`ControlsLine.effortless`):
 
-- during a shape drawn with the place click: "[Left-click: cancel][Right-click: place]";
+- during a shape drawn with the place click: "[Esc/Left-click: cancel][Right-click: place]";
 - with a tool in hand during that shape (an item with Minecraft's `TOOL` component, such as a pickaxe):
-  "[Left-click: cancel][Right-click: interact]";
+  "[Esc/Left-click: cancel][Right-click: interact]";
 - during a shape drawn with the break click: "[Left-click: break][Right-click: cancel]".
 
 The key and its colon are white, and each action keeps Effortless Building's colour: dark aqua, and red during a shape
@@ -793,8 +793,9 @@ screen's bottom, where Effortless Building draws its line. A text of another for
 Effortless Building as it is, and so is the line in a singleplayer world or on a server without Building Planner.
 The game's "Text Background" accessibility setting ("Chat" or "Everywhere") doesn't change it: the setting works only
 through `Options.getBackgroundColor`, which the game's own text (the action bar, subtitles, the player list) calls and
-the controls line doesn't, so the background is always there at that opacity. During a shape, Effortless Building's
-"[Left-click: cancel]" reads "[Esc/Left-click: cancel]", since Esc cancels the shape too (see "Esc").
+the controls line doesn't, so the background is always there at that opacity. Effortless Building's "Left-click to
+cancel" reads "[Esc/Left-click: cancel]", since Esc cancels the shape too (see "Esc"); Effortless Building writes its
+line in English in its code, so `ControlsLine.effortless` knows that clause by its words.
 
 #### Esc
 
@@ -815,8 +816,9 @@ pause"). Hook M7 runs the first step that applies (`EscSteps`, a pure function o
 
 So during a copy's Line, Esc drops the set, Esc again puts the copy away, and Esc a third time pauses, or first
 returns the build mode to Disable when one is chosen. Each step ends with the same sounds and messages as the click
-or button that takes it. Esc with a screen open closes the screen, as it does without Building Planner, and without a
-session Esc pauses at once.
+or button that takes it. Esc held down takes one step, and its repeats pause only when no step is left; F3 with Esc
+pauses without the menu, as it does without Building Planner. Esc with a screen open closes the screen, as it does
+without Building Planner, and without a session Esc pauses at once.
 
 #### The build mode's name and the held item's name
 
@@ -2087,9 +2089,10 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   raw key name;
   each is shot, Controls at 854 by 480 and 1920 by 1080, GUI scale 2, and at 1920 by 1080, GUI scale 4. The driver's
   own Page Up key, under a heading of its own, is unbound first, so Controls shows no clash.
-- The Copy button starts a box: the controls line shows "Copy: [Left-click: set the first corner][Right-click:
+- The Copy button starts a box: the controls line shows "Copy: [Left-click: set the first corner][Esc/Right-click:
   cancel]", a right click and a use of the place click places no block, and Effortless Building's preview and mode are
-  as they were. The box draws white (the driver's `drawbox`). Aiming at a block's top face, the box's first corner is
+  as they were; Esc ends a box as the right click does, opening no screen. The box draws white (the driver's
+  `drawbox`). Aiming at a block's top face, the box's first corner is
   the space above it, and that face shows shaded (the driver's `boxshade`); aiming at its side, the block itself, with
   no face shaded. The first click, with the aim held, keeps the same box and drops the shade: the shot before it has
   more than 500 pixels darker than the shot after it, which has fewer than 200 darker than the one before (the
@@ -2144,6 +2147,10 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   copies by 4, shot at both sizes, and pastes as one edit; aimed at the east face of one of its copies, the copy sits
   flush beside that copy, not beside the Floor's edge; and one Ctrl+Z takes back the whole Floor. R during a Floor
   switches to Off, which drops the set and leaves the copy following the aim.
+- Esc during a copy's Line of 4, with Single chosen: with the inventory open, Esc closes it and the set stays; then
+  Esc drops the set, sending no edit, and the copy follows the aim, still in Line, with Line's line before the first
+  click; Esc again puts the copy away, and Single's line shows; Esc again returns the build mode to Disable; and Esc
+  again, with no step left, pauses the game. No step opens a screen.
 - With Line set, a new copy made with the Copy button keeps the mode, and its first click fixes a set's first copy.
   After Planner1's game restarts, the mode is Off again.
 - The copy's colours (the driver's `copycolour`): on the grass it's blue, and Litematica draws no box for it or for a
@@ -2254,7 +2261,7 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   block (`marks`), with no gap; the list under the crosshair shows stone bricks and 9. A second hold that starts on the
   third mark and sweeps west unmarks the first three. A ghost door marked by its lower half has one mark and two
   positions to erase. Planner2 erasing a marked block drops its mark. A right click clears the marks, and a second ends
-  Delete. One hold over each row marks the wall's 49 blocks the aim meets, and the marked wall is shot at 854 by 480 and
+  Delete; Esc does the same, clearing the marks, and again ending Delete, opening no screen. One hold over each row marks the wall's 49 blocks the aim meets, and the marked wall is shot at 854 by 480 and
   1920 by 1080, GUI scale 2, and with GUI scale 4, beside the same view unmarked. The Delete button with ghost blocks
   hidden shows them and starts Delete, and the Copy button in Delete starts a Copy box.
 - Delete, marking with a box: over ghost stone bricks of 10 by 4 by 10, Left Ctrl held and the left button pressed on
@@ -2263,7 +2270,8 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   crosshair counts 400 stone bricks. It's shot at 854 by 480 and 1920 by 1080. While it's drawn, the crosshair passing
   over the ghost wall outside the box marks none of it, and letting go marks the box's 400 ghost blocks and nothing
   else, shot at both sizes. A box started on a marked block unmarks: a box of 5 by 4 by 5 from it leaves 300 marked. A
-  box may start on a real block, and a right click during the box ends it, marking nothing. The 300 marks erase as one
+  box may start on a real block, and a right click during the box ends it, marking nothing; so does Esc, opening no
+  screen, and letting go of the button after it marks nothing. The 300 marks erase as one
   edit, leaving the 100 unmarked, and one Ctrl+Z brings them back.
 - Delete, erasing and its lines: with 9 marks and the ghost door marked, a left click held 10 ticks shows the progress
   bar (the driver's `erasebar`) a quarter full at the 5th tick and half full at the 10th, 182 by 5 in the screen's
@@ -2358,11 +2366,12 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   2 (Geo's image 1); in creative mode, over Single's line.
 - Effortless Building's own line during a shape (hook E31), word for word and colour by colour as the last frame drew
   it 58 above the screen's bottom (the driver's `ebline`, `eblinecolours` and `eblinerects`, from every component the
-  frame drew there): during a Line drawn with the place click, "[Left-click: cancel][Right-click: place]", each
-  rectangle white with its action in dark aqua; with an iron pickaxe, a tool, in hand during that shape, "[Left-click:
-  cancel][Right-click: interact]", in the same colours; during a Line drawn with the break click, "[Left-click:
+  frame drew there): during a Line drawn with the place click, "[Esc/Left-click: cancel][Right-click: place]", each
+  rectangle white with its action in dark aqua; with an iron pickaxe, a tool, in hand during that shape,
+  "[Esc/Left-click: cancel][Right-click: interact]", in the same colours; during a Line drawn with the break click, "[Left-click:
   break][Right-click: cancel]", each rectangle white with its action in red; and once a click cancels the shape, Effortless
-  Building's line is gone and Line's line shows again. Each is shot at noon at 1920 by 1080, GUI scale 4, and at 854 by 480, GUI scale 2,
+  Building's line is gone and Line's line shows again. Esc cancels a Line drawn with either click too, sending no
+  edit, opening no screen, and leaving Line chosen with its line. Each is shot at noon at 1920 by 1080, GUI scale 4, and at 854 by 480, GUI scale 2,
   with every rectangle's window box in the log for the shots' outlines, and in each the rectangles are laid out as the
   controls' are, in a centred row starting 58 GUI pixels above the bottom.
 - Turning real blocks in Disable (step 18), with Planner1 3 blocks south of each block, facing north, first in
@@ -2557,7 +2566,9 @@ without Left Control for a block that hangs on the block behind it, and none for
 flips or with the sprint key unbound), and the build modes' lines (Single's and the other modes' before the first
 click, locked, each turn phrase with and without Left Control, "Turned:" and "Locked, turned:", the red reason as a
 warning in place of the right click, during a shape drawn with the place click and with the break click, locked or
-not, with no "Turned:" during the break shape, keys a player rebound, and unbound keys left out).
+not, with no "Turned:" during the break shape, keys a player rebound, and unbound keys left out), with Esc before
+the left click that cancels a shape drawn with the place click ("[Esc/Left-click: cancel]") and before each box's
+right click.
 
 Delete's marks have unit tests as pure functions. `DeleteMarksTest` covers a sweep between two aims
 10 blocks apart marking all 10 ghost blocks between them, and none behind a real block; at most 65 aims for a frame's
@@ -2578,6 +2589,9 @@ with the place click). `ShapeLockTest` covers when the lock's controls are activ
 mouse mode, an item that places a block), when the first click's block alone is drawn, the lock off until H, the
 locked position and hit taking the first click, no click taken during a shape or while the controls aren't active, a
 nudge moving the position and the hit point one block, unlocking, and a shape's first click moving with a nudge.
+`EscStepsTest` covers the order of Esc's steps (see "Esc"): during a copy's set, dropping the set, putting the copy
+away, Disable and the pause; in Delete, ending its box, clearing the marks and ending Delete; a box ending before
+anything else; a shape cancelled before Disable; and the pause in Disable with no mode on.
 `BlockTurnTest` (step 16) covers a
 quarter turn each way for stairs, logs, chests and signs, and two turns adding up; the flips' order for a log, a
 stair, a slab (a double slab flipping to bottom), a piston (one placed facing up flipping to the way it would face on

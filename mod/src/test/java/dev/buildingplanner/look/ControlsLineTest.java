@@ -204,16 +204,16 @@ class ControlsLineTest {
 
 	@Test
 	void theBoxesLines() {
-		assertEquals(List.of("Copy: [Left-click: set the first corner][Right-click: cancel]"),
+		assertEquals(List.of("Copy: [Left-click: set the first corner][Esc/Right-click: cancel]"),
 			box("COPY", 0, null, null));
-		assertEquals(List.of("Copy: [Left-click: set the opposite corner][Right-click: cancel][12 × 1 × 8]"),
+		assertEquals(List.of("Copy: [Left-click: set the opposite corner][Esc/Right-click: cancel][12 × 1 × 8]"),
 			box("COPY", 1, new int[] {12, 1, 8}, null));
-		assertEquals(List.of("Copy: [Left-click: set the height][Right-click: cancel][12 × 5 × 8]"),
+		assertEquals(List.of("Copy: [Left-click: set the height][Esc/Right-click: cancel][12 × 5 × 8]"),
 			box("COPY", 2, new int[] {12, 5, 8}, null));
-		assertEquals(List.of("Material list: [Left-click: set the first corner][Right-click: cancel]"),
+		assertEquals(List.of("Material list: [Left-click: set the first corner][Esc/Right-click: cancel]"),
 			box("MATERIAL_LIST", 0, null, null));
 		assertEquals(List.of("Part of the box is too far away to read. Move closer.",
-			"Material list: [Left-click: set the opposite corner][Right-click: cancel][3 × 1 × 2]"),
+			"Material list: [Left-click: set the opposite corner][Esc/Right-click: cancel][3 × 1 × 2]"),
 			box("MATERIAL_LIST", 1, new int[] {3, 1, 2}, BoxCorners.Limit.NOT_LOADED));
 		assertEquals(List.of("set the first corner", "cancel"),
 			collect(ControlsLine.box("COPY", 0, null, null).getFirst(), Look.ACTION));
@@ -457,8 +457,8 @@ class ControlsLineTest {
 
 	@Test
 	void effortlessBuildingsLineIsAControlForEachClauseInItsOwnWords() {
-		assertEquals("[Left-click: cancel][Right-click: place]", read(ControlsLine.effortless(PLACING)));
-		assertEquals("[Left-click: cancel][Right-click: interact]", read(ControlsLine.effortless(List.of(
+		assertEquals("[Esc/Left-click: cancel][Right-click: place]", read(ControlsLine.effortless(PLACING)));
+		assertEquals("[Esc/Left-click: cancel][Right-click: interact]", read(ControlsLine.effortless(List.of(
 			new Part("Left-click to ", "white"), new Part("cancel", "dark_aqua"), new Part(", Right-click to ", "white"),
 			new Part("interact", "dark_aqua")))));
 		assertNull(ControlsLine.effortless(PLACING).label());
@@ -473,7 +473,7 @@ class ControlsLineTest {
 		assertEquals(List.of("break", "cancel"), collect(breaking, Look.WARNING));
 		assertEquals(List.of(), collect(breaking, Look.ACTION));
 		// A key with no colour of its own is drawn white, as Effortless Building draws it.
-		assertEquals("[Left-click: cancel]", read(ControlsLine.effortless(List.of(new Part("Left-click to ", null),
+		assertEquals("[Esc/Left-click: cancel]", read(ControlsLine.effortless(List.of(new Part("Left-click to ", null),
 			new Part("cancel", "dark_aqua")))));
 	}
 

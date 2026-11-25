@@ -45,6 +45,7 @@ import nl.requios.effortlessbuilding.buildmode.buildmodes.Wall;
 import nl.requios.effortlessbuilding.buildpipeline.BuildPipeline;
 import nl.requios.effortlessbuilding.buildpipeline.BuildPipelineClient;
 import nl.requios.effortlessbuilding.config.ServerConfig;
+import nl.requios.effortlessbuilding.screen.RadialMenu;
 import nl.requios.effortlessbuilding.utilities.BlockEntry;
 import nl.requios.effortlessbuilding.utilities.BlockSet;
 
@@ -175,6 +176,15 @@ public final class EffortlessShapes {
 	/** Whether Effortless Building's mode is Disable, where the player places real blocks. */
 	static boolean disableMode() {
 		return BuildModes.CLIENT.getBuildMode() == BuildModeEnum.DISABLED;
+	}
+
+	/**
+	 * Esc's step out of a build mode (hook M7): Effortless Building's mode becomes Disable, with the radial menu's click
+	 * sound, as choosing Disable in the menu does; choosing it ends the lock (hook E21).
+	 */
+	static void disable() {
+		RadialMenu.playRadialMenuSound();
+		BuildModes.CLIENT.setBuildMode(BuildModeEnum.DISABLED);
 	}
 
 	/** The name of Effortless Building's mode ("Line", say), or null in Disable. */

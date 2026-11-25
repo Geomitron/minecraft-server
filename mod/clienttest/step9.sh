@@ -437,9 +437,9 @@ set_line() {
 		echo "$1: $2$turn_mirror$lock_off[R: Mode ($1)][Esc/Left-click: cancel]"
 	fi
 }
-first_line="[Left-click: set the first corner][Right-click: cancel]"
-second_line="[Left-click: set the opposite corner][Right-click: cancel]"
-height_line="[Left-click: set the height][Right-click: cancel]"
+first_line="[Left-click: set the first corner][Esc/Right-click: cancel]"
+second_line="[Left-click: set the opposite corner][Esc/Right-click: cancel]"
+height_line="[Left-click: set the height][Esc/Right-click: cancel]"
 # Delete's lines with no marks, with marks, and during a hold of Left Ctrl that unmarks.
 delete_none="Delete: [Hold Left Control: mark][Hold Left Control + Left-click: mark a box][Esc/Right-click: close]"
 delete_marked="Delete: [Hold Left-click: erase][Hold Left Control: mark][Hold Left Control + Left-click: mark a box][Esc/Right-click: clear]"
@@ -520,6 +520,12 @@ check "a right click ends the box, and Single's line shows again" eval 'drv 1 "w
 check "placing no block, real or ghost, and saying nothing" eval '[[ $(val 1 holdlog) == *" edits=0 "* ]] &&
 	[[ $(val 1 "real 8 -60 19") == minecraft:air ]] && [[ $(val 1 "layer 8 -60 19") == minecraft:air ]] &&
 	(($(chat_lines 1) == lines))'
+# Esc ends a box as its right click does ("Esc"), with no screen opening, and Single's mode stays.
+copy_button
+drv 1 "wait 5" > /dev/null
+press 1 Escape
+check "Esc ends the box, as its right click does, pausing nothing" eval 'box_is "none SINGLE" &&
+	[[ $(val 1 screenclass) == none ]] && [[ $(val 1 modehud) == "$single_line" ]] && (($(chat_lines 1) == lines))'
 
 # The first corner: the space above the block aimed at for its top face, and the block itself for a side. Until the
 # first click, the top face aimed at shows shaded black, and a side shows nothing. The first click, with the aim held,
@@ -1105,6 +1111,40 @@ check "R during a Floor switches to Off, which drops the set" eval 'drv 1 "wait 
 check "and leaves the copy following the aim" eval 'drv 1 "await copy at -39,-60,24..-38,-59,26" > /dev/null &&
 	[[ $(val 1 modehud) == "$controls_ctrl" ]]'
 
+# Esc steps out of one mode a press at a time ("Esc"): during a copy's Line, with Single chosen in Effortless Building,
+# it drops the set, then puts the copy away, then returns the build mode to Disable, then pauses. With the inventory
+# open, Esc closes it and takes no step.
+press 1 r
+first_click
+drv 1 "lookat -44.5 -53.5 34.5" "wait 5" "await set 4 copies, 4 placements FRONT_BACK COUNTERCLOCKWISE_90: $up4" \
+	> /dev/null
+keys 1 key e
+check "with the inventory open" eval 'drv 1 "wait 10" > /dev/null && [[ $(val 1 screenclass) == *Inventory* ]]'
+keys 1 key Escape
+check "Esc closes it, and the set stays" eval 'drv 1 "await noscreen" "wait 5" > /dev/null &&
+	drv 1 "await set 4 copies, 4 placements" > /dev/null && [[ $(val 1 copymode) == LINE ]]'
+press 1 Escape
+check "Esc during a copy's Line drops the set, sending no edit, as the line's [Esc/Left-click: cancel] says" eval \
+	'[[ $(val 1 copyset) == none ]] && [[ $(val 1 holdlog) == *" edits=0 "* ]] && [[ $(val 1 screenclass) == none ]]'
+check "and leaves the copy at the aim, following it again, still in Line" eval \
+	'copy_is 1 "^at " && [[ $(val 1 copymode) == LINE ]] && [[ $(val 1 modehud) == "$(start_line Line)" ]]'
+press 1 Escape
+check "Esc again puts the copy away, as the line's [Esc/Left-click: close] says, and Single's line shows" eval \
+	'copy_is 1 "^away " && [[ $(val 1 modehud) == "$single_line" ]] && [[ $(val 1 screenclass) == none ]]'
+press 1 Escape
+check "Esc in Single, as its line's [Esc: exit mode] says, returns the build mode to Disable" eval \
+	'[[ $(val 1 ebmode) == DISABLED ]] && [[ $(val 1 screenclass) == none ]]'
+press 1 Escape
+check "with no step left, Esc pauses the game" drv 1 "await screenclass net.minecraft.client.gui.screens.PauseScreen"
+# Back to Single, with the copy at the aim in Off, following the aim.
+drv 1 "close" "ebmode SINGLE" "wait 5" > /dev/null
+paste_button
+press 1 r
+press 1 r
+press 1 r
+check "the copy is back at the aim, in Off" eval '[[ $(val 1 copymode) == OFF ]] && copy_is 1 "^at " &&
+	[[ $(val 1 modehud) == "$controls_ctrl" ]]'
+
 # The controls line over light ghost blocks: a floor of ghost white wool, birch planks and glowstone in stripes 2
 # blocks wide, from -79 -60 30 to -62 -60 60, under Planner1, who looks down at it with the copy on it, so the line
 # crosses each of them. Shot at 1920 by 1080, at GUI scale 2 and 4; then the floor is erased.
@@ -1581,6 +1621,19 @@ check "a right click clears the marks, leaving Delete on" eval 'drv 1 "wait 10" 
 	[[ $(val 1 marks) == "0 marks, 0 to erase" ]] && [[ $(val 1 mousemode) == DELETE ]]'
 use_click 1
 check "a second ends Delete" eval 'drv 1 "wait 10" > /dev/null && [[ $(val 1 mousemode) == none ]]'
+# Esc does what Delete's lines say ("Esc"): with marks, it clears them, as [Esc/Right-click: clear] says, and with none
+# it ends Delete, as [Esc/Right-click: close] says, pausing nothing.
+delete_button
+drv 1 "lookat 100.5 -52.5 40" "wait 5" > /dev/null
+hold_ctrl
+sweep "100.5 -52.5 40" "109.5 -52.5 40"
+let_go_ctrl
+check "in Delete with marks" eval '[[ $(val 1 mousemode) == DELETE ]] && [[ $(val 1 marks) != "0 marks"* ]]'
+press 1 Escape
+check "Esc clears the marks, leaving Delete on" eval '[[ $(val 1 marks) == "0 marks, 0 to erase" ]] &&
+	[[ $(val 1 mousemode) == DELETE ]] && [[ $(val 1 screenclass) == none ]]'
+press 1 Escape
+check "and Esc again ends Delete" eval '[[ $(val 1 mousemode) == none ]] && [[ $(val 1 screenclass) == none ]]'
 
 # Delete's lines with marks, and during a hold that unmarks. The middle row's 9 ghost blocks the aim meets and the
 # ghost door, marked by its lower half: 10 marks, and 11 positions to erase. Each line is shot at 1920 by 1080, GUI
@@ -1759,6 +1812,20 @@ check "a right click during the box ends it, marking nothing" eval '[[ $(val 1 m
 	[[ $(val 1 marks) == "300 marks, 300 to erase" ]] && [[ $(val 1 mousemode) == DELETE ]]'
 xdo 1 mouseup 1
 let_go_ctrl
+# Esc while the box is drawn ends it too, marking nothing, as its line's [Esc: cancel] says, and pauses nothing.
+drv 1 "lookat 104.5 -61 18.5" "wait 5" > /dev/null
+hold_ctrl
+xdo 1 mousedown 1
+drv 1 "lookat 109.5 -56 29.5" "wait 10" > /dev/null
+check "with a box drawn again" eval '[[ $(val 1 markbox) == "mark 104,-61,18..109,-57,29 red" ]]'
+press 1 Escape
+check "Esc during the box ends it, marking nothing" eval '[[ $(val 1 markbox) == none ]] &&
+	[[ $(val 1 marks) == "300 marks, 300 to erase" ]] && [[ $(val 1 mousemode) == DELETE ]] &&
+	[[ $(val 1 screenclass) == none ]]'
+xdo 1 mouseup 1
+let_go_ctrl
+check "and letting go of the button marks nothing" eval 'drv 1 "wait 5" > /dev/null &&
+	[[ $(val 1 marks) == "300 marks, 300 to erase" ]]'
 # Held a second, the left button erases the 300 marked bricks as one edit, which one Ctrl+Z takes back.
 drv 1 "holdreset" > /dev/null
 xdo 1 mousedown 1
@@ -2611,10 +2678,10 @@ check "a right click cancels the shape, erasing nothing, and Line's line shows a
 	[[ $(val 1 modehud) == "$line_start[Hold Left Control: turn or flip]$line_end" ]]'
 # Effortless Building's own line during a shape (hook E31) is drawn in Building Planner's rectangles where Effortless
 # Building draws it, 58 above the screen's bottom (the driver's ebline reads what the last frame drew there), in its
-# words and colours: during a Line drawn with the place click "[Left-click: cancel][Right-click: place]", each action in
-# dark aqua; with a pickaxe, a tool, in hand during that shape, "interact" in place of "place"; during a Line drawn with
-# the break click "[Left-click: break][Right-click: cancel]", each action in red. Each is shot at noon, once the chat
-# has faded.
+# words and colours, with Esc before the left click that cancels: during a Line drawn with the place click
+# "[Esc/Left-click: cancel][Right-click: place]", each action in dark aqua; with a pickaxe, a tool, in hand during that
+# shape, "interact" in place of "place"; during a Line drawn with the break click "[Left-click: break][Right-click:
+# cancel]", each action in red. Each is shot at noon, once the chat has faded.
 # ebline_shots <name>: Planner1's view as <name>-1920x1080-gui4 and <name>-854x480-gui2, each with the line's
 # rectangles' window boxes in the log for the shots' outlines, and a check that they're laid out as the controls' are,
 # in a centred row starting 58 above the screen's bottom.
@@ -2634,14 +2701,14 @@ aim 1 -54 -60 -36
 use_click 1
 aim 1 -51 -60 -36
 drv 1 "wait 210" > /dev/null
-check "during a Line drawn with the place click, Effortless Building's line reads [Left-click: cancel][Right-click: place]" \
-	eval '[[ $(val 1 ebline) == "[Left-click: cancel][Right-click: place]" ]]'
+check "during a Line drawn with the place click, Effortless Building's line reads [Esc/Left-click: cancel][Right-click: place]" \
+	eval '[[ $(val 1 ebline) == "[Esc/Left-click: cancel][Right-click: place]" ]]'
 check "each rectangle white, with its action in dark aqua" eval \
 	'[[ $(val 1 eblinecolours) == "white+dark_aqua white+dark_aqua" ]]'
 ebline_shots effortless-line-place
 press 1 7
-check "with a pickaxe in hand during that shape, it reads [Left-click: cancel][Right-click: interact]" eval \
-	'drv 1 "wait 5" > /dev/null && [[ $(val 1 ebline) == "[Left-click: cancel][Right-click: interact]" ]] &&
+check "with a pickaxe in hand during that shape, it reads [Esc/Left-click: cancel][Right-click: interact]" eval \
+	'drv 1 "wait 5" > /dev/null && [[ $(val 1 ebline) == "[Esc/Left-click: cancel][Right-click: interact]" ]] &&
 	[[ $(val 1 eblinecolours) == "white+dark_aqua white+dark_aqua" ]]'
 ebline_shots effortless-line-interact
 press 1 5
@@ -2660,6 +2727,18 @@ use_click 1
 check "a right click cancels it, and Line's line shows there again" eval \
 	'drv 1 "wait 5" > /dev/null && [[ $(val 1 ebline) != *cancel* ]] &&
 	[[ $(val 1 modehud) == "$line_start[Hold Left Control: turn or flip]$line_end" ]]'
+# Esc cancels a shape under way too ("Esc"), as the line's [Esc/Left-click: cancel] says, placing nothing, pausing
+# nothing and leaving Line chosen; and so it does a shape drawn with the break click, erasing nothing.
+for click in use attack; do
+	aim 1 -54 -60 -36
+	"${click}_click" 1
+	aim 1 -51 -60 -36
+	check "during a Line drawn with the $click click" eval 'drv 1 "wait 5" > /dev/null && [[ $(val 1 ebline) == *cancel* ]]'
+	press 1 Escape
+	check "Esc cancels it, editing nothing, and Line stays chosen with its line" eval \
+		'[[ $(val 1 ebline) != *cancel* ]] && [[ $(val 1 holdlog) == *" edits=0 "* ]] && [[ $(val 1 ebmode) == LINE ]] &&
+		[[ $(val 1 screenclass) == none ]] && [[ $(val 1 modehud) == "$line_start[Hold Left Control: turn or flip]$line_end" ]]'
+done
 drv 1 "cmd item replace entity @s hotbar.6 with minecraft:stone" > /dev/null
 # In Disable, the middle click with Left Ctrl held flips the stairs, from the way Minecraft would place them on the
 # grass below Planner1, within the game's own reach (Effortless Building's longer reach is left out in Disable), and

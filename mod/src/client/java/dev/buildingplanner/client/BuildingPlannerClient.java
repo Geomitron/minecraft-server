@@ -9,6 +9,7 @@ import dev.buildingplanner.input.CopyColour;
 import dev.buildingplanner.input.CopyPlacement;
 import dev.buildingplanner.input.DisablePreview;
 import dev.buildingplanner.input.DisableTurn;
+import dev.buildingplanner.input.EscSteps;
 import dev.buildingplanner.input.MouseMode;
 import dev.buildingplanner.input.PlaceTurn;
 import dev.buildingplanner.input.ShapeLock;
@@ -755,6 +756,34 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	/** Whether the placement is one of the tiles that hand the layer to Litematica. */
 	public static boolean isTile(SchematicPlacement placement) {
 		return session != null && session.tiles().holds(placement);
+	}
+
+	/**
+	 * Hook M7: Esc with no screen open takes the next step out of the modes ({@link EscSteps#next}), each as the click
+	 * or button that takes it does, and returns whether the game pauses: without a session, or with no step left. A
+	 * {@code repeat} of a held Esc takes no step, so each step needs a press of its own.
+	 */
+	public static boolean escape(boolean repeat) {
+		if (session == null || Minecraft.getInstance().gui.screen() != null) {
+			return true;
+		}
+		EscSteps.Step step = EscSteps.next(new EscSteps.State(session.mouseMode(), session.markBox().on(),
+			session.marks().size() > 0, session.clipboard().setFixed(), effortless && EffortlessShapes.shapeUnderWay(),
+			effortless && !EffortlessShapes.disableMode()));
+		if (repeat || step == EscSteps.Step.PAUSE) {
+			return step == EscSteps.Step.PAUSE;
+		}
+		switch (step) {
+			case END_BOX, END_DELETE -> session.modeAction(MouseMode.Action.RIGHT_CLICK);
+			case END_DELETE_BOX, CLEAR_MARKS -> session.clearMarks();
+			case DROP_SET -> session.dropSet();
+			case PUT_COPY_AWAY -> session.modeAction(MouseMode.Action.LEFT_CLICK);
+			case CANCEL_SHAPE -> ClickRule.cancelShape();
+			case DISABLE_BUILD_MODE -> EffortlessShapes.disable();
+			case PAUSE -> {
+			}
+		}
+		return false;
 	}
 
 	/**

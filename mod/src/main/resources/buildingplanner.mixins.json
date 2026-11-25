@@ -38,6 +38,7 @@
 		"litematica.WorldUtilsMixin",
 		"minecraft.BlockItemInvoker",
 		"minecraft.HudMixin",
+		"minecraft.KeyboardHandlerMixin",
 		"minecraft.MinecraftMouseModeMixin",
 		"minecraft.MinecraftUseItemMixin",
 		"minecraft.MouseHandlerMixin",
