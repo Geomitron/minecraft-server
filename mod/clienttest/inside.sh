@@ -214,7 +214,7 @@ no_planner_message() {
 }
 
 finish() {
-	for f in run/client*/screenshots/*.png; do
+	for f in run/client*/screenshots/*.png run/client*/screenshots/*.boxes; do
 		[[ -e $f ]] && cp "$f" "/out/$(basename "$(dirname "$(dirname "$f")")")-$(basename "$f")"
 	done
 	return 0

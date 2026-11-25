@@ -1216,11 +1216,70 @@ public final class Driver implements ClientModInitializer {
 			case "shot" -> {
 				Screenshot.grab(mc.gameDirectory, a[1] + ".png", mc.gameRenderer.mainRenderTarget(), 1, c -> {
 				});
+				writeShotBoxes(mc, a[1]);
 				return "ok";
 			}
 			default -> {
 				return "unknown command";
 			}
+		}
+	}
+
+	/** The driver's reads written beside each shot, for outlining what the shot shows. */
+	private static final List<String> SHOT_READS = List.of("moderects", "eblinerects", "erasebar", "modebox", "buttons",
+		"widgets", "malilibbuttons", "infoicon", "drawbox", "markbox", "marks", "preview", "previewred", "copy",
+		"copyset", "lock", "wrongblocks");
+	private static final java.util.regex.Pattern POSITION = java.util.regex.Pattern.compile("(-?\\d+),(-?\\d+),(-?\\d+)");
+
+	/**
+	 * Writes {@code screenshots/<name>.boxes} beside the shot: the window's size and GUI scale; each of
+	 * {@link #SHOT_READS} as the driver gives it; for each read that names block positions, the window box the blocks
+	 * between its lowest and highest positions cover ("world <read> left top right bottom"), and for the wrong blocks
+	 * each block's own; then every text and tooltip background the last frame drew ({@link ScreenProbe#drawnAll}).
+	 */
+	private void writeShotBoxes(Minecraft mc, String name) {
+		List<String> out = new ArrayList<>();
+		out.add("window " + mc.getWindow().getWidth() + " " + mc.getWindow().getHeight() + " scale "
+			+ mc.getWindow().getGuiScale());
+		for (String read : SHOT_READS) {
+			String result;
+			try {
+				result = run(mc, read);
+			} catch (Throwable t) {
+				result = "ERROR " + t;
+			}
+			out.add(read + ": " + result);
+			if (mc.player == null || result.startsWith("ERROR")) {
+				continue;
+			}
+			java.util.regex.Matcher m = POSITION.matcher(result);
+			List<BlockPos> positions = new ArrayList<>();
+			while (m.find()) {
+				positions.add(new BlockPos(Integer.parseInt(m.group(1)), Integer.parseInt(m.group(2)),
+					Integer.parseInt(m.group(3))));
+			}
+			if (positions.isEmpty()) {
+				continue;
+			}
+			BlockPos min = positions.stream().reduce((p, q) -> new BlockPos(Math.min(p.getX(), q.getX()),
+				Math.min(p.getY(), q.getY()), Math.min(p.getZ(), q.getZ()))).orElseThrow();
+			BlockPos max = positions.stream().reduce((p, q) -> new BlockPos(Math.max(p.getX(), q.getX()),
+				Math.max(p.getY(), q.getY()), Math.max(p.getZ(), q.getZ()))).orElseThrow();
+			out.add("world " + read + " " + screenBox(mc, min, max));
+			if (read.equals("wrongblocks")) {
+				for (BlockPos pos : positions) {
+					out.add("world wrongblock " + pos.getX() + "," + pos.getY() + "," + pos.getZ() + " "
+						+ screenBox(mc, pos, pos));
+				}
+			}
+		}
+		out.addAll(ScreenProbe.drawnAll(mc));
+		try {
+			Path dir = mc.gameDirectory.toPath().resolve("screenshots");
+			Files.createDirectories(dir);
+			Files.write(dir.resolve(name + ".boxes"), out, StandardCharsets.UTF_8);
+		} catch (Exception e) {
+			throw new IllegalStateException(e);
 		}
 	}
 

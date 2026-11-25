@@ -43,6 +43,9 @@ public final class ScreenProbe {
 	/** The same for the tooltips set for the next frame, each its lines joined by spaces. */
 	private static List<String> currentTooltips = new ArrayList<>();
 	private static List<String> lastTooltips = List.of();
+	/** The same for each tooltip background drawn, as its visible frame: left, top, right and bottom in GUI pixels. */
+	private static List<int[]> currentTooltipBackgrounds = new ArrayList<>();
+	private static List<int[]> lastTooltipBackgrounds = List.of();
 
 	private ScreenProbe() {
 	}
@@ -62,6 +65,14 @@ public final class ScreenProbe {
 		currentTooltips.add(lines.stream().map(Component::getString).collect(Collectors.joining(" ")));
 	}
 
+	/**
+	 * A tooltip background is being drawn around content {@code width} by {@code height} at {@code x}, {@code y}; its
+	 * frame shows 3 outside that ({@code TooltipRenderUtil.extractTooltipBackground}).
+	 */
+	public static void tooltipBackground(int x, int y, int width, int height) {
+		currentTooltipBackgrounds.add(new int[] {x - 3, y - 3, x + width + 3, y + height + 3});
+	}
+
 	/** A frame has been drawn. */
 	public static void frameDrawn() {
 		last = current;
@@ -70,6 +81,28 @@ public final class ScreenProbe {
 		currentComponents = new ArrayList<>();
 		lastTooltips = currentTooltips;
 		currentTooltips = new ArrayList<>();
+		lastTooltipBackgrounds = currentTooltipBackgrounds;
+		currentTooltipBackgrounds = new ArrayList<>();
+	}
+
+	/**
+	 * Every text and tooltip background the last frame drew, one a line, for outlining them in a screenshot: "text",
+	 * "component" or "tooltip", then the window box (left top right bottom), then the text.
+	 */
+	static List<String> drawnAll(Minecraft mc) {
+		double scale = mc.getWindow().getGuiScale();
+		List<String> out = new ArrayList<>();
+		for (Drawn d : last) {
+			out.add("text " + box(scale, d.x(), d.y(), d.x() + d.width(), d.y() + FONT_HEIGHT) + " " + d.text());
+		}
+		for (DrawnComponent d : lastComponents) {
+			out.add("component " + box(scale, d.x(), d.y(), d.x() + d.width(), d.y() + FONT_HEIGHT) + " "
+				+ d.text().getString());
+		}
+		for (int[] b : lastTooltipBackgrounds) {
+			out.add("tooltip " + box(scale, b[0], b[1], b[2], b[3]));
+		}
+		return out;
 	}
 
 	/**
