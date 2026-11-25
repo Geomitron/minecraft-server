@@ -463,6 +463,15 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
     for effortless building, which you have to get to through the pause or main menu's settings button" (1241 Q1,
     Other); "Visual Settings" is Effortless Building's only settings screen, and only its radial menu and Mod Menu,
     which the pack doesn't have, open it.
+
+  Geo's answers on 0.7.0's texts and screenshots (1313): every text as proposed, except as below.
+  - "Match ghost blocks" turns a placed block only while ghost blocks show (1313 Q1 A), and its tooltip reads
+    "Automatically flips and turns a block you place to match a ghost block you're filling in" (1313, Geo's wording);
+  - the wrong blocks' outline through a wall is drawn at 80% opacity (1313 Q2 B);
+  - the controls lines show no status as a label: "we don't need these statuses, like "Turned:" and "Locked:", those
+    should either be evident from how the preview looks or is indicated on the control hint itself, like "Lock (On)""
+    (1313 [c1]). The copy's mode as a label ("Line:", "Wall, locked:") goes too, since "[R: Mode (Line)]" shows it;
+    the lines without labels go to Geo in 1313 revision 2.
 - The shared layer replaces the decisions above that concern separate plans: named plans that move and turn as a whole
   (411 Q1), plan growth (411 Q2), who deletes a plan (411 Q3, 420 Q9), starting a plan with N (420 Q1, 469 Q1), hiding
   a plan with Litematica or Syncmatica (420 Q2, 469 Q2), the paste's target plan (485 Q3), Litematica's Edit Schematic
