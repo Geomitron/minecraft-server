@@ -59,7 +59,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.permissions.Permissions;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
-import nl.requios.effortlessbuilding.screen.ClientConfigScreen;
 
 /**
  * Drives a dev client for the in-game checks in {@code clienttest/}. It runs the commands in {@code driver-in.txt} in
@@ -934,7 +933,7 @@ public final class Driver implements ClientModInitializer {
 			}
 			case "visualsettings" -> {
 				// visualsettings: opens Effortless Building's "Visual Settings" screen, as its radial menu's button does.
-				mc.setScreenAndShow(new ClientConfigScreen());
+				EffortlessDriver.visualSettings(mc);
 				return "ok";
 			}
 			case "settingrow" -> {

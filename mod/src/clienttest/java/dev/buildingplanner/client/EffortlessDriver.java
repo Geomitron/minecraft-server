@@ -20,6 +20,7 @@ import nl.requios.effortlessbuilding.buildpipeline.BuildPipelineClient;
 import nl.requios.effortlessbuilding.modifier.ArrayModifier;
 import nl.requios.effortlessbuilding.modifier.MirrorModifier;
 import nl.requios.effortlessbuilding.modifier.ModifierSystem;
+import nl.requios.effortlessbuilding.screen.ClientConfigScreen;
 import nl.requios.effortlessbuilding.utilities.BreakDisplayTracker;
 
 /**
@@ -33,6 +34,11 @@ final class EffortlessDriver {
 	/** Effortless Building's build mode, as its radial menu sets it. */
 	static void mode(String mode) {
 		BuildModes.CLIENT.setBuildMode(BuildModeEnum.valueOf(mode));
+	}
+
+	/** Opens Effortless Building's "Visual Settings" screen, as its radial menu's button does. */
+	static void visualSettings(Minecraft mc) {
+		mc.setScreenAndShow(new ClientConfigScreen());
 	}
 
 	/** Effortless Building's build mode. */
