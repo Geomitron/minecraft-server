@@ -8,7 +8,9 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.MultiLineTextWidget;
+import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsList;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsScreen;
@@ -149,6 +151,27 @@ public final class ScreenProbe {
 		for (Drawn d : last) {
 			if (d.y() == screen.height - 10 && d.x() + d.width() == screen.width - 4) {
 				return d.text() + " | " + box(scale, d.x(), d.y(), d.x() + d.width(), d.y() + FONT_HEIGHT);
+			}
+		}
+		return "none";
+	}
+
+	/**
+	 * The text of the widget on the open screen to the right of the label the last frame drew as {@code label}, on its
+	 * row (the label's top within the widget's height), then the widget's centre in window pixels; or none.
+	 */
+	static String settingRow(Minecraft mc, String label) {
+		double scale = mc.getWindow().getGuiScale();
+		for (DrawnComponent d : lastComponents) {
+			if (!d.text().getString().equals(label)) {
+				continue;
+			}
+			for (GuiEventListener child : mc.gui.screen().children()) {
+				if (child instanceof AbstractWidget w && w.visible && w.getX() > d.x() + d.width() && w.getY() <= d.y()
+					&& d.y() < w.getY() + w.getHeight()) {
+					return w.getMessage().getString() + " " + (int) ((w.getX() + w.getWidth() / 2.0) * scale) + " "
+						+ (int) ((w.getY() + w.getHeight() / 2.0) * scale);
+				}
 			}
 		}
 		return "none";

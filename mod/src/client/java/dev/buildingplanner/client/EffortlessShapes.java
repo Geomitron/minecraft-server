@@ -4,6 +4,7 @@ import dev.buildingplanner.input.BlockTurn;
 import dev.buildingplanner.input.CopyColour;
 import dev.buildingplanner.input.CopyMode;
 import dev.buildingplanner.input.DisablePreview;
+import dev.buildingplanner.input.GhostMatch;
 import dev.buildingplanner.input.MixRule;
 import dev.buildingplanner.input.ShapeLock;
 import dev.buildingplanner.layer.GhostErase;
@@ -431,7 +432,8 @@ public final class EffortlessShapes {
 	 * ({@link BuildingPlannerClient#disablePreviewOn}), the block a right click would place, from Minecraft's own aim
 	 * ({@code Minecraft.hitResult}, at its reach), where the item's own placing puts it
 	 * ({@code BlockPlaceContext.getClickedPos}, after {@code updatePlacementContext}), in the state hook S2 would give it
-	 * with the turn of the block in hand ({@link PlaceTurns#place}), and whether it would go in. Null while the preview
+	 * with the turn of the block in hand, or the ghost block's turn that "Match ghost blocks" gives there
+	 * ({@link #withGhostTurn}, {@link PlaceTurns#place}), and whether it would go in. Null while the preview
 	 * doesn't show, the aim isn't a block, the player is beyond the reach the server places within
 	 * ({@link DisablePreview#withinReach}, from the player, not Freecam's camera), or the block can't go there at all
 	 * ({@code BlockPlaceContext.canPlace}).
@@ -457,8 +459,9 @@ public final class EffortlessShapes {
 			BlockState block = item.getBlock().defaultBlockState();
 			return new DisableShown(context.getClickedPos(), turn == null ? block : BlockTurn.apply(block, turn), false);
 		}
-		PlaceTurns.Placed turned = PlaceTurns.place(context, placed,
-			turn == null ? BlockTurn.Held.NONE : new BlockTurn.Held(item, turn),
+		BlockTurn.Held held = withGhostTurn(context, item, placed,
+			turn == null ? BlockTurn.Held.NONE : new BlockTurn.Held(item, turn));
+		PlaceTurns.Placed turned = PlaceTurns.place(context, placed, held,
 			state -> invoker.buildingplanner$canPlace(context, state));
 		// BlockItem.place checks a state the turn leaves as it was too (a player standing in its way, say).
 		boolean goes = turned.stays() && invoker.buildingplanner$canPlace(context, turned.state());
@@ -467,6 +470,50 @@ public final class EffortlessShapes {
 
 	/** Disable's preview: where the block goes, its state, and whether it goes in, or is drawn red. */
 	record DisableShown(BlockPos pos, BlockState state, boolean goes) {
+	}
+
+	/**
+	 * Hook M6, in Disable: the turn a right click with {@code hit} takes, which is {@code otherwise} (Disable's turn,
+	 * {@link dev.buildingplanner.input.DisableTurn#clickTakes}) unless "Match ghost blocks" gives the ghost block's turn
+	 * there ({@link #withGhostTurn}). The click places where the item's own placing puts it
+	 * ({@code BlockPlaceContext.getClickedPos}, after {@code updatePlacementContext}), as Disable's preview finds it.
+	 */
+	static BlockTurn.Held clickTurn(BlockHitResult hit, BlockTurn.Held otherwise) {
+		Player player = Minecraft.getInstance().player;
+		if (!(player.getMainHandItem().getItem() instanceof BlockItem item)) {
+			return otherwise;
+		}
+		BlockPlaceContext context = item.updatePlacementContext(
+			new BlockPlaceContext(player, InteractionHand.MAIN_HAND, player.getMainHandItem(), hit));
+		if (context == null || !context.canPlace()) {
+			return otherwise;
+		}
+		return withGhostTurn(context, item, ((BlockItemInvoker) item).buildingplanner$placementState(context),
+			otherwise);
+	}
+
+	/**
+	 * "Match ghost blocks" (see "Settings"): with the setting on, where the player's copy of the layer has a ghost block
+	 * of the block Minecraft would place ({@code placed}, {@link GhostMatch#turn}), the ghost block's turn when the block
+	 * turned so can stay (hook S2's step, {@link PlaceTurns#place}, and {@code BlockItem.canPlace}); otherwise
+	 * {@code otherwise}, the turn the click takes with the setting off.
+	 */
+	private static BlockTurn.Held withGhostTurn(BlockPlaceContext context, BlockItem item, BlockState placed,
+		BlockTurn.Held otherwise) {
+		ClientSession session = BuildingPlannerClient.session();
+		if (session == null) {
+			return otherwise;
+		}
+		BlockTurn.Held ghost = GhostMatch.turn(BuildingPlannerClient.matchGhost(),
+			session.replica().layer().get(context.getClickedPos()), placed, item);
+		if (ghost.turn() == null) {
+			return otherwise;
+		}
+		BlockItemInvoker invoker = (BlockItemInvoker) item;
+		PlaceTurns.Placed turned = PlaceTurns.place(context, placed, ghost,
+			state -> invoker.buildingplanner$canPlace(context, state));
+		return GhostMatch.clickTakes(ghost, turned.stays() && invoker.buildingplanner$canPlace(context, turned.state()),
+			otherwise);
 	}
 
 	/**

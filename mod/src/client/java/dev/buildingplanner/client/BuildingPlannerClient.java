@@ -10,6 +10,7 @@ import dev.buildingplanner.input.CopyPlacement;
 import dev.buildingplanner.input.DisablePreview;
 import dev.buildingplanner.input.DisableTurn;
 import dev.buildingplanner.input.EscSteps;
+import dev.buildingplanner.input.GhostMatch;
 import dev.buildingplanner.input.MouseMode;
 import dev.buildingplanner.input.PlaceTurn;
 import dev.buildingplanner.input.ShapeLock;
@@ -54,6 +55,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
 
 /**
  * The client side: a session for each connection to a server with Building Planner, started by the server's
@@ -275,6 +277,11 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	/** Building Planner's settings on this computer, such as the speed sliders' in the radial menu (hook E11). */
 	public static ClientConfig config() {
 		return config;
+	}
+
+	/** Whether "Match ghost blocks" is on, as the "Visual Settings" screen saved it (see "Settings"). */
+	static boolean matchGhost() {
+		return config != null && GhostMatch.on(config.get(GhostMatch.SETTING));
 	}
 
 	private static void endSession() {
@@ -547,9 +554,11 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	/**
 	 * Hook M6, before a right click on a block: sends {@code place_turn} when the turn the click takes
 	 * ({@link DisableTurn#clickTakes}: the turn of the block in hand while the sprint key is held in Disable, and
-	 * otherwise none) differs from the one sent last, and keeps it as the one this computer's guess of the block takes.
+	 * otherwise none; or, with "Match ghost blocks" on, the ghost block's turn where the click fills one,
+	 * {@link EffortlessShapes#clickTurn}) differs from the one sent last, and keeps it as the one this computer's guess
+	 * of the block takes.
 	 */
-	public static void beforeUseItemOn() {
+	public static void beforeUseItemOn(BlockHitResult hit) {
 		Minecraft mc = Minecraft.getInstance();
 		if (session == null || mc.player == null) {
 			return;
@@ -558,6 +567,9 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		BlockTurn.Turn turn = HeldTurn.of(inHand);
 		BlockTurn.Held now = DisableTurn.clickTakes(disableTurning(), mc.options.keySprint.isDown(),
 			turn == null ? BlockTurn.Held.NONE : new BlockTurn.Held(inHand, turn));
+		if (effortless && EffortlessShapes.disableMode() && !mouseModeOn()) {
+			now = EffortlessShapes.clickTurn(hit, now);
+		}
 		if (DisableTurn.sends(PlaceTurns.local(), now)) {
 			ClientPlayNetworking.send(new Payloads.PlaceTurn(Optional.ofNullable(now.item()), PlaceTurn.properties(now)));
 			PlaceTurns.sentLocally(now);

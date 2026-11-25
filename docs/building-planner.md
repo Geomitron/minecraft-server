@@ -244,6 +244,7 @@ Effortless Building, under `common/src/main/java/nl/requios/effortlessbuilding/`
 | E33 | `buildmode/TwoClicksBuildMode.java` field `firstBlockEntry`; `buildmode/ThreeClicksBuildMode.java` fields `firstBlockEntry` and `secondBlockEntry`; `buildpipeline/BuildPipelineClient.java` private static field `firstClickHit` | `@Accessor` on each (accessor mixins, getter and setter) | During a shape, the nudge keys move the positions its clicks have set, and the first click's hit with them, by replacing each with a `BlockEntry` (or hit) one block over; `findCoordinates` reads them each frame, so the preview and the finished shape follow (see "Locking and the first click"). |
 | E34 | `screen/RadialMenu.java`, `extractRenderState` | `@ModifyExpressionValue` on the `hasPermission(Permissions.COMMANDS_GAMEMASTER)` check before the "Functional Settings" button | During a session, the button isn't added, for operators too: it changes Effortless Building's settings on the server, which this server doesn't run, and "Show or hide ghost blocks" takes its place under the wrench (see "The radial menu's buttons and sliders"). |
 | E35 | `screen/RadialMenu.java`, private `performAction` | `@WrapWithCondition` on `LocalPlayer.sendOverlayMessage` after `BuildModes.setBuildMode` | During a session, choosing a mode doesn't put its name in the action bar, since the name shows beside the hotbar (see "The build mode's name and the held item's name"). |
+| E36 | `screen/ClientConfigScreen.java`, `init`, `extractRenderState`, private `renderRowTooltips` and private `save` | `@ModifyExpressionValue` on each read of the static `LABEL_KEYS`; `@Inject` at the tail of `init` and at the head of `save` | The "Match ghost blocks" row in "Visual Settings": its label key after the screen's own, so the screen places, labels and explains one row more; its switch, with "Save" and "Cancel" a row down; and the setting saved with the screen's own (see "Settings"). |
 
 Effortless Building's limits on its shapes come from its config on the player's computer (`config/ServerConfig.java`),
 which keeps its defaults, since only Effortless Building's server sends other values (`SyncServerConfigS2CPacket`): in
@@ -1642,8 +1643,15 @@ screen; Mod Menu, which the pack doesn't have, would open it too. The row comes 
 and is drawn as they are, a setting that is on or off, labelled "Match ghost blocks", with the tooltip "Places a block
 turned as the ghost block it fills, whichever way you face" (proposed, for Geo's review). It is off at first. The
 screen's "Save" button saves it with Effortless Building's own settings, in `config/buildingplanner-client.properties`
-(`match-ghost-turn`, `false` at first, which a missing or other value reads as). The row shows on any server; the
-setting acts only during a session.
+(`match-ghost-turn`, `false` at first, which a missing or other value reads as), and "Cancel" leaves it as it was. The
+row shows on any server; the setting acts only during a session.
+
+The screen lays out its rows, draws their labels and shows their tooltips from one list of label keys
+(`ClientConfigScreen.LABEL_KEYS`), each tooltip from its label's key with `.tooltip` added, so hook E36 adds the row's
+key to that list where `init`, `extractRenderState` and `renderRowTooltips` read it (`VisualSettingsRow`). The screen
+then places one row more, centred as before; E36 adds the row's switch where the screen puts its own, with the
+screen's own "ON" and "OFF" (`onOff`), moves "Save" and "Cancel" a row down below it, and saves the switch in
+`save`.
 
 With "Match ghost blocks" on, a real block placed into a ghost block of the same block takes the ghost block's
 orientation, regardless of how the player is standing (Geo's comment c9: "stairs being placed correctly, according to
@@ -2532,6 +2540,14 @@ world's spawn, where Planner2, who isn't an operator, may build:
   nothing draws, and from 32 both do. Both are shot at 854 by 480 and 1920 by 1080, GUI scale 2, through the wall from
   10 blocks and from in front of it. The driver's `wrongscan` times 20 scans with a ghost block at every position
   within 32 blocks of Planner2's camera, and writes the figures to the checks' log.
+- "Match ghost blocks" ("Settings"): Planner1's "Visual Settings" (the driver's `visualsettings`, which opens it as the
+  radial menu's button does) has the row, off at first, and its label shows the tooltip; a real click on its switch
+  turns it on and saves nothing until a click on "Save", which saves `match-ghost-turn=true`. With it on, Planner1, in
+  Disable 3 blocks north of a ghost oak stair facing east and facing south, places oak stairs into it: Planner1's own
+  block, the server's world and Planner2 have the stair facing east, and the ghost block is gone on both clients. Turned
+  off and saved, a stair placed the same way into a second ghost stair facing east faces south and leaves its ghost
+  block. Turned on and saved again, the row shows it on once client 1 has restarted twice. "Visual Settings" is shot
+  without and with the row's tooltip (which covers the row), and Planner2's view of both stairs, at 854 by 480 and 1920 by 1080, GUI scale 2.
 
 The copy's placement has unit tests as pure functions. `CopyPlacementTest` covers the copy against each of the six
 faces, with sides of odd and even lengths, the origin for each turn and mirror filling the turned box, and a turn or
@@ -2625,7 +2641,12 @@ own check lets it. `DisablePreviewTest` covers when the preview shows: only whil
 the sprint key is held and Freecam doesn't keep the click from the world, by Freecam's rule; the reach, the range and
 one block more of the player's eyes, not the camera's; and which blocks hang on the block behind them and which don't
 (a grindstone, a wall skull or a hanging sign on a wall). Where the preview goes is Minecraft's own
-`BlockPlaceContext.getClickedPos`, checked in the game.
+`BlockPlaceContext.getClickedPos`, checked in the game. `GhostMatchTest` covers "Match ghost blocks": an oak stair
+placed facing south into a ghost oak stair facing east takes the ghost block's facing and half; with the setting off,
+into a ghost spruce stair, with no ghost block or nothing placed, and for a ghost block with no orientation, no turn; a
+torch placed as a wall torch matches a ghost wall torch and not a ghost torch; a ghost block's turn that can't stay
+leaves the click with the turn it has with the setting off, Left Ctrl's or none; and the setting on only when saved as
+`true`.
 
 The fill rule's unit tests (`FillRuleTest`) cover each property it compares or ignores: a stair facing another way or
 upside down, a log on another axis, a door with the other hinge or its other half, a bed's other part, a button on

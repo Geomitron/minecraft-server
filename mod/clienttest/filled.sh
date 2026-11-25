@@ -2,9 +2,11 @@
 # ghost blocks they fill, on both clients within a tick and with no glow; a block placed another way leaves its ghost
 # block; a block placed several to a spot fills its ghost block only at the same count; ghost blocks drawn over real
 # blocks that fill them remove the older ghost block there, and undo and redo bring it back and remove it again;
-# breaking a filled block brings none back; a paste onto built blocks changes nothing; and ghost blocks saved over
-# matching real blocks while the server ran without the add-on go once their chunk loads. Shots of a wall half built,
-# before and after, at 854 by 480 and 1920 by 1080, GUI scale 2. Sourced by inside.sh, which provides drv, val, check,
+# breaking a filled block brings none back; a paste onto built blocks changes nothing; a stair placed with "Match ghost
+# blocks" on faces as its ghost stair does and fills it, and the setting stays as saved after the game restarts; and
+# ghost blocks saved over matching real blocks while the server ran without the add-on go once their chunk loads. Shots
+# of a wall half built, before and after, and of "Visual Settings", without and with the row's tooltip, and the stairs
+# placed with the setting on and off, at 854 by 480 and 1920 by 1080, GUI scale 2. Sourced by inside.sh, which provides drv, val, check,
 # use_click, start_server, stop_server, start_client, stop_client and $ADDON. Everything happens more than 16 blocks
 # from the world's spawn, where Planner2, who isn't an operator, may build.
 
@@ -210,6 +212,107 @@ check "from the wall's other side, both draw" eval \
 drv 2 "notoasts" "wait 40" "shot wrong-blocks-in-view-1920x1080" "wait 10" "window 854 480 2" "wait 40" \
 	"notoasts" "shot wrong-blocks-in-view-854x480" "wait 10" > /dev/null
 
+# "Match ghost blocks" ("Settings"): the row in Effortless Building's "Visual Settings" screen, off at first, saved by
+# the screen's "Save" button. With it on, Planner1, 3 blocks north of a ghost oak stair facing east at 220 -60 220 and
+# facing south, places oak stairs there in Disable, and the server's world, Planner2 and Planner1's own block face east
+# and fill the ghost block; with it off, a stair placed into a ghost stair facing east at 222 -60 220 faces south, as
+# Planner1 does, and leaves its ghost block. The setting is left on for the check after the game restarts, below.
+# visual_settings <client>: opens the client's "Visual Settings" screen, as its radial menu's button does.
+visual_settings() {
+	drv "$1" "close" "visualsettings" "await screen Visual Settings" "wait 10" > /dev/null
+}
+# match_row <client>: the "Match ghost blocks" row's switch on the open screen: its text, then its centre.
+match_row() {
+	val "$1" "settingrow Match ghost blocks"
+}
+# match_switch <client>: a real click on the row's switch.
+match_switch() {
+	local text x y
+	read -r text x y < <(match_row "$1")
+	click "$1" "$x" "$y"
+	drv "$1" "wait 5" > /dev/null
+}
+# save_settings <client>: a real click on the screen's "Save" button, which closes it.
+save_settings() {
+	local x y
+	read -r x y < <(val "$1" "widget 0 Save")
+	click "$1" "$x" "$y"
+	drv "$1" "await noscreen" "wait 5" > /dev/null
+}
+# real_has <client> <x y z> <block> <text>: that client's world has that block there, with the text in its state.
+real_has() {
+	drv "$1" "await real $2 $3 $4 $5" > /dev/null && [[ $(val "$1" "realstate $2 $3 $4") == *"$6"* ]]
+}
+# server_has <x y z> <block state> <tag>: the server's own world has that block there, as /execute if block finds it;
+# run by Planner1, who then says the tag, which the server's log shows within 20 seconds.
+server_has() {
+	drv 1 "cmd execute if block $1 $2 $3 $4 run say $5" > /dev/null && wait_for /out/server.log "$5" 20
+}
+client_config=run/client1/config/buildingplanner-client.properties
+drv 1 "window 854 480 2" "wait 20" > /dev/null
+visual_settings 1
+check "Planner1's \"Visual Settings\" has the row \"Match ghost blocks\", off at first" eval \
+	'[[ $(match_row 1) == "OFF "* ]]'
+# label_hover: moves client 1's mouse onto the row's label, which shows its tooltip over the row.
+label_hover() {
+	local left top right bottom
+	read -r left top right bottom < <(val 1 "drawnbox Match ghost blocks")
+	xdo 1 mousemove --window %w $(((left + right) / 2)) $(((top + bottom) / 2))
+}
+# visual_settings_shots <size>: "Visual Settings" with the mouse in a corner, then with the row's tooltip, which covers
+# the row.
+visual_settings_shots() {
+	xdo 1 mousemove --window %w 2 2
+	drv 1 "notoasts" "wait 5" "shot visual-settings-match-ghost-blocks-$1-gui2" > /dev/null
+	label_hover
+	drv 1 "wait 5" "shot visual-settings-match-ghost-blocks-tooltip-$1-gui2" > /dev/null
+}
+label_hover
+check "the row's label shows its tooltip" eval 'drv 1 "wait 5" > /dev/null &&
+	[[ $(val 1 tooltips) == "Places a block turned as the ghost block it fills, whichever way you face" ]]'
+visual_settings_shots 854x480
+drv 1 "window 1920 1080 2" "wait 20" > /dev/null
+visual_settings_shots 1920x1080
+drv 1 "window 854 480 2" "wait 20" > /dev/null
+match_switch 1
+check "a click on the row's switch turns it on, and saves nothing yet" eval \
+	'[[ $(match_row 1) == "ON "* ]] && ! grep -q "^match-ghost-turn=" "$client_config"'
+save_settings 1
+check "\"Save\" closes the screen and saves the setting on" grep -q "^match-ghost-turn=true" "$client_config"
+drv 1 "cmd tp @s 220.5 -60 217.5 0 30" "cmd tp Planner2 221.5 -60 225.5 180 25" \
+	"cmd item replace entity @s weapon.mainhand with minecraft:oak_stairs 64" "ebmode DISABLED" "wait 40" \
+	"edit 220 -60 220 220 -60 220 minecraft:oak_stairs[facing=east]" \
+	"edit 222 -60 220 222 -60 220 minecraft:oak_stairs[facing=east]" > /dev/null
+check "both clients see the two ghost stairs facing east" eval \
+	'drv 1 "await block 222 -60 220 minecraft:oak_stairs" > /dev/null &&
+	drv 2 "await block 222 -60 220 minecraft:oak_stairs" "await noglow" > /dev/null'
+drv 1 "lookat 220.5 -60 220.5" "wait 5" > /dev/null
+use_click 1
+check "with the setting on, Planner1 facing south places a stair facing east, as the ghost stair faces" \
+	real_has 1 220 -60 220 minecraft:oak_stairs "facing=east,"
+check "the server's world has it facing east" server_has 220 -60 220 "minecraft:oak_stairs[facing=east]" \
+	matched-stair-east
+check "Planner2 sees it facing east" real_has 2 220 -60 220 minecraft:oak_stairs "facing=east,"
+check "and it fills the ghost stair on both clients" eval 'drv 2 "wait 5" > /dev/null && both_layer 220 -60 220 minecraft:air'
+visual_settings 1
+match_switch 1
+save_settings 1
+check "the switch turned off again and saved, the setting is off" grep -q "^match-ghost-turn=false" "$client_config"
+drv 1 "cmd tp @s 222.5 -60 217.5 0 30" "wait 10" "lookat 222.5 -60 220.5" "wait 5" > /dev/null
+use_click 1
+check "with the setting off, the stair faces south, as Planner1 does" eval \
+	'real_has 1 222 -60 220 minecraft:oak_stairs "facing=south," &&
+	server_has 222 -60 220 "minecraft:oak_stairs[facing=south]" unmatched-stair-south &&
+	real_has 2 222 -60 220 minecraft:oak_stairs "facing=south,"'
+check "and leaves its ghost stair on both clients" eval 'drv 2 "wait 5" > /dev/null &&
+	both_layer 222 -60 220 minecraft:oak_stairs'
+drv 2 "window 854 480 2" "notoasts" "wait 40" "shot match-ghost-blocks-placed-854x480-gui2" "wait 10" \
+	"window 1920 1080 2" "wait 40" "notoasts" "shot match-ghost-blocks-placed-1920x1080-gui2" "wait 10" > /dev/null
+visual_settings 1
+match_switch 1
+save_settings 1
+check "turned on again and saved, for the restart" grep -q "^match-ghost-turn=true" "$client_config"
+
 # Ghost blocks saved over matching real blocks while the server ran without the add-on: ghost gold blocks at 300 -60 300
 # and 301 -60 300 and a ghost oak stair facing north at 302 -60 300, far from where the players stand.
 drv 1 "cmd tp @s 300 -60 295 0 30" "wait 60" "edit 300 -60 300 301 -60 300 minecraft:gold_block" \
@@ -236,6 +339,9 @@ start_server "" server-again
 start_client 1
 start_client 2
 check "with the add-on back, both clients start a session" eval 'drv 1 "await session" && drv 2 "await session"'
+visual_settings 1
+check "after the game restarts, \"Match ghost blocks\" is on, as saved" eval '[[ $(match_row 1) == "ON "* ]]'
+drv 1 "close" > /dev/null
 check "far from the built blocks, client 1 holds no copy of their column" \
 	eval '[[ $(val 1 "tile 18 18") == none && $(val 1 "layer 302 -60 300") == minecraft:air ]]'
 drv 1 "cmd tp @s 300 -60 295 0 30" > /dev/null

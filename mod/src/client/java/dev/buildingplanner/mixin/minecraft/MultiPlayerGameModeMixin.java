@@ -13,14 +13,15 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
  * Hook M6: a right click on a block calls {@code useItemOn}, which guesses the block ({@code BlockItem.place}, hook S2)
- * and sends {@code ServerboundUseItemOnPacket}; sending the click's turn first (see "Turning real blocks in Disable")
- * puts it before the click on the one connection, so both sides place with it.
+ * and sends {@code ServerboundUseItemOnPacket}; sending the click's turn first (see "Turning real blocks in Disable",
+ * and "Settings" for the ghost block's turn the click's hit finds) puts it before the click on the one connection, so
+ * both sides place with it.
  */
 @Mixin(MultiPlayerGameMode.class)
 abstract class MultiPlayerGameModeMixin {
 	@Inject(method = "useItemOn", at = @At("HEAD"))
 	private void buildingplanner$sendTurn(LocalPlayer player, InteractionHand hand, BlockHitResult hit,
 		CallbackInfoReturnable<InteractionResult> cir) {
-		BuildingPlannerClient.beforeUseItemOn();
+		BuildingPlannerClient.beforeUseItemOn(hit);
 	}
 }

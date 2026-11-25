@@ -166,7 +166,7 @@ public final class BlockTurn {
 	}
 
 	/** The state's orientation properties' values by name. */
-	private static Map<String, String> values(BlockState state) {
+	static Map<String, String> values(BlockState state) {
 		Map<String, String> values = new TreeMap<>();
 		for (Property<?> property : state.getProperties()) {
 			if (ORIENTATION.contains(property)) {

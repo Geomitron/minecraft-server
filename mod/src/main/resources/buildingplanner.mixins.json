@@ -12,6 +12,7 @@
 	],
 	"client": [
 		"effortless.BlockPreviewRendererMixin",
+		"effortless.ClientConfigScreenMixin",
 		"effortless.BuildModeEyeMixin",
 		"effortless.BuildModesMixin",
 		"effortless.BuildPipelineClientAccessor",

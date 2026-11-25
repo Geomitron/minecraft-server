@@ -59,6 +59,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.permissions.Permissions;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
+import nl.requios.effortlessbuilding.screen.ClientConfigScreen;
 
 /**
  * Drives a dev client for the in-game checks in {@code clienttest/}. It runs the commands in {@code driver-in.txt} in
@@ -930,6 +931,16 @@ public final class Driver implements ClientModInitializer {
 				// keybinds: opens the key binds screen (Options, Controls, Key Binds).
 				ScreenProbe.openKeyBinds(mc);
 				return "ok";
+			}
+			case "visualsettings" -> {
+				// visualsettings: opens Effortless Building's "Visual Settings" screen, as its radial menu's button does.
+				mc.setScreenAndShow(new ClientConfigScreen());
+				return "ok";
+			}
+			case "settingrow" -> {
+				// settingrow <label>: the text of the widget on the open screen's row whose label the last frame drew as
+				// <label> (a switch's "ON" or "OFF"), then the widget's centre in window pixels; or none.
+				return ScreenProbe.settingRow(mc, line.substring("settingrow ".length()));
 			}
 			case "keybindlist" -> {
 				// keybindlist: the key binds screen's headings, each with its keys in order: "Heading: key, key ; ...".
