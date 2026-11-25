@@ -2513,8 +2513,8 @@ world's spawn, where Planner2, who isn't an operator, may build:
   the ghost block's properties).
 - Ghost oak planks drawn over real oak planks that have a ghost stone block on them remove the ghost stone on both
   clients; one Ctrl+Z brings the stone back, and Ctrl+Y removes it again.
-- A paste onto built blocks (the driver's `pastehere`, which copies a box and pastes it where it was copied from)
-  changes nothing, with no glow.
+- A paste onto built blocks (the driver's `pastehere`, which copies a box and pastes it where it was copied from, and
+  gives the copy as it was pasted) changes nothing, with no glow.
 - Ghost blocks saved over matching real blocks while the server ran without the add-on are gone once their chunk
   loads, and a ghost stair under a real stair facing the other way stays.
 - Neither client's log has a self-check warning, checked before the restarts and at the end.

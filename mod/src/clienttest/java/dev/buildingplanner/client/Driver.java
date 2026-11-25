@@ -247,10 +247,12 @@ public final class Driver implements ClientModInitializer {
 			case "pastehere" -> {
 				// pastehere x1 y1 z1 x2 y2 z2: copies the box, as Copy does, and pastes the copy at once where it was
 				// copied from, as a right click with the copy there would; the box's lowest corner must hold a block.
+				// Gives the copy as it was pasted, since after the paste it follows the aim again.
 				session().copy(pos(a, 1), pos(a, 4));
 				clipboard().moveTo(pos(a, 1));
+				String pasted = copy();
 				session().paste();
-				return copy();
+				return pasted;
 			}
 			case "lookat" -> {
 				// lookat x y z: turns the player to look at that point, which may be fractional, as a real mouse move
