@@ -24,7 +24,7 @@ import org.joml.Vector4f;
 
 /**
  * Draws the wrong blocks through walls ("Wrong blocks through walls"): each ghost block {@link WrongBlocks} finds near
- * the camera, in Litematica's red (#FF3333) or orange (#FF9010), its outline at 0.4 alpha and its sides at 0.1, with
+ * the camera, in Litematica's red (#FF3333) or orange (#FF9010), its outline at 0.8 alpha and its sides at 0.1, with
  * the depth test off, so they show through any block in front of them. Each colour is one shape ({@link OutlineMesh}).
  * The blocks are found again every {@value #RESCAN_TICKS} ticks, and the shapes are built again only when they change.
  */
@@ -57,7 +57,7 @@ final class WrongBlocksOutline implements IRenderer {
 
 	private static OutlineMesh.Look look(String name, int rgb) {
 		return new OutlineMesh.Look(name, (rgb >> 16 & 0xFF) / 255f, (rgb >> 8 & 0xFF) / 255f, (rgb & 0xFF) / 255f,
-			0.1f, 0.4f, () -> MaLiLibPipelines.POSITION_COLOR_TRANSLUCENT_NO_DEPTH,
+			0.1f, 0.8f, () -> MaLiLibPipelines.POSITION_COLOR_TRANSLUCENT_NO_DEPTH,
 			() -> MaLiLibPipelines.DEBUG_LINES_TRANSLUCENT_NO_DEPTH);
 	}
 
