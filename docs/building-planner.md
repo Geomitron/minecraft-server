@@ -2294,8 +2294,7 @@ people don't need to see the player's ghost blocks (comment c4 on 1359), and pic
 your ghost blocks are saved on your computer and only you see them, and this server still shares them." (1368 Q1 A).
 Shapes place real blocks only on servers that run Building Planner (1368 Q2 A). For the player's own worlds, Geo picked
 "Yes, with ghost blocks shared with the world's LAN guests" (1374 Q4 C). Each choice still Geo's carries an `OPEN:`
-mark naming its question in the request "Ghost blocks between servers" or "Building Planner 0.10.0: the radial line
-and your own worlds"; the text describes the option the request recommends.
+mark naming its question in the request "Building Planner 0.10.0: the radial line and your own worlds"; the text describes the option the request recommends.
 
 **Which servers.** At joining, the game checks the ten payloads as "When the server lacks the mod" describes. If the
 server takes none of them, the game starts a local session at once: Building Planner plays the server's part itself,
