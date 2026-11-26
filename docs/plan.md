@@ -598,9 +598,9 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
     server a turned view just before each such click, as "printer" mods do, and anti-cheat plugins flag those turns,
     so real blocks place there as in Minecraft;
   - for singleplayer worlds and worlds opened to LAN, "Yes, with ghost blocks shared with the world's LAN guests"
-    (Q4 C), with the comment "Really depends, if C is a ton of work, then B would be fine." The server part already
-    runs inside the game's own world once `BuildingPlanner.onInitialize` registers it there too (it registers it only
-    on a dedicated server), so C is the one built.
+    (Q4 C), with the comment "Really depends, if C is a ton of work, then B would be fine." C takes one build step, as
+    B would: `BuildingPlanner.onInitialize` registers the server part in the game too, and the game drops the
+    exceptions it makes for its own world, so C is the one built.
 
   Asked in 1375 ("Ghost blocks between servers"), Geo picked "Yes, the copy stays while the game runs, across servers
   and dimensions" (Q1 A) and, for a server that starts running Building Planner, "They stay on each computer, unused,
@@ -611,7 +611,8 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
   - on a server that takes none of Building Planner's payloads, a server running Effortless Building's own server
     part among them, the game starts a local session: it runs the server's own classes for the layer, undo and the lists
     (`LayerSync`, `LayerStore`, `MaterialLists`) for that player alone; a server that takes some of them waits for
-    `hello`, and a `hello` during a local session replaces it; a LAN guest's game starts one too;
+    `hello`, and a `hello` during a local session replaces it; a LAN guest's game starts one in a world whose host's
+    game doesn't run Building Planner;
   - the player's ghost blocks for each server are files in the game's folder, under the name Litematica gives that
     server's folders, read at joining and written at most every 30 seconds, at leaving and as the game closes;
   - every feature works there as on this server, except that no one else sees the ghost blocks; undo lasts until the
@@ -619,7 +620,22 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
     a placement the server refuses leaves it; "Place real blocks", Disable's turn and "Match ghost blocks" don't act;
     and the removal of the old plans' placements doesn't run;
   - hook L7 shows Litematica's colour for extra blocks inside the player's own placements, on every server;
-  - 0.10.0 changes nothing the server does and keeps protocol version 5.
+  - during a local session, the radial menu shows a line above "Building Planner" in its corner, right-aligned as the
+    name is and in the grey of the menu's mode descriptions, and a row above a hovered mode's description on a screen
+    up to 256 high in the GUI's units, where the description would cross it;
+  - in the player's own world, singleplayer or opened to LAN, the game runs Building Planner's server part as this
+    server does: the ghost blocks and lists are saved in the world's folder, the cap is the default 200,000 blocks
+    an edit without a config file, LAN guests with Building Planner share the ghost blocks, Effortless Building's
+    shapes draw ghost blocks and "Place real blocks" places real ones by this server's rules, the import and the
+    removal of the old plans' placements don't run, and a world whose layer files can't be listed opens with
+    Building Planner off;
+  - 0.10.0 changes nothing this server does and keeps protocol version 5.
+
+  Open, each recommending A, in the request "Building Planner 0.10.0: the radial line and your own worlds", which
+  shows Geo the designs for 1374 Q1 C and Q4 C before the steps that build them: Q1, the radial menu line (A: as
+  designed, in the grey of the mode descriptions; B: in white); Q2, the player's own worlds (A: as designed); Q3, the
+  most real blocks a shape or a paste places there (A: 2,000, as on this server; B: in creative, Effortless Building's
+  own creative limits).
 
 - **Saved copies** is a feature Geo asked for in a comment on 1375 Q1: "I'd like to add a feature to save previously
   copied regions, like saved materials lists. Instead of a button next to the radial menu, you would access it as a
@@ -754,20 +770,19 @@ step 5's last build. The in-game checks of real blocks are in `real.sh`, which s
    which the full set passed, run by the server and the pack (see "Current setup"), with the guide's new sentences in
    Geo's wording.
 
-**Building Planner 0.10.0** (the bullet "Building Planner 0.10.0" in "Decisions" above: Geo's comment c4 on 1359 and
-1368 Q1 A). "Servers without Building Planner" in [building-planner.md](building-planner.md) is the design; each
-choice still Geo's carries an `OPEN:` mark naming its question in the request "Building Planner on other servers" or
-"Ghost blocks between servers", and the text describes the option the request recommends. A pick other than the
-recommended one on a question sends the design of what it changes back to Geo before the steps that build it; Q4 of
-"Building Planner on other servers" (singleplayer worlds) needs no step when Geo picks A. 0.10.0 starts once 0.9.0 is
-released, keeps protocol version 5, and changes nothing the server does.
+**Building Planner 0.10.0** (the bullet "Building Planner 0.10.0" in "Decisions" above: Geo's comment c4 on 1359,
+1368 Q1 A and Geo's answers in 1374). "Servers without Building Planner" in [building-planner.md](building-planner.md)
+is the design; each choice still Geo's carries an `OPEN:` mark naming its question in the request "Ghost blocks between
+servers" or "Building Planner 0.10.0: the radial line and your own worlds", and the text describes the option the
+request recommends. Steps 5 to 7 wait on those requests, as each says; the others can start once 0.9.0 is released.
+0.10.0 keeps protocol version 5 and changes nothing this server does.
 
 The steps come in this order, each needing the one before it, and each small enough for one child. 0.8.0's rules for
 commits, screenshots, the spec's "In-game checks" and the full set of in-game scripts apply; the full set runs once,
-on step 7's last build, before the release. The in-game checks of servers without Building Planner are in `local.sh`,
+on step 8's last build, before the release. The in-game checks of servers without Building Planner are in `local.sh`,
 which step 1 adds: it starts the dev server with the add-on left off its classpath (`start_server "$ADDON"
 server-without-addon`, as `step8.sh` does), both clients having the add-on, and restarts it with the add-on for the
-checks that need both kinds of server.
+checks that need both kinds of server. Those of the player's own worlds are in `own.sh`, which step 6 adds.
 
 1. **The local session** ("Which servers", "The local server", "The files", and undo in "What works there"). The rule
    at joining, `LocalServer`, `SessionLink` for `ClientSession` and `ListSync`, the files and their folders, a `hello`
@@ -779,23 +794,37 @@ checks that need both kinds of server.
    check at chunk load. Done when `LocalServerTest` covers them, `local.sh`'s checks of filled ghost blocks pass, the
    refused placement's included, and `filled.sh` passes unchanged.
 3. **What needs a server that runs Building Planner, and Litematica's extra blocks** ("What works there", "Litematica's
-   extra blocks"). Waits on Q3. "Place real blocks", Disable's turn and "Match ghost blocks" acting only with such a
-   server, and hook L7. Done when `DisableTurnTest` covers no turn during a local session, `local.sh`'s checks of
-   Disable, "Place real blocks" and a placement's extra block pass, and `step10.sh`'s Disable checks, `filled.sh` and
-   `real.sh` pass unchanged.
-4. **Material lists on the computer** (in "What works there"). Waits on Q2. Done when `LocalServerTest` covers the
-   lists kept and read back, `local.sh`'s list checks pass, and `step9.sh`'s list checks pass unchanged.
+   extra blocks"). "Place real blocks", Disable's turn and "Match ghost blocks" acting only with such a server, and
+   hook L7. Done when `DisableTurnTest` covers no turn during a local session, `local.sh`'s checks of Disable, "Place
+   real blocks" and a placement's extra block pass, and `step10.sh`'s Disable checks, `filled.sh` and `real.sh` pass
+   unchanged.
+4. **Material lists on the computer** (in "What works there"). Done when `LocalServerTest` covers the lists kept and
+   read back, `local.sh`'s list checks pass, and `step9.sh`'s list checks pass unchanged.
 5. **The copy between servers** ("Between servers"). Waits on Q1 and Q2 of "Ghost blocks between servers". The copy
    kept outside the session, through leaving, joining and changing dimension. Done when `local.sh`'s checks of the copy
    and of the server restarted with and without Building Planner pass, and `step9.sh`'s copy checks pass.
-6. **The chat line** (in "What works there"). Waits on Q1 of "Building Planner on other servers". Done when
-   `local.sh`'s check of the chat line passes, with the line in the wording proposed to Geo in step 7.
-7. **Texts and screenshots for Geo**: the chat line and the player guide's sentences on other servers go to Geo as
-   editable text, with every step's screenshots, the changes outlined in red, each text following the rule Geo approved
-   for the game's texts (985 Q1 A; 1313). Geo's version is built in, `local.sh` checks it exactly, and the full set of
-   in-game scripts runs on the last build. The same step sets the version 0.10.0, and the release request shows ghost
-   blocks on a server without Building Planner and the chat line, outlined in red.
-8. **The release**, once Geo approves it: the GitHub release `building-planner-0.10.0`, not latest, from the commit on
+6. **The player's own worlds** ("The player's own worlds", and the rule at joining in "Which servers"). Waits on Q2
+   and Q3 of "Building Planner 0.10.0: the radial line and your own worlds". `BuildingPlanner.onInitialize` registering
+   `ServerSync` in the game too, with the default cap and without a config file; hook S1 in the mixin config's common
+   section; the import only on a dedicated server; a world whose layer files can't be listed leaving the server part
+   off, without `hello`; `OldPlans` skipped in the player's own world; `off`, `ownsShapes` and `undo` asking only
+   whether a session runs; the spec's "Unverified" bullet on Effortless Building placing real blocks in a singleplayer
+   world removed; and the harness opening a copy of the dev server's world in Planner1's game
+   (`--quickPlaySingleplayer`) and to LAN (the driver's `lan`), with Planner2's game joining it at that port. Done when
+   `JoinRuleTest` covers the game's own world waiting for `hello`, `own.sh`'s checks pass, and `step6.sh`, `filled.sh`
+   and `real.sh` pass unchanged.
+7. **The line in the radial menu** (in "What works there"). Waits on Q1 of "Building Planner 0.10.0: the radial line
+   and your own worlds". Hook E42, `RadialLine`, and the line's key in the language file. Done when `RadialLineTest`
+   covers the row on screens 240, 256, 257 and 270 high, `local.sh`'s checks of the line and `own.sh`'s checks that it
+   doesn't show pass, and `step10.sh`'s radial menu checks pass unchanged, with the line in the wording proposed to Geo
+   in step 8.
+8. **Texts and screenshots for Geo**: the radial menu's line and the player guide's sentences on other servers and on
+   the player's own worlds go to Geo as editable text, with every step's screenshots, the changes outlined in red, each
+   text following the rule Geo approved for the game's texts (985 Q1 A; 1313). Geo's version is built in, `local.sh`
+   checks it exactly, and the full set of in-game scripts runs on the last build. The same step sets the version
+   0.10.0, and the release request shows ghost blocks on a server without Building Planner with the radial menu's line,
+   and ghost blocks a LAN guest shares in the player's own world, outlined in red.
+9. **The release**, once Geo approves it: the GitHub release `building-planner-0.10.0`, not latest, from the commit on
    which the full set passed, run by the pack, with the guide's new sentences in Geo's wording. The release request
    asks whether the server takes it too, since it changes nothing the server does.
 
