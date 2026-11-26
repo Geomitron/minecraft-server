@@ -9,10 +9,11 @@ import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 
 /**
- * The "Match ghost blocks" row in Effortless Building's "Visual Settings" screen (hook E36, see "Settings"): its label
- * after the screen's own rows, its switch where the screen puts its own, and the setting the screen's "Save" button
- * saves. The screen lays its rows out from the number of its labels, by the sizes below, which it keeps in constants
- * of its own ({@code ClientConfigScreen}'s {@code PANEL_W}, {@code ROW_H}, {@code FIELD_W} and {@code FIELD_H}).
+ * The "Match ghost blocks" row in Effortless Building's settings screen, "Settings" (hook E36, see "Settings"): its
+ * label after the screen's own rows, its switch where the screen puts its own, and the setting the screen's "Save"
+ * button saves. The screen lays its rows out from the number of its labels, by the sizes below, which it keeps in
+ * constants of its own ({@code ClientConfigScreen}'s {@code PANEL_W}, {@code ROW_H}, {@code FIELD_W} and
+ * {@code FIELD_H}).
  */
 public final class VisualSettingsRow {
 	/** The row's label; the screen shows its tooltip from the same key with {@code .tooltip} added. */

@@ -441,8 +441,8 @@ first_line="[Left-click: set the first corner][Esc/Right-click: cancel]"
 second_line="[Left-click: set the opposite corner][Esc/Right-click: cancel]"
 height_line="[Left-click: set the height][Esc/Right-click: cancel]"
 # Delete's lines with no marks, with marks, and during a hold of Left Ctrl that unmarks.
-delete_none="[Hold Left Control: mark][Hold Left Control + Left-click: mark a box][Esc/Right-click: close]"
-delete_marked="[Hold Left-click: erase][Hold Left Control: mark][Hold Left Control + Left-click: mark a box][Esc/Right-click: clear]"
+delete_none="[Hold Left Control: toggle mark][Hold Left Control + Left-click: mark a box][Esc/Right-click: close]"
+delete_marked="[Hold Left-click: erase][Hold Left Control: toggle mark][Hold Left Control + Left-click: mark a box][Esc/Right-click: clear]"
 delete_unmarking="[Hold Left-click: erase][Hold Left Control: unmark][Hold Left Control + Left-click: unmark a box][Esc/Right-click: clear]"
 # copy_button, delete_button and paste_button: a click on the radial menu's Copy, Delete or Paste button.
 copy_button() {
@@ -1740,7 +1740,7 @@ check "unmarked, with Delete still on" eval 'drv 1 "wait 10" > /dev/null && [[ $
 # With the sprint key on Right Control, Delete's line names it; then it goes back.
 drv 1 "bindkey key.sprint key.keyboard.right.control" "wait 2" > /dev/null
 check "with the sprint key rebound, Delete's line names Right Control" eval \
-	'[[ $(val 1 modehud) == "[Hold Right Control: mark][Hold Right Control + Left-click: mark a box][Esc/Right-click: close]" ]]'
+	'[[ $(val 1 modehud) == "[Hold Right Control: toggle mark][Hold Right Control + Left-click: mark a box][Esc/Right-click: close]" ]]'
 line_shot line-delete-rebound
 drv 1 "bindkey key.sprint key.keyboard.left.control" "wait 2" > /dev/null
 check "and with the key back, it names Left Control" eval '[[ $(val 1 modehud) == "$delete_none" ]]'

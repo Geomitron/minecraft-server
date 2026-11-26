@@ -961,9 +961,9 @@ public final class Driver implements ClientModInitializer {
 				ScreenProbe.openKeyBinds(mc);
 				return "ok";
 			}
-			case "visualsettings" -> {
-				// visualsettings: opens Effortless Building's "Visual Settings" screen, as its radial menu's button does.
-				EffortlessDriver.visualSettings(mc);
+			case "settings" -> {
+				// settings: opens Effortless Building's "Settings" screen, as its radial menu's button does.
+				EffortlessDriver.settings(mc);
 				return "ok";
 			}
 			case "settingrow" -> {

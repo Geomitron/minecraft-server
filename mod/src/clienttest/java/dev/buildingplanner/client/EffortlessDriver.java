@@ -36,8 +36,8 @@ final class EffortlessDriver {
 		BuildModes.CLIENT.setBuildMode(BuildModeEnum.valueOf(mode));
 	}
 
-	/** Opens Effortless Building's "Visual Settings" screen, as its radial menu's button does. */
-	static void visualSettings(Minecraft mc) {
+	/** Opens Effortless Building's "Settings" screen, as its radial menu's button does. */
+	static void settings(Minecraft mc) {
 		mc.setScreenAndShow(new ClientConfigScreen());
 	}
 

@@ -22,8 +22,8 @@ drv 2 "window 1920 1080 2" "wait 40" "notoasts" "shot compare-wrong-blocks-throu
 	> /dev/null
 
 # "Match ghost blocks" on, saved, as filled.sh turns it on.
-visual_settings() {
-	drv "$1" "close" "visualsettings" "await screen Visual Settings" "wait 10" > /dev/null
+settings_screen() {
+	drv "$1" "close" "settings" "await screen Settings" "wait 10" > /dev/null
 }
 match_switch() {
 	local text x y
@@ -38,7 +38,7 @@ save_settings() {
 	drv "$1" "await noscreen" "wait 5" > /dev/null
 }
 drv 1 "window 854 480 2" "wait 20" > /dev/null
-visual_settings 1
+settings_screen 1
 match_switch 1
 save_settings 1
 check "\"Match ghost blocks\" is saved on" grep -q "^match-ghost-turn=true" run/client1/config/buildingplanner-client.properties

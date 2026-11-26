@@ -3110,16 +3110,17 @@ world's spawn, where Planner2, who isn't an operator, may build:
   last changed the shapes). The driver's `wrongscan` times 20 scans with a ghost block at every position within 32
   blocks of Planner2's camera, then building their shapes whole and again after each of 20 1-block edits, and writes
   the figures to the checks' log.
-- "Match ghost blocks" ("Settings"): Planner1's "Visual Settings" (the driver's `visualsettings`, which opens it as the
-  radial menu's button does) has the row, off at first, and its label shows the tooltip; a real click on its switch
-  turns it on and saves nothing until a click on "Save", which saves `match-ghost-turn=true`. With it on, Planner1, in
-  Disable 3 blocks north of a ghost oak stair facing east and facing south, places oak stairs into it: Planner1's own
-  block, the server's world and Planner2 have the stair facing east, and the ghost block is gone on both clients. With
-  Planner1's ghost blocks hidden, a stair placed the same way into a third ghost stair facing east faces south and
-  leaves its ghost block. Turned
-  off and saved, a stair placed the same way into a second ghost stair facing east faces south and leaves its ghost
-  block. Turned on and saved again, the row shows it on once client 1 has restarted twice. "Visual Settings" is shot
-  without and with the row's tooltip (which covers the row), and Planner2's view of both stairs, at 854 by 480 and 1920 by 1080, GUI scale 2.
+- "Settings" and "Match ghost blocks" ("Settings"): in Planner1's radial menu, the button under undo shows the hover
+  text "Settings" alone (hook E39), and a real click on it opens the screen, titled "Settings". The screen (opened later
+  by the driver's `settings`, as the button does) has the row, off at first, and its label shows the tooltip; a real
+  click on its switch turns it on and saves nothing until a click on "Save", which saves `match-ghost-turn=true`. With
+  it on, Planner1, in Disable 3 blocks north of a ghost oak stair facing east and facing south, places oak stairs into
+  it: Planner1's own block, the server's world and Planner2 have the stair facing east, and the ghost block is gone on
+  both clients. With Planner1's ghost blocks hidden, a stair placed the same way into a third ghost stair facing east
+  faces south and leaves its ghost block. Turned off and saved, a stair placed the same way into a second ghost stair
+  facing east faces south and leaves its ghost block. Turned on and saved again, the row shows it on once client 1 has
+  restarted twice. The button's hover text is shot at 854 by 480, GUI scale 2, and "Settings" without and with the row's
+  tooltip (which covers the row), and Planner2's view of both stairs, at 854 by 480 and 1920 by 1080, GUI scale 2.
 
 `real.sh`, "Place real blocks" (proposed for 0.9.0), more than 16
 blocks from the world's spawn unless a check says otherwise, with Planner1 in survival (`/gamemode`) and its inventory

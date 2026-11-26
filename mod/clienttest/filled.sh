@@ -5,7 +5,7 @@
 # breaking a filled block brings none back; a paste onto built blocks changes nothing; a stair placed with "Match ghost
 # blocks" on faces as its ghost stair does and fills it, but only while ghost blocks show, and the setting stays as saved after the game restarts; and
 # ghost blocks saved over matching real blocks while the server ran without the add-on go once their chunk loads. Shots
-# of a wall half built, before and after, and of "Visual Settings", without and with the row's tooltip, and the stairs
+# of a wall half built, before and after, of "Settings", without and with the row's tooltip, and the stairs
 # placed with the setting on and off, at 854 by 480 and 1920 by 1080, GUI scale 2. Sourced by inside.sh, which provides drv, val, check,
 # use_click, start_server, stop_server, start_client, stop_client and $ADDON. Everything happens more than 16 blocks
 # from the world's spawn, where Planner2, who isn't an operator, may build.
@@ -227,14 +227,14 @@ check "erasing the ghost block over air takes it out of the light blue within ha
 	 echo "  the layer lost it at $erased_at, the shapes changed at $changed_at" >> /out/checks.log &&
 	 ((changed_at - erased_at <= 10))'
 
-# "Match ghost blocks" ("Settings"): the row in Effortless Building's "Visual Settings" screen, off at first, saved by
+# "Match ghost blocks" ("Settings"): the row in Effortless Building's "Settings" screen, off at first, saved by
 # the screen's "Save" button. With it on, Planner1, 3 blocks north of a ghost oak stair facing east at 220 -60 220 and
 # facing south, places oak stairs there in Disable, and the server's world, Planner2 and Planner1's own block face east
 # and fill the ghost block; with it off, a stair placed into a ghost stair facing east at 222 -60 220 faces south, as
 # Planner1 does, and leaves its ghost block. The setting is left on for the check after the game restarts, below.
-# visual_settings <client>: opens the client's "Visual Settings" screen, as its radial menu's button does.
-visual_settings() {
-	drv "$1" "close" "visualsettings" "await screen Visual Settings" "wait 10" > /dev/null
+# settings_screen <client>: opens the client's "Settings" screen, as its radial menu's button does.
+settings_screen() {
+	drv "$1" "close" "settings" "await screen Settings" "wait 10" > /dev/null
 }
 # match_row <client>: the "Match ghost blocks" row's switch on the open screen: its text, then its centre.
 match_row() {
@@ -265,8 +265,18 @@ server_has() {
 }
 client_config=run/client1/config/buildingplanner-client.properties
 drv 1 "window 854 480 2" "wait 20" > /dev/null
-visual_settings 1
-check "Planner1's \"Visual Settings\" has the row \"Match ghost blocks\", off at first" eval \
+# The radial menu's button under undo, which opens the screen, is named "Settings": with the pointer on it, 131 left
+# of the menu's middle and 13 below it, its hover text is "Settings" alone, shot, and a real click on it opens the
+# screen, titled "Settings".
+xdo 1 keydown Alt_L
+drv 1 "await screen Build Modes" "wait 10" > /dev/null
+xdo 1 mousemove --window %w $((427 - 131 * 2)) $((240 + 13 * 2))
+drv 1 "wait 10" "notoasts" "shot radial-settings-hover-854x480-gui2" > /dev/null
+check "the radial menu's button under undo is named \"Settings\" on hover" eval '[[ $(val 1 tooltips) == Settings ]]'
+xdo 1 click 1
+check "and a click on it opens the screen, titled \"Settings\"" drv 1 "await screen Settings" "wait 10"
+xdo 1 keyup Alt_L
+check "Planner1's \"Settings\" has the row \"Match ghost blocks\", off at first" eval \
 	'[[ $(match_row 1) == "OFF "* ]]'
 # label_hover: moves client 1's mouse onto the row's label, which shows its tooltip over the row.
 label_hover() {
@@ -274,20 +284,19 @@ label_hover() {
 	read -r left top right bottom < <(val 1 "drawnbox Match ghost blocks")
 	xdo 1 mousemove --window %w $(((left + right) / 2)) $(((top + bottom) / 2))
 }
-# visual_settings_shots <size>: "Visual Settings" with the mouse in a corner, then with the row's tooltip, which covers
-# the row.
-visual_settings_shots() {
+# settings_shots <size>: "Settings" with the mouse in a corner, then with the row's tooltip, which covers the row.
+settings_shots() {
 	xdo 1 mousemove --window %w 2 2
-	drv 1 "notoasts" "wait 5" "shot visual-settings-match-ghost-blocks-$1-gui2" > /dev/null
+	drv 1 "notoasts" "wait 5" "shot settings-match-ghost-blocks-$1-gui2" > /dev/null
 	label_hover
-	drv 1 "wait 5" "shot visual-settings-match-ghost-blocks-tooltip-$1-gui2" > /dev/null
+	drv 1 "wait 5" "shot settings-match-ghost-blocks-tooltip-$1-gui2" > /dev/null
 }
 label_hover
 check "the row's label shows its tooltip" eval 'drv 1 "wait 5" > /dev/null &&
 	[[ $(val 1 tooltips) == "Automatically flips and turns a block you place to match a ghost block you'"'"'re filling in" ]]'
-visual_settings_shots 854x480
+settings_shots 854x480
 drv 1 "window 1920 1080 2" "wait 20" > /dev/null
-visual_settings_shots 1920x1080
+settings_shots 1920x1080
 drv 1 "window 854 480 2" "wait 20" > /dev/null
 match_switch 1
 check "a click on the row's switch turns it on, and saves nothing yet" eval \
@@ -325,7 +334,7 @@ check "and leaves its ghost stair on both clients" eval 'drv 2 "wait 5" > /dev/n
 	both_layer 224 -60 220 minecraft:oak_stairs'
 keys 1 key n
 check "Planner1's ghost blocks show again" eval 'drv 1 "wait 20" > /dev/null && [[ $(val 1 ghosts) == shown* ]]'
-visual_settings 1
+settings_screen 1
 match_switch 1
 save_settings 1
 check "the switch turned off again and saved, the setting is off" grep -q "^match-ghost-turn=false" "$client_config"
@@ -339,7 +348,7 @@ check "and leaves its ghost stair on both clients" eval 'drv 2 "wait 5" > /dev/n
 	both_layer 222 -60 220 minecraft:oak_stairs'
 drv 2 "window 854 480 2" "notoasts" "wait 40" "shot match-ghost-blocks-placed-854x480-gui2" "wait 10" \
 	"window 1920 1080 2" "wait 40" "notoasts" "shot match-ghost-blocks-placed-1920x1080-gui2" "wait 10" > /dev/null
-visual_settings 1
+settings_screen 1
 match_switch 1
 save_settings 1
 check "turned on again and saved, for the restart" grep -q "^match-ghost-turn=true" "$client_config"
@@ -370,7 +379,7 @@ start_server "" server-again
 start_client 1
 start_client 2
 check "with the add-on back, both clients start a session" eval 'drv 1 "await session" && drv 2 "await session"'
-visual_settings 1
+settings_screen 1
 check "after the game restarts, \"Match ghost blocks\" is on, as saved" eval '[[ $(match_row 1) == "ON "* ]]'
 drv 1 "close" > /dev/null
 check "far from the built blocks, client 1 holds no copy of their column" \

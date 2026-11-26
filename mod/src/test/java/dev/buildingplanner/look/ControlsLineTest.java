@@ -245,13 +245,13 @@ class ControlsLineTest {
 
 	@Test
 	void deleteWithNoMarks() {
-		assertEquals(List.of("[Hold Left Control: mark][Hold Left Control + Left-click: mark a box]"
+		assertEquals(List.of("[Hold Left Control: toggle mark][Hold Left Control + Left-click: mark a box]"
 			+ "[Esc/Right-click: close]"), delete(new DeleteState(false, false, false, null), DEFAULT));
 	}
 
 	@Test
 	void deleteWithMarks() {
-		assertEquals(List.of("[Hold Left-click: erase][Hold Left Control: mark][Hold Left Control + Left-click: "
+		assertEquals(List.of("[Hold Left-click: erase][Hold Left Control: toggle mark][Hold Left Control + Left-click: "
 			+ "mark a box][Esc/Right-click: clear]"), delete(new DeleteState(true, false, false, null), DEFAULT));
 	}
 
@@ -281,7 +281,7 @@ class ControlsLineTest {
 
 	@Test
 	void atTheCapAWarningGoesAbove() {
-		assertEquals(List.of("Too many blocks", "[Hold Left-click: erase][Hold Left Control: mark]"
+		assertEquals(List.of("Too many blocks", "[Hold Left-click: erase][Hold Left Control: toggle mark]"
 			+ "[Hold Left Control + Left-click: mark a box][Esc/Right-click: clear]"),
 			delete(new DeleteState(true, false, true, null), DEFAULT));
 		assertEquals(List.of("Too many blocks"),
@@ -290,7 +290,7 @@ class ControlsLineTest {
 
 	@Test
 	void deletesActionsAreActions() {
-		assertEquals(List.of("erase", "mark", "mark a box", "clear"),
+		assertEquals(List.of("erase", "toggle mark", "mark a box", "clear"),
 			collect(ControlsLine.delete(new DeleteState(true, false, false, null), DEFAULT).getFirst(), Look.ACTION));
 		assertEquals(List.of("mark the box", "cancel"), collect(ControlsLine.delete(new DeleteState(true, false, false,
 			new DeleteBox(false, new int[] {1, 1, 1}, null)), DEFAULT).getFirst(), Look.ACTION));
@@ -298,7 +298,7 @@ class ControlsLineTest {
 
 	@Test
 	void deleteNamesTheSprintKeyAsBoundAndLeavesItOutUnbound() {
-		assertEquals(List.of("[Hold Left-click: erase][Hold Left Alt: mark][Hold Left Alt + Left-click: mark a "
+		assertEquals(List.of("[Hold Left-click: erase][Hold Left Alt: toggle mark][Hold Left Alt + Left-click: mark a "
 			+ "box][Esc/Right-click: clear]"), delete(new DeleteState(true, false, false, null), REBOUND));
 		assertEquals(List.of("[Hold Left-click: erase][Esc/Right-click: clear]"),
 			delete(new DeleteState(true, false, false, null), UNBOUND));
@@ -629,16 +629,16 @@ class ControlsLineTest {
 		assertEquals("[Left-click: set the opposite corner][Esc/Right-click: cancel][3 × 1 × 2]",
 			box(1, new int[] {3, 1, 2}, null).getLast());
 		// Delete's lines and messages / Nothing marked (Aim in 0.6.0)
-		assertEquals("[Hold Left Control: mark][Hold Left Control + Left-click: mark a box][Esc/Right-click: close]",
+		assertEquals("[Hold Left Control: toggle mark][Hold Left Control + Left-click: mark a box][Esc/Right-click: close]",
 			delete(new DeleteState(false, false, false, null), DEFAULT).getLast());
 		// Delete's lines and messages / With marks
-		assertEquals("[Hold Left-click: erase][Hold Left Control: mark][Hold Left Control + Left-click: mark a box][Esc/Right-click: clear]",
+		assertEquals("[Hold Left-click: erase][Hold Left Control: toggle mark][Hold Left Control + Left-click: mark a box][Esc/Right-click: clear]",
 			delete(new DeleteState(true, false, false, null), DEFAULT).getLast());
 		// Delete's lines and messages / A sweep or a box that unmarks
 		assertEquals("[Hold Left-click: erase][Hold Left Control: unmark][Hold Left Control + Left-click: unmark a box][Esc/Right-click: clear]",
 			delete(new DeleteState(true, true, false, null), DEFAULT).getLast());
 		// Delete's lines and messages / Holding the left button to erase (a bar above the line fills over the second)
-		assertEquals("[Hold Left-click: erase][Hold Left Control: mark][Hold Left Control + Left-click: mark a box][Esc/Right-click: clear]",
+		assertEquals("[Hold Left-click: erase][Hold Left Control: toggle mark][Hold Left Control + Left-click: mark a box][Esc/Right-click: clear]",
 			delete(new DeleteState(true, false, false, null), DEFAULT).getLast());
 		// Delete's lines and messages / A box being drawn, with its size
 		assertEquals("[Release Left-click: mark the box][Esc: cancel][10 × 4 × 10]",

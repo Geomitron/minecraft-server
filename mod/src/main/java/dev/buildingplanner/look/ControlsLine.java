@@ -150,9 +150,10 @@ public final class ControlsLine {
 	/**
 	 * Delete's lines (see "Delete": "Controls line"). While a box is drawn: a warning naming the limit it breaks, if one
 	 * does, then the release that marks or unmarks it, Esc, which cancels it, and its size. Otherwise: "Too many blocks"
-	 * once the marks reach the cap, then the hold that erases the marks while there are any, the sprint key held to mark
-	 * and held with the left click to mark a box (or to unmark, during a hold that unmarks), and Esc or the right click,
-	 * which clears the marks, or with none closes Delete. The sprint key's controls go while it has no key bound.
+	 * once the marks reach the cap, then the hold that erases the marks while there are any, the sprint key held to
+	 * toggle marks and held with the left click to mark a box (or to unmark, during a hold that unmarks), and Esc or
+	 * the right click, which clears the marks, or with none closes Delete. The sprint key's controls go while it has no
+	 * key bound.
 	 */
 	public static List<Line> delete(DeleteState state, Keys keys) {
 		List<Line> lines = new ArrayList<>(2);
@@ -176,7 +177,7 @@ public final class ControlsLine {
 			rects.add(hint(Translated.of(MODE + ".hold", Look.PLAIN, LEFT), DELETE + ".erase"));
 		}
 		if (keys.sprint() != null) {
-			rects.add(hint(held(keys.sprint()), state.unmarking() ? DELETE + ".unmark" : DELETE + ".mark"));
+			rects.add(hint(held(keys.sprint()), state.unmarking() ? DELETE + ".unmark" : DELETE + ".toggle_mark"));
 			rects.add(hint(Translated.of(COPY + ".plus", Look.PLAIN, held(keys.sprint()), LEFT),
 				state.unmarking() ? DELETE + ".unmark_box" : DELETE + ".mark_box"));
 		}

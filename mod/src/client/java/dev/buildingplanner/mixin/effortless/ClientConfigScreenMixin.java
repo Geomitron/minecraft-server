@@ -1,6 +1,7 @@
 package dev.buildingplanner.mixin.effortless;
 
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
+import dev.buildingplanner.client.SettingsName;
 import dev.buildingplanner.client.VisualSettingsRow;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
@@ -12,10 +13,13 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.ModifyArg;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * Hook E36: the "Match ghost blocks" row in Effortless Building's "Visual Settings" screen (see "Settings"). The screen
+ * Hook E39: Effortless Building's settings screen is titled "Settings", the title its constructor passes on read from
+ * Building Planner's key ({@link SettingsName}). Hook E36: the "Match ghost blocks" row in that screen (see
+ * "Settings"). The screen
  * lays out its rows, draws their labels and shows their tooltips from its list of label keys ({@code LABEL_KEYS}), so
  * the row's key added to that list in each of those methods gives the row its place, label and tooltip; {@code init}
  * then adds the row's switch, drawn as the screen's own ("ON" or "OFF", {@code onOff}), below which "Save" and
@@ -38,6 +42,12 @@ abstract class ClientConfigScreenMixin extends Screen {
 	@Shadow
 	private static String onOff(boolean value) {
 		throw new AssertionError();
+	}
+
+	@ModifyArg(method = "<init>", at = @At(value = "INVOKE",
+		target = "Lnet/minecraft/network/chat/Component;translatable(Ljava/lang/String;)Lnet/minecraft/network/chat/MutableComponent;"))
+	private static String buildingplanner$settingsTitle(String key) {
+		return SettingsName.key(key);
 	}
 
 	@ModifyExpressionValue(method = {"init", "extractRenderState", "renderRowTooltips"}, at = @At(value = "FIELD",

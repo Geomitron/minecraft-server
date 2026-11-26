@@ -280,7 +280,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		return config;
 	}
 
-	/** Whether "Match ghost blocks" is on, as the "Visual Settings" screen saved it (see "Settings"). */
+	/** Whether "Match ghost blocks" is on, as the "Settings" screen saved it (see "Settings"). */
 	static boolean matchGhost() {
 		return config != null && GhostMatch.on(config.get(GhostMatch.SETTING));
 	}
