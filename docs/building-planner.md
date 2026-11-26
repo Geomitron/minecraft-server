@@ -2398,8 +2398,7 @@ Proposed for 0.10.0, not built. Geo wants Building Planner to work as a client-s
 people don't need to see the player's ghost blocks (comment c4 on 1359), and picked "Yes, in a later version: there,
 your ghost blocks are saved on your computer and only you see them, and this server still shares them." (1368 Q1 A).
 Shapes place real blocks only on servers that run Building Planner (1368 Q2 A). For the player's own worlds, Geo picked
-"Yes, with ghost blocks shared with the world's LAN guests" (1374 Q4 C). Each choice still Geo's carries an `OPEN:`
-mark naming its question in the request "Building Planner 0.10.0: the radial line and your own worlds"; the text describes the option the request recommends.
+"Yes, with ghost blocks shared with the world's LAN guests" (1374 Q4 C). Geo approved the designs that follow in 1381.
 
 **Which servers.** At joining, the game checks the ten payloads as "When the server lacks the mod" describes. If the
 server takes none of them, the game starts a local session at once: Building Planner plays the server's part itself,
@@ -2458,11 +2457,10 @@ alone, except:
 - The material lists are kept on the computer for that server: "Last counted", the saved lists, the current list and
   the panel come back when the player returns (1374 Q2 A).
 - While the radial menu is open, a line above "Building Planner" in its corner says that only the player sees their
-  ghost blocks there (1374 Q1 C), proposed as "Only you see your ghost blocks here", in the wording Geo approves in
+  ghost blocks there (1374 Q1 C), reading "(client only)" (1381 c1), in the wording Geo approves in
   build step 8. Hook E42 draws it as Effortless Building draws the name below it: right-aligned 4 from the screen's
   right edge, with a shadow, one row (10) above the name, in the grey of the menu's mode descriptions
-  (`descriptionTextColor`, #888888 at 87% opacity) (`OPEN:` "Building Planner 0.10.0: the radial line and your own
-  worlds", Q1). The menu draws a hovered mode's description 100 below its middle, so on a screen up to 256 high in the
+  (`descriptionTextColor`, #888888 at 87% opacity) (1381 Q1 A). The menu draws a hovered mode's description 100 below its middle, so on a screen up to 256 high in the
   GUI's units (854 by 480 at GUI scale 2, 1280 by 720 or 1366 by 768 at GUI scale 3), where that description would
   cross the line's row, the line goes a row above the description's instead. The line doesn't show in the player's
   own world or on a server that runs Building Planner.
@@ -2481,8 +2479,7 @@ server keeps the lists. 0.10.0 changes nothing the server does and keeps protoco
 as after a rollback, the games of players with 0.10.0 would start local sessions there, drawing ghost blocks only they see.
 
 **The player's own worlds.** In a world of the player's own, singleplayer or opened to LAN, Building Planner works as
-on this server, its server part running inside the game (1374 Q4 C; `OPEN:` "Building Planner 0.10.0: the radial line
-and your own worlds", Q2):
+on this server, its server part running inside the game (1374 Q4 C, 1381 Q2 A):
 
 - `BuildingPlanner.onInitialize` registers `ServerSync` in the game too, so the game's own server runs the layer, undo,
   the lists and `PlaceTurns` from the world's start to its stop, through the same Fabric API events and payloads as a
@@ -2510,7 +2507,7 @@ and your own worlds", Q2):
   server part, which the game also runs, places nothing for them. With "Place real blocks" on, shapes and pastes place
   real blocks through Building Planner's server part by the rules of "Place real blocks": at most 2,000 blocks a shape
   and a second, within 64 blocks of the player's eyes, from the inventory in survival, and Ctrl+Z undoes only ghost
-  blocks (1372 Q5 B) (`OPEN:` "Building Planner 0.10.0: the radial line and your own worlds", Q3). Disable's turn and
+  blocks (1372 Q5 B) (1381 Q3 A). Disable's turn and
   "Match ghost blocks" work there as on this server.
 
 **Litematica's extra blocks.** Hook L7 shows Litematica's colour for an extra block inside the box of a placement of
