@@ -169,6 +169,17 @@ public final class ScreenProbe {
 		return boxes.isEmpty() ? "none" : String.join(" | ", boxes);
 	}
 
+	/**
+	 * The window box (left top right bottom: its text's own, one line high) of each string the last frame drew as plain
+	 * text that is {@code text}, separated by " | ", or none; as the radial menu's options' headings.
+	 */
+	static String drawnTextBoxes(Minecraft mc, String text) {
+		double scale = mc.getWindow().getGuiScale();
+		List<String> boxes = last.stream().filter(d -> d.text().equals(text))
+			.map(d -> box(scale, d.x(), d.y(), d.x() + d.width(), d.y() + FONT_HEIGHT)).toList();
+		return boxes.isEmpty() ? "none" : String.join(" | ", boxes);
+	}
+
 	/** Each string drawn in the last frame, separated by " | ". */
 	static String drawnTexts() {
 		return last.stream().map(Drawn::text).collect(Collectors.joining(" | "));

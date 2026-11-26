@@ -887,24 +887,23 @@ public final class Driver implements ClientModInitializer {
 			}
 			case "widget" -> {
 				// widget <n> <text>: the window position of the centre of the nth shown widget (from 0) on the open
-				// screen whose text starts with <text>, or none.
+				// screen whose text (a speed slider's heading) starts with <text>, or none.
 				int n = Integer.parseInt(a[1]);
 				String prefix = line.substring(a[0].length() + a[1].length() + 2);
 				for (GuiEventListener child : mc.gui.screen().children()) {
-					if (child instanceof AbstractWidget w && w.visible && w.getMessage().getString().startsWith(prefix)
-						&& n-- == 0) {
+					if (child instanceof AbstractWidget w && w.visible && label(w).startsWith(prefix) && n-- == 0) {
 						return scaled(mc, w.getX() + w.getWidth() / 2.0, w.getY() + w.getHeight() / 2.0);
 					}
 				}
 				return "none";
 			}
 			case "sliderat" -> {
-				// sliderat <ticks> <text>: the window position on the slider whose text starts with <text> that sets a gap
-				// of <ticks> ticks, where a vanilla slider takes a click at x as (x - (left + 4)) / (width - 8).
+				// sliderat <ticks> <text>: the window position on the slider whose heading starts with <text> that sets
+				// a gap of <ticks> ticks, where a vanilla slider takes a click at x as (x - (left + 4)) / (width - 8).
 				int ticks = Integer.parseInt(a[1]);
 				String prefix = line.substring(a[0].length() + a[1].length() + 2);
 				for (GuiEventListener child : mc.gui.screen().children()) {
-					if (child instanceof AbstractWidget w && w.getMessage().getString().startsWith(prefix)) {
+					if (child instanceof RepeatSlider w && label(w).startsWith(prefix)) {
 						return scaled(mc, w.getX() + 4 + RepeatSpeed.position(ticks) * (w.getWidth() - 8),
 							w.getY() + w.getHeight() / 2.0);
 					}
@@ -913,12 +912,15 @@ public final class Driver implements ClientModInitializer {
 			}
 			case "box" -> {
 				// box <text>: the window position, width and height of the first widget on the open screen whose text
-				// starts with <text>, for outlining it in a screenshot.
+				// (a speed slider's heading) starts with <text>, for outlining it in a screenshot; a speed slider's as
+				// it's drawn, which can fall between GUI pixels.
 				String prefix = line.substring(a[0].length() + 1);
 				double scale = mc.getWindow().getGuiScale();
 				for (GuiEventListener child : mc.gui.screen().children()) {
-					if (child instanceof AbstractWidget w && w.getMessage().getString().startsWith(prefix)) {
-						return scaled(mc, w.getX(), w.getY()) + " " + (int) (w.getWidth() * scale) + " "
+					if (child instanceof AbstractWidget w && label(w).startsWith(prefix)) {
+						double[] at = w instanceof RepeatSlider slider ? slider.drawnAt()
+							: new double[] {w.getX(), w.getY()};
+						return scaled(mc, at[0], at[1]) + " " + (int) (w.getWidth() * scale) + " "
 							+ (int) (w.getHeight() * scale);
 					}
 				}
@@ -1018,6 +1020,17 @@ public final class Driver implements ClientModInitializer {
 				// whose text is that text, separated by " | ", or none; as the held item's name and the mode's name.
 				return ScreenProbe.drawnBoxes(mc, line.substring("drawnbox ".length()));
 			}
+			case "drawntextbox" -> {
+				// drawntextbox <text>: the window box (left top right bottom) of each string the last frame drew as
+				// plain text that is that text, separated by " | ", or none; as the radial menu draws its options'
+				// headings.
+				return ScreenProbe.drawnTextBoxes(mc, line.substring("drawntextbox ".length()));
+			}
+			case "optionrow" -> {
+				// optionrow <section>: the window box (left top right bottom) of the open radial menu's row of three
+				// option buttons in that section (0 for the first), as the menu places them at its full size.
+				return EffortlessDriver.optionRow(mc, Integer.parseInt(a[1]));
+			}
 			case "ringat" -> {
 				// ringat <mode>: the window position on the open radial menu's ring segment of that build mode, 45 GUI
 				// pixels from the menu's middle along the segment's middle line, for pointing at it.
@@ -1103,8 +1116,9 @@ public final class Driver implements ClientModInitializer {
 				return String.valueOf(mc.player.getMainHandItem().getCount());
 			}
 			case "radialclear" -> {
-				// radialclear: "clear" when Building Planner's buttons in the open radial menu meet nothing of the menu's,
-				// the sliders, each other or the screen's edges, else each meeting.
+				// radialclear: "clear" when Building Planner's buttons, and its speed sliders and their headings while
+				// they show, in the open radial menu meet nothing of the menu's, each other or the screen's edges, else
+				// each meeting.
 				return EffortlessDriver.radialConflicts(mc.gui.screen());
 			}
 			case "buttons" -> {
@@ -1558,6 +1572,11 @@ public final class Driver implements ClientModInitializer {
 			}
 		}
 		return String.join(" | ", boxes);
+	}
+
+	/** A widget's text, as the commands that find widgets by it read it: a speed slider's heading, which names it. */
+	private static String label(AbstractWidget w) {
+		return w instanceof RepeatSlider slider ? slider.heading().getString() : w.getMessage().getString();
 	}
 
 	private static String scaled(Minecraft mc, double x, double y) {

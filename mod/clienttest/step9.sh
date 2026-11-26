@@ -220,8 +220,8 @@ check "and N shows them" drv 1 "await block 4 -59 3 minecraft:glowstone"
 # radial_shot <width> <height> <gui scale> <name> opens the menu in a window of that size at that GUI scale, with the
 # pointer over "Single" (about 33 right of the menu's middle and 35 above it) so its name and description show, and
 # shoots it as <name>, and 1 and 2 frames after it opens as <name>-frame1 and <name>-frame2, which it keeps in frames.
-# The buttons' boxes go to the log, for outlining. It fails unless the buttons meet nothing the menu draws, the
-# sliders, each other or the screen's edges.
+# The buttons' boxes go to the log, for outlining. It fails unless the buttons meet nothing the menu draws, each other
+# or the screen's edges; the speed sliders show only in Single, where step10.sh checks them with the buttons.
 radial_shot() {
 	local result
 	drv 1 "ebmode CIRCLE" "window $1 $2 $3" "wait 20" "notoasts" "menuframes arm $4" > /dev/null

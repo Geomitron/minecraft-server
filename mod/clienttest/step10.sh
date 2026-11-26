@@ -180,37 +180,96 @@ for mode in LINE DISABLED; do
 	check "holding use in $mode mode sends no edit" eval '[[ $(val 1 holdlog) == *"edits=0 "* ]]'
 done
 
-# The radial menu's sliders, opened with the menu's key (left Alt) held: a click on the placing slider sets 10 blocks
-# a second (2 ticks), and a drag of the erasing slider's handle sets 2 a second (10 ticks).
+# The radial menu's sliders, opened with the menu's key (left Alt) held, show only while Single is the mode, under
+# the headings "Build speed" and "Break speed", where Effortless Building puts a mode's first and second sections of
+# options: a click on the placing slider sets 10 blocks a second (2 ticks), and a drag of the erasing slider's handle
+# sets 2 a second (10 ticks).
 drv 1 "ebmode SINGLE" "cmd tp @s 20 -58 -5 0 30" "wait 20" "notoasts" > /dev/null
 
-# radial_at <width> <height> <gui scale>: opens the radial menu in a window of that size at that GUI scale, with the
-# pointer over "Single" (about 33 right of the menu's middle and 35 above it) so its description shows 100 below the
-# middle, and shoots it as radial-<width>x<height>. The sliders' boxes go to the log. It fails unless both sliders end
-# above the description and start on the screen.
+# radial_at <width> <height> <gui scale>: in a window of that size at that GUI scale, opens the radial menu in Circle,
+# whose two sections of options, "Start Point" and "Filling", show where the menu puts a mode's first and second, and
+# then in Single, with the pointer over "Single" (about 33 right of the menu's middle and 35 above it) so its name and
+# description show, and shoots it as radial-single-<width>x<height>-gui<scale>. The boxes go to the log. It fails
+# unless in Single "Build speed" and "Break speed" start where Circle's two headings start, each slider starts where
+# its section's row of option buttons starts, 20 high on the row and at least as wide as three buttons' row, and the
+# sliders, their headings and Building Planner's buttons meet nothing (the driver's radialclear).
 radial_at() {
-	local bx by bw bh kx ky kw kh
-	drv 1 "window $1 $2 $3" "wait 20" > /dev/null
+	local start filling row0 row1 build brk clear bx by bw bh kx ky kw kh l0 t0 r0 b0 l1 t1 r1 b1
+	drv 1 "window $1 $2 $3" "ebmode CIRCLE" "wait 20" > /dev/null
 	xdo 1 keydown Alt_L
 	drv 1 "await screen Build Modes" "wait 10" > /dev/null
+	start=$(val 1 "drawntextbox Start Point")
+	filling=$(val 1 "drawntextbox Filling")
+	row0=$(val 1 "optionrow 0")
+	row1=$(val 1 "optionrow 1")
+	xdo 1 keyup Alt_L
+	drv 1 "await noscreen" "ebmode SINGLE" "wait 5" > /dev/null
+	xdo 1 keydown Alt_L
+	drv 1 "await screen Build Modes" > /dev/null
 	xdo 1 mousemove --window %w $(($1 / 2 + 33 * $3)) $(($2 / 2 - 35 * $3))
-	drv 1 "wait 10" "notoasts" "shot radial-$1x$2" > /dev/null
+	drv 1 "wait 10" "notoasts" "shot radial-single-$1x$2-gui$3" > /dev/null
+	build=$(val 1 "drawntextbox Build speed")
+	brk=$(val 1 "drawntextbox Break speed")
 	read -r bx by bw bh < <(val 1 "box Build speed")
 	read -r kx ky kw kh < <(val 1 "box Break speed")
-	echo "  at $1x$2, GUI scale $3: the sliders' boxes $bx $by $bw $bh and $kx $ky $kw $kh" >> /out/checks.log
+	clear=$(val 1 radialclear)
 	xdo 1 keyup Alt_L
 	drv 1 "await noscreen" > /dev/null
-	((ky + kh <= $2 / 2 + 100 * $3 && bx >= 0 && kx >= 0))
+	echo "  at $1x$2, GUI scale $3: in Circle, the headings $start and $filling, the rows $row0 and $row1;" \
+		"in Single, the headings $build and $brk, the sliders $bx $by $bw $bh and $kx $ky $kw $kh;" \
+		"$clear" >> /out/checks.log
+	read -r l0 t0 r0 b0 <<< "$row0"
+	read -r l1 t1 r1 b1 <<< "$row1"
+	[[ $start != none && $filling != none && ${build% * *} == "${start% * *}" && ${brk% * *} == "${filling% * *}" ]] &&
+		((bx == l0 && by == t0 && bh == b0 - t0 && bw >= r0 - l0)) &&
+		((kx == l1 && ky == t1 && kh == b1 - t1 && kw >= r1 - l1)) && [[ $clear == clear ]]
 }
-check "the sliders end above a mode's description and stay on the screen" radial_at 854 480 2
+check "in Single, the headings and sliders sit as a mode's first and second sections, and meet nothing, at 854 by 480" \
+	radial_at 854 480 2
+check "and at 1920 by 1080, GUI scale 2" radial_at 1920 1080 2
 check "and at GUI scale 4" radial_at 1920 1080 4
-drv 1 "window 854 480 2" "wait 20" > /dev/null
 
-# The menu's buttons' names, which texts lists after the sliders' labels.
+# The menu's buttons' names, which texts lists after the sliders' speeds.
 buttons="Show or hide ghost blocks | Copy | Paste | Delete | Block mix | Material list | Material lists"
+# no_sliders_in <mode> [<shot>]: opens the menu in that mode with the pointer on its segment, so its name and
+# description show, and shoots it as <shot>, if given. It fails unless the menu's widgets are Building Planner's buttons
+# alone and it draws neither heading.
+no_sliders_in() {
+	local x y texts drawn
+	drv 1 "ebmode $1" "wait 5" > /dev/null
+	xdo 1 keydown Alt_L
+	drv 1 "await screen Build Modes" > /dev/null
+	read -r x y < <(val 1 "ringat $1")
+	xdo 1 mousemove --window %w "$x" "$y"
+	drv 1 "wait 10" "notoasts" > /dev/null
+	[[ -z ${2:-} ]] || drv 1 "shot $2" > /dev/null
+	texts=$(val 1 texts)
+	drawn=$(val 1 drawntexts)
+	xdo 1 keyup Alt_L
+	drv 1 "await noscreen" > /dev/null
+	echo "  in $1: $texts; drawn: $drawn" >> /out/checks.log
+	[[ $texts == "$buttons" && $drawn != *"Build speed"* && $drawn != *"Break speed"* ]]
+}
+check "in Cube no slider shows" no_sliders_in CUBE radial-cube-1920x1080-gui4
+drv 1 "window 854 480 2" "wait 20" > /dev/null
+check "nor in Disable" no_sliders_in DISABLED
+# Choosing Line in the open menu, by a click on its segment, hides them at once, and the menu stays open.
+drv 1 "ebmode SINGLE" "wait 5" > /dev/null
 xdo 1 keydown Alt_L
-check "the radial menu shows both sliders at their first settings" eval 'drv 1 "await screen Build Modes" > /dev/null &&
-	[[ $(val 1 texts) == "Build speed: 5 blocks/s | Break speed: 3.33 blocks/s | $buttons" ]]'
+check "the radial menu shows both sliders at their first settings, only their speeds" eval \
+	'drv 1 "await screen Build Modes" > /dev/null && [[ $(val 1 texts) == "5 blocks/s | 3.33 blocks/s | $buttons" ]]'
+read -r x y < <(val 1 "ringat LINE")
+xdo 1 mousemove --window %w "$x" "$y"
+drv 1 "wait 5" > /dev/null
+xdo 1 click 1
+drv 1 "wait 5" > /dev/null
+check "choosing Line in the open menu hides them" eval '[[ $(val 1 ebmode) == LINE && $(val 1 texts) == "$buttons" &&
+	$(val 1 drawntexts) != *"Build speed"* ]] && drv 1 "await screen Build Modes" > /dev/null'
+xdo 1 mousemove --window %w 5 5
+xdo 1 keyup Alt_L
+drv 1 "await noscreen" "ebmode SINGLE" "wait 5" > /dev/null
+xdo 1 keydown Alt_L
+drv 1 "await screen Build Modes" > /dev/null
 read -r x y < <(val 1 "sliderat 2 Build speed")
 xdo 1 mousemove --window %w "$x" "$y" click 1
 read -r x y < <(val 1 "sliderat 6 Break speed")
@@ -218,7 +277,7 @@ read -r x2 y2 < <(val 1 "sliderat 10 Break speed")
 xdo 1 mousemove --window %w "$x" "$y" mousedown 1 mousemove --window %w $(((x + x2) / 2)) "$y" sleep 0.2 \
 	mousemove --window %w "$x2" "$y2" sleep 0.2 mouseup 1
 check "the click and the drag set them to 10 and 2 blocks a second" \
-	eval '[[ $(val 1 texts) == "Build speed: 10 blocks/s | Break speed: 2 blocks/s | $buttons" ]]'
+	eval '[[ $(val 1 texts) == "10 blocks/s | 2 blocks/s | $buttons" ]]'
 xdo 1 mousemove --window %w 600 300
 drv 1 "wait 10" "shot radial-moved" > /dev/null
 xdo 1 keyup Alt_L
@@ -261,10 +320,10 @@ check "for 15 seconds after Planner1 joins beside ghost blocks, Litematica's sta
 	 echo "  status panel: $panel" >> /out/checks.log && [[ $panel =~ ^drawn\ 0\ of\ [0-9]+\ ticks$ ]] &&
 	 (($(val 1 "countblocks 2 40 -59 5 minecraft:stone_bricks") > 0))'
 check "after a restart, hold to repeat keeps both settings" eval '[[ $(val 1 repeat) == "place=2 erase=10" ]]'
-drv 1 "cmd tp @s 20 -58 -5 0 30" "wait 20" > /dev/null
+drv 1 "ebmode SINGLE" "cmd tp @s 20 -58 -5 0 30" "wait 20" > /dev/null
 xdo 1 keydown Alt_L
 check "and so do the sliders" eval 'drv 1 "await screen Build Modes" > /dev/null &&
-	[[ $(val 1 texts) == "Build speed: 10 blocks/s | Break speed: 2 blocks/s | $buttons" ]]'
+	[[ $(val 1 texts) == "10 blocks/s | 2 blocks/s | $buttons" ]]'
 xdo 1 keyup Alt_L
 drv 1 "await noscreen" "ebmode SINGLE" > /dev/null
 check "holding use after the restart sends an edit 4 ticks after it goes down, then every 2 ticks" hold_at 3 use 2
@@ -281,7 +340,7 @@ for slider in "Build speed" "Break speed"; do
 		mousemove --window %w $((x2 + 4)) "$y2" sleep 0.2 mouseup 1
 done
 check "both sliders now read 20 blocks a second" \
-	eval '[[ $(val 1 texts) == "Build speed: 20 blocks/s | Break speed: 20 blocks/s | $buttons" ]]'
+	eval '[[ $(val 1 texts) == "20 blocks/s | 20 blocks/s | $buttons" ]]'
 xdo 1 keyup Alt_L
 drv 1 "await noscreen" "ebmode SINGLE" > /dev/null
 check "hold to repeat takes a repeat every tick" eval '[[ $(val 1 repeat) == "place=1 erase=1" ]]'

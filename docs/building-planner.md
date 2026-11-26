@@ -1075,7 +1075,7 @@ end 23 below it.
 **The sliders.** The sliders sit where a mode's own options sit, as "Build speed" and "Break speed" are Single's
 options (Geo's comment c7 on 1359: "displayed just like the mode-specific controls for the cube mode's "filling"
 section (with that header and the controls under it, in that position)"). Effortless Building draws each section of
-a mode's options (`RadialMenu.extractRenderState`, `drawTexts`) as a heading in `optionTextColor` (#EEEEEE),
+a mode's options (`RadialMenu.extractRenderState`, `drawTexts`) as a heading in `optionTextColor` (`0xeeeeeeff`),
 left-aligned 105 × the opening factor − 9 right of the middle, with the section's buttons in a row under it, their
 middles 26 apart from 105 right of the middle. The first section's heading is 37 above the middle and its buttons'
 middles 13 above it, and each next section is 39 lower. Cube's "Filling" is its only section, with three buttons, and
@@ -1230,15 +1230,14 @@ and turns it off at once, saying "Block mix off." when the mix was on, and leave
 "Cancel" and Escape leave the mix as it was, or as "Clear Mix" left it. Opened while the mix is on, the screen shows the
 mix as it is, to change it. The three buttons share the row's width.
 
-While the mix applies, a panel at the right edge of the screen (`MixPanel`, drawn through `HudElementRegistry`),
-centred top to bottom on a dark see-through box, shows the heading "Block mix", then each of the mix's blocks as its
-icon and its percentage ("80%"), then the line "B: Edit mix", with the mix key as the player has bound it. The box is
-as wide as its widest line. The whole panel, like the radial menu's
-slider labels, draws at the smallest size at or above 70% of the game's at which each of the font's pixels covers a
-whole number of screen pixels (`SmallText`), since at 70% they come out uneven and hard to read: ceil(GUI scale × 0.7)
-/ GUI scale, which is full size at GUI scales 1 to 3, 75% at 4, 80% at 5 and 5/6 at 6. It hides while the mix doesn't
-apply (`MixRule`), while a screen is open, and while
-the game's HUD is hidden (F1). Without Effortless Building, whose mode the rule reads, it never shows.
+While the mix applies, a panel at the right edge of the screen (`MixPanel`, drawn through `HudElementRegistry`), centred
+top to bottom on a dark see-through box, shows the heading "Block mix", then each of the mix's blocks as its icon and
+its percentage ("80%"), then the line "B: Edit mix", with the mix key as the player has bound it. The box is as wide as
+its widest line. The whole panel draws at the smallest size at or above 70% of the game's at which each of the font's
+pixels covers a whole number of screen pixels (`SmallText`), since at 70% they come out uneven and hard to read:
+ceil(GUI scale × 0.7) / GUI scale, which is full size at GUI scales 1 to 3, 75% at 4, 80% at 5 and 5/6 at 6. It hides
+while the mix doesn't apply (`MixRule`), while a screen is open, and while the game's HUD is hidden (F1). Without
+Effortless Building, whose mode the rule reads, it never shows.
 
 ### Copy and paste
 
@@ -2626,18 +2625,17 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
 - With ghost blocks hidden, a shape shows them again, then draws, with its message the first time only and never
   "Ghost blocks shown.".
 - Hidden ghost blocks stay hidden after a restart, until N shows them.
-- At 854 by 480, GUI scale 2, and at 1920 by 1080, GUI scales 2 and 4, the seven buttons meet nothing the menu draws
-  in any mode (its ring, buttons, mode options, mode names, descriptions and corner text), the sliders, each other or
-  the screen's edges (the driver's `radialclear`), in their slots (the driver's `slots`: "Show or hide ghost blocks"
-  under the wrench, Copy, Paste and Delete in the row above it, "Block mix", "Material list" and "Material lists" in
-  the row above that), each with its hover text; each is shot, with the buttons' boxes in the log, and so is Delete's
-  hover text. With the pointer on "Show or hide ghost blocks", its hover text is the frame's only tooltip, with no
-  "Functional Settings" (hook E34), for Planner1 an operator and, once Planner1 makes Planner2 one and itself none,
-  not; Planner2 then makes Planner1 an operator again (the driver's `tooltips` and `operator`). Shots taken 1 and 2
-  frames after the menu opens show the buttons nearer the middle and smaller than when it's open, as the menu's own
-  are. With
-  Effortless Building's mode Line, no mode segment shows selected while the copy is at the aim or a box is drawn, and
-  Paste, Copy, "Material list" or Delete does; with the box ended, Line's segment does, and no button.
+- At 854 by 480, GUI scale 2, and at 1920 by 1080, GUI scales 2 and 4, the seven buttons meet nothing the menu draws in
+  any mode (its ring, buttons, mode options, mode names, descriptions and corner text), each other or the screen's edges
+  (the driver's `radialclear`), in Circle, where the sliders don't show, in their slots (the driver's `slots`: "Show or
+  hide ghost blocks" under the wrench, Copy, Paste and Delete in the row above it, "Block mix", "Material list" and
+  "Material lists" in the row above that), each with its hover text; each is shot, with the buttons' boxes in the log,
+  and so is Delete's hover text. With the pointer on "Show or hide ghost blocks", its hover text is the frame's only
+  tooltip, with no "Functional Settings" (hook E34), for Planner1 an operator and, once Planner1 makes Planner2 one and
+  itself none, not; Planner2 then makes Planner1 an operator again (the driver's `tooltips` and `operator`). Shots taken
+  1 and 2 frames after the menu opens show the buttons nearer the middle and smaller than when it's open, as the menu's
+  own are. With Effortless Building's mode Line, no mode segment shows selected while the copy is at the aim or a box is
+  drawn, and Paste, Copy, "Material list" or Delete does; with the box ended, Line's segment does, and no button.
 - The menu's corner text reads "Building Planner", and Controls shows Building Planner's keys, the copy's eight among
   them, and Effortless Building's under the "Building Planner" heading, sorted by name as Controls sorts them, with no
   raw key name;
@@ -2991,10 +2989,15 @@ the row; the checks on the row count the blocks the edits changed, not the edits
   each edit put a ghost block in a new block of the row, on both clients, and no real block.
 - Holding attack over a row filled with ghost blocks sends an edit when the button goes down and then one every 6
   ticks, and each edit erased the ghost block of a new block of the row, on both clients, leaving the real blocks.
-- At GUI scale 2 and, in a window of 1920 by 1080, at 4, the radial menu's sliders end above the description of the
-  mode under the pointer, and start on the screen; each is shot.
-- The radial menu, opened with left Alt held, shows both sliders at their first settings ("Build speed: 5 blocks/s",
-  "Break speed: 3.33 blocks/s"). A click on the build slider sets it to 10 blocks a second and a drag on the break
+- In Single, at 854 by 480, GUI scale 2, and at 1920 by 1080, GUI scales 2 and 4, the radial menu's headings "Build
+  speed" and "Break speed" start where Circle's "Start Point" and "Filling" start (the driver's `drawntextbox`), each
+  slider starts where its section's row of option buttons starts (`optionrow`), 20 high on the row and at least as
+  wide as its three buttons, and the sliders, their headings and Building Planner's buttons meet nothing the menu
+  draws in Single, each other or the screen's edges (`radialclear`); each is shot with the pointer over "Single". In
+  Cube and in Disable the menu shows no slider and draws neither heading; Cube's is shot at 1920 by 1080, GUI scale 4.
+  Choosing Line in the open menu, with a click on its segment, hides the sliders at once.
+- The radial menu, opened with left Alt held, shows both sliders at their first settings, only their speeds ("5
+  blocks/s" and "3.33 blocks/s"). A click on the build slider sets it to 10 blocks a second and a drag on the break
   slider sets it to 2; hold to repeat takes both at once, and Building Planner's client config keeps them. Holding use
   then sends an edit 4 ticks after the button goes down and then every 2 ticks, and holding attack one every 10. After
   a restart the sliders show the same settings, and holding use still repeats every 2 ticks.

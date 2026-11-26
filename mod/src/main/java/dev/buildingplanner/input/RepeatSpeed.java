@@ -15,23 +15,32 @@ public enum RepeatSpeed {
 	 * The use button. Vanilla 26.3 sets {@code Minecraft.rightClickDelay} to 4 in {@code startUseItem}, counts it down
 	 * once a tick, and uses again when it reaches 0.
 	 */
-	PLACING("place-repeat-ticks", 4),
+	PLACING("place-repeat-ticks", 4, "buildingplanner.ui.radial.build_speed"),
 	/**
 	 * The attack button. Vanilla 26.3 sets {@code MultiPlayerGameMode.destroyDelay} to 5 after a block is destroyed,
 	 * counts it down in {@code continueDestroyBlock} on 5 ticks, and destroys again on the next.
 	 */
-	ERASING("erase-repeat-ticks", 6);
+	ERASING("erase-repeat-ticks", 6, "buildingplanner.ui.radial.break_speed");
 
 	public static final int FASTEST = 1;
 	public static final int SLOWEST = 20;
+	/** The text a slider shows, its speed in blocks a second ({@link #blocksPerSecond}): "5 blocks/s". */
+	public static final String SPEED_TEXT = "buildingplanner.ui.radial.speed";
 	private static final int TICKS_A_SECOND = 20;
 
 	private final String key;
 	private final int firstTicks;
+	private final String heading;
 
-	RepeatSpeed(String key, int firstTicks) {
+	RepeatSpeed(String key, int firstTicks, String heading) {
 		this.key = key;
 		this.firstTicks = firstTicks;
+		this.heading = heading;
+	}
+
+	/** The key of the heading over the speed's slider: "Build speed" or "Break speed". */
+	public String heading() {
+		return heading;
 	}
 
 	/** The ticks between repeats a player has before they move the slider. */

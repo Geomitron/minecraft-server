@@ -131,15 +131,31 @@ final class EffortlessDriver {
 	}
 
 	/**
+	 * The window box (left top right bottom) of the open radial menu's row of three option buttons in {@code section}
+	 * (0 for the first), as Effortless Building 4.3's {@code RadialMenu} places them at its full size: 20 across, their
+	 * middles 26 apart from 105 right of the middle, the row's middle 13 above the middle and 39 lower for each next
+	 * section.
+	 */
+	static String optionRow(Minecraft mc, int section) {
+		Screen screen = mc.gui.screen();
+		double scale = mc.getWindow().getGuiScale();
+		double mx = screen.width / 2.0;
+		double y = screen.height / 2.0 - 13 + 39 * section;
+		return (int) ((mx + 95) * scale) + " " + (int) ((y - 10) * scale) + " " + (int) ((mx + 167) * scale) + " "
+			+ (int) ((y + 10) * scale);
+	}
+
+	/**
 	 * What Building Planner's buttons in the open radial menu meet, as "clear" or each meeting: the screen's edges,
-	 * each other, the speed sliders, and everything Effortless Building 4.3's {@code RadialMenu} draws, wherever the
-	 * pointer is and whichever mode is chosen. Its numbers are that class's: the ring's outer edge 65 from the middle,
-	 * the side buttons 20 across at {@code buttonDistance} 105, the left-hand ones in rows 13 above and below the
-	 * middle (but for "Functional Settings" under the wrench, which hook E34 leaves out during a session), each mode's
-	 * options at 105 + 26 j right of the middle in rows -13 + 39 i, with their names 96 right and -37 + 39 i down, a
-	 * hovered mode's name 75 out along its slice, as {@code drawTexts} places it, its description 100 below the middle,
-	 * and the "Effortless Building" mark in the bottom right corner. The menu has reached its full size, as it does a
-	 * moment after it opens.
+	 * each other, the speed sliders and their headings, and everything Effortless Building 4.3's {@code RadialMenu}
+	 * draws, wherever the pointer is and whichever mode is chosen. While the sliders show, the same for them and their
+	 * headings, but for the modes' options: they show only in Single, which has none. Its numbers are that class's:
+	 * the ring's outer edge 65 from the middle, the side buttons 20 across at {@code buttonDistance} 105, the left-hand
+	 * ones in rows 13 above and below the middle (but for "Functional Settings" under the wrench, which hook E34 leaves
+	 * out during a session), each mode's options at 105 + 26 j right of the middle in rows -13 + 39 i, with their names
+	 * 96 right and -37 + 39 i down, a hovered mode's name 75 out along its slice, as {@code drawTexts} places it, its
+	 * description 100 below the middle, and the "Effortless Building" mark in the bottom right corner. The menu has
+	 * reached its full size, as it does a moment after it opens.
 	 */
 	static String radialConflicts(Screen screen) {
 		Font font = Minecraft.getInstance().font;
@@ -149,8 +165,16 @@ final class EffortlessDriver {
 		int iy = (int) my;
 		List<Box> ours = new ArrayList<>();
 		List<Box> theirs = new ArrayList<>();
+		List<Box> sliders = new ArrayList<>();
 		for (GuiEventListener child : screen.children()) {
-			if (child instanceof AbstractWidget w && w.visible) {
+			if (child instanceof RepeatSlider slider && slider.visible) {
+				String heading = slider.heading().getString();
+				int[] at = slider.headingAt();
+				sliders.add(new Box("the slider under " + heading, slider.getX(), slider.getY(),
+					slider.getX() + slider.getWidth(), slider.getY() + slider.getHeight()));
+				sliders.add(new Box("the heading " + heading, at[0], at[1], at[0] + font.width(heading),
+					at[1] + font.lineHeight));
+			} else if (child instanceof AbstractWidget w && w.visible) {
 				(w instanceof RadialButton ? ours : theirs).add(new Box(w.getMessage().getString(), w.getX(), w.getY(),
 					w.getX() + w.getWidth(), w.getY() + w.getHeight()));
 			}
@@ -198,9 +222,24 @@ final class EffortlessDriver {
 		int cx = screen.width - font.width(credits) - 4;
 		theirs.add(new Box("the Effortless Building mark", cx, screen.height - 10, cx + font.width(credits),
 			screen.height - 10 + font.lineHeight));
+		List<Box> buttonsMeet = new ArrayList<>(theirs);
+		buttonsMeet.addAll(sliders);
+		List<Box> slidersMeet = theirs.stream().filter(box -> !box.what().contains("'s option")).toList();
 		List<String> meetings = new ArrayList<>();
-		for (int k = 0; k < ours.size(); k++) {
-			Box box = ours.get(k);
+		meetings(screen, ours, buttonsMeet, meetings);
+		meetings(screen, sliders, slidersMeet, meetings);
+		return meetings.isEmpty() ? "clear" : String.join("; ", meetings);
+	}
+
+	/**
+	 * Adds to {@code meetings} each of {@code boxes} that leaves the screen or meets the menu's ring, another of
+	 * {@code boxes}, or any of {@code others}.
+	 */
+	private static void meetings(Screen screen, List<Box> boxes, List<Box> others, List<String> meetings) {
+		double mx = screen.width / 2.0;
+		double my = screen.height / 2.0;
+		for (int k = 0; k < boxes.size(); k++) {
+			Box box = boxes.get(k);
 			if (box.left() < 0 || box.top() < 0 || box.right() > screen.width || box.bottom() > screen.height) {
 				meetings.add(box + " leaves the screen");
 			}
@@ -209,17 +248,16 @@ final class EffortlessDriver {
 			if (Math.hypot(nearX - mx, nearY - my) < 65) {
 				meetings.add(box + " meets the ring");
 			}
-			for (Box other : theirs) {
+			for (Box other : others) {
 				if (box.meets(other)) {
 					meetings.add(box + " meets " + other);
 				}
 			}
-			for (Box other : ours.subList(k + 1, ours.size())) {
+			for (Box other : boxes.subList(k + 1, boxes.size())) {
 				if (box.meets(other)) {
 					meetings.add(box + " meets " + other);
 				}
 			}
 		}
-		return meetings.isEmpty() ? "clear" : String.join("; ", meetings);
 	}
 }

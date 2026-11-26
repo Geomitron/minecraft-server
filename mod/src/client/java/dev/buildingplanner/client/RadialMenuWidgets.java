@@ -3,7 +3,6 @@ package dev.buildingplanner.client;
 import dev.buildingplanner.input.BoxPurpose;
 import dev.buildingplanner.input.MouseMode;
 import dev.buildingplanner.input.RepeatSpeed;
-import dev.buildingplanner.look.SmallText;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BooleanSupplier;
@@ -20,13 +19,12 @@ import net.minecraft.resources.Identifier;
  * Building Planner's widgets in Effortless Building's radial menu (hooks E11, E12, E16, E19 and E20), placed from the
  * menu's middle as its own buttons are. The menu's left-hand buttons (the wrench, undo and redo, and the row under
  * them) are 20 across with their middles 26 apart, the leftmost 157 left of the menu's middle, in two rows 13 above
- * and 13 below it, so they span 167 to 95 left of the middle and end 23 below it. The two speed sliders sit just under
- * them, 6 below the lower row as that row is below the upper, and end above a mode's description, which the menu draws
- * 100 below the middle. Their labels draw on one line at {@link SmallText}'s size, full size at GUI scales 1 to 3,
- * where the longest label, "Break speed: 3.33 blocks/s", is 137 across: more than the 102 between the buttons' left
- * edge and the menu's ring (65 from the middle at most). So the sliders end 65 left of the middle, outside the ring,
- * and are as wide as the longest label either shows needs at the current size, plus {@link #PAD} on each side, reaching
- * further left than the buttons. Each is {@link #HEIGHT} high, and they end 55 below the middle.
+ * and 13 below it, so they span 167 to 95 left of the middle and end 23 below it.
+ *
+ * <p>On the menu's right, where it shows a mode's options, the two speed sliders ({@link RepeatSlider}) sit as Single's
+ * two sections of options, "Build speed" the first and "Break speed" the second, while Single is the mode: Single has
+ * no options of its own. Each is as wide as the larger of three option buttons' row, 72, and the widest speed either
+ * shows plus {@link #PAD} on each side.
  *
  * <p>Building Planner's seven buttons ({@link RadialButton}) sit in the columns of the wrench, undo and redo
  * (middles 157, 131 and 105 left of the menu's middle): "Show or hide ghost blocks" under the wrench, 13 below the
@@ -44,14 +42,9 @@ import net.minecraft.resources.Identifier;
  * menu's texts do.
  */
 public final class RadialMenuWidgets {
-	/** Where the sliders end, from the middle: just outside the menu's ring. */
-	private static final int RIGHT = -65;
-	private static final int SLIDERS_TOP = 29;
+	/** Three option buttons' row: 20 across each, their middles 26 apart. */
+	private static final int OPTIONS_ROW = 72;
 	private static final int PAD = 4;
-	private static final int HEIGHT = 12;
-	private static final int SLIDER_GAP = 2;
-	private static final String BUILD = "buildingplanner.ui.radial.build_speed";
-	private static final String BREAK = "buildingplanner.ui.radial.break_speed";
 	/** The buttons' middles from the menu's middle, {x, y}. */
 	private static final int[] SHOW_HIDE_SLOT = {-157, 13};
 	private static final int[] COPY_SLOT = {-157, -39};
@@ -86,12 +79,12 @@ public final class RadialMenuWidgets {
 
 	/** The widgets for a radial menu, made afresh each time it opens; {@link #place} places them. */
 	public static List<AbstractWidget> create() {
-		int sliderWidth = widestLabel() + 2 * PAD;
+		int sliderWidth = Math.max(OPTIONS_ROW, widestSpeed() + 2 * PAD);
 		List<AbstractWidget> widgets = new ArrayList<>(List.of(
-			new RepeatSlider(RIGHT, SLIDERS_TOP, sliderWidth, HEIGHT, RepeatSpeed.PLACING, BUILD,
-				BuildingPlannerClient.config()),
-			new RepeatSlider(RIGHT, SLIDERS_TOP + HEIGHT + SLIDER_GAP, sliderWidth, HEIGHT, RepeatSpeed.ERASING, BREAK,
-				BuildingPlannerClient.config())));
+			new RepeatSlider(0, sliderWidth, RepeatSpeed.PLACING, BuildingPlannerClient.config(),
+				EffortlessShapes::singleMode),
+			new RepeatSlider(1, sliderWidth, RepeatSpeed.ERASING, BuildingPlannerClient.config(),
+				EffortlessShapes::singleMode)));
 		widgets.add(button(SHOW_HIDE_SLOT, BuildingPlannerClient.SHOW_HIDE,
 			() -> BuildingPlannerClient.ghostsShown() ? SHOWN : HIDDEN, () -> false, BuildingPlannerClient::toggleGhosts));
 		widgets.add(button(COPY_SLOT, "copy", COPY, () -> BuildingPlannerClient.drawingBoxFor(BoxPurpose.COPY),
@@ -116,7 +109,10 @@ public final class RadialMenuWidgets {
 		return 0.8 + 0.2 * visibility;
 	}
 
-	/** Hook E12 (and E11, before the first frame): places the menu's widgets for this frame of its opening. */
+	/**
+	 * Hook E12 (and E11, before the first frame): places the menu's widgets for this frame of its opening, and shows the
+	 * sliders only while Single is the mode, so choosing another in the open menu hides them at once.
+	 */
 	public static void place(List<? extends GuiEventListener> children, int width, int height, float visibility) {
 		for (GuiEventListener child : children) {
 			if (child instanceof Placed placed) {
@@ -178,16 +174,14 @@ public final class RadialMenuWidgets {
 			() -> null, () -> icon, selected, action);
 	}
 
-	/** The width the longest label either slider shows takes at the current size, in GUI pixels. */
-	private static int widestLabel() {
+	/** The width the widest speed a slider shows takes, in GUI pixels. */
+	private static int widestSpeed() {
 		Font font = Minecraft.getInstance().font;
 		int widest = 0;
 		for (int ticks = RepeatSpeed.FASTEST; ticks <= RepeatSpeed.SLOWEST; ticks++) {
-			for (String key : List.of(BUILD, BREAK)) {
-				widest = Math.max(widest,
-					font.width(Component.translatable(key, RepeatSpeed.blocksPerSecond(ticks))));
-			}
+			widest = Math.max(widest,
+				font.width(Component.translatable(RepeatSpeed.SPEED_TEXT, RepeatSpeed.blocksPerSecond(ticks))));
 		}
-		return (int) Math.ceil(widest * SmallText.scale(Minecraft.getInstance().getWindow().getGuiScale()));
+		return widest;
 	}
 }
