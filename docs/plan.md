@@ -621,13 +621,11 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
   - hook L7 shows Litematica's colour for extra blocks inside the player's own placements, on every server;
   - 0.10.0 changes nothing the server does and keeps protocol version 5.
 
-  Open, each recommending A. In the request "Building Planner on other servers": Q1, what tells the player that only
-  they see their ghost blocks there (A: a chat line the first time they draw or paste ghost blocks after joining); Q2,
-  saved material lists there (A: kept on the computer for that server); Q3, Disable's turn and "Match ghost blocks"
-  there (A: they don't act, and real blocks place as Minecraft places them); Q4, singleplayer worlds (A: Effortless
-  Building places real blocks and Building Planner stays off, as in 0.9.0). In the request "Ghost blocks between
-  servers": Q1, the copy (A: it stays while the game runs, across servers and dimensions); Q2, a server that starts
-  running Building Planner (A: the ghost blocks saved for it stay on the computer, unused, and show again if it stops).
+- **Saved copies** is a feature Geo asked for in a comment on 1375 Q1: "I'd like to add a feature to save previously
+  copied regions, like saved materials lists. Instead of a button next to the radial menu, you would access it as a
+  new keyboard press that's displayed while you're pasting. It would have a menu like the saved materials lists.
+  Copies would save automatically, with the most recent 10, but you can view any of those copies in that menu and
+  rename it, which saves it until you delete it."
 - The shared layer replaces the decisions above that concern separate plans: named plans that move and turn as a whole
   (411 Q1), plan growth (411 Q2), who deletes a plan (411 Q3, 420 Q9), starting a plan with N (420 Q1, 469 Q1), hiding
   a plan with Litematica or Syncmatica (420 Q2, 469 Q2), the paste's target plan (485 Q3), Litematica's Edit Schematic
