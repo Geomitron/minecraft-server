@@ -2441,13 +2441,15 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
 
 `step10.sh`, hold to repeat, editing from Freecam and the settings Building Planner changes once, with Freecam 1.5.1 (Modrinth version
 `lwrkvqym`, the pack's) on both clients. The driver counts the ticks each mouse button was down and
-notes the client tick of each edit the client sends (a mixin in the `clienttest` source set), and the script holds the
-real buttons with xdotool while Planner1 is teleported one block every two ticks along a row, looking straight down:
+notes the client tick of each edit the client sends, and the blocks it changes (a mixin in the `clienttest` source
+set), and the script holds the real buttons with xdotool while Planner1 is teleported east along a row, looking
+straight down. The game's commands pace the teleports unevenly, so now and then two repeats edit the same block of
+the row; the checks on the row count the blocks the edits changed, not the edits:
 
 - Holding use in Single mode with stone bricks sends an edit when the button goes down and then one every 4 ticks, and
-  each edit put one ghost block in the row, on both clients, and no real block.
+  each edit put a ghost block in a new block of the row, on both clients, and no real block.
 - Holding attack over a row filled with ghost blocks sends an edit when the button goes down and then one every 6
-  ticks, and each edit erased one ghost block, on both clients, leaving the real blocks.
+  ticks, and each edit erased the ghost block of a new block of the row, on both clients, leaving the real blocks.
 - At GUI scale 2 and, in a window of 1920 by 1080, at 4, the radial menu's sliders end above the description of the
   mode under the pointer, and start on the screen; each is shot.
 - The radial menu, opened with left Alt held, shows both sliders at their first settings ("Build speed: 5 blocks/s",
