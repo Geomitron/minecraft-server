@@ -2352,9 +2352,9 @@ alone, except:
 
 **Between servers.** The copy stays while the game runs: leaving a server, joining another and changing dimension don't
 drop it, on this server too, so a player can copy ghost blocks and real blocks on one server and paste them as
-ghost blocks on another (`OPEN:` "Ghost blocks between servers", Q1). The ghost blocks saved for a server stay in its
-folder, unused, while that server runs Building Planner, and show again if it stops running it (`OPEN:` "Ghost blocks
-between servers", Q2).
+ghost blocks on another (1375 Q1 A). The ghost blocks saved for a server stay in its
+folder, unused, while that server runs Building Planner, and show again if it stops running it (1375 Q2
+A).
 
 **This server.** On a server that runs Building Planner, 0.10.0 works as 0.9.0 does: the layer is shared, and the
 server keeps the lists. 0.10.0 changes nothing the server does and keeps protocol version 5, so a 0.9.0 game and a

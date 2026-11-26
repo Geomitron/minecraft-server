@@ -602,6 +602,10 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
     runs inside the game's own world once `BuildingPlanner.onInitialize` registers it there too (it registers it only
     on a dedicated server), so C is the one built.
 
+  Asked in 1375 ("Ghost blocks between servers"), Geo picked "Yes, the copy stays while the game runs, across servers
+  and dimensions" (Q1 A) and, for a server that starts running Building Planner, "They stay on each computer, unused,
+  and show again if the server stops running Building Planner" (Q2 A).
+
   The design ("Servers without Building Planner" in [building-planner.md](building-planner.md)) settles how it works
   within Geo's answers:
   - on a server that takes none of Building Planner's payloads, a server running Effortless Building's own server
