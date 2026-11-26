@@ -150,10 +150,10 @@ every part of this spec that mentions them is marked as proposed for 0.11.0. The
   brings back the most recent copy at the aim. With the setting "Place real blocks" on (proposed for 0.9.0), a right
   click pastes real blocks from the player's inventory instead, by the same rules as a shape (see "Place real
   blocks").
-- **Saved copies.** As proposed for 0.11.0, each copy is saved on the player's computer as Copy makes it, with a
-  picture of the player's view. V, which the copy's controls line shows, opens "Saved copies", listing the 10 most
-  recent copies and every copy the player renamed, each with "Paste", "Rename" and "Delete"; a renamed copy stays until
-  the player deletes it, and the copies are the same on every server (see "Saved copies").
+- **Saved copies.** As proposed for 0.11.0, each copy is saved on the player's computer as Copy makes it. V, which the
+  copy's controls line shows, opens "Saved copies", listing the 10 most recent copies and every copy the player renamed,
+  each with "Paste", "Rename" and "Delete"; a renamed copy stays until the player deletes it, and the copies are the
+  same on every server (see "Saved copies").
 - **Material list.** The player presses the "Material list" button in the radial menu and draws a box: Litematica's
   material list screen opens for the blocks inside, ghost blocks and real blocks alike, with how many of each block the
   ghost blocks still need. While ghost blocks are hidden, it lists only the real blocks and leaves the ghost blocks
@@ -1439,40 +1439,39 @@ Proposed for 0.11.0, not built. Geo asked for it in a comment on 1375 Q1: "I'd l
 previously copied regions, like saved materials lists. Instead of a button next to the radial menu, you would access it
 as a new keyboard press that's displayed while you're pasting. It would have a menu like the saved materials lists.
 Copies would save automatically, with the most recent 10, but you can view any of those copies in that menu and rename
-it, which saves it until you delete it." Each choice still Geo's carries an `OPEN:` mark naming its question in the
-request "Saved copies"; the text describes the option the request recommends.
+it, which saves it until you delete it." Geo's answers in the request "Saved copies" (1384) settle it.
 
 **Which copies stay.** Each copy that Copy makes is saved at once as the newest saved copy, named by the date and time
 it was made ("Nov 19, 6:21 PM", the pattern "Save list" fills in). The 10 most recent copies the player hasn't renamed
 stay, and when Copy makes another, the oldest of them is deleted. A copy the player renames stays until they delete
-it and doesn't count among the 10; a player may keep as many as they rename (`OPEN:` "Saved copies", Q3). A paste, a
+it and doesn't count among the 10; a player may keep as many as they rename, however large (1384 Q3 A). A paste, a
 turn or a mirror changes no saved copy, and a box that Copy refuses saves nothing. The rule is a pure function
 (`CopyHistory`, common) of the saved copies, newest first, and each change: a new copy, a rename and a delete.
 
 **Where they're kept.** Saved copies are kept on the player's computer, a set for each Minecraft account, the same on
-every server, in singleplayer and in a LAN world, so a copy saved on one server pastes on another (`OPEN:` "Saved
-copies", Q1). Only the player at that computer sees them, and another computer doesn't have them. The server stores
-nothing, so saved copies work the same on servers with and without Building Planner, and 0.11.0 changes nothing the
-server does and keeps protocol version 5.
+every server, in singleplayer and in a LAN world, so a copy saved on one server pastes on another (1384 Q1 A). Only the
+player at that computer sees them, and another computer doesn't have them. The server stores nothing, so saved copies
+work the same on servers with and without Building Planner, and 0.11.0 changes nothing the server does and keeps
+protocol version 5.
 
 **The key.** "Saved copies" (V), under the heading "Building Planner" in Controls, opens the "Saved copies" screen
-whenever Building Planner has a session and no screen is open, in any mouse mode or none (`OPEN:` "Saved copies", Q2).
-The radial menu has no button for it (Geo: "Instead of a button next to the radial menu"). While the copy is at the
-aim, its controls line shows the key before the left click's control, "[V: saved copies][Esc/Left-click: close]" (or
-"cancel" during a set), naming the key as the player has bound it, and leaves the control out while "Saved copies" has
-no key. Opening the screen keeps the mouse mode, as any screen does. V is no default key, or part of a default key
-combination, of Minecraft 26.3 (the Minecraft Wiki's [Controls](https://minecraft.wiki/w/Controls) page lists V only
-with F3, for "Dump Version Info", which matters only while F3 is held), Litematica (`config/Hotkeys.java`), MaLiLib
-(`MaLiLibConfigs`, whose only default hotkey is "A,C" for its settings), Effortless Building 4.3
-(`utilities/KeyBindings.java`: left Alt, the keypad's +, Z and Y) or Freecam 1.5.1, and none of Building Planner's own.
-It sits beside C and B, under the left hand while the right hand pastes.
+whenever Building Planner has a session and no screen is open, in any mouse mode or none (1384 Q2 A). The radial menu
+has no button for it (Geo: "Instead of a button next to the radial menu"). While the copy is at the aim, its controls
+line shows the key before the left click's control, "[V: saved copies][Esc/Left-click: close]" (or "cancel" during a
+set), naming the key as the player has bound it, and leaves the control out while "Saved copies" has no key. Opening the
+screen keeps the mouse mode, as any screen does. V is no default key, or part of a default key combination, of Minecraft
+26.3 (the Minecraft Wiki's [Controls](https://minecraft.wiki/w/Controls) page lists V only with F3, for "Dump Version
+Info", which matters only while F3 is held), Litematica (`config/Hotkeys.java`), MaLiLib (`MaLiLibConfigs`, whose only
+default hotkey is "A,C" for its settings), Effortless Building 4.3 (`utilities/KeyBindings.java`: left Alt, the keypad's
++, Z and Y) or Freecam 1.5.1, and none of Building Planner's own. It sits beside C and B, under the left hand while the
+right hand pastes.
 
-**The screen.** "Saved copies" is laid out as "Saved lists" (`SavedListsScreen`): the title; under it the line "Your
-10 most recent copies stay here. Rename a copy to keep it."; and a row for each saved copy, newest first, with its
-picture (below), its name, under the name its size and its number of blocks ("12 × 5 × 8 · 120 blocks"), and the
-buttons "Paste", "Rename" and "Delete". With none, it says "No saved copies yet." Each row is 44 high, with the picture
-40 by 40 at its left and the three buttons 50 wide at its right, in a width of up to 400. The mouse wheel scrolls the
-rows, and "Close" at the bottom right, like Escape, goes back to the game.
+**The screen.** "Saved copies" is laid out as "Saved lists" (`SavedListsScreen`): the title; under it the line "Your 10
+most recent copies stay here. Rename a copy to keep it."; and a row for each saved copy, newest first, with its name,
+under the name its size and its number of blocks ("12 × 5 × 8 · 120 blocks"), and the buttons "Paste", "Rename" and
+"Delete". With none, it says "No saved copies yet." Each row is as high as its two lines of text and its buttons, with
+the three buttons 50 wide at its right, in a width of up to 400. The mouse wheel scrolls the rows, and "Close" at the
+bottom right, like Escape, goes back to the game.
 
 - "Paste" closes the screen and brings that copy to the aim as the radial menu's Paste button brings the most recent
   copy: it ends any mouse mode, and the copy comes unlocked, in the copy mode the player last set, turned and mirrored
@@ -1488,30 +1487,20 @@ The screen's texts and the control are in the wording Geo approves in 0.11.0's t
 
 **After a restart.** The copy stays while the game runs (1375 Q1 A), and the saved copies outlast it: with no copy
 since the game started, the radial menu's Paste button brings the newest saved copy to the aim, as it was copied, and
-it gives the message "Nothing to paste. Use Copy first." only while there are no saved copies (`OPEN:` "Saved
-copies", Q5).
-
-**The picture.** As Copy makes a copy, the game takes a picture of the player's view for the copy's row, so that a
-player can tell copies apart (`OPEN:` "Saved copies", Q4). The frame after Copy's last click draws without the box for
-Copy, and the copy comes to the aim a frame later. As that frame's world drawing ends, before the HUD draws, the game
-reads the frame with Minecraft's `Screenshot.takeScreenshot` on the main render target, as Litematica 26.3's schematic
-manager takes a schematic's preview (`gui/GuiSchematicManager.java`, `PreviewGenerator`). It crops the smallest square
-around the copied box's eight corners as they show on screen, a tenth wider at each side and moved inside the screen,
-or the screen's middle square when a corner is behind the camera (`PictureCrop`, a pure function), and scales it to 120
-by 120, Litematica's size for a preview. With Freecam's camera on, the view is the camera's.
+it gives the message "Nothing to paste. Use Copy first." only while there are no saved copies (1384 Q5 A).
 
 **The files.** Each player's saved copies are in `<game folder>/building-planner/copies/<player UUID>/`: each copy's
 blocks as `<number>.litematic`, in Litematica's format, which `LitematicaSchematic.writeToFile` writes and
-`createFromFile` reads, with the copy's region and its structure void as `Clipboard` makes them; its picture as
-`<number>.png`; and `index.dat`, gzip-compressed NBT:
+`createFromFile` reads, with the copy's region and its structure void as `Clipboard` makes them; and `index.dat`,
+gzip-compressed NBT:
 
 - `version`: the format's version, 1.
-- `next`: the number the next copy's files take, so that no number is used twice.
+- `next`: the number the next copy's file takes, so that no number is used twice.
 - `copies`: each saved copy, newest first, with `file` (its number), `name`, `time` (when it was copied, in
   milliseconds since 1970), `kept` (1 once it's renamed, and 0 before), `size` (x, y and z) and `blocks`.
 
 One background thread reads and writes the files, in order, each write through a temporary file and a rename: a copy's
-two files as Copy makes it, the index after each change, and the files of a copy that's dropped or deleted removed
+file as Copy makes it, the index after each change, and the file of a copy that's dropped or deleted removed
 once the index without them is written. It reads the index as the game starts, and a copy's file when the player picks
 it, which then comes to the aim. A file that can't be read is logged as an error and renamed with `.unreadable` at its
 end: for the index, the game starts with no saved copies and leaves the copies' files in place; for a copy, it drops
@@ -3254,24 +3243,22 @@ a set reaching past the build height while its first copy doesn't; the cap check
 blocks read only while no red check fails. `LayerTest` covers the layer's version, which changes with each change and
 only then.
 
-`saved.sh`, saved copies (proposed for 0.11.0; the checks follow the options the request "Saved copies" recommends),
+`saved.sh`, saved copies (proposed for 0.11.0),
 on the dev server, with the server restarted without the add-on for the check between servers. The driver reads
 `index.dat` and the copies' folder for its checks, and its `bindkey` rebinds the key:
 
-- A copy of a hut of oak planks, with a door and a wall torch, puts `1.litematic`, `1.png` and `index.dat` in `building-planner/copies/<Planner1's UUID>/`, the index naming it by its time, not kept,
-  with the hut's size and block count. Planner2's game has no saved copy.
-- The picture is 120 by 120 and shows the hut without the box for Copy or the controls line: the driver puts the copy
-  away, hides the HUD (F1) and shoots the same view, cropped and scaled as `PictureCrop` gives, and at least 95% of
-  the two pictures' pixels match within 8 levels on each colour.
+- A copy of a hut of oak planks, with a door and a wall torch, puts `1.litematic` and `index.dat` in
+  `building-planner/copies/<Planner1's UUID>/`, the index naming it by its time, not kept, with the hut's size and block
+  count. Planner2's game has no saved copy.
 - With the copy at the aim, its controls line ends with "[V: saved copies][Esc/Left-click: close]", and during a Line
   set with "[V: saved copies][Esc/Left-click: cancel]"; with the key unbound, the control is gone and V opens nothing;
   rebound to K, the line names K.
-- V opens "Saved copies" with the hut's row: its picture, its time as its name, and its size and block count. V does
-  nothing with the inventory open. V during a box for Copy opens the screen, "Close" goes back to the game with the box
-  still drawn, and "Paste" on a row ends the box and brings that copy to the aim.
+- V opens "Saved copies" with the hut's row: its time as its name, and its size and block count. V does nothing with
+  the inventory open. V during a box for Copy opens the screen, "Close" goes back to the game with the box still drawn,
+  and "Paste" on a row ends the box and brings that copy to the aim.
 - "Rename" on the hut's row shows its name in the field; an empty name or only spaces greys "Save" out, the field
   accepts no 65th character, and "Hut " saves as "Hut", kept in the index. Eleven more copies, of one block each and
-  each of another block, leave 11 rows, "Hut" and the 10 newest: the first of the 11 is gone, and its two files are
+  each of another block, leave 11 rows, "Hut" and the 10 newest: the first of the 11 is gone, and its file is
   deleted.
 - "Paste" on "Hut" closes the screen and brings the hut to the aim, unlocked and unturned, in the copy mode last set;
   a right click pastes it, and Planner2 sees its blocks; the radial menu's Paste button then brings the hut back.
@@ -3279,8 +3266,8 @@ on the dev server, with the server restarted without the add-on for the check be
   copy's `.litematic` cut short drops from the list when it's picked, with the message "That copy couldn't be read.",
   and is renamed with `.unreadable`; an unreadable `index.dat` is renamed the same way, and the screen says "No saved
   copies yet.".
-- After Planner1's game restarts, the rows come back with their pictures, and the radial menu's Paste button brings
-  the newest copy to the aim; with the folder emptied, it says "Nothing to paste. Use Copy first.".
+- After Planner1's game restarts, the rows come back, and the radial menu's Paste button brings the newest copy to the
+  aim; with the folder emptied, it says "Nothing to paste. Use Copy first.".
 - With the server restarted without the add-on, Planner1's local session shows the same rows, and a saved copy pastes
   there as ghost blocks.
 - Shots at 854 by 480 and 1920 by 1080, GUI scales 2 and 4: "Saved copies" with 11 rows scrolled to its top and its
@@ -3289,9 +3276,7 @@ on the dev server, with the server restarted without the add-on for the check be
 `CopyHistoryTest` covers the rule for which copies stay: a new copy at the top, named by its time; the 11th copy not
 renamed dropping the oldest one not renamed, the renamed ones not counting; a renamed copy kept through any number of
 new copies; a delete of a renamed and of a recent copy; and the files' numbers never used twice. `CopyIndexTest`
-covers `index.dat` written and read back, and an unreadable one starting an empty list. `PictureCropTest` covers the
-square around a box in the middle of the screen, one partly off the screen moved inside it, one larger than the
-screen's height, and one with a corner behind the camera taking the middle square. `ControlsLineTest` covers the
+covers `index.dat` written and read back, and an unreadable one starting an empty list. `ControlsLineTest` covers the
 key's control in each of the copy's lines, and its absence while the key is unbound.
 
 The controls lines have unit tests as a pure function too. `ControlsLineTest` reads each line in English from
@@ -3445,10 +3430,9 @@ other in the game's own copy of the layer, again after a restart, which doesn't 
 - How long the copy's yellow check takes for a large copy moving over ghost blocks: each time the copy moves over a
   column of the layer, it reads the blocks of every copy in the set until one would replace a ghost block, up to the
   block cap of 200,000; expected a few milliseconds, not measured.
-- For saved copies (proposed for 0.11.0): that `Screenshot.takeScreenshot`, called as the world's drawing ends, reads
-  the frame without the HUD (Litematica calls it on a whole frame); and how long writing and reading a large copy
-  takes on the background thread, and how large its file is: Litematica's file stores every position of the box, at 2 bits or
-  more each, so a box of 256 a side is at least 4 MB before compression, not measured.
+- For saved copies (proposed for 0.11.0): how long writing and reading a large copy takes on the background thread, and
+  how large its file is: Litematica's file stores every position of the box, at 2 bits or more each, so a box of 256 a
+  side is at least 4 MB before compression, not measured.
 - That Ctrl with the middle click in creative mode picks a block with its contents in Minecraft 26.3 (expected, from
   earlier versions; the client's `pickBlockOrEntity` not read for it), which hook M4 stops while it flips the block
   in hand.
