@@ -1,24 +1,42 @@
 package dev.buildingplanner.input;
 
+import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * The build modes' lock (see "Locking and the first click"): whether it's on, and the locked first position, with the
- * face and hit point aimed at when it was locked, moved by the nudges. Before a shape's first click, the first click
- * and its preview take that position (hooks E9 and E32). During a shape, the positions its clicks have set stay
- * Effortless Building's own, and the nudges move them together with this one (E33), so a cancelled shape leaves the
- * lock at the shape's first position. The click that finishes a shape ends the lock, placing or erasing (1239 Q1 A).
+ * The build modes' lock (see "Locking and the first click"), a lock for each step of a shape: the step is the number of
+ * positions the shape's clicks have set, 0 before the first click, 1 while a shape finds its second position and 2
+ * while a mode of three clicks finds its third. Before the first click, the locked position keeps the face and hit
+ * point aimed at when it was locked, moved by the nudges, and the first click and its preview take it (hooks E9 and
+ * E32). During a shape, each step starts unlocked; locked, Effortless Building takes the step's locked position in
+ * place of the one its aim finds (E37). A nudge along a direction the step sets moves the step's position, and along
+ * any other the whole shape: the positions the clicks have set stay Effortless Building's own, which the caller moves
+ * (E33), and the first position locked before the first click moves with them, so a cancelled shape leaves it locked
+ * at the shape's first position. The click that finishes a shape ends the lock, placing or erasing (1239 Q1 A).
  */
 public final class ShapeLock {
-	/** The locked first position, or null while the lock is off. */
-	private BlockPos pos;
-	/** The face aimed at when the position was locked. */
+	/**
+	 * How Effortless Building finds a shape's second or third position, which sets the directions a nudge changes it
+	 * along ({@link #sets}): {@code Line.findLine}, {@code Wall.findWall}, {@code Floor.findFloor} and
+	 * {@code ThreeClicksBuildMode.findHeight}.
+	 */
+	public enum Finder {
+		LINE, WALL, FLOOR, HEIGHT
+	}
+
+	/** The first position locked before the first click, or null while that lock is off. */
+	private BlockPos first;
+	/** The face aimed at when the first position was locked. */
 	private Direction face;
-	/** The hit point aimed at when the position was locked, from the locked position, which nudges move it with. */
+	/** The hit point aimed at when the first position was locked, from that position, which nudges move it with. */
 	private Vec3 hitFromPos;
+	/** The step a shape's step's lock is for: 1 or 2. */
+	private int step;
+	/** The shape's step's locked position, or null while that lock is off. */
+	private BlockPos stepPos;
 
 	/**
 	 * Whether the lock's controls are active: Building Planner has a session, Effortless Building's mode isn't Disable,
@@ -37,55 +55,166 @@ public final class ShapeLock {
 		return controlsActive && size == 1;
 	}
 
-	/** Whether the lock is on. */
-	public boolean on() {
-		return pos != null;
+	/**
+	 * How the step finds its position: the third position by {@code findHeight}; the second by {@code findLine} in
+	 * Line, {@code findWall} in Wall, and {@code findFloor} in every other mode of two or three clicks.
+	 */
+	public static Finder finder(boolean line, boolean wall, int step) {
+		if (step >= 2) {
+			return Finder.HEIGHT;
+		}
+		return line ? Finder.LINE : wall ? Finder.WALL : Finder.FLOOR;
 	}
 
 	/**
-	 * Whether the next first click, and the first click's preview, take the locked position (hooks E9 and E32): the
-	 * lock is on, its controls are active, and no shape is under way, whose positions are already set.
+	 * The position {@code finder} finds the step's position from, among the positions the clicks have set (the first
+	 * first): the second for {@code findHeight}, and otherwise the first.
 	 */
-	public boolean takesFirstClick(boolean controlsActive, boolean shapeUnderWay) {
-		return on() && controlsActive && !shapeUnderWay;
-	}
-
-	/** The locked first position; only while {@link #on()}. */
-	public BlockPos pos() {
-		return pos;
+	public static BlockPos from(Finder finder, List<BlockPos> set) {
+		return finder == Finder.HEIGHT ? set.get(1) : set.getFirst();
 	}
 
 	/**
-	 * Locks the first position at {@code pos}, with {@code hit} the hit its blocks' states come from: before the first
-	 * click, the aim's at the block a right click would start from; during a shape, its first click's.
+	 * Whether a nudge that way moves the step's position {@code pos}, found by {@code finder} from {@code from}, which
+	 * changes the shape's size; a nudge along any other direction moves the whole shape. Line's second position: along
+	 * the line, or every direction while the line is one block long. Wall's: up and down, and along the wall, or both
+	 * level directions while it's one block wide. {@code findFloor}'s: both level directions. {@code findHeight}'s: up
+	 * and down.
 	 */
-	public void lock(BlockPos pos, BlockHitResult hit) {
-		this.pos = pos.immutable();
-		this.face = hit.getDirection();
-		this.hitFromPos = hit.getLocation().subtract(Vec3.atLowerCornerOf(pos));
+	public static boolean sets(Finder finder, BlockPos from, BlockPos pos, Direction direction) {
+		Direction.Axis axis = direction.getAxis();
+		return switch (finder) {
+			case LINE -> from.equals(pos) || axis == lineAxis(from, pos);
+			case WALL -> axis == Direction.Axis.Y || from.getX() == pos.getX() && from.getZ() == pos.getZ()
+				|| axis == wallAxis(from, pos);
+			case FLOOR -> axis != Direction.Axis.Y;
+			case HEIGHT -> axis == Direction.Axis.Y;
+		};
 	}
 
-	/** Ends the lock: H again, the click that finishes a shape, or anything else that ends it. */
-	public void unlock() {
-		pos = null;
+	/**
+	 * The axis a line between the two lies along, as {@code Line.getLineBlocks} takes it: X where they differ, then Y,
+	 * then Z.
+	 */
+	private static Direction.Axis lineAxis(BlockPos from, BlockPos pos) {
+		if (from.getX() != pos.getX()) {
+			return Direction.Axis.X;
+		}
+		return from.getY() != pos.getY() ? Direction.Axis.Y : Direction.Axis.Z;
 	}
 
-	/** Moves the locked position, and its hit point with it, one block that way; does nothing while the lock is off. */
-	public void nudge(Direction direction) {
-		if (pos != null) {
-			pos = pos.relative(direction);
+	/**
+	 * The level axis a wall between the two lies along, as {@code Wall.getWallBlocks} takes it: Z where they share
+	 * their X, otherwise X.
+	 */
+	private static Direction.Axis wallAxis(BlockPos from, BlockPos pos) {
+		return from.getX() == pos.getX() ? Direction.Axis.Z : Direction.Axis.X;
+	}
+
+	/**
+	 * Whether the step under way is locked. Reading the lock for a step other than the one a shape's step was locked
+	 * for ends that step's lock: a click has set its position, so the next step starts unlocked, or the shape has
+	 * ended. The first position locked before the first click stays through a shape.
+	 */
+	public boolean on(int step) {
+		follow(step);
+		return step == 0 ? first != null : stepPos != null;
+	}
+
+	/** Ends a shape's step's lock once another step is under way. */
+	private void follow(int step) {
+		if (stepPos != null && this.step != step) {
+			stepPos = null;
 		}
 	}
 
 	/**
-	 * The hit the locked position's blocks take their states from: the face aimed at when it was locked and the hit
-	 * point moved with each nudge, on the locked position. Only while {@link #on()}.
+	 * Whether the next first click, and the first click's preview, take the locked first position (hooks E9 and E32):
+	 * the lock's controls are active, no shape is under way (step 0), whose positions are already set, and the first
+	 * position is locked.
 	 */
-	public BlockHitResult hit() {
-		return new BlockHitResult(Vec3.atLowerCornerOf(pos).add(hitFromPos), face, pos, false);
+	public boolean takesFirstClick(boolean controlsActive, int step) {
+		return controlsActive && step == 0 && on(0);
 	}
 
-	/** {@code hit} moved one block that way, as a nudge moves a shape's first click (hook E33). */
+	/** The step's locked position; only while {@link #on} for that step. */
+	public BlockPos pos(int step) {
+		return step == 0 ? first : stepPos;
+	}
+
+	/**
+	 * Hook E37: the position a shape's step takes, its locked position while it's locked, or otherwise the one
+	 * Effortless Building's aim found, {@code found}.
+	 */
+	public BlockPos position(int step, BlockPos found) {
+		return step > 0 && on(step) ? stepPos : found;
+	}
+
+	/**
+	 * Locks the first position at {@code pos} before the first click, with {@code hit} the hit its blocks' states come
+	 * from: the aim's at the block a right click would start from.
+	 */
+	public void lock(BlockPos pos, BlockHitResult hit) {
+		this.first = pos.immutable();
+		this.face = hit.getDirection();
+		this.hitFromPos = hit.getLocation().subtract(Vec3.atLowerCornerOf(pos));
+	}
+
+	/** Locks a shape's step (1 or 2) at {@code pos}, the position the aim is setting for it at that moment. */
+	public void lockStep(int step, BlockPos pos) {
+		this.step = step;
+		this.stepPos = pos.immutable();
+	}
+
+	/** H on a locked step: ends its lock; during a shape, the first position locked before the first click stays. */
+	public void unlock(int step) {
+		if (step == 0) {
+			first = null;
+		} else if (this.step == step) {
+			stepPos = null;
+		}
+	}
+
+	/** Ends the lock of every step: the click that finishes a shape, or anything else that ends the lock. */
+	public void unlock() {
+		first = null;
+		stepPos = null;
+	}
+
+	/**
+	 * A nudge that way while the step under way is locked, with {@code set} the positions the clicks have set (none
+	 * before the first click) and {@code finder} how the step finds its position (unused before the first click).
+	 * Before the first click, it moves the locked first position, and its hit point with it. During a shape, along a
+	 * direction the step sets ({@link #sets}) it moves the step's position; along any other, the step's position and
+	 * the first position locked before the first click, and it returns true: the caller moves the positions the clicks
+	 * have set and the first click's hit (hook E33). Does nothing while the step isn't locked.
+	 */
+	public boolean nudge(List<BlockPos> set, Finder finder, Direction direction) {
+		int step = set.size();
+		if (!on(step)) {
+			return false;
+		}
+		if (step == 0) {
+			first = first.relative(direction);
+			return false;
+		}
+		boolean whole = !sets(finder, from(finder, set), stepPos, direction);
+		stepPos = stepPos.relative(direction);
+		if (whole && first != null) {
+			first = first.relative(direction);
+		}
+		return whole;
+	}
+
+	/**
+	 * The hit the locked first position's blocks take their states from: the face aimed at when it was locked and the
+	 * hit point moved with each nudge, on the locked position. Only while the first position is locked.
+	 */
+	public BlockHitResult hit() {
+		return new BlockHitResult(Vec3.atLowerCornerOf(first).add(hitFromPos), face, first, false);
+	}
+
+	/** {@code hit} moved one block that way, as a nudge that moves the whole shape moves its first click (hook E33). */
 	public static BlockHitResult moved(BlockHitResult hit, Direction direction) {
 		return new BlockHitResult(hit.getLocation().add(direction.getStepX(), direction.getStepY(), direction.getStepZ()),
 			hit.getDirection(), hit.getBlockPos().relative(direction), hit.isInside());

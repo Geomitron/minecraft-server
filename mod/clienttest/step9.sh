@@ -2084,7 +2084,7 @@ drv 1 "edit -70 -60 -50 -50 -55 -30 minecraft:air" > /dev/null
 check "erasing the ghost blocks reaches both games" eval 'drv 2 "await block -60 -60 -41 minecraft:air" > /dev/null &&
 	drv 1 "await block -60 -60 -41 minecraft:air" > /dev/null'
 
-# Locking the first click in Wall and Cube, on the same grass with stone bricks, from Planner1 at -59.5 -58 -35.5
+# Locking each step in Wall, Cube and Floor, on the same grass with stone bricks, from Planner1 at -59.5 -58 -35.5
 # facing north.
 # preview_has <count> <positions>...: Effortless Building's preview drew that many blocks, among them each position.
 preview_has() {
@@ -2098,6 +2098,14 @@ preview_has() {
 		[[ $drawn == *" $pos "* ]] || return 1
 	done
 }
+# all_in_layer <block> <positions>...: Planner1's copy of the layer has that block at each position (x,y,z).
+all_in_layer() {
+	local block=$1 pos
+	shift
+	for pos in "$@"; do
+		[[ $(val 1 "layer ${pos//,/ }") == "minecraft:$block" ]] || return 1
+	done
+}
 drv 1 "ebmode WALL" "ebarray 0" "cmd tp @s -59.5 -58 -35.5 180 30" "wait 40" > /dev/null
 aim 1 -64 -60 -44
 check "in Wall, the lock's controls are active, unlocked" eval '[[ $(val 1 lock) == "unlocked active" ]]'
@@ -2107,24 +2115,37 @@ aim 1 -56 -60 -40
 check "aimed elsewhere, the preview draws the first corner alone, where it's locked" \
 	drv 1 "wait 10" "await preview -64,-60,-45"
 use_click 1
-check "the first click starts the wall at the locked corner, which stays locked" eval \
-	'drv 1 "wait 10" > /dev/null && [[ $(val 1 lock) == "locked -64,-60,-45 active" ]] &&
+check "the first click starts the wall at the locked corner, and the far corner's step starts unlocked" eval \
+	'drv 1 "wait 10" > /dev/null && [[ $(val 1 lock) == "unlocked active" ]] &&
 	[[ $(val 1 holdlog) == *" edits=0 "* ]]'
 drv 1 "lookat -61.5 -58.5 -44.5" "wait 5" > /dev/null
 check "the far corner follows the aim: aimed at -62 -59 -45, the preview draws a wall of 6" \
 	preview_has 6 -64,-60,-45 -62,-59,-45
 drv 1 "lookat -59.5 -57.5 -44.5" "wait 5" > /dev/null
 check "and aimed at -60 -58 -45, a wall of 15" preview_has 15 -64,-60,-45 -60,-58,-45
-shots wall-locked-corner
+press 1 h
+check "H locks the far corner" eval '[[ $(val 1 lock) == "locked -60,-58,-45 active" ]]'
+drv 1 "lookat -62.5 -59.5 -43.5" "wait 5" > /dev/null
+check "which stays as Planner1 turns: aimed at -63 -60 -44, the preview still draws the wall of 15" eval \
+	'preview_has 15 -64,-60,-45 -60,-58,-45 && [[ $(val 1 lock) == "locked -60,-58,-45 active" ]]'
+shots wall-step-locked
+lock_nudge Prior "Page Up moves the far corner a block up" -60,-57,-45
+check "and makes the wall a block taller: 20 blocks" preview_has 20 -64,-60,-45 -60,-57,-45
+lock_nudge Up "Up, across the wall, moves the far corner a block north" -60,-57,-46
+check "and the whole wall with it" eval 'preview_has 20 -64,-60,-46 -60,-57,-46 &&
+	[[ " $(val 1 preview) " != *" -64,-60,-45 "* ]]'
+shots wall-step-nudged
+shown=$(val 1 preview)
 use_click 1
-check "the second click places the wall from the locked corner, on both clients, and the lock ends" eval \
-	'drv 1 "await block -60 -58 -45 minecraft:stone_bricks" > /dev/null &&
-	drv 2 "await block -60 -58 -45 minecraft:stone_bricks" > /dev/null &&
-	[[ $(val 1 "boxstates -64 -60 -45 -60 -58 -45 stone_bricks") == "15 15" ]] &&
-	[[ $(val 1 "layer -64 -60 -44") == minecraft:air ]] && [[ $(val 1 lock) == "unlocked active" ]]'
-drv 1 "edit -64 -60 -45 -60 -58 -45 minecraft:air" "await block -60 -58 -45 minecraft:air" > /dev/null
-# In Cube, H after the second click locks both positions the clicks set, and Up moves them north together, with the
-# preview; the third click sets the height and places the cube from the moved positions.
+check "the second click places the wall shown, on both clients, and the lock ends" eval \
+	'drv 1 "await block -60 -57 -46 minecraft:stone_bricks" > /dev/null &&
+	drv 2 "await block -60 -57 -46 minecraft:stone_bricks" > /dev/null &&
+	[[ $(val 1 "boxstates -64 -60 -46 -60 -57 -46 stone_bricks") == "20 20" ]] &&
+	all_in_layer stone_bricks $shown &&
+	[[ $(val 1 "layer -64 -60 -45") == minecraft:air ]] && [[ $(val 1 lock) == "unlocked active" ]]'
+drv 1 "edit -64 -60 -46 -60 -57 -46 minecraft:air" "await block -60 -57 -46 minecraft:air" > /dev/null
+# In Cube, after the second click, H locks the height; Page Up raises it and Up, a level nudge, moves the whole cube
+# north, with the preview; the third click, aimed higher, places the cube shown.
 drv 1 "ebmode CUBE" "wait 5" > /dev/null
 aim 1 -66 -60 -46
 use_click 1
@@ -2135,22 +2156,41 @@ drv 1 "lookat -62.5 -59.5 -47.5" "wait 5" > /dev/null
 check "in Cube, after the second click the preview draws the floor from -66 -60 -46 to -63 -60 -48" \
 	preview_has 12 -66,-60,-46 -63,-60,-48
 press 1 h
-check "H locks both positions the clicks set" eval \
-	'[[ $(val 1 lock) == "locked -66,-60,-46 -63,-60,-48 active" ]]'
-press 1 Up
-check "Up moves both one block north" eval '[[ $(val 1 lock) == "locked -66,-60,-47 -63,-60,-49 active" ]]'
-drv 1 "lookat -62.5 -59.5 -48.5" "wait 5" > /dev/null
-check "and the preview with them" eval 'preview_has 12 -66,-60,-47 -63,-60,-49 &&
+check "H locks the height, at the second position's block" eval '[[ $(val 1 lock) == "locked -63,-60,-48 active" ]]'
+lock_nudge Prior "Page Up raises it a block" -63,-59,-48
+check "and the preview draws the cube 2 high" preview_has 24 -66,-60,-46 -63,-59,-48
+shots cube-height-locked
+lock_nudge Up "Up, a level nudge, moves the height a block north" -63,-59,-49
+check "and the whole cube with it" eval 'preview_has 24 -66,-60,-47 -63,-59,-49 &&
 	[[ " $(val 1 preview) " != *" -66,-60,-46 "* ]]'
-shots cube-nudged
 drv 1 "lookat -62.5 -57.5 -48.5" "wait 5" > /dev/null
 use_click 1
-check "the third click places the cube from the moved positions, 3 high, and the lock ends" eval \
-	'drv 1 "await block -63 -58 -49 minecraft:stone_bricks" > /dev/null &&
+check "the third click, aimed higher, places the cube shown, 2 high, and the lock ends" eval \
+	'drv 1 "await block -63 -59 -49 minecraft:stone_bricks" > /dev/null &&
 	drv 2 "await block -66 -60 -47 minecraft:stone_bricks" > /dev/null &&
+	[[ $(val 1 "boxstates -66 -60 -47 -63 -59 -49 stone_bricks") == "24 24" ]] &&
+	[[ $(val 1 "layer -63 -58 -49") == minecraft:air ]] &&
 	[[ $(val 1 "layer -66 -60 -46") == minecraft:air ]] && [[ $(val 1 "layer -63 -60 -50") == minecraft:air ]] &&
 	[[ $(val 1 lock) == "unlocked active" ]]'
-drv 1 "edit -66 -60 -49 -63 -58 -47 minecraft:air" "await block -63 -58 -49 minecraft:air" "ebmode SINGLE" \
+drv 1 "edit -66 -60 -49 -63 -58 -47 minecraft:air" "await block -63 -59 -49 minecraft:air" > /dev/null
+# In Floor, after the first click, H locks the far corner, and Page Up moves the whole floor a block up.
+drv 1 "ebmode FLOOR" "wait 5" > /dev/null
+aim 1 -66 -60 -46
+use_click 1
+aim 1 -63 -60 -48
+check "in Floor, after the first click the preview draws the floor from -66 -60 -46 to -63 -60 -48" \
+	preview_has 12 -66,-60,-46 -63,-60,-48
+press 1 h
+check "H locks the far corner" eval '[[ $(val 1 lock) == "locked -63,-60,-48 active" ]]'
+lock_nudge Prior "Page Up moves it a block up" -63,-59,-48
+check "and the whole floor with it" eval 'preview_has 12 -66,-59,-46 -63,-59,-48 &&
+	[[ " $(val 1 preview) " != *" -66,-60,-46 "* ]]'
+use_click 1
+check "the second click places the floor a block up, and the lock ends" eval \
+	'drv 1 "await block -63 -59 -48 minecraft:stone_bricks" > /dev/null &&
+	[[ $(val 1 "boxstates -66 -59 -46 -63 -59 -48 stone_bricks") == "12 12" ]] &&
+	[[ $(val 1 "layer -66 -60 -46") == minecraft:air ]] && [[ $(val 1 lock) == "unlocked active" ]]'
+drv 1 "edit -66 -59 -48 -63 -59 -46 minecraft:air" "await block -63 -59 -48 minecraft:air" "ebmode SINGLE" \
 	> /dev/null
 
 # R in Single, and a Line of stairs from a locked position, on the same grass, from Planner1 at -58.5 -58 -34.5 facing
@@ -2181,7 +2221,7 @@ aim 1 -58 -60 -36
 use_click 1
 check "the first click, aimed elsewhere, starts the Line at the locked position and sends no edit" eval \
 	'drv 1 "wait 10" > /dev/null && [[ $(val 1 holdlog) == *" edits=0 "* ]] &&
-	[[ $(val 1 lock) == "locked -62,-60,-38 active" ]] && [[ $(val 1 "layer -62 -60 -38") == minecraft:air ]]'
+	[[ $(val 1 lock) == "unlocked active" ]] && [[ $(val 1 "layer -62 -60 -38") == minecraft:air ]]'
 drv 1 "lookat -61.5 -49 -37.5" "wait 5" > /dev/null
 check "looking up into open air, the preview draws a Line of 12 upward" preview_has 12 -62,-60,-38 -62,-49,-38
 shots line-locked-upward
@@ -2194,6 +2234,24 @@ check "the second click places the 12 stairs as one edit, on both clients, and t
 drv 1 "edit -62 -60 -38 -62 -49 -38 minecraft:air" "ebmode SINGLE" > /dev/null
 check "erasing the Line reaches both games" eval 'drv 2 "await block -62 -49 -38 minecraft:air" > /dev/null &&
 	drv 1 "await block -62 -60 -38 minecraft:air" > /dev/null'
+# In Line, a nudge across a line of 5 moves the whole line: from Planner1 at -59.5 -58 -32.5 facing north, the first
+# click on -62 -60 -38 and the far end aimed at -58 -60 -38 and locked, Up moves both ends a block north.
+drv 1 "ebmode LINE" "cmd tp @s -59.5 -58 -32.5 180 30" "wait 40" > /dev/null
+aim 1 -62 -60 -38
+use_click 1
+aim 1 -58 -60 -38
+check "in Line, after the first click the preview draws a line of 5 east" preview_has 5 -62,-60,-38 -58,-60,-38
+press 1 h
+check "H locks the line's far end" eval '[[ $(val 1 lock) == "locked -58,-60,-38 active" ]]'
+lock_nudge Up "Up, across the line, moves the far end a block north" -58,-60,-39
+check "and the whole line with it" eval 'preview_has 5 -62,-60,-39 -58,-60,-39 &&
+	[[ " $(val 1 preview) " != *" -62,-60,-38 "* ]]'
+use_click 1
+check "the second click places the moved line of 5, and the lock ends" eval \
+	'drv 1 "await block -58 -60 -39 minecraft:oak_stairs" > /dev/null &&
+	[[ $(val 1 "boxstates -62 -60 -39 -58 -60 -39 oak_stairs") == "5 5" ]] &&
+	[[ $(val 1 "layer -62 -60 -38") == minecraft:air ]] && [[ $(val 1 lock) == "unlocked active" ]]'
+drv 1 "edit -62 -60 -39 -58 -60 -39 minecraft:air" "await block -58 -60 -39 minecraft:air" "ebmode SINGLE" > /dev/null
 
 # One ghost block, turning and flipping, on the same grass in Single mode, from Planner1 at -58.5 -58 -34.5 facing
 # north. Hotbar slots 5 to 8 hold oak stairs, oak stairs again, stone and an oak log; a stair placed facing north
@@ -2537,28 +2595,30 @@ check "locked, it names the nudges and the lock on" eval '[[ $(val 1 lock) == "l
 line_shot build-line-line-locked
 use_click 1
 aim 1 -51 -60 -36
-check "during a Line drawn with the place click, locked, only the nudges, the turning control and the lock" eval \
-	'drv 1 "wait 5" > /dev/null && [[ $(val 1 modehud) == "$line_nudge[Hold Left Control: turn or flip][H: Lock (On)]" ]]'
-line_shot build-line-shape-locked
-press 1 h
-check "unlocked during it, the turning control and the lock" eval \
-	'[[ $(val 1 modehud) == "[Hold Left Control: turn or flip][H: Lock (Off)]" ]]'
+check "during a Line drawn with the place click, the far end's step starts unlocked: the turning control and the lock" \
+	eval 'drv 1 "wait 5" > /dev/null && [[ $(val 1 modehud) == "[Hold Left Control: turn or flip][H: Lock (Off)]" ]]'
 line_shot build-line-shape
 press 1 h
+check "locked during it, only the nudges, the turning control and the lock" eval \
+	'[[ $(val 1 modehud) == "$line_nudge[Hold Left Control: turn or flip][H: Lock (On)]" ]]'
+line_shot build-line-shape-locked
 attack_click 1
 check "a left click cancels the shape, and the locked line shows again" eval 'drv 1 "wait 5" > /dev/null &&
 	[[ $(val 1 lock) == "locked "+([-0-9]),+([-0-9]),+([-0-9])" active" ]] && [[ $(val 1 modehud) == "[Right-click: start placing]"*"[H: Lock (On)][Esc: exit mode]" ]]'
 attack_click 1
 aim 1 -51 -60 -36
-check "during a Line drawn with the break click, locked, only the nudges and the lock" eval \
-	'drv 1 "wait 5" > /dev/null && [[ $(val 1 modehud) == "$line_nudge[H: Lock (On)]" ]]'
-line_shot build-line-break-locked
-press 1 h
-check "unlocked during it, the lock alone" eval '[[ $(val 1 modehud) == "[H: Lock (Off)]" ]]'
+check "during a Line drawn with the break click, the lock alone" eval \
+	'drv 1 "wait 5" > /dev/null && [[ $(val 1 modehud) == "[H: Lock (Off)]" ]]'
 line_shot build-line-break
+press 1 h
+check "locked during it, only the nudges and the lock" eval '[[ $(val 1 modehud) == "$line_nudge[H: Lock (On)]" ]]'
+line_shot build-line-break-locked
 use_click 1
-check "a right click cancels it, erasing nothing, and the line before the first click shows again" eval \
-	'drv 1 "wait 10" > /dev/null && [[ $(val 1 lock) == "unlocked active" ]] &&
+check "a right click cancels it, erasing nothing, and the locked line before the first click shows again" eval \
+	'drv 1 "wait 10" > /dev/null && [[ $(val 1 lock) == "locked "+([-0-9]),+([-0-9]),+([-0-9])" active" ]] &&
+	[[ $(val 1 modehud) == "[Right-click: start placing]"*"[H: Lock (On)][Esc: exit mode]" ]]'
+press 1 h
+check "and H unlocks it: the line before the first click" eval '[[ $(val 1 lock) == "unlocked active" ]] &&
 	[[ $(val 1 modehud) == "$line_start[Hold Left Control: turn or flip]$line_end" ]]'
 aim 1 -54 -60 -36
 # The build mode's name beside the hotbar and the held item's name.

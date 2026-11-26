@@ -523,7 +523,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	 * ({@link ShapeLock#takesFirstClick}).
 	 */
 	static boolean lockTakesFirstClick() {
-		return lockActive() && session.lock().takesFirstClick(true, EffortlessShapes.shapeUnderWay());
+		return lockActive() && session.lock().takesFirstClick(true, EffortlessShapes.step());
 	}
 
 	/** Hooks E1 and E2: the click that finishes a shape, placing or erasing, ends the lock (1239 Q1 A). */
@@ -639,7 +639,8 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		if (lock) {
 			CopyOutline.Shown boxed = outlineShown();
 			boolean red = boxed != null && boxed.colour().red();
-			return ControlsLine.shape(new ControlsLine.ShapeState(EffortlessShapes.singleMode(), session.lock().on(), red,
+			return ControlsLine.shape(new ControlsLine.ShapeState(EffortlessShapes.singleMode(),
+				session.lock().on(EffortlessShapes.step()), red,
 				EffortlessShapes.underway(), turn), keys);
 		}
 		String sprintKey = keys.sprint();
@@ -654,20 +655,21 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	}
 
 	/**
-	 * "Lock or unlock" while the lock's controls are active: before a shape's first click, locks the first click's
-	 * position where a right click would start now, or with nothing aimed at does nothing; during a shape, locks the
-	 * positions its clicks have set. Locked, unlocks them, and they stay where they are.
+	 * "Lock or unlock" while the lock's controls are active: locks the position the aim sets for the step under way
+	 * ({@link EffortlessShapes#lock}), or with nothing aimed at does nothing; locked, unlocks the step, whose position
+	 * follows the aim again.
 	 */
 	static void toggleLock() {
 		ShapeLock lock = session.lock();
-		if (lock.on()) {
-			lock.unlock();
+		int step = EffortlessShapes.step();
+		if (lock.on(step)) {
+			lock.unlock(step);
 		} else {
 			EffortlessShapes.lock(lock);
 		}
 	}
 
-	/** A nudge key while the lock is on: moves the locked positions one block that way ({@link EffortlessShapes#nudge}). */
+	/** A nudge key while the step under way is locked: moves it or the whole shape ({@link EffortlessShapes#nudge}). */
 	static void nudgeLock(Direction direction) {
 		EffortlessShapes.nudge(session.lock(), direction);
 	}

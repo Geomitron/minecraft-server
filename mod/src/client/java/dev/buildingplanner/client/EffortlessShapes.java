@@ -40,6 +40,7 @@ import net.minecraft.world.phys.Vec3;
 import nl.requios.effortlessbuilding.buildmode.BuildModeEnum;
 import nl.requios.effortlessbuilding.buildmode.BuildModes;
 import nl.requios.effortlessbuilding.buildmode.IBuildMode;
+import nl.requios.effortlessbuilding.buildmode.ThreeClicksBuildMode;
 import nl.requios.effortlessbuilding.buildmode.buildmodes.Floor;
 import nl.requios.effortlessbuilding.buildmode.buildmodes.Line;
 import nl.requios.effortlessbuilding.buildmode.buildmodes.Wall;
@@ -227,16 +228,16 @@ public final class EffortlessShapes {
 	}
 
 	/**
-	 * H, unlocked: during a shape, locks the positions its clicks have set so far, with its first click's hit; before
-	 * the first click, locks the first click's position where a right click would start now ({@link #aimed}), or with
-	 * nothing aimed at does nothing.
+	 * H, with the step under way unlocked ({@link #step}): before the first click, locks the first click's position
+	 * where a right click would start now ({@link #aimed}); during a shape, locks the position the aim sets for the
+	 * step now ({@link #found}). With nothing aimed at, it does nothing.
 	 */
 	static void lock(ShapeLock lock) {
-		if (shapeUnderWay()) {
-			List<BlockPos> set = shapePositions();
-			BlockHitResult hit = BuildPipelineClientAccessor.buildingplanner$firstClickHit();
-			if (!set.isEmpty() && hit != null) {
-				lock.lock(set.getFirst(), hit);
+		int step = step();
+		if (step > 0) {
+			BlockPos found = found(step);
+			if (found != null) {
+				lock.lockStep(step, found);
 			}
 			return;
 		}
@@ -247,13 +248,60 @@ public final class EffortlessShapes {
 	}
 
 	/**
-	 * A nudge key while the lock is on: moves the locked position one block that way, and during a shape every position
-	 * its clicks have set and the first click's hit with them (hook E33). Effortless Building's {@code findCoordinates}
-	 * reads them each frame, so the preview and the finished shape follow.
+	 * The step under way (see {@link ShapeLock}): the number of positions the shape's clicks have set, 0 before the
+	 * first click.
+	 */
+	static int step() {
+		return shapeUnderWay() ? shapePositions().size() : 0;
+	}
+
+	/** How the step finds its position in Effortless Building's mode ({@link ShapeLock#finder}). */
+	private static ShapeLock.Finder finder(int step) {
+		BuildModeEnum mode = BuildModes.CLIENT.getBuildMode();
+		return ShapeLock.finder(mode == BuildModeEnum.LINE, mode == BuildModeEnum.WALL, step);
+	}
+
+	/**
+	 * The position the aim sets for a shape's step now: its finder's ({@link ShapeLock#finder}) from the positions the
+	 * clicks have set, as Effortless Building's preview finds it, with the camera's line of sight while Freecam's is on
+	 * (hook E26); or null where it finds none.
+	 */
+	private static BlockPos found(int step) {
+		Player player = Minecraft.getInstance().player;
+		List<BlockPos> set = shapePositions();
+		if (player == null || set.size() != step) {
+			return null;
+		}
+		ShapeLock.Finder finder = finder(step);
+		BlockPos from = ShapeLock.from(finder, set);
+		return switch (finder) {
+			case LINE -> Line.findLine(player, from, true);
+			case WALL -> Wall.findWall(player, from, true);
+			case FLOOR -> Floor.findFloor(player, from, true);
+			case HEIGHT -> ThreeClicksBuildMode.findHeight(player, from, true);
+		};
+	}
+
+	/**
+	 * Hook E37: the position a shape's step (1 or 2) takes ({@link ShapeLock#position}): while the lock's controls are
+	 * active and the step is locked, its locked position, moved by the nudges; otherwise {@code found}, the one
+	 * Effortless Building's aim found.
+	 */
+	public static BlockPos stepPosition(int step, BlockPos found) {
+		return BuildingPlannerClient.lockActive() ? BuildingPlannerClient.session().lock().position(step, found)
+			: found;
+	}
+
+	/**
+	 * A nudge key while the step under way is locked ({@link ShapeLock#nudge}): before the first click, moves the
+	 * locked position one block that way; during a shape, along a direction the step sets, the step's position, and
+	 * along any other, the whole shape: the step's position, every position the clicks have set and the first click's
+	 * hit with them (hook E33). Effortless Building's {@code findCoordinates} reads them each frame, so the preview and
+	 * the finished shape follow.
 	 */
 	static void nudge(ShapeLock lock, Direction direction) {
-		lock.nudge(direction);
-		if (!shapeUnderWay()) {
+		List<BlockPos> set = shapeUnderWay() ? shapePositions() : List.of();
+		if (!lock.nudge(set, set.isEmpty() ? null : finder(set.size()), direction)) {
 			return;
 		}
 		IBuildMode mode = BuildModes.CLIENT.getBuildMode().instance;
@@ -294,14 +342,12 @@ public final class EffortlessShapes {
 	}
 
 	/**
-	 * The locked positions the copy's box shows around (see "Locking and the first click": "Colours"), while the lock is
-	 * on: during a shape, the positions its clicks have set; before the first click, the locked position.
+	 * The locked position the copy's box shows around (see "Locking and the first click": "Colours"), while the step
+	 * under way is locked: before the first click, the locked first position; during a shape, the step's.
 	 */
 	static List<BlockPos> lockedPositions(ShapeLock lock) {
-		if (!lock.on()) {
-			return List.of();
-		}
-		return shapeUnderWay() ? shapePositions() : List.of(lock.pos());
+		int step = step();
+		return lock.on(step) ? List.of(lock.pos(step)) : List.of();
 	}
 
 	/**
@@ -610,7 +656,7 @@ public final class EffortlessShapes {
 	 * alike; otherwise the position Effortless Building found, {@code found}.
 	 */
 	public static BlockPos firstClickPos(BlockPos found) {
-		return BuildingPlannerClient.lockTakesFirstClick() ? BuildingPlannerClient.session().lock().pos() : found;
+		return BuildingPlannerClient.lockTakesFirstClick() ? BuildingPlannerClient.session().lock().pos(0) : found;
 	}
 
 	/**

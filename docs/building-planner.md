@@ -1535,10 +1535,11 @@ mouse mode is on, and the main hand holds an item that places a block (`ClickRul
 controls (Left Ctrl with the wheel and the middle click) are active under the same conditions in every mode, while no
 shape drawn with the break click is under way (`getBuildState()` isn't `BREAKING`), since that shape erases
 (`SingleRule.turning`); in Disable they act on the real block a right click places. A client class, `ShapeLock`,
-stores the lock's state: the step it's for (the first click, or a shape's second or third position), whether it's on,
-and the locked position, with, for the first click, the face and hit point aimed at when it was locked. The positions
-the shape's clicks have set stay Effortless Building's own (`firstBlockEntry`, and `secondBlockEntry` in the modes of
-three clicks). A second client class,
+stores the lock's state: the first click's locked position, with the face and hit point aimed at when it was locked,
+which stays through a shape so that a cancelled shape leaves it locked, and the locked position of a shape's second
+or third position, with the step it's for. The step under way is the number of positions the shape's clicks have set,
+which stay Effortless Building's own (`firstBlockEntry`, and `secondBlockEntry` in the modes of three clicks). A
+second client class,
 `HeldTurn`, stores the turn and the item it was set for, since the turn reaches every mode. Leaving the server,
 changing dimension, choosing a mode in the radial menu (E21), Esc's step that leaves the mode (see "Esc") and any
 mouse mode starting end the lock. The first click's block has Effortless Building's reach (32 in
@@ -2856,18 +2857,23 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   north, Up moves the locked position east. The locked position is shot in open air at 854 by 480 and 1920 by 1080, GUI
   scale 2, and Controls' "Building Planner" heading with the keys' names at GUI scale 4. In Wall, H before the
   first click locks the first corner and Up nudges it; aimed elsewhere, the preview draws the corner alone there; the
-  first click starts the wall there, the far corner follows the aim (a wall of 6, then of 15, by the preview), and the
-  second click places the wall from the locked corner, on both clients, and ends the lock. In Cube, H after the second
-  click locks both positions the clicks set, Up moves both north with the preview, and the third click places the cube
-  from the moved positions and ends the lock. The locked Wall corner and the nudged Cube are shot at 854 by 480 and
-  1920 by 1080, GUI scale 2.
+  first click starts the wall there, and the far corner's step starts unlocked, following the aim (a wall of 6, then
+  of 15, by the preview). H then locks the far corner, which stays as Planner1 turns; Page Up makes the wall a block
+  taller (20 blocks), and Up, across the wall, moves the whole wall a block north; the second click places the wall
+  shown, every position the preview drew, on both clients, and ends the lock. In Cube, after the second click, H
+  locks the height, Page Up raises it a block and Up, a level nudge, moves the whole cube north, with the preview; the
+  third click, aimed higher, places the cube shown, 2 high, and ends the lock. In Floor, after the first click, H
+  locks the far corner, and Page Up moves the whole floor a block up, where the second click places it. The locked
+  Wall step before and after the nudge across it and the Cube's locked height are shot at 854 by 480 and 1920 by
+  1080, GUI scale 2.
 - Single without row modes, and a Line from a locked position: in Single mode with stone bricks, R leaves Single's
   line, the lock and the copy's mode as they are (the driver's `modehud`, `lock` and `copymode`), and a right click
   places one ghost block as one edit. In Line mode with oak stairs, H locks the first click's position; the first
-  click, aimed elsewhere, starts the Line there and sends no edit; looking up into open air on the line above the
-  start, the preview draws a Line of 12 (the driver's `preview`), and the second click places the 12 stairs as one
-  edit, on both clients, and ends the lock. The Line is shot before the second click at 854 by 480 and 1920 by 1080,
-  GUI scale 2.
+  click, aimed elsewhere, starts the Line there and sends no edit, and the far end's step starts unlocked; looking up
+  into open air on the line above the start, the preview draws a Line of 12 (the driver's `preview`), and the second
+  click places the 12 stairs as one edit, on both clients, and ends the lock. The Line is shot before the second click
+  at 854 by 480 and 1920 by 1080, GUI scale 2. Then, from a first click on the grass with the far end aimed 4 blocks
+  east and locked, Up, across the line, moves the whole Line of 5 a block north, where the second click places it.
 - One ghost block, turning and flipping (step 16): with oak stairs in Single mode, facing north, a notch up with Left
   Ctrl held turns the stair a quarter turn clockwise, to face east (the driver's `heldturn`), and the hotbar slot
   stays; locked, the preview draws the stair facing east (the driver's `previewstate`); the stair placed then faces
@@ -2900,9 +2906,10 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   wheel changes the hotbar slot; a right click cancels it, erasing nothing. Line's line, checked word for word (the
   driver's `modehud`): before the first click with stairs, with Left Ctrl held, turned, with and without Left Ctrl, for
   a chest (turn only) and a slab (flip only), each with Left Ctrl held too, and for stone with no turning control;
-  locked before the first click; during a Line drawn with the place click, locked and not, turned, with and without
-  Left Ctrl; during one drawn with the break click, locked and not, with no turning control; a cancelled shape keeps
-  the lock. No line shows with a stick in hand; in Disable, Disable's line in its place (step 19); with the copy at the
+  locked before the first click; during a Line drawn with the place click, its far end's step unlocked after the
+  first click and then locked, turned, with and without Left Ctrl; during one drawn with the break click, unlocked
+  and then locked, with no turning control; a cancelled shape keeps the first position locked before the first
+  click. No line shows with a stick in hand; in Disable, Disable's line in its place (step 19); with the copy at the
   aim, the copy's line shows; with the sprint key on Right Control, it names Right Control; F1 hides it. During a Line
   after its first click, the line ends 2 GUI pixels above the action bar's text, which shows the shape's block count
   (the driver's `modebox` and `actionbar`), at 854 by 480, GUI scale 2, and at 1920 by 1080, GUI scale 2 and 4, each
@@ -3316,7 +3323,7 @@ without Left Control for a block that hangs on the block behind it, and none for
 flips or with the sprint key unbound), and the build modes' lines (Single's and the other modes' before the first
 click, locked, each turn phrase with and without Left Control, the red reason as a
 warning in place of the right click, during a shape drawn with the place click and with the break click, locked or
-not, keys a player rebound, and unbound keys left out), with Esc before
+not, "[H: Lock (Off)]" after each click, keys a player rebound, and unbound keys left out), with Esc before
 the click that cancels a shape, the left click for one drawn with the place click ("[Esc/Left-click: cancel]") and the
 right click for one drawn with the break click ("[Esc/Right-click: cancel]"), and before each box's right click.
 
@@ -3337,8 +3344,14 @@ when the turning controls are active (`SingleRule.turning`: every mode but Disab
 mouse mode on, with an item that places no block, or during a shape drawn with the break click, but during one drawn
 with the place click). `ShapeLockTest` covers when the lock's controls are active (a session, any mode but Disable, no
 mouse mode, an item that places a block), when the first click's block alone is drawn, the lock off until H, the
-locked position and hit taking the first click, no click taken during a shape or while the controls aren't active, a
-nudge moving the position and the hit point one block, unlocking, and a shape's first click moving with a nudge.
+locked position and hit taking the first click, no first click taken during a shape or while the controls aren't
+active, H locking each step, a locked step's position taking its click in place of the aim's, the next step unlocked
+after each click, H on a locked step unlocking it alone, a cancel keeping a first position locked before the first
+click, unlocking ending every step's lock, the finder each mode's steps use and the directions each step sets (Line
+one block long and longer, Wall one block wide and wider, `findFloor`'s and `findHeight`'s steps), a nudge in each,
+setting the step or moving the whole shape, a first position locked before the first click moving with the whole
+shape, a nudge before the first click moving the position and the hit point one block, and a shape's first click
+moving with a nudge.
 `EscStepsTest` covers the order of Esc's steps (see "Esc"): during a copy's set, dropping the set, putting the copy
 away, Disable and the pause; in Delete, ending its box, clearing the marks and ending Delete; a box ending before
 anything else; a shape cancelled before Disable; and the pause in Disable with no mode on.

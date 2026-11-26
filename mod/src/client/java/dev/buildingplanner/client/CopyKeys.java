@@ -98,7 +98,7 @@ final class CopyKeys {
 		}
 		Entity view = Aim.entity();
 		boolean nudging = view != null
-			&& (acting && session.clipboard().locked() || locking && session.lock().on());
+			&& (acting && session.clipboard().locked() || locking && session.lock().on(EffortlessShapes.step()));
 		for (CopyNudge nudge : CopyNudge.values()) {
 			KeyMapping key = NUDGES.get(nudge);
 			int presses = presses(key);

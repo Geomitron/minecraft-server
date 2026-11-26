@@ -7,8 +7,8 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 
 /**
  * Hook E33: the positions the first and second clicks of a mode of three clicks (Cube, Cylinder, Sphere, Slope Floor,
- * Diagonal Line, Diagonal Wall) have set, which the nudge keys move together while the lock is on during the shape
- * (see "Locking and the first click").
+ * Diagonal Line, Diagonal Wall) have set, which a nudge that moves the whole shape moves together (see "Locking and
+ * the first click").
  */
 @Mixin(value = ThreeClicksBuildMode.class, remap = false)
 public interface ThreeClicksBuildModeAccessor {

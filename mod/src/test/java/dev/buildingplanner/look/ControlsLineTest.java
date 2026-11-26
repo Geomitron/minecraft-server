@@ -12,6 +12,7 @@ import dev.buildingplanner.input.BoxPurpose;
 import dev.buildingplanner.input.CopyColour.Refusal;
 import dev.buildingplanner.input.CopyMode;
 import dev.buildingplanner.input.MouseMode;
+import dev.buildingplanner.input.ShapeLock;
 import dev.buildingplanner.look.ControlsLine.CopyState;
 import dev.buildingplanner.look.ControlsLine.DeleteBox;
 import dev.buildingplanner.look.ControlsLine.DeleteState;
@@ -29,6 +30,10 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -429,6 +434,24 @@ class ControlsLineTest {
 			shape(new ShapeState(false, false, false, Underway.PLACING, STAIRS), DEFAULT));
 		assertEquals("[Arrow keys + Page Up/Down: nudge][Hold Left Control: turn or flip][H: Lock (On)]",
 			shape(new ShapeState(false, true, false, Underway.PLACING, STAIRS), DEFAULT));
+	}
+
+	@Test
+	void afterEachClickTheNextStepsLineStartsAtLockOff() {
+		ShapeLock lock = new ShapeLock();
+		lock.lock(new BlockPos(0, -60, 0),
+			new BlockHitResult(new Vec3(0.5, -60, 0.5), Direction.UP, new BlockPos(0, -61, 0), false));
+		assertEquals("[Right-click: start placing][Arrow keys + Page Up/Down: nudge][Left-click: start erasing]"
+			+ "[Hold Left Control: turn or flip][H: Lock (On)][Esc: exit mode]",
+			shape(new ShapeState(false, lock.on(0), false, Underway.NONE, STAIRS), DEFAULT));
+		String off = "[Hold Left Control: turn or flip][H: Lock (Off)]";
+		String on = "[Arrow keys + Page Up/Down: nudge][Hold Left Control: turn or flip][H: Lock (On)]";
+		assertEquals(off, shape(new ShapeState(false, lock.on(1), false, Underway.PLACING, STAIRS), DEFAULT));
+		lock.lockStep(1, new BlockPos(3, -60, 2));
+		assertEquals(on, shape(new ShapeState(false, lock.on(1), false, Underway.PLACING, STAIRS), DEFAULT));
+		assertEquals(off, shape(new ShapeState(false, lock.on(2), false, Underway.PLACING, STAIRS), DEFAULT));
+		lock.lockStep(2, new BlockPos(3, -58, 2));
+		assertEquals(on, shape(new ShapeState(false, lock.on(2), false, Underway.PLACING, STAIRS), DEFAULT));
 	}
 
 	@Test
