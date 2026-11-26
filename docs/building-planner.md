@@ -30,6 +30,11 @@ request that asks it.
 paste (Geo's comment c4 on 1359, 1368 Q2 A, 1372), is designed in "Place real blocks" and not built; every part of
 this spec that mentions it is marked as proposed for 0.9.0. Its build steps follow 0.8.0's in [plan.md](plan.md).
 
+**Proposed for 0.10.0.** Building Planner on servers that don't run it, where the player's ghost blocks are saved on
+their computer and only they see them (Geo's comment c4 on 1359, 1368 Q1 A), is designed in "Servers without Building
+Planner" and not built; every part of this spec that mentions it is marked as proposed for 0.10.0. Its build steps
+follow 0.9.0's in [plan.md](plan.md).
+
 ## What players get
 
 - **Ghost blocks.** Each dimension has one layer of ghost blocks, shared with everyone on the server. Every change
@@ -170,6 +175,9 @@ this spec that mentions it is marked as proposed for 0.9.0. Its build steps foll
   This happens whether or not the player joins a server with Building Planner.
 - **Messages.** Building Planner's messages show in the player's chat. Every text players see (messages, key names,
   button and slider labels, the panel) is in the wording Geo approved, which this spec quotes (0.7.0's in 1313).
+- **Other servers.** As proposed for 0.10.0, on a server that doesn't run Building Planner, Building Planner works
+  from the player's computer alone: their ghost blocks are saved on their computer for that server, and only they see
+  them. This server still shares its ghost blocks (see "Servers without Building Planner").
 
 ## Geo's goals, and what meets each
 
@@ -1774,8 +1782,9 @@ that row is (hook E36's list of label keys gains its key; `VisualSettingsRow`): 
 `config/buildingplanner-client.properties` as `place-real-blocks` (`false` at first, which a missing or other value
 reads as). Its tooltip is in the wording Geo approves in build step 5. The row shows on any server. The setting acts
 while Building Planner has a session and the server takes the payload `place` (`ClientPlayNetworking.canSend`): with
-it on, a server with 0.8.0 gets ghost blocks and a server without Building Planner gets nothing, as with it off. The
-later version for servers without Building Planner (1368 Q1 A) needs nothing from it.
+it on, a server with 0.8.0 gets ghost blocks and a server without Building Planner gets nothing, as with it off. On a
+server without Building Planner, as proposed for 0.10.0, shapes draw ghost blocks with it on (see "Servers without
+Building Planner").
 
 **What a shape does.** While the setting acts, in every build mode but Disable, with an item that places a block in
 hand, the place (right) click's shape places real blocks instead of ghost blocks: the shape with Effortless
@@ -2137,7 +2146,9 @@ keeps to the same limits itself, so a player never meets them, and they have no 
 Each server with Building Planner keeps its own lists, so a player starts with none on another such server, and their
 lists and panel come back when they return. On a server without Building Planner, or with another protocol version,
 Building Planner stays off (see "When the server lacks the mod"): the panel doesn't show, and the radial menu's
-buttons do nothing. A singleplayer world runs no server side, so it has no lists either.
+buttons do nothing. A singleplayer world runs no server side, so it has no lists either. As proposed for 0.10.0, on a
+server that takes none of Building Planner's payloads, the game starts a local session and saves the player's lists
+on their computer (see "Servers without Building Planner").
 
 A game on another version than the server's, such as a 0.5.0 game on the 0.6.0 server, has Building Planner off with
 no message, as on a server without it: no ghost blocks, no lists, and Effortless Building's shapes draw nothing. One
@@ -2265,19 +2276,106 @@ without Building Planner. The server sends nothing to a player who can't receive
 so players without the add-on, or without any mods, join and play as before. It sends `hello` only to a game that also
 takes `columns`, since Building Planner 0.2 takes a `hello` of another layout under the same name.
 
-**What the player's computer alone can do.** Geo's ideal is a mod that also works on other servers from the player's
-computer alone, where other players don't see the player's ghost blocks (comment c4 on 1359). Whether Building Planner
-works on servers without it, in a later version, with the player's ghost blocks kept on their computer there while
-this server still shares them (1368 Q1 A); shapes place real blocks only on servers that run Building Planner (1368
-Q2 A). What the sources show:
+As proposed for 0.10.0, on a server that takes none of the ten payloads, the game starts a local session instead of
+leaving Building Planner off (see "Servers without Building Planner"). Building Planner then stays off only on a server
+that takes some or all of them and sends no `hello` of the game's protocol version.
 
-- Ghost blocks, shapes, erasing, the copy, Delete, undo, the block mix, editing from Freecam and the material list's
-  counts run on the player's computer, with the layer kept in a file there for each server and dimension instead of
-  on the server. Sharing, other players' edits and their glow, and the material lists the server keeps need the
-  server's part. Ghost blocks the real world fills could leave the layer only in chunks the player has loaded, from
-  the block changes the game receives, where the server's hook S1 sees every change. Disable's turn and "Match ghost
-  blocks" place through the server's hook S2; from the computer alone, the game would have to turn the player's view
-  before the click, which is untested.
+### Servers without Building Planner
+
+Proposed for 0.10.0, not built. Geo wants Building Planner to work as a client-side mod on other servers, where other
+people don't need to see the player's ghost blocks (comment c4 on 1359), and picked "Yes, in a later version: there,
+your ghost blocks are saved on your computer and only you see them, and this server still shares them." (1368 Q1 A).
+Shapes place real blocks only on servers that run Building Planner (1368 Q2 A). Each choice still Geo's carries an
+`OPEN:` mark naming its question in the request "Building Planner on other servers" or "Ghost blocks between
+servers"; the text describes the option the request recommends.
+
+**Which servers.** At joining, a game that isn't in its own world checks the ten payloads as "When the server lacks
+the mod" describes. If the server takes none of them, the game starts a local session at once: Building Planner plays
+the server's part itself, on the player's computer, for that player alone. If the server takes some or all of them,
+the game waits for the server's `hello`, so a server with another version of Building Planner leaves it off, silently
+(483). If a `hello` arrives during a local session, the game saves and ends the local session and starts the server's.
+On a server that runs Effortless Building's own server part but not Building Planner, the game starts one too: the
+player's shapes draw ghost blocks there, and hooks E1, E2 and E4 keep Effortless Building's packets from going out, as
+on this server. A LAN guest's game starts one, since a LAN world runs no Building Planner server part
+(`BuildingPlanner.onInitialize` registers it only on a dedicated server). A singleplayer world and a LAN host's own
+world stay as "When the server lacks the mod" describes (`OPEN:` "Building Planner on other servers", Q4).
+
+**The local server.** `LocalServer` (client) runs the classes the dedicated server runs from the common source set:
+`LayerSync` for the layer, its checks and undo, `LayerStore` for the layer's files, and `MaterialLists` with
+`ListFiles` for the material lists. Its `LayerSync.World` answers from the game itself: the player's dimension and
+chunk column, the radius of the chunks the game keeps loaded as the view distance, the level's build height and world
+border, and a real block only in a chunk the game has loaded (`ClientLevel`). Its `Outbox` queues each payload for the
+player, and the game handles the queue in order at the start of its next tick, as it handles a server's packets.
+`ClientSession` and `ListSync` send through a link, the network on a server that runs Building Planner and
+`LocalServer` elsewhere, so the session, its replica (`LayerReplica`) and the tiles work as they do on this server. The
+local `hello` has protocol version 5 and the block cap of 200,000 blocks an edit (`SyncLimits.DEFAULT`).
+
+**The files.** The game saves the player's ghost blocks for each server in
+`<game folder>/building-planner/servers/<server>/<player UUID>/layer/<dimension namespace>/<dimension path>/<x>.<z>.dat`,
+in the format of "The layer's files on the server", and their material lists in
+`<game folder>/building-planner/servers/<server>/<player UUID>/material-lists/<player UUID>.dat`, in the format of "The
+lists on the server". `<server>` is the name Litematica gives its own folders for that server (MaLiLib's
+`StringUtils.getWorldOrServerName`): the address the player joined, with each `:` turned into `_` (`play.example.org`,
+`localhost_25565`), and `realms` for a Realm. The game reads every file in the server's folder as the session starts,
+writes a changed area at most every 30 seconds while the layer has changed, and writes every change as the player
+leaves the server and as the game closes (`ClientLifecycleEvents.CLIENT_STOPPING`), each through a temporary file and a
+rename, by `LayerStore`'s rules. A file it can't read is logged, skipped and never written over, as on the server. If
+it can't list the server's folder, Building Planner stays off on that server and logs an error, rather than run
+without the player's ghost blocks. A server joined by two addresses (a name and its IP address) has two folders, as
+Litematica's own do. A LAN world has a new port each time it's opened to LAN, so a LAN guest's ghost blocks come back
+only while the host keeps the world open.
+
+**What works there.** Every feature in "What players get" works there as on this server, from the player's computer
+alone, except:
+
+- Only the player sees their ghost blocks, and no one else's edits reach them, so none glow.
+- Undo and redo take back the player's own changes, with 50 steps and 2,000,000 blocks as on this server. The steps
+  survive leaving and rejoining the server and changing dimension, and last until the game closes.
+- A real block fills a ghost block by the same rule, but only where the game sees it. Hook C1 notes each change to a
+  block in a chunk the game has loaded, and at the end of the client tick `LayerSync.removeFilled` removes the ghost
+  blocks still filled, as one edit with no undo step. A position where the game placed a block that the server hasn't
+  confirmed yet (`BlockStatePredictionHandler`) waits for the server's answer, so a placement the server refuses leaves
+  its ghost block in place. The check at chunk load (`ClientChunkEvents.CHUNK_LOAD`, `LayerSync.chunkLoaded`) finds blocks
+  placed while the chunk wasn't loaded. A block placed and broken again while the chunk wasn't loaded leaves its ghost
+  block, where this server's hook S1 would have removed it.
+- "Place real blocks" doesn't act: with it on, shapes draw ghost blocks, as with it off (1368 Q2 A).
+- In Disable, Left Ctrl, the wheel and the middle click work as in Minecraft, and "Match ghost blocks" doesn't act,
+  since both turn a real block through the server's hook S2: real blocks place as Minecraft places them (`OPEN:` Q3).
+  `DisableTurn`'s rule and hook M6's `place_turn` act only during a session with a server that runs Building Planner.
+- The material lists are kept on the computer for that server: "Last counted", the saved lists, the current list and
+  the panel come back when the player returns (`OPEN:` Q2).
+- The first time the player draws or pastes ghost blocks after joining, a line in chat says that only they see their
+  ghost blocks on that server, because it doesn't run Building Planner, in the wording Geo approves in build step 7
+  (`OPEN:` Q1).
+- `OldPlans` removes the old plans' placements only during a session with a server that runs Building Planner, so a
+  player's Litematica and Syncmatica placements on other servers stay.
+
+**Between servers.** The copy stays while the game runs: leaving a server, joining another and changing dimension don't
+drop it, on this server too, so a player can copy ghost blocks and real blocks on one server and paste them as
+ghost blocks on another (`OPEN:` "Ghost blocks between servers", Q1). The ghost blocks saved for a server stay in its
+folder, unused, while that server runs Building Planner, and show again if it stops running it (`OPEN:` "Ghost blocks
+between servers", Q2).
+
+**This server.** On a server that runs Building Planner, 0.10.0 works as 0.9.0 does: the layer is shared, and the
+server keeps the lists. 0.10.0 changes nothing the server does and keeps protocol version 5, so a 0.9.0 game and a
+0.10.0 server work together, and so do a 0.10.0 game and a 0.9.0 server. If this server ran without Building Planner,
+as after a rollback, the games of players with 0.10.0 would start local sessions there, drawing ghost blocks only they see.
+
+**Litematica's extra blocks.** Hook L7 shows Litematica's colour for an extra block inside the box of a placement of
+the player's own that holds air there, on any server, so the player's own placements show extra blocks as Litematica
+does without Building Planner. The layer's tiles mark none.
+
+| # | File, method | Hook | Purpose |
+|---|---|---|---|
+| C1 | `LevelChunk.setBlockState(BlockPos, BlockState, int)` | `@Inject` at return, in the mixin config's client section | During a local session, for the game's own level: note a position whose new state fills a ghost block of the local layer, for the check at the end of the client tick. |
+| L7 | `render/schematic/ChunkRendererSchematicVbo.java`, `getOverlayType(BlockState, BlockState)` | the same hook, or one on its caller where the block's position is known | Keep `EXTRA` inside the box of a placement that isn't a tile or the copy and holds air there. |
+
+`LocalServer` (client) wires the common classes to the game; `SessionLink` is what `ClientSession` and `ListSync` send
+through.
+
+**Real blocks from the computer alone.** Shapes place no real blocks on other servers (1368 Q2 A). What the sources
+show:
+
 - From the player's computer alone, a real block goes in only as a player places it: one right click sent for each
   block (`ServerboundUseItemOnPacket`), which Minecraft 26.3's server takes only within the player's block reach plus
   1 of their eyes (`ServerGamePacketListenerImpl.handleUseItemOn`, `Player.isWithinBlockInteractionRange(pos, 1.0)`:
@@ -2363,7 +2461,8 @@ add-on's classes off the classpath) and checks:
   message; the block mix key opens nothing; an Effortless Building shape adds no ghost blocks and places no real ones, with the
   player staying connected; and, by the driver's counter of the custom payloads leaving the client (a mixin in the
   `clienttest` source set), no place, break, undo or redo packet of Effortless Building is sent after a shape, Ctrl+Z,
-  Ctrl+Y and the break click.
+  Ctrl+Y and the break click. As proposed for 0.10.0, both clients start a local session there instead, the block
+  mix key opens the mix screen, and the shape adds ghost blocks on Planner1's client only (see `local.sh`).
 - A `hello` with protocol version 4, as Building Planner 0.5.0 sends, which the driver hands to the client, starts no
   session and shows no message. Then Left Ctrl doesn't turn the block in hand (step 18): in Disable, with oak stairs in hand, Left
   Ctrl with the wheel changes the hotbar slot, and a right click with Left Ctrl held places the stair as Minecraft
@@ -2918,6 +3017,45 @@ height or the border, and water; red past 2,000 blocks, checked first, and in su
 short. `PayloadsTest` covers `place` and its limits, and `ControlsLineTest` the lines with the setting on, the copy's
 included.
 
+`local.sh`, servers without Building Planner (proposed for 0.10.0; the checks follow the options the requests
+recommend), on the dev server started with the add-on left off its classpath (`start_server "$ADDON"
+server-without-addon`, as `step8.sh` starts it), with both clients having the add-on. Real blocks are checked on the
+server with the scripts' `server_has`:
+
+- Both clients start a local session at joining, and the driver's counter of the custom payloads leaving the client
+  counts none of Building Planner's.
+- A Line of 4 oak planks draws 4 ghost blocks on Planner1's client, places no real block on the server, and draws none
+  on Planner2's; Ctrl+Z takes them back, and Ctrl+Y draws them again.
+- The first shape after joining puts the chat line about ghost blocks only the player sees in Planner1's chat, the
+  second shape doesn't, and the first shape after a rejoin does again.
+- After Planner1 leaves, the area's file is in
+  `building-planner/servers/localhost_25565/<Planner1's UUID>/layer/minecraft/overworld/`, and the ghost blocks show
+  again after a rejoin and after the game restarts; a file made unreadable stays as it was, and its ghost blocks don't
+  show.
+- Ghost blocks a real block fills: a real oak plank Planner1 places into a ghost oak plank removes it; a `/setblock` of
+  oak planks from the server's console in a chunk Planner1 has loaded removes another; one set while Planner1 is
+  farther away than the view distance goes once Planner1 returns and the chunk loads; and with Planner1 no longer an
+  operator, an oak plank placed into a ghost oak plank within 16 blocks of the world's spawn, which the server refuses,
+  leaves the ghost block.
+- In Disable, with oak stairs in hand, Left Ctrl with the wheel changes the hotbar slot, and with "Match ghost blocks"
+  on, an oak stair placed into a ghost oak stair facing east faces the way Minecraft places it, on the server.
+- With "Place real blocks" on, a Line draws ghost blocks and places no real block.
+- A box counted, then saved as a list, and the material list panel come back after a rejoin.
+- A copy of ghost blocks and real blocks taken on the server with Building Planner pastes as ghost blocks on Planner1's
+  client after the server restarts without it, and the copy stays through a change of dimension.
+- With the server restarted with Building Planner, Planner1 sees the shared ghost blocks without its own local ones;
+  restarted without it again, its local ghost blocks show.
+- A Litematica placement of Planner1's own, with air where a real block stands, marks that block as extra.
+- Shots at 854 by 480 and 1920 by 1080: Planner1's ghost blocks on the server without the add-on, and the chat line.
+
+`JoinRuleTest` covers the rule at joining: the game's own world (no session), a server that takes none of the ten
+payloads (a local session), some or all of them (waiting for `hello`), a `hello` of another version (off), and a
+`hello` during a local session (the server's session). `LocalServerTest`, with `LayerNetwork`'s in-order queues,
+covers an edit, an erase, undo and redo, the steps kept across a rejoin, a ghost block a real block fills at a change
+and at chunk load, a position awaiting the server's answer waiting and a refused one keeping its ghost block, the files
+written and read back at the next session, an unreadable file never written over, and the lists kept.
+`LocalFoldersTest` covers the folders: each `:` turned into `_`, a Realm, and two players' UUIDs in two folders.
+
 The copy's placement has unit tests as pure functions. `CopyPlacementTest` covers the copy against each of the six
 faces, with sides of odd and even lengths, the origin for each turn and mirror filling the turned box, and a turn or
 mirror keeping the middle block. `PasteBoxesTest` covers snapping: flush against each face of a paste's box at the
@@ -3142,6 +3280,20 @@ other in the game's own copy of the layer, again after a restart, which doesn't 
   pickles, snow layers, turtle eggs, pink petals), each to be listed from the 26.3 jar's block state properties; and
   that a paste's context, the top face with a hit at each block's bottom middle, gives each block of a copy its own
   state once S2 turns it.
+- Servers without Building Planner (proposed for 0.10.0), not run:
+  - That `ClientPlayNetworking.canSend` at joining (`ClientPlayConnectionEvents.JOIN`) already knows every channel a
+    server running Building Planner takes, so no such server starts a local session; a `hello` that arrives during one
+    replaces it, should the check be early.
+  - That the 26.3 client's `BlockStatePredictionHandler` tracks each position the game placed until the server answers,
+    so hook C1's check can wait for it: its methods (`startPredicting`, `retainKnownServerState`,
+    `endPredictionsUpTo`) were seen in the jar, their bytecode not read.
+  - How long the game takes to read a server's files at joining, on its own thread: expected a few milliseconds for a
+    player's own ghost blocks, not measured.
+  - MaLiLib's `StringUtils.getWorldOrServerName` read in its source (`sakura-ryoko/malilib`, branch `26.3`), not run
+    for a Realm or a LAN world. Behind a proxy that joins several servers under one address (Velocity, BungeeCord), all
+    of them share one folder, and whether the game sees a new join at each switch isn't known.
+  - Where hook L7 can read the block's position: `getOverlayType` has none, so the hook may go on its caller; Litematica's
+    source not read for it.
 - How Freecam 1.5.1 stops a right click while "Allow interaction" is off, and that `Aim` can read the option by
   reflection, as it reads "Player control"; its source wasn't read for either.
 - That every orientation property `BlockTurn` stores is a separate property from the one a two-part block uses for its
