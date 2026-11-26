@@ -153,7 +153,7 @@ request that asks it.
   "Litematica's area selection").
 - **Litematica's status panel.** On each player's computer, once, Building Planner turns off Litematica's option that
   shows its status panel ("Layer Mode: All", "Renderers: …") for 10 seconds at a time, so the panel stays off the
-  screen (`OPEN:` the "Litematica's corner text" request, Q1; see "Litematica's status panel").
+  screen (see "Litematica's status panel").
 - **M opens Freecam's menu.** On each player's computer, once, Building Planner binds M to Freecam's menu and takes M
   from Litematica's menu, which players then have no key to open (see "Keys").
 - **How ghost blocks look.** On each player's computer, once, Building Planner turns on Litematica's "render blocks as
@@ -2081,7 +2081,7 @@ turn it off, since M opens Freecam's (see "Keys").
 
 Building Planner turns off `statusInfoHudAuto` once on each player's computer, under its own record (see "Settings
 Building Planner changes once"), so the panel shows only for a player who turns on Litematica's `statusInfoHud`
-(off by default) (`OPEN:` the "Litematica's corner text" request, Q1). Area selections stay undrawn.
+(off by default). Area selections stay undrawn.
 
 ### When the server lacks the mod
 

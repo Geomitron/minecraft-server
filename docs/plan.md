@@ -489,7 +489,7 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
   - the two lines Geo saw in a corner of the screen, "Layer Mode: All" and "Renderers: A: ON S: ON B: ON O: ON SEL:
     OFF", are Litematica's status panel: Litematica shows it for 10 seconds each time it adds a placement while one of
     its drawing switches is off, and Building Planner turned off "SEL" (area selections) and adds a placement for each
-    column of ghost blocks, so it shows often. Geo likely wants it gone (c1); Building Planner would turn off
+    column of ghost blocks, so it shows often. Geo likely wants it gone (c1); Building Planner turns off
     Litematica's option that shows it, once on each computer;
   - every ghost block within 32 blocks shows through walls, as red and orange ones do, in light blue where its block
     is missing (c2);
@@ -509,8 +509,10 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
   - "Build speed" and "Break speed" move to the radial menu's right side as headed sections, where Cube's "Filling"
     shows, and show only while Single is the mode (c7).
 
-  The questions the design leaves open, drafted for Geo in this order: "Litematica's corner text" (Q1: hide the panel
-  for every player), "Red frame for the left click" (Q1: in Single, the red frame only on ghost blocks, since a left
+  Geo's answer: Litematica's status panel is hidden: "Building Planner turns off Litematica's option that shows the
+  panel, once on each player's computer" (1367 Q1 A).
+
+  The questions still open: "Red frame for the left click" (Q1: in Single, the red frame only on ghost blocks, since a left
   click there erases nothing else), and "Place real blocks and other servers" (Q1: Building Planner on servers without
   it; Q2: the setting "Place real blocks"). 0.8.0 builds neither of the last request's two: what a "yes" to either
   needs (a layer kept on the player's computer; breaking real blocks, the survival inventory and undo of real blocks)
@@ -536,7 +538,7 @@ set of in-game scripts runs once, on step 7's last build ("Thread Procedures" in
 at 854 by 480 and 1920 by 1080, GUI scale 2, plus GUI scale 4 where a step says so.
 
 1. **Litematica's status panel off** ("Litematica's status panel" and "Settings Building Planner changes once"; c1).
-   Waits on "Litematica's corner text" Q1, and is built only if Geo chooses to hide the panel. The record
+   Can start now (1367 Q1 A). The record
    `status-panel-off-applied` turning off Litematica's `statusInfoHudAuto` once. Done when `LookDefaultsTest` covers
    the option turned off from its default, left as the player set it, the record written once, and no record when
    saving fails; and `step9.sh`'s once-settings checks pass: after a start, Litematica's config holds
