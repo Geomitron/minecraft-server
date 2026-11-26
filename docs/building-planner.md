@@ -143,8 +143,8 @@ request that asks it.
   "Close" button at its bottom right, and its (i) icon explains Building Planner's list (see "The material list").
 - **Settings.** Effortless Building's "Visual Settings" screen, and the radial menu's button that opens it, are named
   "Settings". The setting "Match ghost blocks" in it, off at first, places a real block turned as the ghost block it
-  fills (see "Settings"). Whether a setting "Place real blocks" makes shapes place real blocks is `OPEN:` the "Place
-  real blocks and other servers" request, Q2.
+  fills (see "Settings"). A setting "Place real blocks", on servers that run Building Planner, will make the server
+  place a shape's real blocks (1368 Q2 A), designed after 0.8.0.
 - **Building Planner's name.** Where players see Effortless Building's name in the game, the corner of the radial
   menu, it reads "Building Planner". Effortless Building's four keys in Controls show under the "Building Planner"
   heading, with Building Planner's own.
@@ -678,7 +678,7 @@ the player already had at the value Building Planner would set looks the same as
 | `area-selection-off-applied=true` | Litematica's `Visuals` option `enableAreaSelectionBoxesRendering` (on) | off, then `Configs.saveToFile()` (see "Litematica's area selection") |
 | `menu-key-applied=true` | Freecam's key "Config GUI" (`key.freecam.config.open`, unbound) and Litematica's hotkey `openGuiMainMenu` ("M") | M for Freecam's key, then `KeyMapping.resetMapping()` and `Options.save()`; no key for Litematica's hotkey, then `Configs.saveToFile()` (see "Keys"). Only with both Freecam and Litematica loaded. |
 | `layer-keys-applied=true` | Litematica's hotkeys `layerNext` ("PAGE_UP") and `layerPrevious` ("PAGE_DOWN") | no key for each, then `Configs.saveToFile()`, so Page Up and Page Down reach the copy's nudge keys (see "Keys"). Only with Litematica loaded. |
-| `status-panel-off-applied=true` | Litematica's `InfoOverlays` option `statusInfoHudAuto` (on) | off, then `Configs.saveToFile()` (see "Litematica's status panel"). Only with Litematica loaded. `OPEN:` the "Litematica's corner text" request, Q1. |
+| `status-panel-off-applied=true` | Litematica's `InfoOverlays` option `statusInfoHudAuto` (on) | off, then `Configs.saveToFile()` (see "Litematica's status panel"). Only with Litematica loaded. |
 
 With the tool item off, Litematica's tool (a stick by default) does nothing, since the stick and Litematica's tool modes
 play no part in planning. `look-defaults-applied` is the record Building Planner 0.3.0 and 0.4.0 wrote for every
@@ -1748,8 +1748,9 @@ The setting changes nothing on the server and no payload, so it works with proto
 
 Geo asked for a setting "Place real blocks" (comment c4 on 1359: "I also want a setting for "place real blocks""),
 weighed against Building Planner working from the player's computer alone on other servers. Whether and where
-shapes place real blocks is `OPEN:` the "Place real blocks and other servers" request, Q2, and what a game can do on a
-server without Building Planner is in "When the server lacks the mod". 0.8.0 adds no such row.
+shapes place real blocks is settled: on servers that run Building Planner, the server places the whole shape (1368
+Q2 A), designed after 0.8.0. What a game can do on a server without Building Planner is in "When the server lacks the
+mod". 0.8.0 adds no such row.
 
 ### The material list
 
@@ -2102,8 +2103,9 @@ takes `columns`, since Building Planner 0.2 takes a `hello` of another layout un
 
 **What the player's computer alone can do.** Geo's ideal is a mod that also works on other servers from the player's
 computer alone, where other players don't see the player's ghost blocks (comment c4 on 1359). Whether Building Planner
-works on servers without it is `OPEN:` the "Place real blocks and other servers" request, Q1, and whether shapes place
-real blocks there is Q2. What the sources show:
+works on servers without it, in a later version, with the player's ghost blocks kept on their computer there while
+this server still shares them (1368 Q1 A); shapes place real blocks only on servers that run Building Planner (1368
+Q2 A). What the sources show:
 
 - Ghost blocks, shapes, erasing, the copy, Delete, undo, the block mix, editing from Freecam and the material list's
   counts run on the player's computer, with the layer kept in a file there for each server and dimension instead of

@@ -512,11 +512,16 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
   Geo's answer: Litematica's status panel is hidden: "Building Planner turns off Litematica's option that shows the
   panel, once on each player's computer" (1367 Q1 A).
 
-  The questions still open: "Red frame for the left click" (Q1: in Single, the red frame only on ghost blocks, since a left
-  click there erases nothing else), and "Place real blocks and other servers" (Q1: Building Planner on servers without
-  it; Q2: the setting "Place real blocks"). 0.8.0 builds neither of the last request's two: what a "yes" to either
-  needs (a layer kept on the player's computer; breaking real blocks, the survival inventory and undo of real blocks)
-  is designed in a later version once Geo answers.
+  Geo's answers on real blocks and other servers (1368): Building Planner also works on servers that don't run it, in
+  a later version: "there, your ghost blocks are saved on your computer and only you see them, and this server still
+  shares them" (Q1 A); and shapes can place real blocks, with a setting "Place real blocks" in "Settings", "on servers
+  that run Building Planner: the server places the whole shape" (Q2 A), an exception to the rule that shapes edit only
+  ghost blocks (402 r2, c1). 0.8.0 builds neither: each is designed as a version of its own after 0.8.0, "Place real
+  blocks" first, with what it needs (the left click with the setting on, the survival inventory, undo of real blocks)
+  as questions for Geo.
+
+  The question still open: "Red frame for the left click" (Q1: in Single, the red frame only on ghost blocks, since a
+  left click there erases nothing else).
 - The shared layer replaces the decisions above that concern separate plans: named plans that move and turn as a whole
   (411 Q1), plan growth (411 Q2), who deletes a plan (411 Q3, 420 Q9), starting a plan with N (420 Q1, 469 Q1), hiding
   a plan with Litematica or Syncmatica (420 Q2, 469 Q2), the paste's target plan (485 Q3), Litematica's Edit Schematic
