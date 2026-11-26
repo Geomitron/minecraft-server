@@ -589,6 +589,19 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
   - for "Place real blocks", "Yes, on servers that run Building Planner: the server places the whole shape." (Q2 A), so
     on other servers shapes draw ghost blocks only.
 
+  Asked in 1374 ("Building Planner on other servers"), Geo picked:
+  - for what tells a player that only they see their ghost blocks, "A line above "Building Planner" in the radial
+    menu's corner" (Q1 C);
+  - for saved material lists, "Yes, saved on the player's computer for that server" (Q2 A);
+  - for Disable's turn with Left Ctrl and "Match ghost blocks", "I'd prefer it, but not if you need some weird hack to
+    make it work that might get detected as a problem by servers" (Q3). The only way is for the game to send the
+    server a turned view just before each such click, as "printer" mods do, and anti-cheat plugins flag those turns,
+    so real blocks place there as in Minecraft;
+  - for singleplayer worlds and worlds opened to LAN, "Yes, with ghost blocks shared with the world's LAN guests"
+    (Q4 C), with the comment "Really depends, if C is a ton of work, then B would be fine." The server part already
+    runs inside the game's own world once `BuildingPlanner.onInitialize` registers it there too (it registers it only
+    on a dedicated server), so C is the one built.
+
   The design ("Servers without Building Planner" in [building-planner.md](building-planner.md)) settles how it works
   within Geo's answers:
   - on a server that takes none of Building Planner's payloads, a server running Effortless Building's own server

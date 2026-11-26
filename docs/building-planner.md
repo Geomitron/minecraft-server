@@ -2340,11 +2340,10 @@ alone, except:
   block, where this server's hook S1 would have removed it.
 - "Place real blocks" doesn't act: with it on, shapes draw ghost blocks, as with it off (1368 Q2 A).
 - In Disable, Left Ctrl, the wheel and the middle click work as in Minecraft, and "Match ghost blocks" doesn't act,
-  since both turn a real block through the server's hook S2: real blocks place as Minecraft places them (`OPEN:`
-  "Building Planner on other servers", Q3).
+  since both turn a real block through the server's hook S2: real blocks place as Minecraft places them (1374 Q3).
   `DisableTurn`'s rule and hook M6's `place_turn` act only during a session with a server that runs Building Planner.
 - The material lists are kept on the computer for that server: "Last counted", the saved lists, the current list and
-  the panel come back when the player returns (`OPEN:` "Building Planner on other servers", Q2).
+  the panel come back when the player returns (1374 Q2 A).
 - The first time the player draws or pastes ghost blocks after joining, a line in chat says that only they see their
   ghost blocks on that server, because it doesn't run Building Planner, in the wording Geo approves in build step 7
   (`OPEN:` "Building Planner on other servers", Q1).
