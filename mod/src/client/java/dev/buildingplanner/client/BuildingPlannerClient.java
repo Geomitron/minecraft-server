@@ -466,8 +466,8 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	}
 
 	/**
-	 * The name beside the hotbar during a session: "Copy" or "Material list" while a box for it is drawn, "Delete" while
-	 * Delete is on ({@link ControlsLine#toolName}), in Disable too; otherwise Effortless Building's mode's name, or null
+	 * The name beside the hotbar during a session: "Copy" or "Material list" while a box for it is drawn, "Paste" while
+	 * the copy is at the aim, "Delete" while Delete is on ({@link ControlsLine#toolName}), in Disable too; otherwise Effortless Building's mode's name, or null
 	 * in Disable.
 	 */
 	private static Component nameBesideHotbar() {

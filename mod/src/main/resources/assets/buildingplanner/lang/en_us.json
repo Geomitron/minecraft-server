@@ -81,6 +81,7 @@
 	"buildingplanner.ui.mode.copy.mode_line": "Mode (Line)",
 	"buildingplanner.ui.mode.copy.mode_wall": "Mode (Wall)",
 	"buildingplanner.ui.mode.copy.mode_floor": "Mode (Floor)",
+	"buildingplanner.ui.mode.copy.title": "Paste",
 	"buildingplanner.ui.mode.copy.paste": "paste",
 	"buildingplanner.ui.mode.copy.start": "set the start",
 	"buildingplanner.ui.mode.copy.paste_set": "paste %s copies",

@@ -14,7 +14,7 @@ import java.util.Locale;
  * the keys' names in them, worked out from the mode's state and the keys as the player has them bound. Each line is a
  * row of rectangles: each control as "key: action", a red reason in place of a control that can't act, and a box's
  * size. No line has a label: the lock's and the copy's mode's states show in their controls ("[H: Lock (On)]", "[R:
- * Mode (Line)]"), a turned block in its preview, and the tool ("Copy", "Delete") beside the hotbar ({@link #toolName}).
+ * Mode (Line)]"), a turned block in its preview, and the tool ("Copy", "Paste", "Delete") beside the hotbar ({@link #toolName}).
  * A warning above the controls ("Too many blocks") is a line of its label alone. The game turns them into its own
  * components and lays the rectangles out ({@code ModeHud}, {@link ControlsRows}): white, with each action in dark aqua
  * and each reason in red.
@@ -109,15 +109,18 @@ public final class ControlsLine {
 
 	/**
 	 * The name beside the hotbar, in the build mode's name's place, while a box for Copy or the material list is drawn
-	 * ("Copy", "Material list", by the box's {@code purpose}) or Delete is on ("Delete"); null in the other modes, where
-	 * the build mode's name shows.
+	 * ("Copy", "Material list", by the box's {@code purpose}), Delete is on ("Delete"), or the copy is at the aim
+	 * ("Paste"); null in the other modes, where the build mode's name shows.
 	 */
 	public static Text toolName(MouseMode mode, BoxPurpose purpose) {
-		if (mode == MouseMode.DELETE) {
-			return Translated.of(DELETE + ".title", Look.PLAIN);
+		if (mode == null) {
+			return null;
 		}
-		return mode == MouseMode.BOX ? Translated.of(BOX + "." + purpose.name().toLowerCase(Locale.ROOT), Look.PLAIN)
-			: null;
+		return switch (mode) {
+			case DELETE -> Translated.of(DELETE + ".title", Look.PLAIN);
+			case COPY_AT_AIM -> Translated.of(COPY + ".title", Look.PLAIN);
+			case BOX -> Translated.of(BOX + "." + purpose.name().toLowerCase(Locale.ROOT), Look.PLAIN);
+		};
 	}
 
 	/**

@@ -39,7 +39,7 @@ import net.minecraft.world.entity.HumanoidArm;
  * ({@link ControlsLine#disable}); during a shape, while Effortless Building draws its own line there and the shape's
  * block count in the action bar above it, it shows above the action bar, its last row ending 2 pixels above it. While the HUD shows, Effortless Building's mode's name shows
  * just left of the hotbar, in a rectangle of the same look ({@link ModeName}), but in Disable; while a box for Copy or
- * the material list is drawn, or Delete is on, the tool's name shows there in its place ({@link ControlsLine#toolName}),
+ * the material list is drawn, the copy is at the aim, or Delete is on, the tool's name shows there in its place ({@link ControlsLine#toolName}),
  * in Disable too.
  */
 final class ModeHud implements HudElement {
@@ -99,7 +99,7 @@ final class ModeHud implements HudElement {
 	 * ({@link ControlsLine#disable}), or null, {@code shape} whether Effortless
 	 * Building's shape is under way, {@code eraseTicks} the ticks the left button has been held in Delete toward the
 	 * erase, or -1, {@code list} the kinds of block in the box, or the marks, and {@code modeName} the name beside
-	 * the hotbar during a session: the tool's while a box or Delete is on, otherwise Effortless Building's mode's, or
+	 * the hotbar during a session: the tool's while a box, the copy or Delete is on, otherwise Effortless Building's mode's, or
 	 * null in Disable or without a session.
 	 */
 	ModeHud(Supplier<MouseMode> mode, Supplier<BoxDraw.Shown> box, Supplier<ControlsLine.Line> copy,

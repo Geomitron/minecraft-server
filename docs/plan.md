@@ -580,10 +580,10 @@ where a step says so. 0.7.0 keeps protocol version 5 and changes nothing on the 
     "[Esc: exit mode]", the (i) text, the "Match ghost blocks" row and its tooltip, Delete's lines and messages)
     goes to Geo as editable text, with every step's screenshots, the changes outlined in red, each text following the
     rule Geo approved for the game's texts (985 Q1 A; 1313). Geo's version is built in: no controls line has a label,
-    the tools' names ("Copy", "Material list", "Delete") showing beside the hotbar in the build mode's name's place;
+    the tools' names ("Copy", "Material list", "Paste", "Delete") showing beside the hotbar in the build mode's name's place;
     "Match ghost blocks" acts only while ghost blocks show, with Geo's tooltip; and the wrong blocks' outline through a
     wall is drawn at 80% opacity. `ControlsLineTest` and `step9.sh` check each text exactly, `step9.sh` the name
-    beside the hotbar, and `filled.sh` that a stair placed into a hidden ghost stair faces as the player does. The same
+    beside the hotbar (and "Paste" with the copy at the aim), and `filled.sh` that a stair placed into a hidden ghost stair faces as the player does. The same
     step sets the version 0.7.0, and the release request shows the changed parts in the game, outlined in red.
 16. **The release**: after Geo's approval, released as 0.6.0 was: `overlap.sh`, `filled.sh` and `import.sh` on the
     release commit; the GitHub release `building-planner-0.7.0`; then, in one sitting, the server (a backup of the

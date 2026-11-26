@@ -226,8 +226,8 @@ class ControlsLineTest {
 		assertEquals("Copy", read(ControlsLine.toolName(MouseMode.BOX, BoxPurpose.COPY)));
 		assertEquals("Material list", read(ControlsLine.toolName(MouseMode.BOX, BoxPurpose.MATERIAL_LIST)));
 		assertEquals("Delete", read(ControlsLine.toolName(MouseMode.DELETE, BoxPurpose.COPY)));
-		// The copy at the aim, and no mouse mode, leave the build mode's name.
-		assertNull(ControlsLine.toolName(MouseMode.COPY_AT_AIM, BoxPurpose.COPY));
+		assertEquals("Paste", read(ControlsLine.toolName(MouseMode.COPY_AT_AIM, BoxPurpose.COPY)));
+		// No mouse mode leaves the build mode's name.
 		assertNull(ControlsLine.toolName(null, null));
 	}
 

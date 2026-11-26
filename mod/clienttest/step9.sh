@@ -505,7 +505,8 @@ mode_name_at() {
 line_shot() {
 	drv 1 "cmd time set noon" "wait 210" "window ${2:-1920} ${3:-1080} ${4:-4}" "wait 20" "notoasts" "wait 5" \
 		"shot $1" "wait 20" > /dev/null
-	echo "  $1: $(val 1 modewrap) | box $(val 1 modebox)${5:+ | part $(val 1 "modepart $5")}" >> /out/checks.log
+	echo "  $1: $(val 1 modewrap) | box $(val 1 modebox)${5:+ | part $(val 1 "modepart $5")} | name $(val 1 "drawnbox Paste")" \
+		>> /out/checks.log
 	check "$1: each control is its own rectangle, in centred rows" rects_ok "${2:-1920}" "${4:-4}"
 	drv 1 "window 854 480 2" "wait 20" > /dev/null
 }
@@ -782,6 +783,7 @@ check "walking away and aiming elsewhere leaves the locked copy where it was" ev
 # Shot with the crosshair on the grass to its right, where an unlocked copy would be.
 drv 1 "lookat -24.5 -60.5 31.5" "wait 5" > /dev/null
 check "and stays there for the shot" copy_is 1 "^at -30,-60,29\.\.-29,-59,31 "
+check "the name Paste shows left of the hotbar, in Single's place, with the copy locked" mode_name_at Paste 232
 shots copy-locked
 line_shot line-locked
 line_shot line-locked-854x480-gui2 854 480 2
@@ -990,6 +992,7 @@ check "Litematica draws no box for the set's copies, and Building Planner draws 
 	'[[ $(val 1 boxes) == *"others: none" ]] && [[ $(val 1 copycolour) == BLUE ]]'
 check "the controls line counts the set's 4 copies" eval \
 	'[[ $(val 1 modehud) == "$(set_line Line "[Right-click: paste 4 copies]")" ]]'
+check "the name Paste shows left of the hotbar, in a Line of copies" mode_name_at Paste 232
 shots copy-line-up
 line_shot line-line-set
 # Looking farther up, Line's block is at -40, 11 copies up; the set stops at 10, the tenth 18 blocks above the first.
@@ -1140,9 +1143,11 @@ check "Esc during a copy's Line drops the set, sending no edit, as the line's [E
 	'[[ $(val 1 copyset) == none ]] && [[ $(val 1 holdlog) == *" edits=0 "* ]] && [[ $(val 1 screenclass) == none ]]'
 check "and leaves the copy at the aim, following it again, still in Line" eval \
 	'copy_is 1 "^at " && [[ $(val 1 copymode) == LINE ]] && [[ $(val 1 modehud) == "$(start_line Line)" ]]'
+check "with the name Paste showing left of the hotbar, in Single's place" mode_name_at Paste 232
 press 1 Escape
 check "Esc again puts the copy away, as the line's [Esc/Left-click: close] says, and Single's line shows" eval \
 	'copy_is 1 "^away " && [[ $(val 1 modehud) == "$single_line" ]] && [[ $(val 1 screenclass) == none ]]'
+check "and the name Single shows left of the hotbar again" mode_name_at Single 232
 press 1 Escape
 check "Esc in Single, as its line's [Esc: exit mode] says, returns the build mode to Disable" eval \
 	'[[ $(val 1 ebmode) == DISABLED ]] && [[ $(val 1 screenclass) == none ]]'
@@ -2588,6 +2593,14 @@ for mode in "SINGLE Single" "FLOOR Floor" "CUBE Cube" "DIAGONAL_LINE Diagonal Li
 done
 drv 1 "ebmode DISABLED" "wait 5" > /dev/null
 check "in Disable, no name shows" eval '[[ $(val 1 "drawnbox Disable") == none ]]'
+# The copy at the aim in Disable shows its name too, "Paste", which a left click puts away, leaving no name.
+paste_button
+check "in Disable, the copy at the aim shows the name Paste left of the hotbar" eval \
+	'drv 1 "wait 5" > /dev/null && copy_is 1 "^at " && mode_name_at Paste 232'
+line_shot paste-disable
+attack_click 1
+check "and a left click puts the copy away, leaving no name in Disable" eval \
+	'drv 1 "wait 10" > /dev/null && copy_is 1 "^away " && [[ $(val 1 "drawnbox Paste") == none ]]'
 drv 1 "ebmode LINE" "cmd item replace entity @s weapon.offhand with minecraft:shield" "wait 5" > /dev/null
 check "with a shield in the off hand, the name ends 4 left of its slot" mode_name_at Line 174
 drv 1 "wait 210" "notoasts" "wait 5" "shot mode-name-shield-854x480" "window 1920 1080 2" "wait 20" "notoasts" \

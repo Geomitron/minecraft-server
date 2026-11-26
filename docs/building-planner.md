@@ -72,8 +72,8 @@ The build steps are in [plan.md](plan.md) ("Agent-ready work").
   then the copy, a box, Delete's marks, then Delete, a shape under way, then the build mode, back to "Disable" (see
   "Esc").
 - **The build mode's name.** While a build mode other than Disable is chosen, its name shows just left of the hotbar;
-  while a box for Copy or the material list is drawn, or Delete is on, the tool's name ("Copy", "Material list",
-  "Delete") shows there in its place, in Disable too.
+  while a box for Copy or the material list is drawn, the copy is at the aim, or Delete is on, the tool's name ("Copy",
+  "Material list", "Paste", "Delete") shows there in its place, in Disable too.
   The held item's name, which the game shows for a moment after the player picks an item, shows above the controls
   lines, where the build mode's name used to show (see "The build mode's name and the held item's name").
 - **Wrong blocks through walls.** A ghost block with a different real block in it, which Litematica draws red, or the
@@ -839,10 +839,12 @@ During a session, while Effortless Building's mode isn't Disable and the HUD sho
 (Effortless Building's own, such as "Line" or "Diagonal Wall") just left of the hotbar, on the controls' dark
 background in a rectangle of the same padding, white, ending 4 left of the hotbar, or 4 left of the off hand's slot
 when the off hand holds an item and the slot shows on the hotbar's left, and centred on the hotbar's height
-(`ModeName`). While a box for Copy or the material list is drawn, or Delete is on, the tool's name, "Copy", "Material
-list" or "Delete", shows there in the mode's name's place, in the same look, in Disable too (1313 revision 2, Q3: "I
-thought these should be on the left side of the hotbar, like the names for the placement modes?";
-`ControlsLine.toolName`); once the box ends or Delete closes, the mode's name comes back, or none in Disable. Hook E35
+(`ModeName`). While a box for Copy or the material list is drawn, the copy is at the aim (in Off, Line, Wall and
+Floor, locked or not), or Delete is on, the tool's name, "Copy", "Material list", "Paste" or "Delete", shows there in
+the mode's name's place, in the same look, in Disable too (1313 revision 2, Q3: "I thought these should be on the left
+side of the hotbar, like the names for the placement modes?"; 1335 [c1]: "why does this say "Single"? If this text is
+supposed to be the currently selected action, shouldn't it be "Paste"?"; `ControlsLine.toolName`); once the box ends,
+the copy is put away or Delete closes, the mode's name comes back, or none in Disable. Hook E35
 keeps the name out of the action bar. Hook M8 draws the held item's name 2 above the top of the highest row of
 Building Planner's lines, about where the action bar's text sits above a line of one row; with no line showing, the
 game draws it in its own place.
@@ -2376,8 +2378,9 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   in the radial menu (a real pointer on its segment of the ring, the driver's `ringat`) puts nothing in the action bar
   (hook E35). The mode's name, as the last frame drew it (the driver's `drawnbox`), shows once, its rectangle ending 4
   GUI pixels left of the hotbar and centred on the hotbar's height, in every mode but Disable, each by Effortless
-  Building's own name ("Diagonal Wall", say); in Disable no name shows. "Copy", "Material list" and "Delete" show
-  there in Single's place during Copy's box, the material list's box and Delete. With a shield in the off hand, the rectangle
+  Building's own name ("Diagonal Wall", say); in Disable no name shows. "Copy", "Material list", "Paste" and "Delete"
+  show there in Single's place during Copy's box, the material list's box, the copy at the aim (in Line and in Disable
+  too: exactly "Paste", and the mode's name back once the copy is put away) and Delete. With a shield in the off hand, the rectangle
   ends 4 left of the off hand's slot, shot at 854 by 480 and 1920 by 1080, GUI scale 2; without it, 4 left of the
   hotbar again. The held item's name (hook M8), shown again by switching to stone and back, ends 2 GUI pixels above the
   top of the controls' highest row: in survival mode, over Line's line, shot at 854 by 480 and 1920 by 1080, GUI scale
