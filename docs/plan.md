@@ -63,7 +63,8 @@ From inbox requests 401 and 402 (revisions 1 to 4):
   (a free or fixed camera), and lay out walls, shapes and other components quickly, with copy and paste and symmetry,
   as a plan everyone on the server sees, which the group then builds for real by hand (402 r1).
 - Effortless Building's shapes, mirror, repeat and Randomizer edit only Litematica ghost plans, never real blocks
-  (402 r2, comment c1).
+  (402 r2, comment c1), except that with the setting "Place real blocks" on, on servers that run Building Planner, the
+  server places the whole shape (1368 Q2 A; "Building Planner 0.9.0" below).
 - Randomized block mixes, such as cobblestone with some mossy cobblestone (402 r2, c1).
 - Layout guides are shared with everyone on the server; client-only guides like MiniHUD's are rejected (402 r2, c2).
 - No automation (block placers, breakers, quarries) for now (402 r2).
@@ -512,16 +513,49 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
   Geo's answer: Litematica's status panel is hidden: "Building Planner turns off Litematica's option that shows the
   panel, once on each player's computer" (1367 Q1 A).
 
-  Geo's answers on real blocks and other servers (1368): Building Planner also works on servers that don't run it, in
-  a later version: "there, your ghost blocks are saved on your computer and only you see them, and this server still
-  shares them" (Q1 A); and shapes can place real blocks, with a setting "Place real blocks" in "Settings", "on servers
-  that run Building Planner: the server places the whole shape" (Q2 A), an exception to the rule that shapes edit only
-  ghost blocks (402 r2, c1). 0.8.0 builds neither: each is designed as a version of its own after 0.8.0, "Place real
-  blocks" first, with what it needs (the left click with the setting on, the survival inventory, undo of real blocks)
-  as questions for Geo.
+  0.8.0 builds neither of Geo's answers on real blocks and other servers (1368), which "Building Planner 0.9.0"
+  below records.
 
   In Single, the red frame shows on ghost blocks only, and in the other modes on any aimed block: "Yes, but on ghost
   blocks only, since single does erase ghost blocks" (1369 Q1).
+- **Building Planner 0.9.0** adds the setting "Place real blocks", which Geo asked for in the trial of 0.7.0 (1359,
+  c4): "I also want a setting for "place real blocks". However, I have ideals for this being a client-side only mod
+  that could be used on other servers that don't need other people to be able to see your own ghost blocks. And in
+  cases like that, I'm not sure if it's still possible to implement a "place real blocks" feature, so that would have
+  to be weighed against that ideal, if it's possible or not." Asked in 1368, Geo picked:
+  - for "Should Building Planner also work on servers that don't run it?", "Yes, in a later version: there, your ghost
+    blocks are saved on your computer and only you see them, and this server still shares them." (Q1 A). That version
+    comes after 0.9.0, which designs nothing that blocks it;
+  - for "Should shapes be able to place real blocks, with a setting "Place real blocks" in "Settings"?", "Yes, on
+    servers that run Building Planner: the server places the whole shape." (Q2 A). This changes Geo's rule that
+    Effortless Building's shapes, mirror, repeat and Randomizer edit only Litematica ghost plans, never real blocks
+    (402 r2, c1): while the setting is on, the place click's shape places real blocks.
+
+  The design ("Place real blocks" in [building-planner.md](building-planner.md)) settles how it works within Geo's
+  answer:
+  - the setting is a row of "Settings" after "Match ghost blocks", off at first and saved with the screen's "Save"; it
+    acts on a server whose Building Planner takes the new payload `place`, and 0.9.0 keeps protocol version 5, so a
+    0.8.0 game and a 0.9.0 server work together;
+  - while it acts, the place click's shape in every build mode but Disable places real blocks, with the mirror, the
+    radial mirror, the array and the block mix, each block turned as the preview shows it, and with "Match ghost
+    blocks" on, each block that fills a ghost block of its own block turned as that ghost block is; Single places one
+    real block a click, repeated at the build speed while the button is held;
+  - the server places each block as the player's own right click would place it there, through Minecraft's
+    `BlockItem.place`, with a right click's checks (a game mode that builds, a loaded chunk, the build height, the
+    world border, spawn protection, a block that can stay, no entity in its way, operators' blocks only for
+    operators);
+  - at most 2,000 real blocks a shape, and a second, for each player (`max-place-blocks`, Effortless Building's own cap
+    on a survival player's shape), and one place sound a shape;
+  - the preview draws red each block the player's game can tell won't go in, Effortless Building's own icons beside
+    the crosshair count the blocks the shape uses, and the right click's control says it places real blocks (Geo's
+    rule for the controls lines, 1313 [c1]), in words Geo approves in build step 5;
+  - a real block that fills a ghost block takes it out of the layer, as any real block does.
+
+  Open, in the request "Place real blocks: open choices", each recommending A: Q1, where a shape's blocks come from in
+  survival (A: the inventory, the blocks nearest the player going in when it runs short); Q2, how far from the player
+  (A: 64 blocks); Q3, real blocks in the way (A: never replaced); Q4, the left click (A: erases ghost blocks, as with
+  the setting off); Q5, undo (A: Ctrl+Z undoes real blocks too, their items back to the inventory); Q6, a paste (A:
+  ghost blocks, as with the setting off).
 - The shared layer replaces the decisions above that concern separate plans: named plans that move and turn as a whole
   (411 Q1), plan growth (411 Q2), who deletes a plan (411 Q3, 420 Q9), starting a plan with N (420 Q1, 469 Q1), hiding
   a plan with Litematica or Syncmatica (420 Q2, 469 Q2), the paste's target plan (485 Q3), Litematica's Edit Schematic
@@ -602,6 +636,49 @@ at 854 by 480 and 1920 by 1080, GUI scale 2, plus GUI scale 4 where a step says 
 8. **The release**, once Geo approves it: the GitHub release `building-planner-0.8.0`, not latest, from the commit on
    which `overlap.sh`, `filled.sh` and `import.sh` passed, run by the server and the pack (see "Current setup"), with
    the guide's changed sentences in Geo's wording.
+
+**Building Planner 0.9.0** (the bullet "Building Planner 0.9.0" in "Decisions" above: Geo's comment c4 on 1359 and
+1368 Q2 A). "Place real blocks" in [building-planner.md](building-planner.md) is the design; each choice still Geo's
+carries an `OPEN:` mark naming its question in the request "Place real blocks: open choices", and the text describes
+the option the request recommends. A pick other than the recommended one on a question sends the design of what it
+changes back to Geo before the steps that build it. 0.9.0 starts once 0.8.0 is released, and keeps protocol version 5.
+
+The steps come in this order, each needing the one before it, and each small enough for one child. 0.8.0's rules for
+commits, screenshots, the spec's "In-game checks" and the full set of in-game scripts apply; the full set runs once, on
+step 5's last build. The in-game checks of real blocks are in `real.sh`, which step 2 adds.
+
+1. **The rule for each block** ("Place real blocks": "How the server places each block" and the checks before it).
+   Waits on Q1, Q2 and Q3. `RealPlace` (common), the pure rule the game's preview and the server's placing share: the
+   order, the inventory, the reach and a space that takes a block. Done when `RealPlaceTest` covers what the spec's
+   unit tests' paragraph lists for it.
+2. **The server places a shape** ("How the server places each block", "The cap", "One sound", "The notice",
+   "Compatibility"). The payload `place`, `RealPlacer`, hook S2 turning each block to the shape's state, hook S3, the
+   setting `max-place-blocks` (the cap on a shape and on a second), and the notice. Done when `PayloadsTest` covers
+   `place` and its limits, `filled.sh` and `overlap.sh` pass (hook S2 still turns Disable's blocks and matches ghost
+   blocks), and `real.sh`'s checks of what lands on the server pass, with the driver sending each shape's `place`
+   itself (a driver command that step 3 keeps for the cap's check): the Line's nearest blocks, the stairs, door and
+   bed, the mix, real blocks and the cow in the way, the reach, ghost blocks filled, spawn protection and adventure
+   mode, the cap and its time, and one sound.
+3. **The setting in the game** ("The setting", "What a shape does", "The preview"). Waits on Q4 and Q6, which decide
+   what the break click and a paste do with the setting on. The row in "Settings" (hook E36's label keys,
+   `VisualSettingsRow`), hook E1 sending the shape as `place`, hooks E8 and E40, and the controls lines. Done when
+   `ControlsLineTest` covers the lines with the setting on and off, `filled.sh`'s settings checks pass with the new
+   row, `step9.sh`'s controls line checks pass unchanged with the setting off, and every `real.sh` check but undo's
+   passes through Planner1's own clicks, with the preview's red blocks and the crosshair's icons. Shots as `real.sh`
+   lists them.
+4. **Undo and redo of real blocks** ("Undo", and "Undo and redo" in "What players get"). Waits on Q5. The undo list's
+   second kind of step, hook S1's marks and `RealUndo`. Done when `RealUndoTest` covers what the spec's unit tests'
+   paragraph lists for it, `UndoHistoryTest` and `LayerUndoTest` cover a real step beside the layer's steps within the
+   50 steps and the block budget, and `step6.sh`'s undo checks and `real.sh`'s undo checks pass.
+5. **Texts and screenshots for Geo**: every text steps 2 to 4 add (the row's label and tooltip, the controls lines'
+   words, the notices for blocks left out, the cap and an undo), and the player guide's sentences on "Place real
+   blocks", go to Geo as editable text, with every step's screenshots, the changes outlined in red, each text following
+   the rule Geo approved for the game's texts (985 Q1 A; 1313). Geo's version is built in, `ControlsLineTest` and
+   `real.sh` check each text exactly, and the full set of in-game scripts runs on the last build. The same step sets
+   the version 0.9.0, and the release request shows the setting and a placed shape in the game, outlined in red.
+6. **The release**, once Geo approves it: the GitHub release `building-planner-0.9.0`, not latest, from the commit on
+   which the full set passed, run by the server and the pack (see "Current setup"), with the guide's new sentences in
+   Geo's wording.
 
 ## Design work: Building Planner
 
