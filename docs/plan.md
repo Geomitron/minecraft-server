@@ -520,8 +520,8 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
   blocks" first, with what it needs (the left click with the setting on, the survival inventory, undo of real blocks)
   as questions for Geo.
 
-  The question still open: "Red frame for the left click" (Q1: in Single, the red frame only on ghost blocks, since a
-  left click there erases nothing else).
+  In Single, the red frame shows on ghost blocks only, and in the other modes on any aimed block: "Yes, but on ghost
+  blocks only, since single does erase ghost blocks" (1369 Q1).
 - The shared layer replaces the decisions above that concern separate plans: named plans that move and turn as a whole
   (411 Q1), plan growth (411 Q2), who deletes a plan (411 Q3, 420 Q9), starting a plan with N (420 Q1, 469 Q1), hiding
   a plan with Litematica or Syncmatica (420 Q2, 469 Q2), the paste's target plan (485 Q3), Litematica's Edit Schematic
@@ -572,8 +572,8 @@ at 854 by 480 and 1920 by 1080, GUI scale 2, plus GUI scale 4 where a step says 
    the one shown; in Cube, after the second click, H locks the height, Page Up raises it and a level nudge moves the
    whole cube; in Line, a nudge across a line of 5 moves the whole line; in Floor, Page Up moves the whole floor up.
    Shots of a locked Wall step before and after a nudge across it, and a Cube's locked height.
-4. **The red frame for the left click** ("Locking and the first click": "The first click's blocks"; c7). Waits on
-   "Red frame for the left click" Q1, and needs step 3. Hook E38 and its rule for where the frame shows (a pure
+4. **The red frame for the left click** ("Locking and the first click": "The first click's blocks"; c7). Needs
+   step 3 (Geo answered 1369). Hook E38 and its rule for where the frame shows (a pure
    function beside `ShapeLock`), with the mirror and array copies. Done when a unit test covers the rule for Geo's
    answer (Single on a ghost block and on a real block, the other modes on each, none while locked, in Disable, during
    a shape, with a mouse mode on or aiming at nothing), and `step9.sh` checks pass: what the last frame drew in red

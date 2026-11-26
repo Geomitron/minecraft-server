@@ -46,7 +46,7 @@ request that asks it.
   and holding a button repeats as the game does.
 - **Locking and the first click.** In every build mode but Disable, with a block in hand, the block a right click
   would place shows at the aim before the first click, and the block a left click would start erasing from shows
-  framed in red (`OPEN:` the "Red frame for the left click" request, Q1). H locks the position the aim is setting: the
+  framed in red (in Single, only on a ghost block). H locks the position the aim is setting: the
   first click's before it, and during a shape the step's under way, such as a wall's far corner. The arrow keys, Page
   Up and Page Down then move that position, or move the whole shape along a direction that step doesn't use, such as
   across a wall; each click sets its step's position, the next step follows the aim until H locks it, and the lock ends
@@ -1440,8 +1440,7 @@ by hook E9's aim, since Effortless Building starts a shape drawn with the break 
 (`BuildPipelineClient.CLIENT.processBlocks` on a `BREAKING` set). Hook E38 draws it after the preview with Effortless
 Building's own drawing (`renderBoundingBoxFaces`, `renderEdgeQuads`). In Single, a left click on a real block erases
 nothing, so there the red frame shows only on a ghost block, and in the other modes on any aimed block, where the
-erasing shape starts (`OPEN:` the "Red frame for the left click" request, Q1, recommends this; Geo's words put it on
-any aimed block in every mode). While the first click's position is locked, both clicks start at the locked position,
+erasing shape starts ("Yes, but on ghost blocks only, since single does erase ghost blocks", Geo, 1369 Q1). While the first click's position is locked, both clicks start at the locked position,
 which shows the copy's box (see "Colours"), so no red frame shows.
 
 **Locking and nudging.** H ("Lock or unlock") locks the position the aim is setting at that moment, for the step
