@@ -154,8 +154,8 @@ Building Planner as built, from inbox requests 469, 473, 477, 482, 483, 485, 570
   me through using all the features we have available, with space for me to provide feedback and suggestions on how to
   adjust the experience of using the mod. Once I'm happy with it, we can publish a guide on how to use it."). Geo
   approved the section "Build Plans" for Building Planner 0.7.0 as drafted (578 revision 2, no edits). It goes to
-  players with 0.7.0's release, so the guide never describes a version players don't have, with the texts from 0.7.0's
-  step 15 in Geo's wording.
+  players with 0.7.0's release, so the guide never describes a version players don't have, with 0.7.0's texts
+  in Geo's wording (1313).
 
 From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
 
@@ -483,6 +483,38 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
   Geo approved the release of 0.7.0 with the guide's two changes, "faintly" out of the line on red and orange blocks
   through walls and "while ghost blocks show" in the "Match ghost blocks" sentence (1335 Q1 A), and then with "Paste"
   beside the hotbar, from its screenshots (1335 revision 2, Q1 A: "Release it.").
+- **Building Planner 0.8.0** takes the changes Geo asked for in the trial of 0.7.0 (1359, comments c1 to c7; c5 asks
+  for nothing: "ignore that, I forgot to delete the comment", 1363). Their design settles how each works and asks Geo
+  what's still open:
+  - the two lines Geo saw in a corner of the screen, "Layer Mode: All" and "Renderers: A: ON S: ON B: ON O: ON SEL:
+    OFF", are Litematica's status panel: Litematica shows it for 10 seconds each time it adds a placement while one of
+    its drawing switches is off, and Building Planner turned off "SEL" (area selections) and adds a placement for each
+    column of ghost blocks, so it shows often. Geo likely wants it gone (c1); Building Planner would turn off
+    Litematica's option that shows it, once on each computer;
+  - every ghost block within 32 blocks shows through walls, as red and orange ones do, in light blue where its block
+    is missing (c2);
+  - H locks the step under way: before the first click the first position, and after each click the position the aim
+    sets for the next, such as a wall's length and height or a cube's height. The nudge keys then move that step's
+    position, or move the whole shape along a direction the step doesn't set, such as across a wall (c3), since
+    Effortless Building reads a wall's far corner moved across it as a turn. This replaces 0.7.0's lock during a
+    shape, which held every position set so far and nudged them together (c5 on 815 revision 2);
+  - "Visual Settings" is renamed "Settings", the screen and the radial menu's button (c4);
+  - Geo wants a setting "Place real blocks", weighed against Building Planner working from a player's computer alone
+    on other servers, where other players don't see that player's ghost blocks (c4). From the computer alone, a mod
+    can place a real block only as a player does, one right click a block within about 5 blocks, as Litematica's Easy
+    Place does; a server part can place a whole shape at once, as Effortless Building's own server does;
+  - Delete's controls line says "toggle mark" where it says "mark" (c6);
+  - before the first click in the build modes, the block a left click would start from shows framed in red, as a shape
+    drawn with the left click shows it, beside the block a right click would place (c7);
+  - "Build speed" and "Break speed" move to the radial menu's right side as headed sections, where Cube's "Filling"
+    shows, and show only while Single is the mode (c7).
+
+  The questions the design leaves open, drafted for Geo in this order: "Litematica's corner text" (Q1: hide the panel
+  for every player), "Red frame for the left click" (Q1: in Single, the red frame only on ghost blocks, since a left
+  click there erases nothing else), and "Place real blocks and other servers" (Q1: Building Planner on servers without
+  it; Q2: the setting "Place real blocks"). 0.8.0 builds neither of the last request's two: what a "yes" to either
+  needs (a layer kept on the player's computer; breaking real blocks, the survival inventory and undo of real blocks)
+  is designed in a later version once Geo answers.
 - The shared layer replaces the decisions above that concern separate plans: named plans that move and turn as a whole
   (411 Q1), plan growth (411 Q2), who deletes a plan (411 Q3, 420 Q9), starting a plan with N (420 Q1, 469 Q1), hiding
   a plan with Litematica or Syncmatica (420 Q2, 469 Q2), the paste's target plan (485 Q3), Litematica's Edit Schematic
@@ -490,113 +522,85 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
 
 ## Agent-ready work
 
-**Building Planner 0.7.0** (the bullet "Building Planner 0.7.0" in "Decisions" above: Geo's comments c2 to c19 on 815
-revision 2). [building-planner.md](building-planner.md) is the design, with Geo's answers to the questions it left
-open (1238, 1239, 1240, 1241 and 1244) in "Decisions" above. No step waits on a question.
+**Building Planner 0.8.0** (the bullet "Building Planner 0.8.0" in "Decisions" above: Geo's comments c1 to c7 on
+1359). [building-planner.md](building-planner.md) is the design; each choice still Geo's carries an `OPEN:` mark
+naming the request that asks it. Steps 1 and 4 wait on Geo's answers, as each says; the others can start now. 0.8.0
+keeps protocol version 5 and changes nothing on the server.
 
-The steps come in this order, each small enough for one child. Steps 1 and 3 change no file another step changes,
-so each may run beside another step; the others change `ControlsLine`, `ModeHud`, `CopyKeys` or `step9.sh`, so they
-run one at a time. A step that changes what players see is committed without pushing, and goes to `main` once Geo
-has seen its in-game screenshots, with the changes outlined in red, in step 15. Each step rewrites the spec's
-"In-game checks" for what it changes, removing the checks of behavior it removes, and every step's checks include
-`step6.sh` to `step10.sh` still passing. `overlap.sh` (about 15 minutes) runs in step 10, which changes what Litematica
-draws, and at the release. Screenshots are at 854 by 480 and 1920 by 1080, GUI scale 2, plus GUI scale 4
-where a step says so. 0.7.0 keeps protocol version 5 and changes nothing on the server.
+The steps come in this order, each small enough for one child. Step 2 may run beside any step but 6; the others change
+`step9.sh`, `step10.sh`, `filled.sh` or the language file, so they run one at a time. A step that changes what players
+see is committed without pushing, and goes to `main` once Geo has seen its in-game screenshots, with the changes
+outlined in red, in step 7. Each step rewrites the spec's "In-game checks" and its unit tests' paragraphs for what it
+changes, removing the checks of behavior it removes, and runs the unit tests and the in-game scripts it names; the full
+set of in-game scripts runs once, on step 7's last build ("Thread Procedures" in the project's index). Screenshots are
+at 854 by 480 and 1920 by 1080, GUI scale 2, plus GUI scale 4 where a step says so.
 
-1. **The radial menu's rows** ("The radial menu's buttons and sliders"; c2). Can start now. "Show or hide ghost
-   blocks" under the wrench, Copy, Paste and Delete in the row above it, "Block mix", "Material list" and "Material
-   lists" in the row above that, and hook E34 leaving out "Functional Settings" during a session. Done when the radial
-   menu's checks in `step9.sh` pass for the new positions and hover texts, with Planner1 an operator and not, and the
-   shots of the menu (with GUI scale 4) show nothing overlapping.
-2. **Boxes in their colours** ("Boxes for Copy and the material list"; c8, c11, c18). Can start now. Each purpose's
-   colour (white for Copy, blue #00D4FF for the material list, red for Delete's box), the aimed face shaded black at
-   0.35 alpha under a first corner, and the dark background under the blocks listed beside the crosshair. Done when
-   unit tests cover the colour for each purpose and the shaded face for each of the six faces, and `step9.sh` checks
-   pass for each, with shots of a box for each purpose and of the list under the crosshair.
-3. **The material list's Close buttons and (i) text** ("The screen's buttons" and "Saved lists"; c8, c19). Can start
-   now. Hook L10's "Close" at the bottom right, "Close" on "Saved lists", and hook L12 with the proposed text in the
-   language file. Done when `step10.sh`'s material list checks pass: each "Close" closes its screen as Escape does, and
-   the (i) icon's tooltip shows the proposed lines; shots of both screens and the tooltip.
-4. **The build mode's name and the held item's name** ("The build mode's name and the held item's name"; c17). Can
-   start now. `ModeHud` drawing the mode's name left of the hotbar or the off hand's slot, hook E35, and hook M8 moving
-   the item's name above Building Planner's lines. Done when unit tests cover the name's position with and without an
-   off-hand item, and `step9.sh` checks pass: the name shows in every mode but Disable, the action bar shows no name
-   after a mode is chosen, and an item's name draws above a line of one row and of two; shots in Line with oak stairs
-   (Geo's image 1) and with a shield in the off hand.
-5. **The first click's block in every mode** ("Locking and the first click": "The first click's block"; c4). Can
-   start now. Hook E30 drawing the first click's block in every mode but Disable, and E28 its state. Done when
-   `step9.sh` checks pass: in Line, Wall, Cube and Sphere, the preview draws one stair at the aim before the first
-   click, turned as it will be placed, and none while aiming at nothing; with the array on, its copies draw as before;
-   shots in Wall and Cube.
-6. **Locking in every mode** ("Locking and the first click": "Locking and nudging" and "Colours"; c5). Can start
-   now; a click that erases ends the lock too (1239 Q1 A). `ShapeLock` in place of `SingleBlock`'s
-   lock, hooks E32 and E33, H and the nudge keys in every mode but Disable (`CopyKeys`), the copy's box around each
-   locked position, and the lock ending when a shape finishes. Done when `ShapeLockTest` covers when the lock is
-   active and when it ends, and `step9.sh` checks pass: in Single, a locked stair nudged up places there and unlocks;
-   in Wall, H before the first click locks the first corner, the far corner follows the aim, and the wall places from
-   the locked corner; in Cube, H after the second click and Up move both set positions and the preview with them;
-   Freecam's camera nudges by its facing; shots of a locked Wall corner and a nudged Cube.
-7. **Each build mode's controls line** ("Locking and the first click": "Controls line"; c6, c13, c17). Needs steps 5
-   and 6. `ControlsLine.shape` before the first click in every mode but Disable, with "[H: Lock (Off)]" and "[Esc: exit
-   mode]", and the lock and turning line above the action bar during a shape. Done when `ControlsLineTest` covers each
-   state's line, and `step9.sh` checks each line exactly; shots of each line (with GUI scale 4).
-8. **Single without Zoop and Vertical** ("Locking and the first click"; c6, 1238 Q1 A). Removing
-   the block's own mode, its row and R in Single (`SingleBlock`'s row, `CopyRow` for a block), with their checks.
-   Needs step 6. Done when `step9.sh` passes without the row checks, R in Single does nothing, and a Line of 12
-   upward stairs, started from a locked position, places as one edit.
-9. **The copy's right-click paste** ("Copy and paste": the controls; c13, c14, 1238 Q2 A, 1239 Q2 A). Hooks M2 pasting and M1 putting the copy away or dropping its set, and the copy's lines
-   with "[Right-click: paste]" and "[Esc/Left-click: close]". Done when `step9.sh`'s copy checks, rewritten for the
-   right click, pass: a right click pastes, a left click puts the copy away, and a locked copy unlocks after a paste
-   and follows the aim; shots of the copy's lines (with GUI scale 4).
-10. **The copy's mode: Off, Line, Wall and Floor** ("Copy and paste": "The copy's mode"; c7, c12, c15, 1238 Q4 A).
-    Needs step 9. `CopyGrid` with Effortless Building's `findLine`, `findWall` and `findFloor`, the
-    set's placements, R during a set, H and the nudges during a set, and "Change copy mode". Done when `CopyGridTest`
-    covers each mode in each direction and the cap on copies, and `step9.sh` checks pass: a Line of 4 copies upward and
-    one eastward, a Wall of 3 by 2 and a Floor of 4 by 4 each paste as one edit, which one undo takes back; R during a
-    Line keeps the first copy as a Wall, and at Off drops the set; shots of each mode before the second click.
-11. **Delete as one mode** ("Delete"; c16, 1240 Q1 A). One mode `DELETE` in place of the box
-    and Aim, the box drawn with Left Control and a held left click marking or unmarking, the Left Control sweep
-    alongside it, the one-second erase with the progress bar, and Delete's lines. Needs step 2. Done when
-    `DeleteMarksTest` and `EraseHoldTest` pass and `step9.sh`'s Delete checks, rewritten for one mode, pass: a box of
-    10 by 4 by 10 marks its ghost blocks; a box started on a marked block unmarks; a sweep with Left Control marks the
-    ghost blocks it passes over, and while a box is drawn the crosshair passing over ghost blocks outside the box marks
-    none of them; holding the left click for a second erases the marks as one edit, with the
-    bar filling; shots of a marked box, the bar half full, and each line (with GUI scale 4).
-12. **Esc** ("Esc"; c10, c13, c17, 1238 Q3 A). Needs steps 6, 10 and 11. Hook M7 and `EscSteps`.
-    Done when `EscStepsTest` covers each step's order, and `step9.sh` checks pass: during a copy's Line, Esc drops the
-    set, then puts the copy away, then sets the mode to Disable, then pauses; in Delete with marks, Esc clears them,
-    then ends Delete; with the inventory open, Esc closes it.
-13. **Wrong blocks through walls** ("Wrong blocks through walls"; c3, 1241 Q2 C, Q3 B). `WrongBlocks` and its
-    drawing. Done when unit tests cover which blocks count and the distance, and new `filled.sh` checks pass: a
-    cobblestone block in a ghost stone brick shows red through a wall from 10 blocks and not from beyond 32, and an
-    oak stair facing north in a ghost oak stair facing east shows orange through it; shots from both sides of the
-    wall.
-14. **"Match ghost blocks"** ("Settings"; c9, 1244 Q1 B). The row in Effortless Building's "Visual Settings" screen
-    and its hook, `match-ghost-turn` saved by the screen's "Save" button, `GhostMatch`, and M6 sending the ghost
-    block's turn. Done when `GhostMatchTest` covers a match, a different block, a wall torch, and a turn that can't
-    stay, and new `filled.sh` checks pass: the row shows in "Visual Settings" and stays as saved after the game
-    restarts; with the setting on, Planner1 facing south places oak stairs into a ghost stair facing east, and the
-    server's world and Planner2 show it facing east, filling the ghost block; with it off, it faces as Planner1 does;
-    shots of "Visual Settings" with the row and of the placed stair.
-15. **Texts and screenshots for Geo**: every text steps 1 to 14 add or change (each controls line, "Change copy mode",
-    "[Esc: exit mode]", the (i) text, the "Match ghost blocks" row and its tooltip, Delete's lines and messages)
-    goes to Geo as editable text, with every step's screenshots, the changes outlined in red, each text following the
-    rule Geo approved for the game's texts (985 Q1 A; 1313). Geo's version is built in: no controls line has a label,
-    the tools' names ("Copy", "Material list", "Paste", "Delete") showing beside the hotbar in the build mode's name's place;
-    "Match ghost blocks" acts only while ghost blocks show, with Geo's tooltip; and the wrong blocks' outline through a
-    wall is drawn at 80% opacity. `ControlsLineTest` and `step9.sh` check each text exactly, `step9.sh` the name
-    beside the hotbar (and "Paste" with the copy at the aim), and `filled.sh` that a stair placed into a hidden ghost stair faces as the player does. The same
-    step sets the version 0.7.0, and the release request shows the changed parts in the game, outlined in red.
-16. **The release** (done, Geo's approval in 1335): the GitHub release `building-planner-0.7.0`, not latest, from
-    the commit on which `overlap.sh`, `filled.sh` and `import.sh` passed. The server and the pack both run it (see
-    "Current setup"), and the guide's section "Build Plans" is the one Geo approved in 578 revision 2, with step
-    15's texts in Geo's wording and Geo's two changes in 1335. Geo's walkthrough of 0.7.0 follows (815 [c1]).
+1. **Litematica's status panel off** ("Litematica's status panel" and "Settings Building Planner changes once"; c1).
+   Waits on "Litematica's corner text" Q1, and is built only if Geo chooses to hide the panel. The record
+   `status-panel-off-applied` turning off Litematica's `statusInfoHudAuto` once. Done when `LookDefaultsTest` covers
+   the option turned off from its default, left as the player set it, the record written once, and no record when
+   saving fails; and `step9.sh`'s once-settings checks pass: after a start, Litematica's config holds
+   `statusInfoHudAuto` false and Building Planner's file the record; with the record there and the option turned back
+   on, a restart leaves it on; and for 15 seconds after Planner1 joins beside ghost blocks, Litematica's status panel
+   never draws (`StatusInfoRenderer.shouldRenderStatusInfoHud()` false each tick). Shot of the screen 5 seconds after
+   joining, with the corner where Geo saw the panel.
+2. **Ghost blocks through walls** ("Ghost blocks through walls"; c2). Can start now. `WrongBlocks` and
+   `WrongBlocksOutline` renamed `ThroughWalls` and `ThroughWallsOutline`, light blue for a ghost block over air or a
+   fluid, and only the changed sections rebuilt. Done when `ThroughWallsTest` (from `WrongBlocksTest`) covers light
+   blue over air, water and lava, red, orange, nothing over the same block, the range, and the sections that changed
+   between two scans; and `filled.sh`'s checks pass: a ghost stone brick over air 4 blocks behind the wall draws light
+   blue from 10 blocks and nothing from 33, beside the red and orange ones, and erasing it takes it out within half a
+   second. The driver's `wrongscan` also times building the shapes whole and again after a 1-block edit, with a ghost
+   block at every position within 32 blocks, to the checks' log and the spec's "Unverified". Shots from both sides of
+   the wall, with light blue, red and orange.
+3. **A lock for each step** ("Locking and the first click": "Locking and nudging", "Colours" and "Controls line"; c3).
+   Can start now. `ShapeLock` holding the step under way, hook E37, the directions each step sets, a nudge along
+   another direction moving the whole shape through E33, the copy's box around the locked step's position, and the
+   next step unlocked after each click. Done when `ShapeLockTest` covers H for each step, the directions each mode's
+   steps set (Line one block long and longer, Wall one block wide and wider, `findFloor`'s and `findHeight`'s steps),
+   a nudge in each, the click taking the locked position, the next step unlocked, and a cancel keeping a first
+   position locked before the first click; `ControlsLineTest` covers "[H: Lock (Off)]" after each click; and
+   `step9.sh`'s lock checks pass: in Wall, after the first click, H locks the far corner, which stays as Planner1 turns,
+   Page Up makes the wall a block taller, a nudge across the wall moves the whole wall a block, and the placed wall is
+   the one shown; in Cube, after the second click, H locks the height, Page Up raises it and a level nudge moves the
+   whole cube; in Line, a nudge across a line of 5 moves the whole line; in Floor, Page Up moves the whole floor up.
+   Shots of a locked Wall step before and after a nudge across it, and a Cube's locked height.
+4. **The red frame for the left click** ("Locking and the first click": "The first click's blocks"; c7). Waits on
+   "Red frame for the left click" Q1, and needs step 3. Hook E38 and its rule for where the frame shows (a pure
+   function beside `ShapeLock`), with the mirror and array copies. Done when a unit test covers the rule for Geo's
+   answer (Single on a ghost block and on a real block, the other modes on each, none while locked, in Disable, during
+   a shape, with a mouse mode on or aiming at nothing), and `step9.sh` checks pass: what the last frame drew in red
+   (recorded by E38 for the driver) is the aimed ghost block in Single, the aimed real block in Wall, and both mirror
+   copies with the mirror on, and nothing once the first position is locked. Shots in Single on a ghost block and in
+   Wall on a real block, with the stair a right click would place beside it.
+5. **The speed sliders in Single** ("The radial menu's buttons and sliders": "The sliders"; c7). Can start now. The
+   headings "Build speed" and "Break speed" and the two sliders on the menu's right side, the sliders showing only
+   their values, shown only while Single is the mode. Done when `RepeatSpeedTest` covers the values' text, and the
+   radial menu's checks in `step10.sh` and `step9.sh` pass: in Single, the headings and sliders are where Effortless
+   Building puts a mode's first and second sections, a click and a drag set the speeds as before, and nothing
+   overlaps at 854 by 480 and 1920 by 1080, GUI scales 2 and 4; in Cube and Disable no slider shows, and choosing Line
+   in the open menu hides them. Shots of the menu in Single and in Cube (with GUI scale 4).
+6. **"Settings" and "toggle mark"** ("Settings" and "Delete": "Controls line"; c4, c6). Can start now. Hook E39 with
+   `buildingplanner.ui.settings`, and "toggle mark" in Delete's lines. Done when `ControlsLineTest` covers Delete's
+   lines with "toggle mark", `step9.sh`'s Delete checks read each line exactly, and `filled.sh`'s settings checks pass
+   with the screen's title "Settings" and the radial menu's button named "Settings" on hover. Shots of the screen, the
+   button's hover text, and Delete's line with and without marks.
+7. **Texts and screenshots for Geo**: every text steps 1 to 6 add or change (the headings and the sliders' values,
+   "Settings", "toggle mark"), and the player guide's sentences on ghost blocks through walls, the radial menu's
+   "Visual Settings" and sliders, locking and nudging, and the red frame, go to Geo as editable text, with every step's
+   screenshots, the changes outlined in red, each text following the rule Geo approved for the game's texts (985 Q1 A;
+   1313). Geo's version is built in, `ControlsLineTest`, `step9.sh` and `filled.sh` check each text exactly, and the
+   full set of in-game scripts runs on the last build. The same step sets the version 0.8.0, and the release request
+   shows the changed parts in the game, outlined in red.
+8. **The release**, once Geo approves it: the GitHub release `building-planner-0.8.0`, not latest, from the commit on
+   which `overlap.sh`, `filled.sh` and `import.sh` passed, run by the server and the pack (see "Current setup"), with
+   the guide's changed sentences in Geo's wording.
 
 ## Design work: Building Planner
 
 [building-planner.md](building-planner.md) is the spec: what players get, how each goal above is met, the technical
 design with every hook checked in the source, and what's unverified. Geo's decisions are above. The texts players see
-are in the wording Geo approved, 0.7.0's in its step 15 (1313).
+are in the wording Geo approved, 0.7.0's in 1313.
 
 ### Source evidence (read 2026-11-13)
 
