@@ -164,53 +164,68 @@ check "the wall's real blocks remove their ghost blocks, and the rest stay" eval
 drv 2 "notoasts" "wait 40" "shot wall-after-1920x1080" "wait 10" "window 854 480 2" "wait 40" \
 	"shot wall-after-854x480" "wait 10" > /dev/null
 
-# Wrong blocks through walls: a ghost stone brick at 154 -60 156 with a real cobblestone in it, and a ghost oak stair
-# facing east at 152 -60 156 with a real oak stair facing north in it, 4 blocks behind a real stone wall from 139 -60 160
-# to 169 -49 160 that fills Planner2's view from the south. The animals the flat world starts with are killed so
-# nothing else moves in the view, and Planner1 stands out of it, west of the blocks.
+# Ghost blocks through walls: a ghost stone brick at 156 -60 156 over air, a ghost stone brick at 154 -60 156 with a
+# real cobblestone in it, and a ghost oak stair facing east at 152 -60 156 with a real oak stair facing north in it,
+# 4 blocks behind a real stone wall from 139 -60 160 to 169 -49 160 that fills Planner2's view from the south. The
+# animals the flat world starts with are killed so nothing else moves in the view, and Planner1 stands out of it, west
+# of the blocks. through_walls is what the last frame drew with all three.
+through_walls="lightblue 156,-60,156 red 154,-60,156 orange 152,-60,156"
 drv 1 "cmd tp @s 120 -60 156 -90 0" "cmd tp Planner2 154.5 -60 166.5 180 10" "wait 40" \
 	"cmd kill @e[type=!minecraft:player]" "cmd time set noon" "cmd fill 139 -60 160 169 -49 160 minecraft:stone" \
-	"edit 154 -60 156 154 -60 156 minecraft:stone_bricks" "edit 152 -60 156 152 -60 156 minecraft:oak_stairs[facing=east]" \
-	> /dev/null
-check "Planner2 sees the two ghost blocks behind the wall" drv 2 "await block 154 -60 156 minecraft:stone_bricks" \
-	"await block 152 -60 156 minecraft:oak_stairs" "await real 154 -59 160 minecraft:stone" "await noglow"
+	"edit 156 -60 156 156 -60 156 minecraft:stone_bricks" "edit 154 -60 156 154 -60 156 minecraft:stone_bricks" \
+	"edit 152 -60 156 152 -60 156 minecraft:oak_stairs[facing=east]" > /dev/null
+check "Planner2 sees the three ghost blocks behind the wall" drv 2 "await block 156 -60 156 minecraft:stone_bricks" \
+	"await block 154 -60 156 minecraft:stone_bricks" "await block 152 -60 156 minecraft:oak_stairs" \
+	"await real 154 -59 160 minecraft:stone" "await noglow"
 drv 1 "cmd setblock 154 -60 156 minecraft:cobblestone" "cmd setblock 152 -60 156 minecraft:oak_stairs[facing=north]" \
 	> /dev/null
 check "a cobblestone and an oak stair facing north leave the ghost blocks they don't fill" eval \
 	'drv 2 "await real 154 -60 156 minecraft:cobblestone" "await real 152 -60 156 minecraft:oak_stairs" "wait 5" \
 	> /dev/null && both_layer 154 -60 156 minecraft:stone_bricks && both_layer 152 -60 156 minecraft:oak_stairs'
-check "through the wall from 10 blocks, the cobblestone's ghost block draws red and the stair's orange" eval \
-	'drv 2 "wait 20" > /dev/null && [[ $(val 2 wrongblocks) == "red 154,-60,156 orange 152,-60,156" ]]'
-drv 2 "window 854 480 2" "notoasts" "wait 40" "shot wrong-blocks-through-wall-854x480" "wait 10" \
-	"window 1920 1080 2" "wait 40" "notoasts" "shot wrong-blocks-through-wall-1920x1080" "wait 10" > /dev/null
+check "from 10 blocks through the wall, the block over air draws light blue, the cobblestone's red, the stair's orange" \
+	eval \
+	'drv 2 "wait 20" > /dev/null && [[ $(val 2 throughwalls) == "$through_walls" ]]'
+drv 2 "window 854 480 2" "notoasts" "wait 40" "shot through-walls-through-wall-854x480" "wait 10" \
+	"window 1920 1080 2" "wait 40" "notoasts" "shot through-walls-through-wall-1920x1080" "wait 10" > /dev/null
 keys 2 key n
 check "with ghost blocks hidden, nothing draws" eval \
-	'drv 2 "wait 20" > /dev/null && [[ $(val 2 ghosts) == hidden* ]] && [[ $(val 2 wrongblocks) == none ]]'
-drv 2 "notoasts" "wait 40" "shot wrong-blocks-hidden-1920x1080" "wait 10" > /dev/null
-through=$(val 2 "shotdiff wrong-blocks-through-wall-1920x1080 wrong-blocks-hidden-1920x1080")
-echo "  pixels the wrong blocks change through the wall: $through" >> /out/checks.log
-check "the view through the wall differs from the view with ghost blocks hidden, where the two blocks draw" eval \
+	'drv 2 "wait 20" > /dev/null && [[ $(val 2 ghosts) == hidden* ]] && [[ $(val 2 throughwalls) == none ]]'
+drv 2 "notoasts" "wait 40" "shot through-walls-hidden-1920x1080" "wait 10" > /dev/null
+through=$(val 2 "shotdiff through-walls-through-wall-1920x1080 through-walls-hidden-1920x1080")
+echo "  pixels the ghost blocks change through the wall: $through" >> /out/checks.log
+check "the view through the wall differs from the view with ghost blocks hidden, where the three blocks draw" eval \
 	'((through > 500))'
 keys 2 key n
 check "shown again, they draw again" eval \
-	'drv 2 "wait 20" > /dev/null && [[ $(val 2 wrongblocks) == "red 154,-60,156 orange 152,-60,156" ]]'
-# The cost of finding them: 20 scans with a ghost block at every position within 32 blocks of Planner2's camera.
+	'drv 2 "wait 20" > /dev/null && [[ $(val 2 throughwalls) == "$through_walls" ]]'
+# The cost of finding them and building their shapes: 20 scans with a ghost block at every position within 32 blocks
+# of Planner2's camera, then the shapes built whole and again after each of 20 1-block edits.
 cost=$(val 2 "wrongscan 20")
-echo "  finding the wrong blocks: $cost" >> /out/checks.log
-check "a scan with ghost blocks filling its range runs" eval '[[ $cost == "20 scans of 274625 ghost blocks, "* ]]'
+echo "  ghost blocks through walls: $cost" >> /out/checks.log
+check "a scan with ghost blocks filling its range, and building its shapes, runs" eval \
+	'[[ $cost == "20 scans of 274625 ghost blocks, "*"; shapes built whole in "*"; after a 1-block edit, "* ]]'
 # Planner2's camera is in block z 188 here, 32 blocks from the blocks' z, and in z 189 farther back, 33 blocks away.
 drv 1 "cmd tp Planner2 154.5 -60 189.5 180 10" > /dev/null
 check "from 33 blocks, beyond 32, nothing draws" eval \
-	'drv 2 "wait 40" > /dev/null && [[ $(val 2 wrongblocks) == none ]]'
+	'drv 2 "wait 40" > /dev/null && [[ $(val 2 throughwalls) == none ]]'
 drv 1 "cmd tp Planner2 154.5 -60 188.5 180 10" > /dev/null
-check "from 32 blocks, both draw" eval \
-	'drv 2 "wait 40" > /dev/null && [[ $(val 2 wrongblocks) == "red 154,-60,156 orange 152,-60,156" ]]'
+check "from 32 blocks, all three draw" eval \
+	'drv 2 "wait 40" > /dev/null && [[ $(val 2 throughwalls) == "$through_walls" ]]'
 # From the north side, in front of the wall, the faint colours draw over Litematica's own overlay.
 drv 1 "cmd tp Planner2 154.5 -60 150.5 0 10" > /dev/null
-check "from the wall's other side, both draw" eval \
-	'drv 2 "wait 40" > /dev/null && [[ $(val 2 wrongblocks) == "red 154,-60,156 orange 152,-60,156" ]]'
-drv 2 "notoasts" "wait 40" "shot wrong-blocks-in-view-1920x1080" "wait 10" "window 854 480 2" "wait 40" \
-	"notoasts" "shot wrong-blocks-in-view-854x480" "wait 10" > /dev/null
+check "from the wall's other side, all three draw" eval \
+	'drv 2 "wait 40" > /dev/null && [[ $(val 2 throughwalls) == "$through_walls" ]]'
+drv 2 "notoasts" "wait 40" "shot through-walls-in-view-1920x1080" "wait 10" "window 854 480 2" "wait 40" \
+	"notoasts" "shot through-walls-in-view-854x480" "wait 10" > /dev/null
+# Erasing the ghost block over air takes it out within half a second: the scan that changed the shapes comes within 10
+# ticks of Planner2's copy of the layer taking it out.
+drv 1 "edit 156 -60 156 156 -60 156 minecraft:air" > /dev/null
+erased_at=$(drv 2 "await inlayer 156 -60 156 minecraft:air" "gametime" | tail -1 | sed 's/^.* => //')
+check "erasing the ghost block over air takes it out of the light blue within half a second" eval \
+	'drv 2 "await throughwalls lightblue none red 154,-60,156 orange 152,-60,156" > /dev/null &&
+	 changed_at=$(val 2 throughwallschanged) &&
+	 echo "  the layer lost it at $erased_at, the shapes changed at $changed_at" >> /out/checks.log &&
+	 ((changed_at - erased_at <= 10))'
 
 # "Match ghost blocks" ("Settings"): the row in Effortless Building's "Visual Settings" screen, off at first, saved by
 # the screen's "Save" button. With it on, Planner1, 3 blocks north of a ghost oak stair facing east at 220 -60 220 and

@@ -1,4 +1,4 @@
-# Step 15's comparison shots: the wrong blocks through a wall, red and orange, from Planner2's side as filled.sh sets
+# Step 15's comparison shots: the ghost blocks through a wall, red and orange, from Planner2's side as filled.sh sets
 # them up; and "Match ghost blocks" with ghost blocks hidden: Planner1, with ghost blocks hidden and the setting on,
 # places oak stairs into a hidden ghost stair facing east, which face as Planner1 does, shot from Planner2's side.
 # Each shot's .boxes file and the placed stair's window box go to /out. Sourced by inside.sh.
@@ -6,7 +6,7 @@
 check "client 1 starts a session on hello" drv 1 "await session" "await noscreen"
 check "client 2 starts a session on hello" drv 2 "await session" "await noscreen"
 
-# The wrong blocks, as in filled.sh.
+# The ghost blocks through the wall, red and orange, as in filled.sh.
 drv 1 "cmd tp @s 120 -60 156 -90 0" "cmd tp Planner2 154.5 -60 166.5 180 10" "wait 40" \
 	"cmd kill @e[type=!minecraft:player]" "cmd time set noon" "cmd fill 139 -60 160 169 -49 160 minecraft:stone" \
 	"edit 154 -60 156 154 -60 156 minecraft:stone_bricks" "edit 152 -60 156 152 -60 156 minecraft:oak_stairs[facing=east]" \
@@ -17,7 +17,7 @@ drv 1 "cmd setblock 154 -60 156 minecraft:cobblestone" "cmd setblock 152 -60 156
 	> /dev/null
 check "through the wall, the cobblestone's ghost block draws red and the stair's orange" eval \
 	'drv 2 "await real 154 -60 156 minecraft:cobblestone" "await real 152 -60 156 minecraft:oak_stairs" "wait 25" \
-	> /dev/null && [[ $(val 2 wrongblocks) == "red 154,-60,156 orange 152,-60,156" ]]'
+	> /dev/null && [[ $(val 2 throughwalls) == "lightblue none red 154,-60,156 orange 152,-60,156" ]]'
 drv 2 "window 1920 1080 2" "wait 40" "notoasts" "shot compare-wrong-blocks-through-wall-1920x1080-gui2" "wait 10" \
 	> /dev/null
 

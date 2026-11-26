@@ -16,7 +16,7 @@ import dev.buildingplanner.input.PlaceTurn;
 import dev.buildingplanner.input.ShapeLock;
 import dev.buildingplanner.input.SingleRule;
 import dev.buildingplanner.layer.Layer;
-import dev.buildingplanner.layer.WrongBlocks;
+import dev.buildingplanner.layer.ThroughWalls;
 import dev.buildingplanner.look.ControlsLine;
 import dev.buildingplanner.look.GhostsShown;
 import dev.buildingplanner.server.PlaceTurns;
@@ -74,7 +74,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	 * class never loads their classes then.
 	 */
 	private static EditGlow glow;
-	private static WrongBlocksOutline wrongBlocks;
+	private static ThroughWallsOutline throughWalls;
 	/** The player's block mix, kept while the game runs, across servers. */
 	private static final BlockMix MIX = new BlockMix();
 
@@ -148,7 +148,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		// The sweep runs before the marks' outline, which then draws the marks as they stand.
 		DeleteAim.registered(() -> session);
 		MarksOutline.registered(() -> session != null && session.deleteOn() ? session.marks() : null);
-		wrongBlocks = WrongBlocksOutline.registered(
+		throughWalls = ThroughWallsOutline.registered(
 			() -> session != null && session.ghostsShown() ? session.replica().layer() : null);
 		modeHud = new ModeHud(BuildingPlannerClient::mouseMode, BuildingPlannerClient::boxShown,
 			BuildingPlannerClient::copyLine, BuildingPlannerClient::deleteLines, BuildingPlannerClient::modelessLine,
@@ -317,9 +317,14 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 			() -> ClientSession.show(PlayerMessage.mixOff()));
 	}
 
-	/** The wrong blocks the last frame drew through walls, or none. */
-	static WrongBlocks.Found wrongBlocksDrawn() {
-		return wrongBlocks == null ? WrongBlocks.Found.NONE : wrongBlocks.drawn();
+	/** The ghost blocks the last frame drew through walls, or none. */
+	static ThroughWalls.Found throughWallsDrawn() {
+		return throughWalls == null ? ThroughWalls.Found.NONE : throughWalls.drawn();
+	}
+
+	/** The game time of the scan that last changed the ghost blocks drawn through walls. */
+	static long throughWallsChangedAt() {
+		return throughWalls == null ? 0 : throughWalls.changedAt();
 	}
 
 	/** Whether ghost blocks show for this player, as the switch is set, with or without a session. */

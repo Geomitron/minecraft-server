@@ -646,11 +646,13 @@ Litematica's overlay of the same colour. Nothing draws while ghost blocks are hi
 The positions come from a pure function of the player's copy of the layer and the real blocks (`ThroughWalls`), worked
 out again every 10 ticks over the 16-block sections within reach that hold ghost blocks, so a block built, broken,
 drawn or erased shows within half a second. In the test harness, a scan with a ghost block at all 274,625 positions in
-range takes 4.5 ms at the median of 20 scans, and 26.9 ms at the slowest. Missing blocks make most ghost blocks part of
-a shape, so a scan's result changes with each edit nearby. `ThroughWallsOutline` therefore rebuilds only the 16-block
-sections whose positions or colours changed since the last scan, as Delete's marks rebuild only the sections a mark
-changed, instead of both shapes whole: in the harness, building the shape of 200,000 marks whole takes 59 ms to 546
-ms, and building it again after one mark changed 0.6 ms on average (see "Unverified").
+range (257,351 of them light blue and 17,274 red) takes 23.3 ms at the median of 20 scans, and 43.3 ms at the slowest.
+Missing blocks make most ghost blocks part of a shape, so a scan's result changes with each edit nearby.
+`ThroughWallsOutline` therefore rebuilds only the 16-block sections whose positions or colours changed since the last
+scan (with, for a position on a section's side, the section beside it, whose faces against it change), as Delete's
+marks rebuild only the sections a mark changed, instead of the shapes whole: in the harness, building the shapes of
+that full range takes 286 ms whole, and after a 1-block edit 8.0 ms on average and 12.6 ms at the longest, finding the
+changed positions included (see "Unverified").
 
 ### The client
 
@@ -3086,14 +3088,18 @@ world's spawn, where Planner2, who isn't an operator, may build:
 - Neither client's log has a self-check warning, checked before the restarts and at the end.
 - Planner2 is shot at 854 by 480 and 1920 by 1080, GUI scale 2, looking at a ghost wall before and after real blocks
   fill half of it.
-- Wrong blocks through walls ("Ghost blocks through walls"): a real cobblestone in a ghost stone brick and a real oak
-  stair facing north in a ghost oak stair facing east, 4 blocks behind a real stone wall that fills Planner2's view,
-  leave their ghost blocks. From 10 blocks, on the wall's other side, the stone brick draws red and the stair orange
-  (the driver's `wrongblocks`, what the last frame drew), and the view differs from the same view with ghost blocks
-  hidden by more than 500 pixels; with ghost blocks hidden nothing draws, and shown again both draw. From 33 blocks
-  nothing draws, and from 32 both do. Both are shot at 854 by 480 and 1920 by 1080, GUI scale 2, through the wall from
-  10 blocks and from in front of it. The driver's `wrongscan` times 20 scans with a ghost block at every position
-  within 32 blocks of Planner2's camera, and writes the figures to the checks' log.
+- Ghost blocks through walls ("Ghost blocks through walls"): a ghost stone brick over air, a real cobblestone in a ghost
+  stone brick and a real oak stair facing north in a ghost oak stair facing east, 4 blocks behind a real stone wall
+  that fills Planner2's view. From 10 blocks, on the wall's other side, the block over air draws light blue, the
+  cobblestone's red and the stair orange (the driver's `throughwalls`, what the last frame drew), and the view differs
+  from the same view with ghost blocks hidden by more than 500 pixels; with ghost blocks hidden nothing draws, and
+  shown again all three draw. From 33 blocks nothing draws, and from 32 all three do, and from in front of the wall
+  too. All three are shot at 854 by 480 and 1920 by 1080, GUI scale 2, through the wall from 10 blocks and from in
+  front of it. Planner1 erases the block over air, and the scan that takes it out of the light blue comes within 10
+  ticks of Planner2's copy of the layer losing it (the driver's `throughwallschanged`, the game time of the scan that
+  last changed the shapes). The driver's `wrongscan` times 20 scans with a ghost block at every position within 32
+  blocks of Planner2's camera, then building their shapes whole and again after each of 20 1-block edits, and writes
+  the figures to the checks' log.
 - "Match ghost blocks" ("Settings"): Planner1's "Visual Settings" (the driver's `visualsettings`, which opens it as the
   radial menu's button does) has the row, off at first, and its label shows the tooltip; a real click on its switch
   turns it on and saves nothing until a click on "Save", which saves `match-ghost-turn=true`. With it on, Planner1, in
@@ -3370,10 +3376,13 @@ another face, a sign turned another way and a hopper, piston, dripstone tip and 
 stair of another shape or waterlogged, a fence or wall with other connections, a waterlogged slab, a crop of another
 age, an open or powered door, an occupied bed, a lit furnace and an extended piston fill it; a top or double slab
 doesn't fill a bottom one; air fills nothing; and for each of candles, sea pickles, snow layers, turtle eggs, pink
-petals and leaf litter, a block of another count stays and one of the same count fills. `WrongBlocksTest` covers which
-ghost blocks draw through walls: over another block red, over the same block facing another way orange, and over the
-same block, air, water or lava, or with no ghost block, nothing; and the range, a block 10 away and one 32 away on
-every axis drawing, and one 33 away on any axis not. `LayerFillTest` covers the end-of-tick edit (by the nil author with no
+petals and leaf litter, a block of another count stays and one of the same count fills. `ThroughWallsTest` covers
+which ghost blocks draw through walls: over air, cave air, water or lava light blue, over another block red, over the
+same block facing another way orange, and over the same block, or with no ghost block, nothing; the range, a block 10
+away and one 32 away on every axis drawing, and one 33 away on any axis not, over air and over another block; and the
+sections that change between two scans: the positions that joined or left a colour, each one's own section, the
+sections beside a position on a section's side, edge or corner, and for a block built into a light blue wall, the one
+section of each of light blue and red. `LayerFillTest` covers the end-of-tick edit (by the nil author with no
 client sequence, to every watcher, only for blocks still filled when the tick ends, split at the block cap), an edit's
 filter (a position a real block fills takes air instead of the new ghost block, unless the server hasn't loaded its
 chunk, so a ghost block drawn over a real block that fills it removes the older ghost block there, one undo brings it
@@ -3467,9 +3476,10 @@ other in the game's own copy of the layer, again after a restart, which doesn't 
   (source read); Planner1 and Planner2 are made operators for the check of hook E34.
 - What drawing ghost blocks through walls costs on players' computers (`ThroughWalls`, rescanned every 10 ticks
   within 32 blocks, up to 65 by 65 by 65 positions a scan in the sections that hold ghost blocks): measured only in the
-  test harness's container, where a scan with a ghost block at all 274,625 positions takes 4.5 ms at the median of 20
-  scans and 26.9 ms at the slowest. Building and drawing the shapes, with missing blocks among them and only changed
-  sections rebuilt, aren't timed yet.
+  test harness's container, where with a ghost block at all 274,625 positions a scan takes 23.3 ms at the median of 20
+  scans and 43.3 ms at the slowest, building the shapes takes 286 ms whole, and building them again after a 1-block
+  edit 8.0 ms on average and 12.6 ms at the longest (`filled.sh`, the driver's `wrongscan`). Drawing the shapes each
+  frame isn't timed.
 - That a two-part block placed with "Match ghost blocks" on (a door, a bed) takes the ghost block's facing for both
   parts, as one turned with Left Ctrl does; read, not run.
 - That no Litematica or MaLiLib hotkey acts on Left Ctrl with the wheel or the middle button while Litematica's tool

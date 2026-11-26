@@ -1160,14 +1160,23 @@ public final class Driver implements ClientModInitializer {
 					+ " tiles, " + DataManager.getSchematicPlacementManager().getAllSchematicsPlacements().size()
 					+ " placements";
 			}
-			case "wrongblocks" -> {
-				// wrongblocks: the wrong blocks the last frame drew through walls, as "red x,y,z ... orange x,y,z ...",
-				// or none.
-				return WrongBlocksProbe.drawn();
+			case "throughwalls" -> {
+				// throughwalls: the ghost blocks the last frame drew through walls, as "lightblue x,y,z ... red x,y,z ...
+				// orange x,y,z ...", or none.
+				return ThroughWallsProbe.drawn();
+			}
+			case "throughwallschanged" -> {
+				// throughwallschanged: the game time of the scan that last changed the ghost blocks drawn through walls.
+				return String.valueOf(BuildingPlannerClient.throughWallsChangedAt());
+			}
+			case "gametime" -> {
+				// gametime: the level's game time now, in ticks.
+				return String.valueOf(mc.level.getGameTime());
 			}
 			case "wrongscan" -> {
-				// wrongscan <times>: how long finding the wrong blocks takes with ghost blocks filling its range.
-				return WrongBlocksProbe.scanCost(Integer.parseInt(a[1]));
+				// wrongscan <times>: how long finding the ghost blocks drawn through walls takes with ghost blocks filling
+				// its range, and building their shapes whole and again after a 1-block edit.
+				return ThroughWallsProbe.scanCost(Integer.parseInt(a[1]));
 			}
 			case "toolitem" -> {
 				// toolitem: whether Litematica's tool item is on.
@@ -1256,14 +1265,15 @@ public final class Driver implements ClientModInitializer {
 	/** The driver's reads written beside each shot, for outlining what the shot shows. */
 	private static final List<String> SHOT_READS = List.of("moderects", "eblinerects", "erasebar", "modebox", "buttons",
 		"widgets", "malilibbuttons", "infoicon", "drawbox", "markbox", "marks", "preview", "previewred", "copy",
-		"copyset", "lock", "wrongblocks");
+		"copyset", "lock", "throughwalls");
 	private static final java.util.regex.Pattern POSITION = java.util.regex.Pattern.compile("(-?\\d+),(-?\\d+),(-?\\d+)");
 
 	/**
 	 * Writes {@code screenshots/<name>.boxes} beside the shot: the window's size and GUI scale; each of
 	 * {@link #SHOT_READS} as the driver gives it; for each read that names block positions, the window box the blocks
-	 * between its lowest and highest positions cover ("world <read> left top right bottom"), and for the wrong blocks
-	 * each block's own; then every text and tooltip background the last frame drew ({@link ScreenProbe#drawnAll}).
+	 * between its lowest and highest positions cover ("world <read> left top right bottom"), and for the ghost blocks
+	 * drawn through walls each block's own, with its colour; then every text and tooltip background the last frame
+	 * drew ({@link ScreenProbe#drawnAll}).
 	 */
 	private void writeShotBoxes(Minecraft mc, String name) {
 		List<String> out = new ArrayList<>();
@@ -1294,10 +1304,18 @@ public final class Driver implements ClientModInitializer {
 			BlockPos max = positions.stream().reduce((p, q) -> new BlockPos(Math.max(p.getX(), q.getX()),
 				Math.max(p.getY(), q.getY()), Math.max(p.getZ(), q.getZ()))).orElseThrow();
 			out.add("world " + read + " " + screenBox(mc, min, max));
-			if (read.equals("wrongblocks")) {
-				for (BlockPos pos : positions) {
-					out.add("world wrongblock " + pos.getX() + "," + pos.getY() + "," + pos.getZ() + " "
-						+ screenBox(mc, pos, pos));
+			if (read.equals("throughwalls")) {
+				// The colour names come before their positions: "lightblue x,y,z ... red ... orange ...".
+				String colour = "";
+				for (String word : result.split(" ")) {
+					m = POSITION.matcher(word);
+					if (!m.matches()) {
+						colour = word;
+						continue;
+					}
+					BlockPos pos = new BlockPos(Integer.parseInt(m.group(1)), Integer.parseInt(m.group(2)),
+						Integer.parseInt(m.group(3)));
+					out.add("world throughwall " + colour + " " + word + " " + screenBox(mc, pos, pos));
 				}
 			}
 		}
@@ -1361,6 +1379,9 @@ public final class Driver implements ClientModInitializer {
 			case "noglow" -> glows().isEmpty();
 			case "held" -> SentPackets.held(a[1].equals("use"));
 			case "pressedafter" -> SentPackets.presses() > Integer.parseInt(a[1]);
+			case "throughwalls" -> ThroughWallsProbe.drawn().equals(what.substring(13));
+			case "inlayer" -> BuiltInRegistries.BLOCK.getKey(session().replica().layer().get(pos(a, 1)).getBlock())
+				.toString().equals(a[4]);
 			case "ingame" -> inGameTicks >= Integer.parseInt(a[1]);
 			case "layer" -> LayerProbe.matches(mc.gameDirectory.toPath().resolve(a[1]));
 			case "listfile" -> ListProbe.fileHasCurrent(mc.gameDirectory.toPath().resolve(a[1]));
