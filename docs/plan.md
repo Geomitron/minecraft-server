@@ -479,8 +479,8 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
     While the copy is at the aim, "Paste" shows there the same way: "why does this say "Single"? If this text is
     supposed to be the currently selected action, shouldn't it be "Paste"?" (1335 [c1]).
   Geo approved the release of 0.7.0 with the guide's two changes, "faintly" out of the line on red and orange blocks
-  through walls and "while ghost blocks show" in the "Match ghost blocks" sentence (1335 Q1 A); the release follows
-  the screenshots of "Paste" (1335 [c1]).
+  through walls and "while ghost blocks show" in the "Match ghost blocks" sentence (1335 Q1 A), and then with "Paste"
+  beside the hotbar, from its screenshots (1335 revision 2, Q1 A: "Release it.").
 - The shared layer replaces the decisions above that concern separate plans: named plans that move and turn as a whole
   (411 Q1), plan growth (411 Q2), who deletes a plan (411 Q3, 420 Q9), starting a plan with N (420 Q1, 469 Q1), hiding
   a plan with Litematica or Syncmatica (420 Q2, 469 Q2), the paste's target plan (485 Q3), Litematica's Edit Schematic
