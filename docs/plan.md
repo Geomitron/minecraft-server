@@ -644,7 +644,7 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
   rename it, which saves it until you delete it."
 
   The design ("Saved copies" in [building-planner.md](building-planner.md)), proposed for 0.11.0, settles how it works
-  within Geo's words, and the request "Saved copies" asks Geo what's still open (Q1 to Q4):
+  within Geo's words, and the request "Saved copies" asks Geo what's still open (Q1 to Q5):
   - each copy Copy makes is saved at once, named by its date and time; the 10 most recent copies not renamed stay, and
     a renamed copy stays until deleted, without counting among the 10 (Q3);
   - the copies are kept on the player's computer, a set for each account, the same on every server, so 0.11.0 changes
@@ -654,7 +654,7 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
   - the screen "Saved copies", laid out as "Saved lists", lists them newest first, each with a picture of the player's
     view as the copy was made (Q4), its name, size and block count, and "Paste", "Rename" and "Delete"; "Rename" opens
     a screen laid out as "Save list", and saving it makes the copy stay until it's deleted;
-  - with no copy since the game started, the radial menu's Paste button brings back the newest saved copy.
+  - with no copy since the game started, the radial menu's Paste button brings back the newest saved copy (Q5).
 - The shared layer replaces the decisions above that concern separate plans: named plans that move and turn as a whole
   (411 Q1), plan growth (411 Q2), who deletes a plan (411 Q3, 420 Q9), starting a plan with N (420 Q1, 469 Q1), hiding
   a plan with Litematica or Syncmatica (420 Q2, 469 Q2), the paste's target plan (485 Q3), Litematica's Edit Schematic
@@ -853,7 +853,7 @@ commits, screenshots, the spec's "In-game checks" and the full set of in-game sc
 on step 4's last build, before the release. The in-game checks of saved copies are in `saved.sh`, which step 1 adds.
 
 1. **The saved copies and their files** ("Saved copies": "Which copies stay", "Where they're kept", "The files" and
-   "After a restart"). Waits on Q1 and Q3. `CopyHistory` and the index's format (common), `SavedCopies` with its
+   "After a restart"). Waits on Q1, Q3 and Q5. `CopyHistory` and the index's format (common), `SavedCopies` with its
    background thread, each copy saved as Copy makes it, the 11th dropping the oldest not renamed, and the radial
    menu's Paste button bringing back the newest saved copy after a restart; the driver renames, picks and deletes
    copies through commands of its own until step 2 adds the screen. Done when `CopyHistoryTest` and `CopyIndexTest`

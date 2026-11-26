@@ -1488,7 +1488,8 @@ The screen's texts and the control are in the wording Geo approves in 0.11.0's t
 
 **After a restart.** The copy stays while the game runs (1375 Q1 A), and the saved copies outlast it: with no copy
 since the game started, the radial menu's Paste button brings the newest saved copy to the aim, as it was copied, and
-it gives the message "Nothing to paste. Use Copy first." only while there are no saved copies.
+it gives the message "Nothing to paste. Use Copy first." only while there are no saved copies (`OPEN:` "Saved
+copies", Q5).
 
 **The picture.** As Copy makes a copy, the game takes a picture of the player's view for the copy's row, so that a
 player can tell copies apart (`OPEN:` "Saved copies", Q4). The frame after Copy's last click draws without the box for
