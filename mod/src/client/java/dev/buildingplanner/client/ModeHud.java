@@ -1,10 +1,12 @@
 package dev.buildingplanner.client;
 
 import dev.buildingplanner.input.BoxCorners;
+import dev.buildingplanner.input.EraseHold;
 import dev.buildingplanner.input.MouseMode;
 import dev.buildingplanner.look.BoxListLayout;
 import dev.buildingplanner.look.ControlsLine;
 import dev.buildingplanner.look.ControlsRows;
+import dev.buildingplanner.look.ModeName;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
@@ -20,6 +22,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
 import net.minecraft.util.ARGB;
+import net.minecraft.world.entity.HumanoidArm;
 
 /**
  * The lines of a mouse mode's controls, centred where Effortless Building draws its own line during a shape
@@ -28,23 +31,32 @@ import net.minecraft.util.ARGB;
  * laid out by {@link ControlsRows}; white, with each action in dark aqua and each reason in red. A box's line ends with
  * its size, and a box past a limit has a red line above saying which. A line too wide for the screen goes on in a row
  * below. While a box is drawn, the blocks in it show under the crosshair ({@link BoxList}, laid out by
- * {@link BoxListLayout}), in rows that end above the controls, and in Delete by aim, the marked ghost blocks.
- * They show while a mode is on, with no screen open and the HUD shown (not hidden with F1). With no mode on, Single's
- * line shows in the same place while the one ghost block's controls are active ({@link ControlsLine#single}), or the
- * turning line ({@link ControlsLine#turning}), or in Disable, Disable's line ({@link ControlsLine#disable}); during a
- * shape drawn with the place click, while Effortless Building draws its own line there and the shape's block count in
- * the action bar above it, it shows above the action bar.
+ * {@link BoxListLayout}), in rows that end above the controls, each row on the controls' dark background, and in
+ * Delete with no box drawn, the marked ghost blocks. While the left button is held in Delete to erase the marks, a
+ * progress bar shows just above the controls, filling in the marks' red toward the erase.
+ * They show while a mode is on, with no screen open and the HUD shown (not hidden with F1). With no mode on, the build
+ * modes' line shows in the same place while the lock's controls are active ({@link ControlsLine#shape}), or in Disable, Disable's line
+ * ({@link ControlsLine#disable}); during a shape, while Effortless Building draws its own line there and the shape's
+ * block count in the action bar above it, it shows above the action bar, its last row ending 2 pixels above it. While the HUD shows, Effortless Building's mode's name shows
+ * just left of the hotbar, in a rectangle of the same look ({@link ModeName}), but in Disable; while a box for Copy or
+ * the material list is drawn, the copy is at the aim, or Delete is on, the tool's name shows there in its place ({@link ControlsLine#toolName}),
+ * in Disable too.
  */
 final class ModeHud implements HudElement {
 	private static final int BOTTOM = 58;
 	/**
-	 * Where the turning line ends during a shape: 2 above the top of the action bar's text, which the game draws from 72
-	 * to 63 above the screen's bottom ({@code Hud.extractOverlayMessage}).
+	 * Where the build modes' line ends during a shape: 2 above the top of the action bar's text, which the game draws
+	 * from 72 to 63 above the screen's bottom ({@code Hud.extractOverlayMessage}).
 	 */
 	private static final int ABOVE_ACTION_BAR = 74;
 	private static final int WHITE = -1;
 	/** The black behind each rectangle: the opacity of the game's chat background by default (0.5). */
 	private static final int BACKGROUND = ARGB.black(0.5F);
+	/** The erase's progress bar: the hotbar's width, 5 high, 4 above the controls' top row, in the marks' red. */
+	private static final int BAR_WIDTH = 182;
+	private static final int BAR_HEIGHT = 5;
+	private static final int BAR_GAP = 4;
+	private static final int BAR_FILL = ARGB.opaque(0xFF7070);
 
 	/** A line of the controls: its rectangles, its label first, and whether it starts with a label (a warning above the
 	 * controls is a line of its label alone). */
@@ -73,31 +85,35 @@ final class ModeHud implements HudElement {
 	private final Supplier<MouseMode> mode;
 	private final Supplier<BoxDraw.Shown> box;
 	private final Supplier<ControlsLine.Line> copy;
-	private final Supplier<List<ControlsLine.Line>> aim;
+	private final Supplier<List<ControlsLine.Line>> delete;
 	private final Supplier<ControlsLine.Line> modeless;
 	private final Supplier<Boolean> shape;
-	private final Supplier<String> modeKey;
+	private final Supplier<Integer> eraseTicks;
 	private final Supplier<List<BoxList.Entry>> list;
+	private final Supplier<Component> modeName;
 
 	/**
 	 * {@code mode} is the mouse mode now, or null, {@code box} the box drawn now, or null, {@code copy} the copy at the
-	 * aim's line ({@link ControlsLine#copy}), or null, {@code aim} Delete by aim's lines ({@link ControlsLine#deleteAim}),
-	 * {@code modeless} the line with no mouse mode on, Single's ({@link ControlsLine#single}), the turning line
-	 * ({@link ControlsLine#turning}) or Disable's ({@link ControlsLine#disable}), or null, {@code shape} whether Effortless
-	 * Building's shape is under way, {@code modeKey} the name of the key that switches a Delete box to Aim, or null
-	 * while it has none, and {@code list} the kinds of block in the box, or the marks.
+	 * aim's line ({@link ControlsLine#copy}), or null, {@code delete} Delete's lines ({@link ControlsLine#delete}),
+	 * {@code modeless} the line with no mouse mode on, the build modes' ({@link ControlsLine#shape}) or Disable's
+	 * ({@link ControlsLine#disable}), or null, {@code shape} whether Effortless
+	 * Building's shape is under way, {@code eraseTicks} the ticks the left button has been held in Delete toward the
+	 * erase, or -1, {@code list} the kinds of block in the box, or the marks, and {@code modeName} the name beside
+	 * the hotbar during a session: the tool's while a box, the copy or Delete is on, otherwise Effortless Building's mode's, or
+	 * null in Disable or without a session.
 	 */
 	ModeHud(Supplier<MouseMode> mode, Supplier<BoxDraw.Shown> box, Supplier<ControlsLine.Line> copy,
-		Supplier<List<ControlsLine.Line>> aim, Supplier<ControlsLine.Line> modeless, Supplier<Boolean> shape,
-		Supplier<String> modeKey, Supplier<List<BoxList.Entry>> list) {
+		Supplier<List<ControlsLine.Line>> delete, Supplier<ControlsLine.Line> modeless, Supplier<Boolean> shape,
+		Supplier<Integer> eraseTicks, Supplier<List<BoxList.Entry>> list, Supplier<Component> modeName) {
 		this.mode = mode;
 		this.box = box;
 		this.copy = copy;
-		this.aim = aim;
+		this.delete = delete;
 		this.modeless = modeless;
 		this.shape = shape;
-		this.modeKey = modeKey;
+		this.eraseTicks = eraseTicks;
 		this.list = list;
+		this.modeName = modeName;
 	}
 
 	/** The lines to show now, from the top, or none. */
@@ -109,20 +125,20 @@ final class ModeHud implements HudElement {
 		List<ControlsLine.Line> lines = now == null ? modelessLines() : switch (now) {
 			case BOX -> {
 				BoxDraw.Shown shown = box.get();
-				yield shown == null ? List.of() : ControlsLine.box(shown.purpose().name(), shown.corners(),
+				yield shown == null ? List.of() : ControlsLine.box(shown.corners(),
 					shown.corners() > 0 && shown.min() != null ? BoxCorners.size(shown.min(), shown.max()) : null,
-					shown.limit(), modeKey.get());
+					shown.limit());
 			}
 			case COPY_AT_AIM -> {
 				ControlsLine.Line line = copy.get();
 				yield line == null ? List.of() : List.of(line);
 			}
-			case DELETE_AIM -> aim.get();
+			case DELETE -> delete.get();
 		};
 		return lines.stream().map(line -> new Line(components(line), line.label() != null)).toList();
 	}
 
-	/** The line with no mouse mode on, Single's, the turning line or Disable's, while it shows, or none. */
+	/** The line with no mouse mode on, the build modes' or Disable's, while it shows, or none. */
 	private List<ControlsLine.Line> modelessLines() {
 		ControlsLine.Line line = modeless.get();
 		return line == null ? List.of() : List.of(line);
@@ -135,20 +151,20 @@ final class ModeHud implements HudElement {
 	}
 
 	/**
-	 * Whether the lines end above the action bar: the turning line during a shape, while Effortless Building draws its
-	 * own line where the lines otherwise end.
+	 * Whether the lines end above the action bar: the build modes' line during a shape, while Effortless Building draws
+	 * its own line where the lines otherwise end.
 	 */
 	private boolean raised() {
 		return mode.get() == null && shape.get();
 	}
 
-	/** Whether the list under the crosshair goes with the mode now: a box's, or Delete by aim's marks. */
+	/** Whether the list under the crosshair goes with the mode now: a box's, or in Delete its box's or its marks. */
 	private boolean listed() {
 		MouseMode now = mode.get();
 		if (now == null) {
 			return false;
 		}
-		return now == MouseMode.BOX || now == MouseMode.DELETE_AIM;
+		return now == MouseMode.BOX || now == MouseMode.DELETE;
 	}
 
 	/** The style white where it has no colour of its own, so a warning stays red and a rectangle's text is white. */
@@ -157,7 +173,7 @@ final class ModeHud implements HudElement {
 	}
 
 	/** The game's component for a part of a line, in its look: an action in dark aqua and a warning in red. */
-	private static MutableComponent component(ControlsLine.Text text) {
+	static MutableComponent component(ControlsLine.Text text) {
 		return switch (text) {
 			case ControlsLine.Translated translated -> looked(Component.translatable(translated.key(),
 				translated.args().stream().map(ModeHud::component).toArray()), translated.look());
@@ -356,6 +372,25 @@ final class ModeHud implements HudElement {
 	}
 
 	/**
+	 * The dark background under each row of the list under the crosshair as it shows now, its window box (left top
+	 * right bottom, in the window's pixels), top row first, separated by " | "; or {@code hidden}.
+	 */
+	String listBackgrounds() {
+		List<BoxList.Entry> entries = list.get();
+		if (!listed() || !shown() || entries.isEmpty()) {
+			return "hidden";
+		}
+		Minecraft mc = Minecraft.getInstance();
+		int width = mc.getWindow().getGuiScaledWidth();
+		int height = mc.getWindow().getGuiScaledHeight();
+		int top = top(placed(lines(), mc.font, width, height).size(), mc.font, height, false);
+		int scale = scale();
+		return BoxListLayout.of(width, height, entries.size(), top).backgrounds().stream()
+			.map(r -> r.left() * scale + " " + r.top() * scale + " " + r.right() * scale + " " + r.bottom() * scale)
+			.collect(Collectors.joining(" | "));
+	}
+
+	/**
 	 * The top of the controls: {@code count} rows, the last of them starting 58 above the screen's bottom, or while
 	 * {@code raised}, ending 74 above it, over the action bar; with none, of one row there.
 	 */
@@ -365,28 +400,102 @@ final class ModeHud implements HudElement {
 			: height - BOTTOM - (rows - 1) * ControlsRows.pitch(font.lineHeight);
 	}
 
+	/**
+	 * Hook M8: the top of the held item's name, which the game gives as {@code drawnAt}: 2 above the top of the highest
+	 * row of the lines while they show, or {@code drawnAt}.
+	 */
+	int itemNameTop(int drawnAt) {
+		List<Line> lines = lines();
+		if (lines.isEmpty()) {
+			return drawnAt;
+		}
+		Minecraft mc = Minecraft.getInstance();
+		int height = mc.getWindow().getGuiScaledHeight();
+		int rows = placed(lines, mc.font, mc.getWindow().getGuiScaledWidth(), height).size();
+		return drawnAt + ModeName.itemNameShift(drawnAt, mc.font.lineHeight, top(rows, mc.font, height, raised()));
+	}
+
+	/** The mode's name in its rectangle beside the hotbar while it shows, or null. */
+	private Placed modeNamePlaced(Font font, int width, int height) {
+		Minecraft mc = Minecraft.getInstance();
+		Component name = mc.gui.hud.isHidden() || mc.player == null ? null : modeName.get();
+		if (name == null) {
+			return null;
+		}
+		Component text = Component.empty().append(name).withStyle(ChatFormatting.WHITE);
+		boolean offHandLeft = !mc.player.getOffhandItem().isEmpty()
+			&& mc.player.getMainArm().getOpposite() == HumanoidArm.LEFT;
+		ModeName.Box box = ModeName.box(font.width(text), font.lineHeight, width, height, offHandLeft);
+		return new Placed(text, box.left(), box.top(), box.right(), box.bottom());
+	}
+
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor graphics, DeltaTracker delta) {
+		Font font = Minecraft.getInstance().font;
+		Placed name = modeNamePlaced(font, graphics.guiWidth(), graphics.guiHeight());
+		if (name != null) {
+			draw(graphics, font, List.of(List.of(name)));
+		}
 		List<Line> lines = lines();
 		if (lines.isEmpty() && !(listed() && shown())) {
 			return;
 		}
-		Font font = Minecraft.getInstance().font;
 		List<List<Placed>> rows = placed(lines, font, graphics.guiWidth(), graphics.guiHeight());
 		draw(graphics, font, rows);
+		int top = top(rows.size(), font, graphics.guiHeight(), raised());
 		if (listed()) {
-			drawList(graphics, font, top(rows.size(), font, graphics.guiHeight(), raised()));
+			drawList(graphics, font, top);
 		}
+		int[] bar = bar(graphics.guiWidth(), top);
+		if (bar != null) {
+			graphics.fill(bar[0], bar[1], bar[2], bar[3], BACKGROUND);
+			graphics.fill(bar[0], bar[1], bar[4], bar[3], BAR_FILL);
+		}
+	}
+
+	/**
+	 * The erase's progress bar on a screen {@code width} wide whose controls start at {@code top}: its left, top, right
+	 * and bottom and the right of its fill, in GUI pixels, or null while the left button isn't held in Delete to erase.
+	 */
+	private int[] bar(int width, int top) {
+		Integer ticks = eraseTicks.get();
+		if (mode.get() != MouseMode.DELETE || ticks == null || ticks < 0 || !shown()) {
+			return null;
+		}
+		int left = (width - BAR_WIDTH) / 2;
+		int bottom = top - BAR_GAP;
+		return new int[] {left, bottom - BAR_HEIGHT, left + BAR_WIDTH, bottom,
+			left + BAR_WIDTH * ticks / EraseHold.TICKS};
+	}
+
+	/**
+	 * The erase's progress bar as it's drawn now, for the in-game checks: its window box (left top right bottom, in the
+	 * window's pixels) and the right of its fill, or {@code hidden}.
+	 */
+	String eraseBar() {
+		Minecraft mc = Minecraft.getInstance();
+		int height = mc.getWindow().getGuiScaledHeight();
+		int[] bar = bar(mc.getWindow().getGuiScaledWidth(),
+			top(placedNow().size(), mc.font, height, raised()));
+		if (bar == null) {
+			return "hidden";
+		}
+		int scale = scale();
+		return bar[0] * scale + " " + bar[1] * scale + " " + bar[2] * scale + " " + bar[3] * scale + " fill "
+			+ bar[4] * scale;
 	}
 
 	/**
 	 * The list under the crosshair, drawn as Effortless Building draws its own ({@code RenderHandler.drawItemStack}):
 	 * each item, then its count over it, right-aligned to the item's right edge and starting 9 below its top; the "+N"
-	 * cell's text sits in the middle of its cell.
+	 * cell's text sits in the middle of its cell. Each row sits on the controls' dark background.
 	 */
 	private void drawList(GuiGraphicsExtractor graphics, Font font, int top) {
 		List<BoxList.Entry> entries = list.get();
 		BoxListLayout layout = BoxListLayout.of(graphics.guiWidth(), graphics.guiHeight(), entries.size(), top);
+		for (BoxListLayout.Rect rect : layout.backgrounds()) {
+			graphics.fill(rect.left(), rect.top(), rect.right(), rect.bottom(), BACKGROUND);
+		}
 		int items = layout.more() > 0 ? layout.cells().size() - 1 : layout.cells().size();
 		for (int i = 0; i < items; i++) {
 			BoxListLayout.Cell cell = layout.cells().get(i);

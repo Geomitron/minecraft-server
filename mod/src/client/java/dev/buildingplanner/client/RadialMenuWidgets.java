@@ -1,5 +1,6 @@
 package dev.buildingplanner.client;
 
+import dev.buildingplanner.input.BoxPurpose;
 import dev.buildingplanner.input.MouseMode;
 import dev.buildingplanner.input.RepeatSpeed;
 import dev.buildingplanner.look.SmallText;
@@ -27,12 +28,13 @@ import net.minecraft.resources.Identifier;
  * and are as wide as the longest label either shows needs at the current size, plus {@link #PAD} on each side, reaching
  * further left than the buttons. Each is {@link #HEIGHT} high, and they end 55 below the middle.
  *
- * <p>Building Planner's seven buttons ({@link RadialButton}) sit in rows above the wrench, undo and redo, in their
- * columns (middles 157, 131 and 105 left of the menu's middle): "Show or hide ghost blocks", "Block mix" and "Material
- * list" 39 above the middle, Copy, Paste and "Material lists" 65 above it, and Delete 91 above it, over Copy. "Show or
- * hide ghost blocks" and "Block mix" do what their keys do; the others have no keys, and Copy, Delete, Paste and
- * "Material list" each show selected while its mouse mode is on (Delete in a Delete box and in Delete by aim), when no
- * mode segment does (E19). Each icon is a
+ * <p>Building Planner's seven buttons ({@link RadialButton}) sit in the columns of the wrench, undo and redo
+ * (middles 157, 131 and 105 left of the menu's middle): "Show or hide ghost blocks" under the wrench, 13 below the
+ * middle, where Effortless Building shows operators its "Functional Settings" button, which hook E34 leaves out during a
+ * session; Copy, Paste and Delete 39 above the middle; and "Block mix", "Material list" and "Material lists" 65 above
+ * it. The row 91 above the middle is left free. "Show or hide ghost blocks" and "Block mix" do what their keys do; the
+ * others have no keys, and Copy, Delete, Paste and "Material list" each show selected while its mouse mode is on, when
+ * no mode segment does (E19). Each icon is a
  * texture of its own ({@link RadialButton#icon}), "Block mix" shows Effortless Building's Randomizer Bag, "Material
  * lists" Minecraft's Book and Quill, and Delete Minecraft's Barrier.
  *
@@ -51,13 +53,13 @@ public final class RadialMenuWidgets {
 	private static final String BUILD = "buildingplanner.ui.radial.build_speed";
 	private static final String BREAK = "buildingplanner.ui.radial.break_speed";
 	/** The buttons' middles from the menu's middle, {x, y}. */
-	private static final int[] SHOW_HIDE_SLOT = {-157, -39};
-	private static final int[] BLOCK_MIX_SLOT = {-131, -39};
-	private static final int[] MATERIAL_LIST_SLOT = {-105, -39};
-	private static final int[] COPY_SLOT = {-157, -65};
-	private static final int[] PASTE_SLOT = {-131, -65};
+	private static final int[] SHOW_HIDE_SLOT = {-157, 13};
+	private static final int[] COPY_SLOT = {-157, -39};
+	private static final int[] PASTE_SLOT = {-131, -39};
+	private static final int[] DELETE_SLOT = {-105, -39};
+	private static final int[] BLOCK_MIX_SLOT = {-157, -65};
+	private static final int[] MATERIAL_LIST_SLOT = {-131, -65};
 	private static final int[] MATERIAL_LISTS_SLOT = {-105, -65};
-	private static final int[] DELETE_SLOT = {-157, -91};
 
 	private static final Identifier SHOWN = RadialButton.icon("ghost_blocks_shown");
 	private static final Identifier HIDDEN = RadialButton.icon("ghost_blocks_hidden");
@@ -92,17 +94,17 @@ public final class RadialMenuWidgets {
 				BuildingPlannerClient.config())));
 		widgets.add(button(SHOW_HIDE_SLOT, BuildingPlannerClient.SHOW_HIDE,
 			() -> BuildingPlannerClient.ghostsShown() ? SHOWN : HIDDEN, () -> false, BuildingPlannerClient::toggleGhosts));
-		widgets.add(button(BLOCK_MIX_SLOT, BuildingPlannerClient.BLOCK_MIX, () -> RANDOMIZER_BAG, () -> false,
-			BuildingPlannerClient::blockMix));
-		widgets.add(button(MATERIAL_LIST_SLOT, "material_list", MATERIAL_LIST,
-			() -> BuildingPlannerClient.drawingBoxFor(BoxDraw.Purpose.MATERIAL_LIST), BuildingPlannerClient::materialList));
-		widgets.add(button(COPY_SLOT, "copy", COPY, () -> BuildingPlannerClient.drawingBoxFor(BoxDraw.Purpose.COPY),
+		widgets.add(button(COPY_SLOT, "copy", COPY, () -> BuildingPlannerClient.drawingBoxFor(BoxPurpose.COPY),
 			BuildingPlannerClient::copy));
 		widgets.add(button(PASTE_SLOT, "paste", PASTE,
 			() -> BuildingPlannerClient.mouseMode() == MouseMode.COPY_AT_AIM, BuildingPlannerClient::paste));
+		widgets.add(button(DELETE_SLOT, "delete", BARRIER, BuildingPlannerClient::deleteOn, BuildingPlannerClient::delete));
+		widgets.add(button(BLOCK_MIX_SLOT, BuildingPlannerClient.BLOCK_MIX, () -> RANDOMIZER_BAG, () -> false,
+			BuildingPlannerClient::blockMix));
+		widgets.add(button(MATERIAL_LIST_SLOT, "material_list", MATERIAL_LIST,
+			() -> BuildingPlannerClient.drawingBoxFor(BoxPurpose.MATERIAL_LIST), BuildingPlannerClient::materialList));
 		widgets.add(button(MATERIAL_LISTS_SLOT, "material_lists", BOOK_AND_QUILL, () -> false,
 			BuildingPlannerClient::materialLists));
-		widgets.add(button(DELETE_SLOT, "delete", BARRIER, BuildingPlannerClient::deleteOn, BuildingPlannerClient::delete));
 		return widgets;
 	}
 
@@ -121,6 +123,15 @@ public final class RadialMenuWidgets {
 				placed.place(width / 2.0, height / 2.0, factor(visibility));
 			}
 		}
+	}
+
+	/**
+	 * Hook E34: whether the menu adds Effortless Building's "Functional Settings" button under the wrench, given whether
+	 * the player is an operator. During a session it doesn't, for operators too: the button changes Effortless
+	 * Building's settings on the server, which this server doesn't run, and "Show or hide ghost blocks" sits there.
+	 */
+	public static boolean showFunctionalSettings(boolean operator) {
+		return operator && !BuildingPlannerClient.active();
 	}
 
 	/**

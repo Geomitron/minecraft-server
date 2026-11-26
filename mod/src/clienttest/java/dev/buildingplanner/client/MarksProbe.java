@@ -13,7 +13,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
-/** Delete by aim's marks as the driver reads them, and the times its aims and its marks' shape take (step9.sh). */
+/** Delete's marks as the driver reads them, and the times its aims and its marks' shape take (step9.sh). */
 final class MarksProbe {
 	/** The most marks {@link #marks} lists one by one. */
 	private static final int LISTED = 40;

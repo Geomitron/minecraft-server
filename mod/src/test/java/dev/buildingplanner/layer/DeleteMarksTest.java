@@ -20,7 +20,9 @@ import net.minecraft.world.phys.Vec3;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-/** Delete by aim's marks: the sweep between two aims, unmarking, the cap and marks dropping with their ghost blocks. */
+/**
+ * Delete's marks: the sweep between two aims, the box, unmarking, the cap and marks dropping with their ghost blocks.
+ */
 class DeleteMarksTest {
 	private static BlockState bricks;
 	private static BlockState air;
@@ -149,6 +151,84 @@ class DeleteMarksTest {
 		marks.pass(new BlockPos(4, 64, 8), layer);
 		assertFalse(marks.unmarking());
 		assertEquals(rowFrom(3, 4, 5, 8), marked(marks), "a sweep that starts on no mark marks again");
+	}
+
+	@Test
+	void aBoxMarksEveryGhostBlockBetweenItsCornersAtEveryHeight() {
+		Layer layer = row();
+		layer.set(new BlockPos(2, 66, 8), bricks);
+		layer.set(new BlockPos(2, 67, 8), bricks);
+		DeleteMarks marks = new DeleteMarks(200_000);
+		marks.startSweep();
+		assertFalse(marks.startBox(new BlockPos(2, 64, 8)), "a box started on no mark marks");
+
+		assertTrue(marks.box(new BlockPos(2, 64, 8), new BlockPos(4, 66, 8), layer, false));
+		assertEquals(Set.of(new BlockPos(2, 64, 8), new BlockPos(3, 64, 8), new BlockPos(4, 64, 8),
+			new BlockPos(2, 66, 8)), marked(marks));
+	}
+
+	@Test
+	void aBoxStartedOnAMarkUnmarksTheMarksInItAndLeavesTheRest() {
+		Layer layer = row();
+		DeleteMarks marks = new DeleteMarks(200_000);
+		marks.startSweep();
+		marks.box(new BlockPos(0, 64, 8), new BlockPos(9, 64, 8), layer, false);
+		marks.endSweep();
+
+		marks.startSweep();
+		assertTrue(marks.startBox(new BlockPos(3, 64, 8)));
+		assertTrue(marks.unmarking(), "the hold unmarks what its sweep passes over too");
+		assertTrue(marks.box(new BlockPos(3, 64, 8), new BlockPos(5, 64, 8), layer, true));
+		assertEquals(rowFrom(0, 1, 2, 6, 7, 8, 9), marked(marks));
+	}
+
+	@Test
+	void aHoldsSweepDecidesBeforeItsBoxDoes() {
+		Layer layer = row();
+		DeleteMarks marks = new DeleteMarks(200_000);
+		marks.startSweep();
+		marks.pass(new BlockPos(5, 64, 8), layer);
+		marks.endSweep();
+
+		marks.startSweep();
+		marks.pass(new BlockPos(0, 64, 8), layer);
+		assertFalse(marks.startBox(new BlockPos(5, 64, 8)), "the sweep met an unmarked ghost block first, so it marks");
+	}
+
+	@Test
+	void aBoxThatWouldPassTheCapMarksNothing() {
+		Layer layer = row();
+		DeleteMarks marks = new DeleteMarks(3);
+		marks.startSweep();
+		marks.pass(new BlockPos(0, 64, 8), layer);
+
+		assertFalse(marks.fits(layer, new BlockPos(1, 64, 8), new BlockPos(3, 64, 8)));
+		assertFalse(marks.box(new BlockPos(1, 64, 8), new BlockPos(3, 64, 8), layer, false));
+		assertEquals(rowFrom(0), marked(marks));
+
+		assertTrue(marks.fits(layer, new BlockPos(0, 64, 8), new BlockPos(2, 64, 8)), "a mark already in it adds none");
+		assertTrue(marks.box(new BlockPos(0, 64, 8), new BlockPos(2, 64, 8), layer, false));
+		assertEquals(rowFrom(0, 1, 2), marked(marks));
+		assertTrue(marks.full());
+	}
+
+	@Test
+	void aBoxCountsTheOtherHalfOfADoorItCuts() {
+		Layer layer = new Layer();
+		layer.set(new BlockPos(0, 64, 0), lowerDoor);
+		layer.set(new BlockPos(0, 65, 0), upperDoor);
+		layer.set(new BlockPos(1, 64, 0), bricks);
+
+		DeleteMarks capped = new DeleteMarks(2);
+		capped.startSweep();
+		assertFalse(capped.box(new BlockPos(0, 64, 0), new BlockPos(1, 64, 0), layer, false),
+			"the door's upper half makes 3 positions to erase");
+
+		DeleteMarks marks = new DeleteMarks(200_000);
+		marks.startSweep();
+		marks.box(new BlockPos(0, 64, 0), new BlockPos(1, 64, 0), layer, false);
+		assertEquals(2, marks.size());
+		assertEquals(3, marks.eraseSize());
 	}
 
 	@Test

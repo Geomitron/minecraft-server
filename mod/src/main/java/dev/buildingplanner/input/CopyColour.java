@@ -14,7 +14,7 @@ import net.minecraft.world.level.block.state.BlockState;
 /**
  * The colour of the copy at the aim, in Satisfactory's hologram colours: red where the server would refuse its paste,
  * yellow where some of its blocks would replace ghost blocks already there, and blue where the paste would go in as it
- * shows. With a zoop's row fixed, the whole row has one colour, since it pastes as one edit.
+ * shows. With a set fixed, the whole set has one colour, since it pastes as one edit.
  */
 public final class CopyColour {
 	private static final Vec3i ONE = new Vec3i(1, 1, 1);
@@ -53,13 +53,13 @@ public final class CopyColour {
 	}
 
 	/**
-	 * The colour of a row of copies in the boxes {@code row} (the copy's own box alone without a row), each copy holding
+	 * The colour of a set of copies in the boxes {@code set} (the copy's own box alone without a set), each copy holding
 	 * {@code blocksPerCopy} blocks: red while {@link #refusal} finds a reason, otherwise yellow while {@code overGhosts}
 	 * says so (asked only then, since it reads every block), otherwise blue.
 	 */
-	public static Shown of(List<Spot> row, int blocksPerCopy, World world, int maxEditBlocks,
+	public static Shown of(List<Spot> set, int blocksPerCopy, World world, int maxEditBlocks,
 		BooleanSupplier overGhosts) {
-		Optional<Refusal> refusal = refusal(row, blocksPerCopy, world, maxEditBlocks);
+		Optional<Refusal> refusal = refusal(set, blocksPerCopy, world, maxEditBlocks);
 		if (refusal.isPresent()) {
 			return Shown.red(refusal.get());
 		}
@@ -67,16 +67,16 @@ public final class CopyColour {
 	}
 
 	/**
-	 * Why the server would refuse the row's paste: more blocks than its cap, or a block outside the build height or the
+	 * Why the server would refuse the set's paste: more blocks than its cap, or a block outside the build height or the
 	 * world border. The copy's box is the smallest box around its blocks, so its blocks reach each side of every copy's
-	 * box, and of the row's; the build height bounds y, and the border bounds x and z, each on its own, so the row's
+	 * box, and of the set's; the build height bounds y, and the border bounds x and z, each on its own, so the set's
 	 * lowest and highest corners stand for its blocks.
 	 */
-	public static Optional<Refusal> refusal(List<Spot> row, int blocksPerCopy, World world, int maxEditBlocks) {
-		if ((long) row.size() * blocksPerCopy > maxEditBlocks) {
+	public static Optional<Refusal> refusal(List<Spot> set, int blocksPerCopy, World world, int maxEditBlocks) {
+		if ((long) set.size() * blocksPerCopy > maxEditBlocks) {
 			return Optional.of(Refusal.TOO_MANY_BLOCKS);
 		}
-		Spot box = CopyRow.box(row);
+		Spot box = CopyGrid.box(set);
 		BlockPos min = box.min();
 		BlockPos max = box.max();
 		if (!world.inBuildHeight(min.getY()) || !world.inBuildHeight(max.getY())) {
@@ -89,17 +89,17 @@ public final class CopyColour {
 	}
 
 	/**
-	 * Whether a block of any copy in the row would replace a ghost block in {@code layer}: a ghost block other than the
+	 * Whether a block of any copy in the set would replace a ghost block in {@code layer}: a ghost block other than the
 	 * copy's own block there, which the paste would leave as it is. {@code blocks} are the copy's blocks, as it's turned
-	 * and mirrored, by their position from the copy's lowest corner. A row over no column of the layer reads no block.
+	 * and mirrored, by their position from the copy's lowest corner. A set over no column of the layer reads no block.
 	 */
-	public static boolean overGhosts(List<Spot> row, Map<BlockPos, BlockState> blocks, Layer layer) {
-		Spot box = CopyRow.box(row);
+	public static boolean overGhosts(List<Spot> set, Map<BlockPos, BlockState> blocks, Layer layer) {
+		Spot box = CopyGrid.box(set);
 		if (!anyColumn(layer, box)) {
 			return false;
 		}
 		BlockPos.MutableBlockPos at = new BlockPos.MutableBlockPos();
-		for (Spot spot : row) {
+		for (Spot spot : set) {
 			BlockPos corner = spot.min();
 			for (Map.Entry<BlockPos, BlockState> block : blocks.entrySet()) {
 				BlockPos offset = block.getKey();
@@ -114,14 +114,14 @@ public final class CopyColour {
 	}
 
 	/**
-	 * The one ghost block's colour (see "One ghost block": "Colours"), the locked block or its fixed row as copies of
-	 * one block: {@code row} its positions, and {@code placed} the blocks a right click would place at them, by their
-	 * positions in the world, which may differ along the row, as the block mix's do. Red while {@link #refusal} finds a
-	 * reason, otherwise yellow where a block would replace a different ghost block, otherwise blue.
+	 * The colour of the locked positions (see "Locking and the first click": "Colours"), as copies of one block:
+	 * {@code own} the positions, and {@code placed} the blocks a right click would place at them, by their positions in
+	 * the world, which may differ between positions, as the block mix's do. Red while {@link #refusal} finds a reason,
+	 * otherwise yellow where a block would replace a different ghost block, otherwise blue.
 	 */
-	public static Shown ofBlocks(List<BlockPos> row, Map<BlockPos, BlockState> placed, World world, int maxEditBlocks,
+	public static Shown ofBlocks(List<BlockPos> own, Map<BlockPos, BlockState> placed, World world, int maxEditBlocks,
 		Layer layer) {
-		List<Spot> spots = row.stream().map(pos -> new Spot(pos, ONE)).toList();
+		List<Spot> spots = own.stream().map(pos -> new Spot(pos, ONE)).toList();
 		return of(spots, 1, world, maxEditBlocks, () -> placed.entrySet().stream().anyMatch(block -> {
 			BlockState ghost = layer.get(block.getKey());
 			return !ghost.isAir() && ghost != block.getValue();

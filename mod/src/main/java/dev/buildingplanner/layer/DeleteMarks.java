@@ -13,11 +13,12 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * The ghost blocks marked in Delete by aim (see "Delete by aim"): a sweep of the aim, while the sprint key is held,
- * marks each ghost block it passes over, or unmarks them when the first it meets is marked. Only the ghost block the aim
- * meets is marked, not the other half of a two-block ghost block, which the erase takes with it ({@link OtherHalf});
- * the marks stop at the server's cap for one edit, counting those other halves. A mark drops when its ghost block
- * leaves the layer ({@link #retain}).
+ * The ghost blocks marked in Delete (see "Delete"): while the sprint key is held, a sweep of the aim marks each ghost
+ * block it passes over, and a box marks every ghost block in it; or, when the hold's first ghost block (the sweep's
+ * first, or the box's first corner) is marked, the hold unmarks them instead. Only the ghost block itself is marked,
+ * not the other half of a two-block ghost block, which the erase takes with it ({@link OtherHalf}); the marks stop at
+ * the server's cap for one edit, counting those other halves. A mark drops when its ghost block leaves the layer
+ * ({@link #retain}).
  */
 public final class DeleteMarks {
 	/** The most a sweep's aimed points are apart, in blocks, so a quick sweep leaves no gap. */
@@ -98,24 +99,26 @@ public final class DeleteMarks {
 		return ghosts;
 	}
 
-	/** The sprint key went down: a sweep starts, which decides at its first ghost block whether it marks or unmarks. */
+	/**
+	 * The sprint key went down: a hold starts, which decides at its first ghost block whether it marks or unmarks.
+	 */
 	public void startSweep() {
 		sweeping = true;
 		unmarking = null;
 	}
 
-	/** The sprint key came up, or the sweep can't go on: the next sweep decides again. */
+	/** The sprint key came up, or the hold can't go on: the next hold decides again. */
 	public void endSweep() {
 		sweeping = false;
 		unmarking = null;
 	}
 
-	/** Whether a sweep is under way. */
+	/** Whether a hold of the sprint key is under way. */
 	public boolean sweeping() {
 		return sweeping;
 	}
 
-	/** Whether the sweep under way unmarks what it passes over. */
+	/** Whether the hold under way unmarks what it passes over and its boxes take in. */
 	public boolean unmarking() {
 		return Boolean.TRUE.equals(unmarking);
 	}
@@ -141,6 +144,88 @@ public final class DeleteMarks {
 		} else {
 			mark(pos, layer);
 		}
+	}
+
+	/**
+	 * A box's first corner, at {@code corner}, during the hold under way (starting one if none is): the hold decides
+	 * there whether it marks or unmarks, unless its sweep has already met a ghost block. Returns whether the box
+	 * unmarks.
+	 */
+	public boolean startBox(BlockPos corner) {
+		sweeping = true;
+		if (unmarking == null) {
+			unmarking = marks.contains(corner.asLong());
+		}
+		return unmarking;
+	}
+
+	/**
+	 * A box from {@code min} to {@code max} let go: unmarks each mark in it when {@code unmark}, and otherwise marks every
+	 * ghost block in it, or none of them when that would take the erase past the cap, other halves counted. Returns
+	 * whether it marked or unmarked.
+	 */
+	public boolean box(BlockPos min, BlockPos max, Layer layer, boolean unmark) {
+		if (unmark) {
+			List<Long> inBox = new ArrayList<>();
+			for (LongIterator it = marks.iterator(); it.hasNext();) {
+				long key = it.nextLong();
+				if (inside(key, min, max)) {
+					inBox.add(key);
+				}
+			}
+			inBox.forEach(this::unmark);
+			return true;
+		}
+		List<long[]> adding = new ArrayList<>();
+		LongOpenHashSet more = new LongOpenHashSet();
+		layer.forEachIn(min, max, (pos, ghost) -> {
+			long key = pos.asLong();
+			if (marks.contains(key)) {
+				return;
+			}
+			long other = otherHalf(pos, ghost, layer);
+			adding.add(new long[] {key, other});
+			if (!erased.containsKey(key)) {
+				more.add(key);
+			}
+			if (!erased.containsKey(other)) {
+				more.add(other);
+			}
+		});
+		if (erased.size() + more.size() > cap) {
+			return false;
+		}
+		for (long[] mark : adding) {
+			add(mark[0], mark[1]);
+			changed(mark[0]);
+		}
+		if (!adding.isEmpty()) {
+			version++;
+		}
+		return true;
+	}
+
+	/**
+	 * Whether a box from {@code min} to {@code max} may mark its ghost blocks within the cap, for its colour while it's
+	 * drawn: its ghost blocks, less the positions already to erase in it, and the positions already to erase, come to
+	 * no more than the cap. Other halves outside the box count only when it's let go ({@link #box}).
+	 */
+	public boolean fits(Layer layer, BlockPos min, BlockPos max) {
+		int inBox = 0;
+		for (LongIterator it = erased.keySet().iterator(); it.hasNext();) {
+			if (inside(it.nextLong(), min, max)) {
+				inBox++;
+			}
+		}
+		return !GhostErase.overCap(layer, min, max, cap - erased.size() + inBox);
+	}
+
+	private static boolean inside(long key, BlockPos min, BlockPos max) {
+		int x = BlockPos.getX(key);
+		int y = BlockPos.getY(key);
+		int z = BlockPos.getZ(key);
+		return x >= min.getX() && x <= max.getX() && y >= min.getY() && y <= max.getY() && z >= min.getZ()
+			&& z <= max.getZ();
 	}
 
 	private void mark(BlockPos pos, Layer layer) {

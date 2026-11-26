@@ -16,6 +16,8 @@ import net.minecraft.network.chat.Component;
  * top. Each row shows its name, when it was saved and its box's size, with "Open" and, except for "Last counted",
  * "Delete", which asks again first. "Open" asks the server for the list and opens its screen when it arrives. The rows
  * follow each index the server sends, which it sends again after each save and delete. The mouse wheel scrolls them.
+ * "Close" at the bottom right, placed and sized as the material list screen's, goes back as Escape does, and the rows
+ * stop above it.
  */
 final class SavedListsScreen extends Screen {
 	private static final int TEXT = 0xFFFFFFFF;
@@ -23,6 +25,9 @@ final class SavedListsScreen extends Screen {
 	private static final int ROW = 26;
 	private static final int TOP = 24;
 	private static final int BUTTON = 50;
+	/** The "Close" button's distance from the screen's right edge and bottom, as on the material list screen. */
+	private static final int CLOSE_RIGHT = 10;
+	private static final int CLOSE_BOTTOM = 26;
 
 	/** One row: the name to ask the server for ("" for "Last counted"), the name shown, and its summary. */
 	private record Row(String name, Component shown, Payloads.ListSummary summary) {
@@ -55,13 +60,17 @@ final class SavedListsScreen extends Screen {
 		return (width - contentWidth()) / 2;
 	}
 
-	/** How many rows fit on the screen. */
+	/** How many rows fit on the screen above "Close". */
 	private int shownRows() {
-		return Math.max(1, (height - TOP - 8) / ROW);
+		return Math.max(1, (height - CLOSE_BOTTOM - 4 - TOP) / ROW);
 	}
 
 	@Override
 	protected void init() {
+		Component close = Component.translatable("buildingplanner.ui.saved_lists.close");
+		int closeWidth = font.width(close) + 20;
+		addRenderableWidget(Button.builder(close, button -> onClose())
+			.bounds(width - closeWidth - CLOSE_RIGHT, height - CLOSE_BOTTOM, closeWidth, 20).build());
 		ClientSession session = BuildingPlannerClient.session();
 		if (session == null) {
 			return;

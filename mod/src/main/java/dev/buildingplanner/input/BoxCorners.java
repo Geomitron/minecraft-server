@@ -23,7 +23,7 @@ public final class BoxCorners {
 		SIDE,
 		/** A chunk the box touches isn't loaded in the player's game, which then knows neither its blocks nor its ghost blocks. */
 		NOT_LOADED,
-		/** A Delete box holds more ghost blocks than the server's cap for one edit, so one erase can't take them. */
+		/** Delete's box would take the marks past the server's cap for one edit, so one erase couldn't take them. */
 		TOO_MANY_BLOCKS
 	}
 

@@ -2,14 +2,16 @@ package dev.buildingplanner.client;
 
 import dev.buildingplanner.BuildingPlanner;
 import dev.buildingplanner.ClientConfig;
+import dev.buildingplanner.input.BoxCorners;
+import dev.buildingplanner.input.BoxPurpose;
 import dev.buildingplanner.input.CopyColour;
 import dev.buildingplanner.input.CopyMode;
 import dev.buildingplanner.input.CopyPlacement;
-import dev.buildingplanner.input.CopyRow;
-import dev.buildingplanner.input.DeleteMode;
+import dev.buildingplanner.input.CopyGrid;
 import dev.buildingplanner.input.EraseHold;
 import dev.buildingplanner.input.MouseMode;
 import dev.buildingplanner.input.PasteBoxes;
+import dev.buildingplanner.input.ShapeLock;
 import dev.buildingplanner.layer.BoxCount;
 import dev.buildingplanner.layer.DeleteMarks;
 import dev.buildingplanner.layer.GhostErase;
@@ -40,7 +42,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 
@@ -51,41 +52,38 @@ import net.minecraft.world.phys.BlockHitResult;
  */
 final class ClientSession {
 	/**
-	 * The copy's build mode, which starts as Single each time the game starts and stays as the player last set it while
+	 * The copy's mode, which starts as Off each time the game starts and stays as the player last set it while
 	 * the game runs, across copies, servers and dimensions, as Satisfactory keeps a build mode until R changes it.
 	 */
-	private static CopyMode copyMode = CopyMode.SINGLE;
-	/**
-	 * Delete's mode, which starts as Box each time the game starts and stays as the player last used it while the game
-	 * runs, as the copy's mode does.
-	 */
-	private static DeleteMode deleteMode = DeleteMode.BOX;
+	private static CopyMode copyMode = CopyMode.OFF;
 	private final int maxEditBlocks;
 	private final EditGlow glow;
 	private final Tiles tiles;
 	private final SelfCheck check;
 	private final LayerReplica replica;
 	private final Clipboard clipboard = new Clipboard();
-	/** The one ghost block's controls in Effortless Building's Single mode. */
-	private final SingleBlock single = new SingleBlock();
+	/** The build modes' lock on the first click's position (see "Locking and the first click"). */
+	private final ShapeLock lock = new ShapeLock();
 	/** The player's recent pastes in this dimension, which the copy snaps to. */
 	private final PasteBoxes pastes = new PasteBoxes();
-	/** Whether the copy was over ghost blocks, for these row boxes, these blocks and this layer at this version. */
+	/** Whether the copy was over ghost blocks, for these set boxes, these blocks and this layer at this version. */
 	private boolean overGhosts;
-	private List<CopyPlacement.Spot> ghostsRow;
+	private List<CopyPlacement.Spot> ghostsSet;
 	private Map<BlockPos, BlockState> ghostsBlocks;
 	private Layer ghostsLayer;
 	private long ghostsVersion;
 	private final BoxDraw box;
 	private final BoxList list = new BoxList();
-	/** Whether Delete by aim is on. */
-	private boolean aimOn;
-	/** Delete by aim's marks, kept while R switches Aim to a Delete box and back, and cleared when Delete ends. */
+	/** Whether Delete is on. */
+	private boolean deleteOn;
+	/** Delete's marks, cleared when Delete ends. */
 	private final DeleteMarks marks;
+	/** Delete's box, drawn while the left button is held with the sprint key. */
+	private final MarkBox markBox = new MarkBox();
 	/** The layer, and its version, the marks were last checked against. */
 	private Layer marksLayer;
 	private long marksVersion;
-	/** Delete by aim's hold of the left button that erases the marks. */
+	/** Delete's hold of the left button that erases the marks. */
 	private final EraseHold hold = new EraseHold();
 	private final ListSync lists = new ListSync();
 	private int clientSeq;
@@ -109,7 +107,7 @@ final class ClientSession {
 	ClientSession(int maxEditBlocks, EditGlow glow, Identifier dimension, LongSet loadedChunks, ClientConfig config,
 		Supplier<String> showHideKey) {
 		this.maxEditBlocks = maxEditBlocks;
-		this.box = new BoxDraw(maxEditBlocks);
+		this.box = new BoxDraw();
 		this.marks = new DeleteMarks(maxEditBlocks);
 		this.glow = glow;
 		this.config = config;
@@ -145,9 +143,9 @@ final class ClientSession {
 		return clipboard;
 	}
 
-	/** The one ghost block, locked or following the aim (see "One ghost block"). */
-	SingleBlock single() {
-		return single;
+	/** The build modes' lock (see "Locking and the first click"). */
+	ShapeLock lock() {
+		return lock;
 	}
 
 	/** The material lists the server keeps for the player. */
@@ -169,18 +167,18 @@ final class ClientSession {
 		replica.levelChanged(dimension);
 		check.clear();
 		box.end();
-		endAim();
+		endDelete();
 		clipboard.clear();
-		single.clear();
+		lock.unlock();
 		pastes.clear();
 		glow.clear();
 	}
 
 	/**
 	 * Once a client tick: removes old plans' placements when due, asks for the columns that loaded and lets go of those
-	 * that unloaded, runs the self-check's comparisons that are due, counts Delete by aim's hold of the left button
-	 * ({@code attackDown}) and erases the marks once it's held a second, moves the box being drawn and the copy at the
-	 * aim to where the player aims, unlocks the one ghost block and drops its row once a mouse mode is on, and sends the
+	 * that unloaded, runs the self-check's comparisons that are due, moves Delete's box to where the player aims and
+	 * marks it once the left button ({@code attackDown}) is let go, counts Delete's hold of the left button and erases
+	 * the marks once it's held a second, moves the box being drawn and the copy at the aim to where the player aims, ends the build modes' lock once a mouse mode is on, and sends the
 	 * current material list when it changed.
 	 */
 	void tick(boolean attackDown) {
@@ -195,17 +193,26 @@ final class ClientSession {
 			box.update(replica.layer(), tiles.shown());
 		}
 		keepMarks();
-		if (hold.tick(attackDown) && aimOn) {
+		if (markBox.on()) {
+			if (attackDown) {
+				markBox.update(marks, replica.layer(), tiles.shown());
+			} else {
+				markBox.release(marks, replica.layer(), tiles.shown());
+			}
+		}
+		if (hold.tick(attackDown) && deleteOn) {
 			eraseMarks();
 		}
-		if (aimOn) {
+		if (markBox.on()) {
+			list.update(markBox.shown(), replica.layer(), tiles.shown());
+		} else if (deleteOn) {
 			list.update(marks, replica.layer());
 		} else {
 			list.update(box.shown(), replica.layer(), tiles.shown());
 		}
 		followAim();
 		if (mouseMode() != null) {
-			single.clear();
+			lock.unlock();
 		}
 		lists.tick(System.currentTimeMillis());
 	}
@@ -213,11 +220,11 @@ final class ClientSession {
 	/**
 	 * Moves the copy at the aim against the face the player aims at, flush to a recent paste aimed at, and in line with
 	 * the most recent paste while the sprint key is held ({@link PasteBoxes#place}); aiming at nothing, or the copy locked,
-	 * leaves it. With a row fixed, the copy stays and the row follows the aim instead.
+	 * leaves it. With a set fixed, the first copy stays and the set follows the aim instead.
 	 */
 	private void followAim() {
-		if (clipboard.rowFixed()) {
-			followAimWithRow();
+		if (clipboard.setFixed()) {
+			followAimWithSet();
 			return;
 		}
 		if (!clipboard.atAim() || clipboard.locked()) {
@@ -231,48 +238,45 @@ final class ClientSession {
 	}
 
 	/**
-	 * Lays the fixed row from the copy toward the aim ({@link CopyRow#row}): in Zoop toward where the copy would rest
-	 * against the aimed face, leaving the row as it was while the player aims at nothing; in Vertical toward the view's
-	 * height above or below the copy ({@link CopyRow#verticalAim}).
+	 * Lays the fixed set from the first copy to the block Effortless Building's Line, Wall or Floor gives from the first
+	 * copy's middle ({@link EffortlessShapes#copyReach}, with its reach and aiming from the camera, hooks E25 and E26),
+	 * as {@link CopyGrid#of} counts the copies; where it gives no block, the set stays as it was.
 	 */
-	private void followAimWithRow() {
+	private void followAimWithSet() {
 		CopyPlacement.Spot first = clipboard.spot();
-		BlockPos toward = null;
-		if (copyMode == CopyMode.VERTICAL) {
-			Entity view = Aim.entity();
-			if (view != null) {
-				toward = CopyRow.verticalAim(first, view.getEyePosition(), view.getLookAngle(), GhostAim.COPY_REACH);
-			}
-		} else {
-			BlockHitResult hit = GhostAim.aim(replica.layer(), tiles.shown(), GhostAim.COPY_REACH);
-			if (hit != null) {
-				toward = CopyPlacement.againstFace(hit.getBlockPos(), hit.getDirection(), first.size()).middle();
-			}
-		}
-		if (toward != null) {
-			clipboard.showRow(CopyRow.row(copyMode, first, toward, CopyRow.MAX_COPIES));
+		BlockPos reached = EffortlessShapes.copyReach(copyMode, first.middle());
+		if (reached != null) {
+			clipboard.showSet(CopyGrid.of(copyMode, first, reached, CopyGrid.MAX_COPIES));
 		}
 	}
 
-	/** The copy's build mode. */
+	/** The copy's mode. */
 	static CopyMode copyMode() {
 		return copyMode;
 	}
 
-	/** "Change Zoop or Delete mode" with the copy at the aim: Single, Zoop and Vertical, in that order. */
+	/**
+	 * "Change copy mode" with the copy at the aim: Off, Line, Wall and Floor, in that order. During a set, after its
+	 * first click, the next mode keeps the same first copy; at Off the set drops and the copy follows the aim.
+	 */
 	void cycleCopyMode() {
 		copyMode = copyMode.next();
+		if (copyMode == CopyMode.OFF) {
+			dropSet();
+		} else {
+			followAim();
+		}
 	}
 
 	/**
-	 * The right click during a zoop, after its first click: drops the row and leaves the copy at the aim, which follows
-	 * the aim again unless it's locked. Returns whether there was a row.
+	 * The left click during a set, after its first click: drops the set and leaves the copy at the aim in the same mode,
+	 * ready for a new set, following the aim again unless it's locked. Returns whether there was a set.
 	 */
-	boolean dropRow() {
-		if (!clipboard.rowFixed()) {
+	boolean dropSet() {
+		if (!clipboard.setFixed()) {
 			return false;
 		}
-		clipboard.dropRow();
+		clipboard.dropSet();
 		followAim();
 		return true;
 	}
@@ -280,81 +284,65 @@ final class ClientSession {
 	/** Building Planner's mode that takes over the mouse now, or null. */
 	MouseMode mouseMode() {
 		return box.on() ? MouseMode.BOX : clipboard.atAim() ? MouseMode.COPY_AT_AIM
-			: aimOn ? MouseMode.DELETE_AIM : null;
+			: deleteOn ? MouseMode.DELETE : null;
 	}
 
 	/**
 	 * The player did something that may end the mouse mode ({@link MouseMode#endedBy}): ending it ends the box, or puts
-	 * the copy away. Choosing a build mode also unlocks the one ghost block and drops its row.
+	 * the copy away. Choosing a build mode also ends the lock.
 	 */
 	void modeAction(MouseMode.Action action) {
 		if (action == MouseMode.Action.CHOOSE_BUILD_MODE) {
-			single.clear();
+			lock.unlock();
 		}
 		MouseMode mode = mouseMode();
 		if (mode != null && mode.endedBy(action)) {
 			switch (mode) {
 				case BOX -> box.end();
 				case COPY_AT_AIM -> clipboard.putAway();
-				case DELETE_AIM -> endAim();
+				case DELETE -> endDelete();
 			}
 		}
 	}
 
-	/** Delete's mode, which the Delete button starts in. */
-	static DeleteMode deleteMode() {
-		return deleteMode;
-	}
-
-	/** Whether Delete is on: Delete by aim, or a box drawn for Delete. */
+	/** Whether Delete is on. */
 	boolean deleteOn() {
-		return aimOn || box.on() && box.purpose() == BoxDraw.Purpose.DELETE;
+		return deleteOn;
 	}
 
-	/** Whether Delete by aim is on. */
-	boolean aimOn() {
-		return aimOn;
-	}
-
-	/** Delete by aim's marks. */
+	/** Delete's marks. */
 	DeleteMarks marks() {
 		return marks;
 	}
 
+	/** Delete's box, for the in-game checks. */
+	MarkBox markBox() {
+		return markBox;
+	}
+
 	/**
-	 * The Delete button in Aim, with no other mouse mode on: starts Delete by aim with no marks, showing hidden ghost
-	 * blocks first, as a Delete box does.
+	 * The Delete button, with no other mouse mode on: starts Delete with no marks, showing hidden ghost blocks first, as
+	 * starting a shape does.
 	 */
-	void startAim() {
+	void startDelete() {
 		showForDrawing();
 		marks.clear();
-		aimOn = true;
-		deleteMode = DeleteMode.AIM;
+		deleteOn = true;
 	}
 
 	/**
-	 * R while Delete is on: a Delete box, at any of its clicks, switches to Aim, dropping its corners, and Aim switches
-	 * to a Delete box with no corners. The marks stay, and show again back in Aim.
+	 * The right click in Delete: ends the box being drawn, marking nothing, or clears the marks; returns whether it did
+	 * either, false with no box and no marks, or out of Delete.
 	 */
-	void switchDeleteMode() {
-		if (aimOn) {
-			aimOn = false;
-			marks.endSweep();
-			hold.cancel();
-			box.start(BoxDraw.Purpose.DELETE);
-			box.update(replica.layer(), tiles.shown());
-			deleteMode = DeleteMode.BOX;
-		} else if (box.on() && box.purpose() == BoxDraw.Purpose.DELETE) {
-			box.end();
-			showForDrawing();
-			aimOn = true;
-			deleteMode = DeleteMode.AIM;
-		}
-	}
-
-	/** The right click in Delete by aim: clears the marks; returns whether there were any, or false out of Aim. */
 	boolean clearMarks() {
-		if (!aimOn || marks.size() == 0) {
+		if (!deleteOn) {
+			return false;
+		}
+		if (markBox.on()) {
+			markBox.end();
+			return true;
+		}
+		if (marks.size() == 0) {
 			return false;
 		}
 		marks.clear();
@@ -363,19 +351,26 @@ final class ClientSession {
 	}
 
 	/**
-	 * The left click in Delete by aim (hook M1): with marks, starts the hold that erases them once the button has stayed
-	 * down a second; with none, does nothing.
+	 * The left click in Delete (hook M1): with the sprint key held ({@code sprint}), starts Delete's box at the block
+	 * aimed at; otherwise, with marks, starts the hold that erases them once the button has stayed down a second; with
+	 * none, does nothing.
 	 */
-	void pressErase() {
-		if (aimOn && marks.size() > 0) {
+	void deletePress(boolean sprint) {
+		if (!deleteOn) {
+			return;
+		}
+		if (sprint) {
+			hold.cancel();
+			markBox.start(marks, replica.layer(), tiles.shown());
+		} else if (marks.size() > 0) {
 			hold.press();
 		}
 	}
 
 	/**
 	 * The hold's erase: one erase edit of the marked ghost blocks, with the other half of each two-block ghost block
-	 * ({@link GhostErase#of}), so one undo brings them all back, saying how many as the Delete box does. The marks go
-	 * with it, so an undo brings the ghost blocks back unmarked, and Aim stays on to mark more.
+	 * ({@link GhostErase#of}), so one undo brings them all back, saying how many. The marks go with it, so an undo
+	 * brings the ghost blocks back unmarked, and Delete stays on to mark more.
 	 */
 	private void eraseMarks() {
 		List<BlockPos> marked = new ArrayList<>(marks.size());
@@ -387,17 +382,28 @@ final class ClientSession {
 		}
 	}
 
-	/** Delete by aim as its controls line tells it ({@link ControlsLine#deleteAim}), or null while it's off. */
-	ControlsLine.AimState aimState() {
-		if (!aimOn) {
+	/** Delete as its controls lines tell it ({@link ControlsLine#delete}), or null while it's off. */
+	ControlsLine.DeleteState deleteState() {
+		if (!deleteOn) {
 			return null;
 		}
-		return new ControlsLine.AimState(marks.size() > 0, marks.sweeping() && marks.unmarking(), hold.percent(),
-			marks.full());
+		BoxDraw.Shown shown = markBox.shown();
+		return new ControlsLine.DeleteState(marks.size() > 0, marks.sweeping() && marks.unmarking(), marks.full(),
+			shown == null ? null : new ControlsLine.DeleteBox(markBox.unmarks(),
+				BoxCorners.size(shown.min(), shown.max()), shown.limit()));
 	}
 
-	private void endAim() {
-		aimOn = false;
+	/**
+	 * The ticks the left button has been held toward the erase, for the progress bar, or -1 while it isn't held to
+	 * erase.
+	 */
+	int eraseTicks() {
+		return deleteOn ? hold.ticks() : -1;
+	}
+
+	private void endDelete() {
+		deleteOn = false;
+		markBox.end();
 		marks.endSweep();
 		marks.clear();
 		hold.cancel();
@@ -417,17 +423,17 @@ final class ClientSession {
 		}
 		marksLayer = layer;
 		marksVersion = layer.version();
-		if (!aimOn || marks.size() == 0) {
+		if (!deleteOn || marks.size() == 0) {
 			hold.cancel();
 		}
 	}
 
-	/** The box being drawn now, as it shows, or null. */
+	/** The box being drawn now, for Copy or the material list or Delete's box, as it shows, or null. */
 	BoxDraw.Shown boxShown() {
-		return box.shown();
+		return box.on() ? box.shown() : markBox.shown();
 	}
 
-	/** The kinds of block in the box being drawn, for the list under the crosshair. */
+	/** The kinds of block in the box being drawn, or Delete's marks, for the list under the crosshair. */
 	List<BoxList.Entry> boxList() {
 		return list.entries();
 	}
@@ -438,19 +444,15 @@ final class ClientSession {
 	}
 
 	/**
-	 * Copy's, Delete's or the material list's button: starts a box for that purpose, or, while a box is drawn, ends it
-	 * when it's for the same purpose and otherwise switches it to that purpose, keeping its corners. A box for Delete
-	 * shows hidden ghost blocks first, as drawing a shape does. Returns whether a box started.
+	 * Copy's or the material list's button: starts a box for that purpose, or, while a box is drawn, ends it when it's
+	 * for the same purpose and otherwise switches it to that purpose, keeping its corners. Returns whether a box
+	 * started.
 	 */
-	boolean boxButton(BoxDraw.Purpose purpose) {
+	boolean boxButton(BoxPurpose purpose) {
 		boolean started = !box.on();
 		if (!started && box.purpose() == purpose) {
 			box.end();
 			return false;
-		}
-		if (purpose == BoxDraw.Purpose.DELETE) {
-			showForDrawing();
-			deleteMode = DeleteMode.BOX;
 		}
 		if (started) {
 			box.start(purpose);
@@ -462,8 +464,8 @@ final class ClientSession {
 	}
 
 	/**
-	 * The left click while a box is drawn: sets its next corner, and after the third hands the box to Copy, Delete or
-	 * the material list. Returns whether the click made the copy, which is then at the aim.
+	 * The left click while a box is drawn: sets its next corner, and after the third hands the box to Copy or the
+	 * material list. Returns whether the click made the copy, which is then at the aim.
 	 */
 	boolean boxClick() {
 		BoxDraw.Finished finished = box.click(replica.layer(), tiles.shown());
@@ -472,31 +474,16 @@ final class ClientSession {
 		}
 		switch (finished.purpose()) {
 			case COPY -> copy(finished.min(), finished.max());
-			case DELETE -> erase(finished.min(), finished.max());
 			case MATERIAL_LIST -> materialList(finished.min(), finished.max());
 		}
 		return clipboard.atAim();
 	}
 
-	/**
-	 * Erases every ghost block in the box from {@code min} to {@code max}, with the other half of each two-block ghost
-	 * block, as one edit ({@link GhostErase#inBox}), so one undo brings them all back, saying how many; a box without
-	 * ghost blocks changes nothing, with its message.
-	 */
-	void erase(BlockPos min, BlockPos max) {
-		Map<BlockPos, BlockState> erase = GhostErase.inBox(replica.layer(), min, max);
-		if (erase.isEmpty()) {
-			show(PlayerMessage.nothingToErase());
-		} else if (sendShape(EditKind.ERASE, erase)) {
-			show(PlayerMessage.erased(erase.size()));
-		}
-	}
-
 	void close() {
 		box.end();
-		endAim();
+		endDelete();
 		clipboard.clear();
-		single.clear();
+		lock.unlock();
 		tiles.clear();
 		check.clear();
 		glow.clear();
@@ -639,42 +626,46 @@ final class ClientSession {
 	}
 
 	/**
-	 * The left click with the copy at the aim. In Single it pastes the copy as one shape edit. In Zoop and Vertical the
-	 * first click fixes the copy as the row's first, and the second pastes the whole row as one shape edit, which one
-	 * undo takes back, and the copy then follows the aim again (unless it's locked) for a new row. A paste names only
-	 * the copies' blocks, so their empty space leaves the layer's, and each copy's box joins the recent pastes the copy
-	 * snaps to, as a paste of its own. While the copy, or its row, is red ({@link #copyShown}), the click that would paste pastes nothing and sends
-	 * no edit; a zoop's first click, which pastes nothing anyway, still fixes the row.
+	 * The right click with the copy at the aim. In Off it pastes the copy as one shape edit. In Line, Wall and Floor the
+	 * first click fixes the copy as the set's first, and the second pastes the whole set as one shape edit, which one
+	 * undo takes back. A paste names only the copies' blocks, so their empty space leaves the layer's, and each copy's
+	 * box joins the recent pastes the copy snaps to, as a paste of its own, in the set's order; the copy stays at the
+	 * aim, unlocked, and follows the aim for the next paste. While the copy, or its set, is red ({@link #copyShown}), the
+	 * click that would paste pastes nothing and sends no edit; a set's first click, which pastes nothing anyway, still
+	 * fixes the first copy.
 	 */
 	void paste() {
 		if (!clipboard.atAim()) {
 			return;
 		}
 		boolean red = copyShown().red();
-		if (copyMode == CopyMode.SINGLE) {
+		if (copyMode == CopyMode.OFF) {
 			if (red) {
 				return;
 			}
 			if (sendShape(EditKind.SHAPE, clipboard.worldBlocks())) {
 				pastes.add(clipboard.spot());
+				clipboard.unlock();
+				followAim();
 			}
-		} else if (!clipboard.rowFixed()) {
-			clipboard.fixRow();
+		} else if (!clipboard.setFixed()) {
+			clipboard.fixSet();
 			followAim();
 		} else if (!red) {
-			List<CopyPlacement.Spot> copies = clipboard.rowSpots();
-			if (sendShape(EditKind.SHAPE, clipboard.rowBlocks())) {
+			List<CopyPlacement.Spot> copies = clipboard.setSpots();
+			if (sendShape(EditKind.SHAPE, clipboard.setBlocks())) {
 				pastes.addAll(copies);
-				dropRow();
+				clipboard.unlock();
+				dropSet();
 			}
 		}
 	}
 
 	/**
-	 * The colour of the copy at the aim and its row, if one is fixed ({@link CopyColour}), against the world's build
+	 * The colour of the copy at the aim and its set, if one is fixed ({@link CopyColour}), against the world's build
 	 * height and border and the server's block cap, and the player's copy of the layer whether or not ghost blocks show,
 	 * since a paste shows them again and replaces them. Asked each frame to draw it and at each paste, so whether the
-	 * copy is over ghost blocks, which reads each of its blocks, is kept until the row's boxes, the copy, its turn or
+	 * copy is over ghost blocks, which reads each of its blocks, is kept until the set's boxes, the copy, its turn or
 	 * the layer change. Null while the copy isn't at the aim.
 	 */
 	CopyColour.Shown copyShown() {
@@ -682,14 +673,14 @@ final class ClientSession {
 		if (!clipboard.atAim() || level == null) {
 			return null;
 		}
-		List<CopyPlacement.Spot> row = clipboard.rowSpots();
+		List<CopyPlacement.Spot> set = clipboard.setSpots();
 		Map<BlockPos, BlockState> blocks = clipboard.blocksFromCorner();
 		Layer layer = replica.layer();
-		return CopyColour.of(row, blocks.size(), world(level), maxEditBlocks, () -> {
-			if (!row.equals(ghostsRow) || blocks != ghostsBlocks || layer != ghostsLayer
+		return CopyColour.of(set, blocks.size(), world(level), maxEditBlocks, () -> {
+			if (!set.equals(ghostsSet) || blocks != ghostsBlocks || layer != ghostsLayer
 				|| layer.version() != ghostsVersion) {
-				overGhosts = CopyColour.overGhosts(row, blocks, layer);
-				ghostsRow = row;
+				overGhosts = CopyColour.overGhosts(set, blocks, layer);
+				ghostsSet = set;
 				ghostsBlocks = blocks;
 				ghostsLayer = layer;
 				ghostsVersion = layer.version();
@@ -699,12 +690,12 @@ final class ClientSession {
 	}
 
 	/**
-	 * The one ghost block's colour ({@link CopyColour#ofBlocks}): its own positions {@code row} and the blocks a right
+	 * The colour of the locked positions ({@link CopyColour#ofBlocks}): the positions {@code own} and the blocks a right
 	 * click would place there, against the world's build height and border, the server's block cap, and the player's
 	 * copy of the layer whether or not ghost blocks show.
 	 */
-	CopyColour.Shown singleColour(List<BlockPos> row, Map<BlockPos, BlockState> placed) {
-		return CopyColour.ofBlocks(row, placed, world(Minecraft.getInstance().level), maxEditBlocks, replica.layer());
+	CopyColour.Shown lockColour(List<BlockPos> own, Map<BlockPos, BlockState> placed) {
+		return CopyColour.ofBlocks(own, placed, world(Minecraft.getInstance().level), maxEditBlocks, replica.layer());
 	}
 
 	/** The world's limits on where a block may go, as the server checks an edit's positions. */
@@ -724,7 +715,7 @@ final class ClientSession {
 
 	/**
 	 * The copy at the aim as its controls line tells it ({@link ControlsLine#copy}): its mode, whether it's locked, the
-	 * copies in a fixed row, whether the player has pasted in this dimension, and why its paste would be refused. Null
+	 * copies in a fixed set, whether the player has pasted in this dimension, and why its paste would be refused. Null
 	 * while the copy isn't at the aim.
 	 */
 	ControlsLine.CopyState copyState() {
@@ -733,7 +724,7 @@ final class ClientSession {
 			return null;
 		}
 		return new ControlsLine.CopyState(copyMode, clipboard.locked(),
-			clipboard.rowFixed() ? clipboard.rowSpots().size() : 0, pastes.latest() != null, shown.refusal());
+			clipboard.setFixed() ? clipboard.setSpots().size() : 0, pastes.latest() != null, shown.refusal());
 	}
 
 	/**
@@ -752,8 +743,8 @@ final class ClientSession {
 
 	/**
 	 * Gives the copy at the aim a quarter turn around its middle, clockwise or counterclockwise seen from above, and sets
-	 * it against the aim again unless it's locked; with a row fixed, the copy turns in place and the row's other copies
-	 * turn with it, laid end to end again at their turned length.
+	 * it against the aim again unless it's locked; with a set fixed, the first copy turns in place and the set's other
+	 * copies turn with it, laid side by side again at their turned size.
 	 */
 	void turnCopy(boolean clockwise) {
 		if (clipboard.atAim()) {

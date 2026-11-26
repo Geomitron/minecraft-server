@@ -1,8 +1,10 @@
 package dev.buildingplanner.look;
 
 import dev.buildingplanner.input.BoxCorners;
+import dev.buildingplanner.input.BoxPurpose;
 import dev.buildingplanner.input.CopyColour;
 import dev.buildingplanner.input.CopyMode;
+import dev.buildingplanner.input.MouseMode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -10,8 +12,10 @@ import java.util.Locale;
 /**
  * The lines of a mouse mode's controls (see "Building Planner's mouse modes"), as texts from the language file with
  * the keys' names in them, worked out from the mode's state and the keys as the player has them bound. Each line is a
- * row of rectangles: its label (the mode and its state, such as "Delete:"), if it has one, then each control as "key:
- * action", a red reason in place of a control that can't act, and a box's size. The game turns them into its own
+ * row of rectangles: each control as "key: action", a red reason in place of a control that can't act, and a box's
+ * size. No line has a label: the lock's and the copy's mode's states show in their controls ("[H: Lock (On)]", "[R:
+ * Mode (Line)]"), a turned block in its preview, and the tool ("Copy", "Paste", "Delete") beside the hotbar ({@link #toolName}).
+ * A warning above the controls ("Too many blocks") is a line of its label alone. The game turns them into its own
  * components and lays the rectangles out ({@code ModeHud}, {@link ControlsRows}): white, with each action in dark aqua
  * and each reason in red.
  */
@@ -22,6 +26,7 @@ public final class ControlsLine {
 	private static final String DELETE = MODE + ".delete";
 	private static final String TURN = MODE + ".turn";
 	private static final String SINGLE = MODE + ".single";
+	private static final String SHAPE = MODE + ".shape";
 
 	private ControlsLine() {
 	}
@@ -46,6 +51,8 @@ public final class ControlsLine {
 
 	private static final Text LEFT = Translated.of(MODE + ".left_click", Look.PLAIN);
 	private static final Text RIGHT = Translated.of(MODE + ".right_click", Look.PLAIN);
+	/** The left click with Esc, which does the same: "Esc/Left-click". */
+	private static final Text ESC_LEFT = Translated.of(MODE + ".esc_click", Look.PLAIN, LEFT);
 	private static final Text MIDDLE = Translated.of(MODE + ".middle_click", Look.PLAIN);
 	private static final Text SCROLL = Translated.of(MODE + ".scroll", Look.PLAIN);
 
@@ -73,7 +80,7 @@ public final class ControlsLine {
 
 	/**
 	 * The copy's keys, each by its name as the game gives it, or null while it has no key: "Lock or unlock", "Change
-	 * Zoop or Delete mode", the four nudges along the ground (forward, back, left and right), whether those four are on
+	 * copy mode", the four nudges along the ground (forward, back, left and right), whether those four are on
 	 * the arrow keys (Up, Down, Left and Right in that order), the nudges up and down, and Minecraft's sprint key, which
 	 * lines the copy up.
 	 */
@@ -82,102 +89,133 @@ public final class ControlsLine {
 	}
 
 	/**
-	 * The copy at the aim as its line tells it: its mode, whether it's locked, the number of copies in a zoop's fixed
-	 * row (0 before the first click), whether the player has pasted in this dimension (so the copy can line up with the
-	 * latest paste), and why the server would refuse its paste, or null.
+	 * The copy at the aim as its line tells it: its mode, whether it's locked, the number of copies in a fixed set (0
+	 * before the first click in Line, Wall or Floor), whether the player has pasted in this dimension (so the copy can
+	 * line up with the latest paste), and why the server would refuse its paste, or null.
 	 */
-	public record CopyState(CopyMode mode, boolean locked, int row, boolean pasted, CopyColour.Refusal refusal) {
+	public record CopyState(CopyMode mode, boolean locked, int set, boolean pasted, CopyColour.Refusal refusal) {
 	}
 
 	/**
-	 * Delete by aim as its line tells it: whether any ghost block is marked, whether the sweep under way unmarks, the
-	 * hold's progress toward the erase in percent ({@code erasing}, -1 while the left button isn't held to erase), and
-	 * whether the marks have reached the cap.
+	 * Delete as its lines tell it: whether any ghost block is marked, whether the hold of the sprint key under way
+	 * unmarks, whether the marks have reached the cap, and the box being drawn, or null.
 	 */
-	public record AimState(boolean marked, boolean unmarking, int erasing, boolean full) {
+	public record DeleteState(boolean marked, boolean unmarking, boolean full, DeleteBox box) {
+	}
+
+	/** A box being drawn in Delete: whether it unmarks, its size, and the limit it breaks, or null. */
+	public record DeleteBox(boolean unmarks, int[] size, BoxCorners.Limit limit) {
+	}
+
+	/**
+	 * The name beside the hotbar, in the build mode's name's place, while a box for Copy or the material list is drawn
+	 * ("Copy", "Material list", by the box's {@code purpose}), Delete is on ("Delete"), or the copy is at the aim
+	 * ("Paste"); null in the other modes, where the build mode's name shows.
+	 */
+	public static Text toolName(MouseMode mode, BoxPurpose purpose) {
+		if (mode == null) {
+			return null;
+		}
+		return switch (mode) {
+			case DELETE -> Translated.of(DELETE + ".title", Look.PLAIN);
+			case COPY_AT_AIM -> Translated.of(COPY + ".title", Look.PLAIN);
+			case BOX -> Translated.of(BOX + "." + purpose.name().toLowerCase(Locale.ROOT), Look.PLAIN);
+		};
 	}
 
 	/**
 	 * A box's lines: a warning naming the limit the aimed corner breaks, if one does, then its controls for the next
-	 * click, with its size once a corner is set ({@code size} is null before). {@code purpose} is the box's purpose's
-	 * name (COPY, DELETE or MATERIAL_LIST); a Delete box names the mode key, {@code mode}, which switches it to Aim,
-	 * unless it has no key (null).
+	 * click, with its size once a corner is set ({@code size} is null before).
 	 */
-	public static List<Line> box(String purpose, int corners, int[] size, BoxCorners.Limit limit, String mode) {
+	public static List<Line> box(int corners, int[] size, BoxCorners.Limit limit) {
 		String next = switch (corners) {
 			case 0 -> BOX + ".first";
 			case 1 -> BOX + ".second";
 			default -> BOX + ".height";
 		};
-		List<Text> rects = new ArrayList<>(4);
+		List<Text> rects = new ArrayList<>(3);
 		rects.add(hint(LEFT, next));
-		if (purpose.equals("DELETE") && mode != null) {
-			rects.add(hint(new Literal(mode), MODE + ".delete_mode"));
-		}
-		rects.add(hint(RIGHT, BOX + ".cancel"));
+		rects.add(hint(Translated.of(MODE + ".esc_click", Look.PLAIN, RIGHT), BOX + ".cancel"));
 		if (size != null) {
-			rects.add(Translated.of(BOX + ".size", Look.PLAIN, new Literal(String.valueOf(size[0])),
-				new Literal(String.valueOf(size[1])), new Literal(String.valueOf(size[2]))));
+			rects.add(size(size));
 		}
 		List<Line> lines = new ArrayList<>(2);
 		if (limit != null) {
-			String reason = switch (limit) {
-				case SIDE, TOO_MANY_BLOCKS -> BOX + ".too_large";
-				case NOT_LOADED -> BOX + ".not_loaded";
-			};
-			lines.add(warning(reason));
+			lines.add(limitWarning(limit));
 		}
-		lines.add(labelled(Translated.of(BOX + "." + purpose.toLowerCase(Locale.ROOT), Look.PLAIN), rects));
+		lines.add(new Line(null, List.copyOf(rects)));
 		return lines;
 	}
 
 	/**
-	 * Delete by aim's lines: "Too many blocks" once the marks reach the cap, then its controls: with marks, the hold that
-	 * erases them, or its progress while the left button is held; the sprint key that marks, or unmarks during a sweep
-	 * that unmarks; the mode key, which switches to a Delete box; and the right click, which clears the marks, or with
-	 * none closes Aim. A key with no key bound is left out.
+	 * Delete's lines (see "Delete": "Controls line"). While a box is drawn: a warning naming the limit it breaks, if one
+	 * does, then the release that marks or unmarks it, Esc, which cancels it, and its size. Otherwise: "Too many blocks"
+	 * once the marks reach the cap, then the hold that erases the marks while there are any, the sprint key held to mark
+	 * and held with the left click to mark a box (or to unmark, during a hold that unmarks), and Esc or the right click,
+	 * which clears the marks, or with none closes Delete. The sprint key's controls go while it has no key bound.
 	 */
-	public static List<Line> deleteAim(AimState state, Keys keys) {
-		List<Text> rects = new ArrayList<>();
-		if (state.marked()) {
-			Text hold = Translated.of(MODE + ".hold", Look.PLAIN, LEFT);
-			rects.add(state.erasing() >= 0
-				? hint(hold, Translated.of(DELETE + ".erasing", Look.ACTION, new Literal(String.valueOf(state.erasing()))))
-				: hint(hold, DELETE + ".erase"));
-		}
-		if (keys.sprint() != null) {
-			rects.add(hint(held(keys.sprint()), state.unmarking() ? DELETE + ".unmark" : DELETE + ".mark"));
-		}
-		if (keys.mode() != null) {
-			rects.add(hint(new Literal(keys.mode()), MODE + ".delete_mode"));
-		}
-		rects.add(hint(RIGHT, state.marked() ? DELETE + ".clear" : COPY + ".put_away"));
+	public static List<Line> delete(DeleteState state, Keys keys) {
 		List<Line> lines = new ArrayList<>(2);
+		List<Text> rects = new ArrayList<>(4);
+		DeleteBox box = state.box();
+		if (box != null) {
+			if (box.limit() != null) {
+				lines.add(limitWarning(box.limit()));
+			}
+			rects.add(hint(Translated.of(MODE + ".release", Look.PLAIN, LEFT),
+				box.unmarks() ? DELETE + ".unmark_the_box" : DELETE + ".mark_the_box"));
+			rects.add(hint(Translated.of(SHAPE + ".esc", Look.PLAIN), COPY + ".cancel"));
+			rects.add(size(box.size()));
+			lines.add(new Line(null, List.copyOf(rects)));
+			return lines;
+		}
 		if (state.full()) {
 			lines.add(warning(BOX + ".too_large"));
 		}
-		lines.add(labelled(Translated.of(DELETE + ".titled", Look.PLAIN, Translated.of(DELETE + ".aim", Look.PLAIN)),
-			rects));
+		if (state.marked()) {
+			rects.add(hint(Translated.of(MODE + ".hold", Look.PLAIN, LEFT), DELETE + ".erase"));
+		}
+		if (keys.sprint() != null) {
+			rects.add(hint(held(keys.sprint()), state.unmarking() ? DELETE + ".unmark" : DELETE + ".mark"));
+			rects.add(hint(Translated.of(COPY + ".plus", Look.PLAIN, held(keys.sprint()), LEFT),
+				state.unmarking() ? DELETE + ".unmark_box" : DELETE + ".mark_box"));
+		}
+		rects.add(hint(Translated.of(MODE + ".esc_click", Look.PLAIN, RIGHT),
+			state.marked() ? DELETE + ".clear" : COPY + ".put_away"));
+		lines.add(new Line(null, List.copyOf(rects)));
 		return lines;
+	}
+
+	/** A box's size: "12 × 5 × 8". */
+	private static Text size(int[] size) {
+		return Translated.of(BOX + ".size", Look.PLAIN, new Literal(String.valueOf(size[0])),
+			new Literal(String.valueOf(size[1])), new Literal(String.valueOf(size[2])));
+	}
+
+	/** The warning above a box's line naming the limit it breaks. */
+	private static Line limitWarning(BoxCorners.Limit limit) {
+		return warning(switch (limit) {
+			case SIDE, TOO_MANY_BLOCKS -> BOX + ".too_large";
+			case NOT_LOADED -> BOX + ".not_loaded";
+		});
 	}
 
 	/**
 	 * The block in hand as the turning line tells it: whether it turns and whether it flips (or a block of the mix
-	 * does), whether Minecraft's sprint key is held, and whether the block has been turned or flipped.
+	 * does), and whether Minecraft's sprint key is held.
 	 */
-	public record TurnState(boolean turns, boolean flips, boolean held, boolean turned) {
+	public record TurnState(boolean turns, boolean flips, boolean held) {
 	}
 
 	/**
-	 * The turning line (see "One ghost block": "Controls line"): with the sprint key held, the wheel that turns and the
-	 * middle click that flips, otherwise the sprint key held to turn or flip; each part only for a block that turns or
-	 * flips, and "Turned:" before them once the block is turned or flipped. Null for a block that does neither, and
+	 * The turning line, Disable's line without the sprint key held (see "Turning real blocks in Disable": "Controls
+	 * line"): with the sprint key held, the wheel that turns and the middle click that flips, otherwise the sprint key
+	 * held to turn or flip; each part only for a block that turns or flips. Null for a block that does neither, and
 	 * while the sprint key has no key bound.
 	 */
 	public static Line turning(TurnState state, String sprint) {
 		List<Text> rects = turnParts(state, sprint);
-		return rects.isEmpty() ? null
-			: labelled(state.turned() ? Translated.of(TURN + ".turned", Look.PLAIN) : null, rects);
+		return rects.isEmpty() ? null : new Line(null, List.copyOf(rects));
 	}
 
 	/**
@@ -204,41 +242,36 @@ public final class ControlsLine {
 		return rects;
 	}
 
-	/**
-	 * The one ghost block as its line tells it: its own mode, whether it's locked, the number of blocks in a Zoop or
-	 * Vertical row fixed by its first click (0 before it), whether the block or the row is red (outside the world's build
-	 * height or its border), and the block in hand as the turning line tells it.
-	 */
-	public record SingleState(CopyMode mode, boolean locked, int row, boolean red, TurnState turn) {
+	/** Which of Effortless Building's shapes is under way: none, one drawn with the place click, or with the break click. */
+	public enum Underway {
+		NONE, PLACING, BREAKING
 	}
 
 	/**
-	 * Single's line (see "One ghost block": "Controls line"). With a row fixed: the mode, the right click that places the
-	 * row with its count (or in red why it can't), the turning controls, and the left click that cancels the row, locked
-	 * or not. Otherwise: the mode, "Locked" or both, the right click (placing, or in red why it can't; in Zoop and
-	 * Vertical the reason if there is one, then setting the row's start), the nudge keys while it's locked, the left
-	 * click that erases, the turning controls, the lock key and the mode key. ", turned" follows the mode and the lock
-	 * once the block is turned or flipped, or "Turned" alone in Single. A key with no key bound is left out.
+	 * A build mode as its line tells it (see "Locking and the first click": "Controls line"): whether the mode is Single,
+	 * whether a position is locked, whether the locked position is red (outside the world's build height or its border),
+	 * which shape is under way, and the block in hand as the turning line tells it.
 	 */
-	public static Line single(SingleState state, Keys keys) {
-		List<Text> turning = turnParts(state.turn(), keys.sprint());
+	public record ShapeState(boolean single, boolean locked, boolean red, Underway underway, TurnState turn) {
+	}
+
+	/**
+	 * A build mode's line, in every mode but Disable (see "Locking and the first click": "Controls line"). Before the
+	 * first click: the right click (placing in Single, starting a shape in the
+	 * others, or in red why the locked position can't place), the nudge keys while it's locked, the left click (erasing in
+	 * Single, starting an erasing shape in the others), the turning controls, the lock key with the lock's state, and Esc,
+	 * which leaves the mode. During a shape, beside Effortless Building's own line, only the lock and the turning controls:
+	 * the nudge keys while it's locked, the turning controls during a shape drawn with the place click, and the lock key.
+	 * The line has no label. A key with no key bound is left out.
+	 */
+	public static Line shape(ShapeState state, Keys keys) {
+		boolean breaking = state.underway() == Underway.BREAKING;
+		List<Text> turning = breaking ? List.of() : turnParts(state.turn(), keys.sprint());
 		List<Text> rects = new ArrayList<>();
-		if (state.row() > 0) {
+		boolean before = state.underway() == Underway.NONE;
+		if (before) {
 			rects.add(state.red() ? reason(SINGLE + ".outside")
-				: hint(RIGHT, state.row() == 1 ? Translated.of(SINGLE + ".place_row_one", Look.ACTION)
-					: Translated.of(SINGLE + ".place_row", Look.ACTION, new Literal(String.valueOf(state.row())))));
-			rects.addAll(turning);
-			rects.add(hint(LEFT, COPY + ".cancel"));
-			return labelled(turned(modeName(state.mode()), state.turn().turned()), rects);
-		}
-		if (state.mode() != CopyMode.SINGLE) {
-			// The first click still fixes the row's start while the block is red, so it stays, after the reason.
-			if (state.red()) {
-				rects.add(reason(SINGLE + ".outside"));
-			}
-			rects.add(hint(RIGHT, COPY + ".start"));
-		} else {
-			rects.add(state.red() ? reason(SINGLE + ".outside") : hint(RIGHT, TURN + ".place"));
+				: hint(RIGHT, state.single() ? TURN + ".place" : SHAPE + ".start_placing"));
 		}
 		if (state.locked()) {
 			Text nudge = nudge(keys);
@@ -246,24 +279,17 @@ public final class ControlsLine {
 				rects.add(hint(nudge, COPY + ".nudge"));
 			}
 		}
-		rects.add(hint(LEFT, DELETE + ".erase"));
+		if (before) {
+			rects.add(hint(LEFT, state.single() ? DELETE + ".erase" : SHAPE + ".start_erasing"));
+		}
 		rects.addAll(turning);
 		if (keys.lock() != null) {
-			rects.add(hint(new Literal(keys.lock()), state.locked() ? COPY + ".unlock" : COPY + ".lock"));
+			rects.add(hint(new Literal(keys.lock()), state.locked() ? SHAPE + ".lock_on" : SHAPE + ".lock_off"));
 		}
-		if (keys.mode() != null) {
-			rects.add(hint(new Literal(keys.mode()), MODE + ".zoop_mode"));
+		if (before) {
+			rects.add(hint(Translated.of(SHAPE + ".esc", Look.PLAIN), SHAPE + ".exit_mode"));
 		}
-		return labelled(turned(title(state.mode(), state.locked()), state.turn().turned()), rects);
-	}
-
-	/** The label's text with ", turned" after it once the block is turned or flipped, or "Turned" alone with none. */
-	private static Text turned(Text title, boolean turned) {
-		if (!turned) {
-			return title;
-		}
-		return title == null ? Translated.of(TURN + ".turned", Look.PLAIN)
-			: Translated.of(SINGLE + ".turned_title", Look.PLAIN, title);
+		return new Line(null, List.copyOf(rects));
 	}
 
 	/**
@@ -275,14 +301,13 @@ public final class ControlsLine {
 
 	/**
 	 * Disable's line (see "Turning real blocks in Disable": "Controls line"): without the sprint key held, the turning
-	 * line with no "Turned:", since a right click then places as in Minecraft, and no line for a block that hangs on the
-	 * block behind it; with it held, the right click that places the turned block, or in red why it can't, then the
-	 * turning line's controls, after "Turned:" once the block is turned or flipped. Null as for the turning line.
+	 * line, and no line for a block that hangs on the block behind it; with it held, the right click that places the
+	 * turned block, or in red why it can't, then the turning line's controls. Null as for the turning line.
 	 */
 	public static Line disable(DisableState state, String sprint) {
 		TurnState turn = state.turn();
 		if (!turn.held()) {
-			return state.hangs() ? null : turning(new TurnState(turn.turns(), turn.flips(), false, false), sprint);
+			return state.hangs() ? null : turning(turn, sprint);
 		}
 		Line turning = turning(turn, sprint);
 		if (turning == null) {
@@ -291,34 +316,32 @@ public final class ControlsLine {
 		List<Text> rects = new ArrayList<>(3);
 		rects.add(state.stays() ? hint(RIGHT, TURN + ".place") : reason(TURN + ".cant_place"));
 		rects.addAll(turning.rects());
-		return new Line(turning.label(), List.copyOf(rects));
+		return new Line(null, List.copyOf(rects));
 	}
 
 	/**
-	 * The copy at the aim's line. With a zoop's row fixed: the mode, the click that pastes the row (or why it can't),
-	 * and the right click that drops the row. Otherwise: the mode, or "Locked", the left click (paste, or why it can't,
-	 * in Single; in Zoop and Vertical the reason if there is one, then setting the row's start), the nudge keys while
-	 * it's locked, the wheel, the middle click, the sprint key while it's unlocked and there's a paste to line up with
-	 * (a locked copy doesn't line up), the lock key, the mode key, and the right click that closes it. A key with no key
-	 * bound is left out.
+	 * The copy at the aim's line (see "Building Planner's mouse modes"), with no label: the right click (in Off the paste; in Line, Wall and Floor before the first click setting the start, and
+	 * after it the set's paste with its count), with the reason in red in the paste's place, or before setting the
+	 * start, while the copy is red; the nudge keys while it's locked; the wheel; the middle click; the sprint key while
+	 * the copy follows the aim and there's a paste to line up with (a locked copy, and a set's fixed first copy, don't
+	 * line up); the lock key with the lock's state; the mode key with the mode; and Esc and the left click, which close
+	 * the copy, or cancel the set after its first click. A key with no key bound is left out.
 	 */
 	public static Line copy(CopyState state, Keys keys) {
 		List<Text> rects = new ArrayList<>();
-		if (state.row() > 0) {
+		boolean set = state.set() > 0;
+		if (set) {
 			rects.add(state.refusal() != null ? refusal(state.refusal())
-				: hint(LEFT, state.row() == 1 ? Translated.of(COPY + ".paste_row_one", Look.ACTION)
-					: Translated.of(COPY + ".paste_row", Look.ACTION, new Literal(String.valueOf(state.row())))));
-			rects.add(hint(RIGHT, COPY + ".cancel"));
-			return labelled(modeName(state.mode()), rects);
-		}
-		if (state.mode() != CopyMode.SINGLE) {
-			// A zoop's first click still fixes the row while the copy is red, so it stays, after the reason.
+				: hint(RIGHT, state.set() == 1 ? Translated.of(COPY + ".paste_set_one", Look.ACTION)
+					: Translated.of(COPY + ".paste_set", Look.ACTION, new Literal(String.valueOf(state.set())))));
+		} else if (state.mode() != CopyMode.OFF) {
+			// The first click still fixes the first copy while the copy is red, so it stays, after the reason.
 			if (state.refusal() != null) {
 				rects.add(refusal(state.refusal()));
 			}
-			rects.add(hint(LEFT, COPY + ".start"));
+			rects.add(hint(RIGHT, COPY + ".start"));
 		} else {
-			rects.add(state.refusal() != null ? refusal(state.refusal()) : hint(LEFT, COPY + ".paste"));
+			rects.add(state.refusal() != null ? refusal(state.refusal()) : hint(RIGHT, COPY + ".paste"));
 		}
 		if (state.locked()) {
 			Text nudge = nudge(keys);
@@ -328,17 +351,17 @@ public final class ControlsLine {
 		}
 		rects.add(hint(SCROLL, COPY + ".turn"));
 		rects.add(hint(MIDDLE, COPY + ".mirror"));
-		if (!state.locked() && state.pasted() && keys.sprint() != null) {
+		if (!set && !state.locked() && state.pasted() && keys.sprint() != null) {
 			rects.add(hint(held(keys.sprint()), COPY + ".line_up"));
 		}
 		if (keys.lock() != null) {
-			rects.add(hint(new Literal(keys.lock()), state.locked() ? COPY + ".unlock" : COPY + ".lock"));
+			rects.add(hint(new Literal(keys.lock()), state.locked() ? SHAPE + ".lock_on" : SHAPE + ".lock_off"));
 		}
 		if (keys.mode() != null) {
-			rects.add(hint(new Literal(keys.mode()), MODE + ".zoop_mode"));
+			rects.add(hint(new Literal(keys.mode()), COPY + ".mode_" + state.mode().name().toLowerCase(Locale.ROOT)));
 		}
-		rects.add(hint(RIGHT, COPY + ".put_away"));
-		return labelled(title(state.mode(), state.locked()), rects);
+		rects.add(hint(ESC_LEFT, set ? COPY + ".cancel" : COPY + ".put_away"));
+		return new Line(null, List.copyOf(rects));
 	}
 
 	/** A run of Effortless Building's line in one colour: its text and the colour's name ("dark_aqua"), or null. */
@@ -346,9 +369,17 @@ public final class ControlsLine {
 	}
 
 	/**
+	 * The cancel in Effortless Building's own line, which it writes in English in its code
+	 * ({@code RenderHandler.PLACING_TEXT}, {@code INTERACTING_TEXT} and {@code BREAKING_TEXT}).
+	 */
+	private static final String EFFORTLESS_CANCEL = "cancel";
+
+	/**
 	 * Effortless Building's own line during a shape (hook E31), as Building Planner's rectangles: each of its clauses,
 	 * "key to action", separated by ", ", becomes the control "[key: action]", in Effortless Building's own words and
-	 * colours: "Left-click to cancel, Right-click to place" is "[Left-click: cancel][Right-click: place]". The key and
+	 * colours, with Esc before the click that cancels, since Esc cancels the shape too (hook M7): "Left-click to
+	 * cancel, Right-click to place" is "[Esc/Left-click: cancel][Right-click: place]", and "Left-click to break,
+	 * Right-click to cancel" is "[Left-click: break][Esc/Right-click: cancel]". The key and
 	 * the colon are white; the action stays dark aqua, or red as Effortless Building draws a shape that breaks blocks.
 	 * Null for a text of another form, or in other colours (a key not white, an action neither dark aqua nor red, or in
 	 * more than one colour), which Effortless Building then draws as it is.
@@ -383,19 +414,14 @@ public final class ControlsLine {
 				|| !colours.subList(action, end).stream().allMatch(colours.get(action)::equals)) {
 				return null;
 			}
-			rects.add(hint(new Literal(text.substring(start, to)), new Literal(text.substring(action, end), look)));
+			String key = text.substring(start, to);
+			String does = text.substring(action, end);
+			Text named = does.equals(EFFORTLESS_CANCEL)
+				? Translated.of(MODE + ".esc_click", Look.PLAIN, new Literal(key)) : new Literal(key);
+			rects.add(hint(named, new Literal(does, look)));
 			start = end + 2;
 		}
 		return rects.isEmpty() ? null : new Line(null, List.copyOf(rects));
-	}
-
-	/** The label of a line that follows the aim: the mode outside Single, "Locked" or both, or none. */
-	private static Text title(CopyMode mode, boolean locked) {
-		if (locked) {
-			return mode == CopyMode.SINGLE ? Translated.of(COPY + ".locked", Look.PLAIN)
-				: Translated.of(COPY + ".mode_locked", Look.PLAIN, modeName(mode));
-		}
-		return mode == CopyMode.SINGLE ? null : modeName(mode);
 	}
 
 	/** The four nudges along the ground: "Arrow keys" while they're on them, otherwise their keys' names. */
@@ -438,17 +464,12 @@ public final class ControlsLine {
 		return one == null ? null : new Literal(one);
 	}
 
-	/** A line with its label ("Delete:"), or with none while {@code title} is null. */
-	private static Line labelled(Text title, List<Text> rects) {
-		return new Line(title == null ? null : Translated.of(MODE + ".label", Look.PLAIN, title), List.copyOf(rects));
-	}
-
 	/** A warning above the controls, in red, alone on its line. */
 	private static Line warning(String key) {
 		return new Line(Translated.of(key, Look.WARNING), List.of());
 	}
 
-	/** A control: its key, then its action in dark aqua ("Left-click: paste"). */
+	/** A control: its key, then its action in dark aqua ("Right-click: paste"). */
 	private static Text hint(Text key, Text action) {
 		return Translated.of(MODE + ".hint", Look.PLAIN, key, action);
 	}
@@ -472,9 +493,5 @@ public final class ControlsLine {
 			case TOO_MANY_BLOCKS -> COPY + ".too_many";
 			case BUILD_HEIGHT, WORLD_BORDER -> COPY + ".outside";
 		});
-	}
-
-	private static Text modeName(CopyMode mode) {
-		return Translated.of(COPY + "." + mode.name().toLowerCase(Locale.ROOT), Look.PLAIN);
 	}
 }

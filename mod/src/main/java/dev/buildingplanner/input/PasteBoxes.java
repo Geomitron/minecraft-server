@@ -27,9 +27,9 @@ public final class PasteBoxes {
 		}
 	}
 
-	/** A row's copies, each as a paste of its own, in the order they were laid, so the last is the most recent. */
-	public void addAll(List<Spot> row) {
-		row.forEach(this::add);
+	/** A set's copies, each as a paste of its own, in the order they were laid, so the last is the most recent. */
+	public void addAll(List<Spot> set) {
+		set.forEach(this::add);
 	}
 
 	/** Forgets every paste, on leaving the server or changing dimension. */

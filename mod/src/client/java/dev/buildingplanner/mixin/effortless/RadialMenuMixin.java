@@ -1,11 +1,14 @@
 package dev.buildingplanner.mixin.effortless;
 
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
+import com.llamalad7.mixinextras.injector.v2.WrapWithCondition;
+import dev.buildingplanner.client.BuildingPlannerClient;
 import dev.buildingplanner.client.RadialMenuWidgets;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Renderable;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
 import nl.requios.effortlessbuilding.screen.RadialMenu;
@@ -19,7 +22,7 @@ import org.spongepowered.asm.mixin.injection.ModifyConstant;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * Hooks E11, E12, E16, E18, E19 and E20: Building Planner's widgets in Effortless Building's radial menu, and its name
+ * Hooks E11, E12, E16, E18, E19, E20, E34 and E35: Building Planner's widgets in Effortless Building's radial menu, and its name
  * in the menu's corner (E18). Minecraft clears a screen's widgets and calls {@code init} each time it opens, so E11
  * adds them there; as children of the screen they
  * get the clicks and drags the menu passes on to {@code Screen}. The menu draws itself without {@code Screen}'s own
@@ -28,7 +31,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * shows over them. The menu has no widgets of its own. The menu acts on its own button under the pointer in
  * {@code onClose}, which its {@code tick} calls once its key is let go, after closing so the action can open another
  * screen; E16 lets Building Planner's buttons act there too, after the menu's own action. E19 leaves every mode segment
- * unselected while Building Planner's mouse mode is on.
+ * unselected while Building Planner's mouse mode is on. E34 leaves out the "Functional Settings" button the menu shows
+ * operators under its wrench during a session, where "Show or hide ghost blocks" sits. E35 keeps a chosen mode's name
+ * out of the action bar during a session, since the name shows beside the hotbar.
  */
 @Mixin(value = RadialMenu.class, remap = false)
 abstract class RadialMenuMixin extends Screen {
@@ -82,8 +87,21 @@ abstract class RadialMenuMixin extends Screen {
 		return RadialMenuWidgets.selectedSegment(modeIndex);
 	}
 
+	@ModifyExpressionValue(method = "extractRenderState", at = @At(value = "INVOKE",
+		target = "Lnet/minecraft/server/permissions/PermissionSet;hasPermission(Lnet/minecraft/server/permissions/Permission;)Z"))
+	private boolean buildingplanner$functionalSettings(boolean operator) {
+		return RadialMenuWidgets.showFunctionalSettings(operator);
+	}
+
 	@ModifyConstant(method = "drawTexts", constant = @Constant(stringValue = "Effortless Building"))
 	private String buildingplanner$credits(String effortlessBuilding) {
 		return I18n.get("buildingplanner.ui.radial.credits");
+	}
+
+	@WrapWithCondition(method = "performAction", at = @At(value = "INVOKE",
+		target = "Lnet/minecraft/client/player/LocalPlayer;sendOverlayMessage(Lnet/minecraft/network/chat/Component;)V",
+		ordinal = 0))
+	private boolean buildingplanner$noModeNameInActionBar(LocalPlayer player, Component message) {
+		return !BuildingPlannerClient.active();
 	}
 }

@@ -6,7 +6,9 @@
 	"client": [
 		"ConnectionMixin",
 		"GuiTextMixin",
+		"KeyboardHandlerMixin",
 		"KeyMappingMixin",
-		"MinecraftFrameMixin"
+		"MinecraftFrameMixin",
+		"TooltipBackgroundMixin"
 	]
 }

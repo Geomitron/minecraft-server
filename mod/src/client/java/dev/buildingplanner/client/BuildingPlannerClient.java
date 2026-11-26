@@ -4,15 +4,19 @@ import com.mojang.blaze3d.platform.InputConstants;
 import dev.buildingplanner.BuildingPlanner;
 import dev.buildingplanner.ClientConfig;
 import dev.buildingplanner.input.BlockTurn;
+import dev.buildingplanner.input.BoxPurpose;
 import dev.buildingplanner.input.CopyColour;
 import dev.buildingplanner.input.CopyPlacement;
-import dev.buildingplanner.input.DeleteMode;
 import dev.buildingplanner.input.DisablePreview;
 import dev.buildingplanner.input.DisableTurn;
+import dev.buildingplanner.input.EscSteps;
+import dev.buildingplanner.input.GhostMatch;
 import dev.buildingplanner.input.MouseMode;
 import dev.buildingplanner.input.PlaceTurn;
+import dev.buildingplanner.input.ShapeLock;
 import dev.buildingplanner.input.SingleRule;
 import dev.buildingplanner.layer.Layer;
+import dev.buildingplanner.layer.WrongBlocks;
 import dev.buildingplanner.look.ControlsLine;
 import dev.buildingplanner.look.GhostsShown;
 import dev.buildingplanner.server.PlaceTurns;
@@ -41,7 +45,9 @@ import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
@@ -50,6 +56,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
 
 /**
  * The client side: a session for each connection to a server with Building Planner, started by the server's
@@ -67,6 +74,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	 * class never loads their classes then.
 	 */
 	private static EditGlow glow;
+	private static WrongBlocksOutline wrongBlocks;
 	/** The player's block mix, kept while the game runs, across servers. */
 	private static final BlockMix MIX = new BlockMix();
 
@@ -139,12 +147,15 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		CopyOutline.registered(BuildingPlannerClient::outlineShown);
 		// The sweep runs before the marks' outline, which then draws the marks as they stand.
 		DeleteAim.registered(() -> session);
-		MarksOutline.registered(() -> session != null && session.aimOn() ? session.marks() : null);
+		MarksOutline.registered(() -> session != null && session.deleteOn() ? session.marks() : null);
+		wrongBlocks = WrongBlocksOutline.registered(
+			() -> session != null && session.ghostsShown() ? session.replica().layer() : null);
 		modeHud = new ModeHud(BuildingPlannerClient::mouseMode, BuildingPlannerClient::boxShown,
-			BuildingPlannerClient::copyLine, BuildingPlannerClient::aimLines, BuildingPlannerClient::modelessLine,
+			BuildingPlannerClient::copyLine, BuildingPlannerClient::deleteLines, BuildingPlannerClient::modelessLine,
 			() -> effortless && EffortlessShapes.shapeUnderWay(),
-			() -> CopyKeys.names(Minecraft.getInstance()).mode(),
-			() -> session == null ? List.of() : session.boxList());
+			() -> session == null ? -1 : session.eraseTicks(),
+			() -> session == null ? List.of() : session.boxList(),
+			BuildingPlannerClient::nameBesideHotbar);
 		HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(BuildingPlanner.MOD_ID, "mode_controls"),
 			modeHud);
 		HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(BuildingPlanner.MOD_ID, "material_panel"),
@@ -243,9 +254,6 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 					}
 					heldClicks.tick(client);
 				}
-				if (singleActive() && session.single().rowFixed()) {
-					EffortlessShapes.followRow(session.single());
-				}
 			}
 			copyKeys.tick(client, session);
 		});
@@ -270,6 +278,11 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	/** Building Planner's settings on this computer, such as the speed sliders' in the radial menu (hook E11). */
 	public static ClientConfig config() {
 		return config;
+	}
+
+	/** Whether "Match ghost blocks" is on, as the "Visual Settings" screen saved it (see "Settings"). */
+	static boolean matchGhost() {
+		return config != null && GhostMatch.on(config.get(GhostMatch.SETTING));
 	}
 
 	private static void endSession() {
@@ -304,6 +317,11 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 			() -> ClientSession.show(PlayerMessage.mixOff()));
 	}
 
+	/** The wrong blocks the last frame drew through walls, or none. */
+	static WrongBlocks.Found wrongBlocksDrawn() {
+		return wrongBlocks == null ? WrongBlocks.Found.NONE : wrongBlocks.drawn();
+	}
+
 	/** Whether ghost blocks show for this player, as the switch is set, with or without a session. */
 	public static boolean ghostsShown() {
 		return session == null ? GhostsShown.get(config) : session.ghostsShown();
@@ -318,41 +336,35 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 
 	/**
 	 * The radial menu's Copy button: puts the copy away and starts a box around the ghost blocks and real blocks to copy,
-	 * or ends a box for Copy, or switches a box for Delete or the material list to Copy. Does nothing while Building
-	 * Planner is off.
+	 * or ends a box for Copy, or switches a box for the material list to Copy, or ends Delete and starts the box. Does
+	 * nothing while Building Planner is off.
 	 */
 	static void copy() {
-		boxButton(BoxDraw.Purpose.COPY, MouseMode.Action.COPY_BUTTON);
+		boxButton(BoxPurpose.COPY, MouseMode.Action.COPY_BUTTON);
 	}
 
 	/**
-	 * The radial menu's Delete button: in Delete by aim, ends it; otherwise as {@link #copy()}, for a box whose ghost
-	 * blocks are erased, except that with no box drawn and Aim the last Delete mode the player used, it starts Delete by
-	 * aim instead (see "Delete by aim").
+	 * The radial menu's Delete button: ends Delete while it's on; otherwise ends the mouse mode on now, drops a shape
+	 * under way, and starts Delete (see "Delete").
 	 */
 	static void delete() {
 		if (session == null) {
 			return;
 		}
-		if (session.aimOn()) {
-			session.modeAction(MouseMode.Action.DELETE_BUTTON);
-			return;
-		}
-		if (!session.box().on() && ClientSession.deleteMode() == DeleteMode.AIM) {
-			session.modeAction(MouseMode.Action.DELETE_BUTTON);
+		boolean on = session.deleteOn();
+		session.modeAction(MouseMode.Action.DELETE_BUTTON);
+		if (!on) {
 			if (effortless) {
 				ClickRule.cancelShape();
 			}
-			session.startAim();
+			session.startDelete();
 			modeStarted();
-			return;
 		}
-		boxButton(BoxDraw.Purpose.DELETE, MouseMode.Action.DELETE_BUTTON);
 	}
 
 	/** The radial menu's "Material list" button: as {@link #copy()}, for a box whose blocks the material list counts. */
 	static void materialList() {
-		boxButton(BoxDraw.Purpose.MATERIAL_LIST, MouseMode.Action.MATERIAL_LIST_BUTTON);
+		boxButton(BoxPurpose.MATERIAL_LIST, MouseMode.Action.MATERIAL_LIST_BUTTON);
 	}
 
 	/**
@@ -366,7 +378,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	}
 
 	/** After the button's action on the mouse mode, starts, ends or switches a box, dropping a shape under way. */
-	private static void boxButton(BoxDraw.Purpose purpose, MouseMode.Action button) {
+	private static void boxButton(BoxPurpose purpose, MouseMode.Action button) {
 		if (session == null) {
 			return;
 		}
@@ -390,16 +402,15 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		return state == null ? null : ControlsLine.copy(state, CopyKeys.names(Minecraft.getInstance()));
 	}
 
-	/** Delete by aim's controls lines, with its keys as the player has them bound, or none while it's off. */
-	private static List<ControlsLine.Line> aimLines() {
-		ControlsLine.AimState state = session == null ? null : session.aimState();
-		return state == null ? List.of() : ControlsLine.deleteAim(state, CopyKeys.names(Minecraft.getInstance()));
+	/** Delete's controls lines, with its keys as the player has them bound, or none while it's off. */
+	private static List<ControlsLine.Line> deleteLines() {
+		ControlsLine.DeleteState state = session == null ? null : session.deleteState();
+		return state == null ? List.of() : ControlsLine.delete(state, CopyKeys.names(Minecraft.getInstance()));
 	}
 
 	/**
-	 * The box {@link CopyOutline} draws, in its colour: the copy at the aim's, with its row's boxes; or the one ghost
-	 * block's while it's locked or its row is fixed and its controls are active, around the locked block or each block
-	 * of the row; or null.
+	 * The box {@link CopyOutline} draws, in its colour: the copy at the aim's, with its set's boxes; the lock's while it's
+	 * on and its controls are active, around each locked position; or null.
 	 */
 	static CopyOutline.Shown outlineShown() {
 		if (session == null) {
@@ -407,15 +418,23 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		}
 		CopyColour.Shown colour = session.copyShown();
 		if (colour != null) {
-			return new CopyOutline.Shown(colour, session.clipboard().rowSpots());
+			return new CopyOutline.Shown(colour, session.clipboard().setSpots());
 		}
-		SingleBlock block = shownSingle();
-		if (block == null) {
-			return null;
-		}
-		List<BlockPos> own = block.rowFixed() ? block.row() : List.of(block.pos());
-		return new CopyOutline.Shown(EffortlessShapes.singleColour(block),
-			own.stream().map(pos -> new CopyPlacement.Spot(pos, new Vec3i(1, 1, 1))).toList());
+		List<BlockPos> locked = lockedShown();
+		return locked.isEmpty() ? null
+			: new CopyOutline.Shown(EffortlessShapes.lockColour(session.lock(), locked), spots(locked));
+	}
+
+	private static List<CopyPlacement.Spot> spots(List<BlockPos> positions) {
+		return positions.stream().map(pos -> new CopyPlacement.Spot(pos, new Vec3i(1, 1, 1))).toList();
+	}
+
+	/**
+	 * The locked positions the copy's box shows around while the lock is on and its controls are active (see "Locking
+	 * and the first click": "Colours"), or none.
+	 */
+	private static List<BlockPos> lockedShown() {
+		return lockActive() ? EffortlessShapes.lockedPositions(session.lock()) : List.of();
 	}
 
 	/**
@@ -437,13 +456,26 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	}
 
 	/** Whether a box is drawn for that purpose, whose radial menu button then shows selected. */
-	static boolean drawingBoxFor(BoxDraw.Purpose purpose) {
+	static boolean drawingBoxFor(BoxPurpose purpose) {
 		return session != null && session.mouseMode() == MouseMode.BOX && session.box().purpose() == purpose;
 	}
 
-	/** Whether Delete is on, a Delete box or Delete by aim, so the radial menu's Delete button shows selected. */
+	/** Whether Delete is on, so the radial menu's Delete button shows selected. */
 	static boolean deleteOn() {
 		return session != null && session.deleteOn();
+	}
+
+	/**
+	 * The name beside the hotbar during a session: "Copy" or "Material list" while a box for it is drawn, "Paste" while
+	 * the copy is at the aim, "Delete" while Delete is on ({@link ControlsLine#toolName}), in Disable too; otherwise Effortless Building's mode's name, or null
+	 * in Disable.
+	 */
+	private static Component nameBesideHotbar() {
+		if (session == null) {
+			return null;
+		}
+		ControlsLine.Text tool = ControlsLine.toolName(session.mouseMode(), session.box().purpose());
+		return tool != null ? ModeHud.component(tool) : effortless ? EffortlessShapes.modeName() : null;
 	}
 
 	/** Building Planner's mode that takes over the mouse now, or null. */
@@ -465,42 +497,40 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	}
 
 	/**
-	 * Hook M3: whether holding the attack button breaks nothing: while a mouse mode is on, while the one ghost block is
-	 * locked or its row is fixed, and while the button stays down after the click that finished a box, erased at the
-	 * locked block or dropped the block's row.
+	 * Hook M3: whether holding the attack button breaks nothing: while a mouse mode is on, and while the button stays
+	 * down after the click that finished a box.
 	 */
 	public static boolean holdingAttackTaken() {
-		return session != null && (attackHeld || session.mouseMode() != null || singleTakesBreak());
+		return session != null && (attackHeld || session.mouseMode() != null);
 	}
 
 	/**
-	 * Whether the one ghost block's controls are active ({@link SingleRule#active}): a session, Effortless Building's
-	 * Single mode, no mouse mode, and an item that places a block in the main hand.
+	 * Whether the lock's controls are active ({@link ShapeLock#controlsActive}): a session, any of Effortless Building's
+	 * modes but Disable, no mouse mode, and an item that places a block in the main hand.
 	 */
-	static boolean singleActive() {
-		return effortless && SingleRule.active(session != null, EffortlessShapes.singleMode(), mouseModeOn(),
+	static boolean lockActive() {
+		return effortless && ShapeLock.controlsActive(session != null, EffortlessShapes.disableMode(), mouseModeOn(),
 			ClickRule.holdsPlaceable());
 	}
 
 	/**
-	 * The one ghost block while it's locked or its row is fixed and its controls are active (hooks E27, E28 and E30), or
-	 * null.
+	 * Hooks E9, E28 and E32: whether the next first click and its preview take the locked position
+	 * ({@link ShapeLock#takesFirstClick}).
 	 */
-	static SingleBlock shownSingle() {
-		return singleActive() && (session.single().locked() || session.single().rowFixed()) ? session.single() : null;
+	static boolean lockTakesFirstClick() {
+		return lockActive() && session.lock().takesFirstClick(true, EffortlessShapes.shapeUnderWay());
+	}
+
+	/** Hooks E1 and E2: the click that finishes a shape, placing or erasing, ends the lock (1239 Q1 A). */
+	static void shapeFinished() {
+		if (session != null) {
+			session.lock().unlock();
+		}
 	}
 
 	/**
-	 * Whether the one ghost block follows the aim with its controls active, in Single or in Zoop or Vertical before the
-	 * first click ({@link SingleRule#drawnAtAim}), so hook E30 draws it there.
-	 */
-	static boolean singleAtAim() {
-		return singleActive() && SingleRule.drawnAtAim(session.single().state());
-	}
-
-	/**
-	 * Whether the turning controls are active (Left Ctrl with the wheel and the middle click, see "One ghost block":
-	 * "Turning and flipping"): in the modes whose shapes take the turn ({@link #shapesTakeTurn}), or in Disable
+	 * Whether the turning controls are active (Left Ctrl with the wheel and the middle click, see "Locking and the first
+	 * click": "Turning and flipping"): in the modes whose shapes take the turn ({@link #shapesTakeTurn}), or in Disable
 	 * ({@link #disableTurning}).
 	 */
 	static boolean turningActive() {
@@ -538,9 +568,11 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	/**
 	 * Hook M6, before a right click on a block: sends {@code place_turn} when the turn the click takes
 	 * ({@link DisableTurn#clickTakes}: the turn of the block in hand while the sprint key is held in Disable, and
-	 * otherwise none) differs from the one sent last, and keeps it as the one this computer's guess of the block takes.
+	 * otherwise none; or, with "Match ghost blocks" on, the ghost block's turn where the click fills one,
+	 * {@link EffortlessShapes#clickTurn}) differs from the one sent last, and keeps it as the one this computer's guess
+	 * of the block takes.
 	 */
-	public static void beforeUseItemOn() {
+	public static void beforeUseItemOn(BlockHitResult hit) {
 		Minecraft mc = Minecraft.getInstance();
 		if (session == null || mc.player == null) {
 			return;
@@ -549,6 +581,9 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		BlockTurn.Turn turn = HeldTurn.of(inHand);
 		BlockTurn.Held now = DisableTurn.clickTakes(disableTurning(), mc.options.keySprint.isDown(),
 			turn == null ? BlockTurn.Held.NONE : new BlockTurn.Held(inHand, turn));
+		if (effortless && EffortlessShapes.disableMode() && !mouseModeOn()) {
+			now = EffortlessShapes.clickTurn(hit, now);
+		}
 		if (DisableTurn.sends(PlaceTurns.local(), now)) {
 			ClientPlayNetworking.send(new Payloads.PlaceTurn(Optional.ofNullable(now.item()), PlaceTurn.properties(now)));
 			PlaceTurns.sentLocally(now);
@@ -580,34 +615,29 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	}
 
 	/**
-	 * The line that shows with no mouse mode on, with the keys as the player has them bound: while the one ghost block's
-	 * controls are active, Single's line ({@link ControlsLine#single}), red while the locked block or its row is; in
-	 * Effortless Building's modes other than Single and Disable, while the turning controls are active and the block in
-	 * hand turns or flips, the turning line ({@link ControlsLine#turning}); in Disable, while its turning controls are
-	 * active, Disable's line ({@link ControlsLine#disable}), with whether the block a right click would place hangs on
-	 * the block behind it and whether the turned block can stay; or null.
+	 * The line that shows with no mouse mode on, with the keys as the player has them bound: while the lock's controls
+	 * are active, in every one of Effortless Building's modes but Disable, the build modes' line
+	 * ({@link ControlsLine#shape}), with the reason in red while the locked position is red; in Disable, while its turning controls are active, Disable's line ({@link ControlsLine#disable}), with whether the
+	 * block a right click would place hangs on the block behind it and whether the turned block can stay; or null.
 	 */
 	private static ControlsLine.Line modelessLine() {
-		boolean single = singleActive();
+		boolean lock = lockActive();
 		boolean disable = disableTurning();
-		if (!single && !disable && (!shapesTakeTurn() || EffortlessShapes.singleMode())) {
+		if (!lock && !disable) {
 			return null;
 		}
 		Minecraft mc = Minecraft.getInstance();
 		boolean sprint = mc.options.keySprint.isDown();
 		ControlsLine.TurnState turn = new ControlsLine.TurnState(heldCan(BlockTurn::turns), heldCan(BlockTurn::flips),
-			sprint, HeldTurn.of(mc.player.getMainHandItem().getItem()) != null);
+			sprint);
 		ControlsLine.Keys keys = CopyKeys.names(mc);
-		if (single) {
-			SingleBlock block = session.single();
-			boolean boxed = block.locked() || block.rowFixed();
-			return ControlsLine.single(new ControlsLine.SingleState(SingleBlock.mode(), block.locked(),
-				block.rowFixed() ? block.row().size() : 0, boxed && EffortlessShapes.singleColour(block).red(), turn), keys);
+		if (lock) {
+			CopyOutline.Shown boxed = outlineShown();
+			boolean red = boxed != null && boxed.colour().red();
+			return ControlsLine.shape(new ControlsLine.ShapeState(EffortlessShapes.singleMode(), session.lock().on(), red,
+				EffortlessShapes.underway(), turn), keys);
 		}
 		String sprintKey = keys.sprint();
-		if (!disable) {
-			return ControlsLine.turning(turn, sprintKey);
-		}
 		EffortlessShapes.DisableShown shown = sprint ? EffortlessShapes.disableShown() : null;
 		return ControlsLine.disable(new ControlsLine.DisableState(turn, EffortlessShapes.placedHangs(),
 			shown == null || shown.goes()), sprintKey);
@@ -618,27 +648,23 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		return effortless && turnTakes(BlockTurn::flips);
 	}
 
-	/** Hooks E14 and M2: whether the place click is the one ghost block's ({@link SingleRule#takesPlace}). */
-	public static boolean singleTakesPlace() {
-		return singleActive() && SingleRule.takesPlace(session.single().state());
-	}
-
-	/** Hooks E14, M1 and M3: whether the break click is the one ghost block's ({@link SingleRule#takesBreak}). */
-	public static boolean singleTakesBreak() {
-		return singleActive() && SingleRule.takesBreak(session.single().state());
-	}
-
 	/**
-	 * "Lock or unlock" while the one ghost block's controls are active: locks it where a right click would place it now,
-	 * or with nothing aimed at does nothing; locked, unlocks it, and it follows the aim again.
+	 * "Lock or unlock" while the lock's controls are active: before a shape's first click, locks the first click's
+	 * position where a right click would start now, or with nothing aimed at does nothing; during a shape, locks the
+	 * positions its clicks have set. Locked, unlocks them, and they stay where they are.
 	 */
-	static void toggleSingleLock() {
-		SingleBlock block = session.single();
-		if (block.locked()) {
-			block.unlock();
+	static void toggleLock() {
+		ShapeLock lock = session.lock();
+		if (lock.on()) {
+			lock.unlock();
 		} else {
-			EffortlessShapes.lock(block);
+			EffortlessShapes.lock(lock);
 		}
+	}
+
+	/** A nudge key while the lock is on: moves the locked positions one block that way ({@link EffortlessShapes#nudge}). */
+	static void nudgeLock(Direction direction) {
+		EffortlessShapes.nudge(session.lock(), direction);
 	}
 
 	/** A mouse mode started, perhaps within a click of the use button, whose hold mustn't end it. */
@@ -654,20 +680,14 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	}
 
 	/**
-	 * Hook M1: the left click sets the box's next corner, pastes the copy at the aim, or in Delete by aim starts the hold
-	 * that erases the marks; with the one ghost block's row fixed, it drops the row, and with the block locked, it erases
-	 * every ghost block a right click would place; holding the button then does nothing more. Returns whether the click
-	 * is taken from the game.
+	 * Hook M1: the left click sets the box's next corner, drops the copy's set or puts the copy at the aim away when no
+	 * set is fixed, or in Delete starts Delete's box with the sprint key held, or otherwise the hold that erases the
+	 * marks; holding the button then does nothing more, even once the box or the copy is gone. Returns whether the click is taken from the game.
 	 */
 	public static boolean leftClick() {
 		MouseMode mode = mouseMode();
 		if (mode == null) {
-			if (!singleTakesBreak()) {
-				return false;
-			}
-			EffortlessShapes.leftClick(session.single());
-			attackHeld = Minecraft.getInstance().options.keyAttack.isDown();
-			return true;
+			return false;
 		}
 		switch (mode) {
 			case BOX -> {
@@ -676,33 +696,37 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 					attackHeld = Minecraft.getInstance().options.keyAttack.isDown();
 				}
 			}
-			case COPY_AT_AIM -> session.paste();
-			// Delete by aim's left click attacks and breaks nothing; held a second, it erases the marks.
-			case DELETE_AIM -> session.pressErase();
+			case COPY_AT_AIM -> {
+				if (!session.dropSet()) {
+					session.modeAction(MouseMode.Action.LEFT_CLICK);
+				}
+				if (session.mouseMode() == null) {
+					attackHeld = Minecraft.getInstance().options.keyAttack.isDown();
+				}
+			}
+			// Delete's left click attacks and breaks nothing: with the sprint key it draws Delete's box, and alone, held a
+			// second, it erases the marks.
+			case DELETE -> session.deletePress(Minecraft.getInstance().options.keySprint.isDown());
 		}
 		return true;
 	}
 
 	/**
-	 * Hook M2: the right click puts the copy away, or during a zoop, after its first click, drops the row and leaves the
-	 * copy at the aim; in Delete by aim it clears the marks, or with none ends the mode. With the one ghost block locked
-	 * or in Zoop or Vertical, it places the block where it's locked, fixes the row's start, or places the row
-	 * ({@link EffortlessShapes#rightClick}). Returns whether the game's use is skipped, which it is too while the button
-	 * stays down after a mode started or ended or the block's click acted, so holding it does no more.
+	 * Hook M2: the right click pastes the copy at the aim (in Line, Wall and Floor, fixes the set's first copy or pastes
+	 * the set); a box ends; in Delete it ends Delete's box, or clears the marks, or with neither ends the mode. Returns whether the game's use
+	 * is skipped, which it is too while the button stays down after a click the mode took or after a mode started or
+	 * ended, so holding it pastes or places no more.
 	 */
 	public static boolean rightClick() {
 		if (session == null) {
 			return false;
 		}
 		if (session.mouseMode() != null && !useHeld) {
-			if (!session.dropRow() && !session.clearMarks()) {
+			if (session.mouseMode() == MouseMode.COPY_AT_AIM) {
+				session.paste();
+			} else if (!session.clearMarks()) {
 				session.modeAction(MouseMode.Action.RIGHT_CLICK);
 			}
-			useHeld = true;
-			return true;
-		}
-		if (!useHeld && singleTakesPlace()) {
-			EffortlessShapes.rightClick(session.single());
 			useHeld = true;
 			return true;
 		}
@@ -751,6 +775,42 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		return false;
 	}
 
+	/**
+	 * Hook M7: Esc with no screen open takes the next step out of the modes ({@link EscSteps#next}), each as the click
+	 * or button that takes it does, and returns whether the game pauses: without a session, or with no step left. A
+	 * {@code repeat} of a held Esc takes no step, so each step needs a press of its own.
+	 */
+	public static boolean escape(boolean repeat) {
+		if (session == null || Minecraft.getInstance().gui.screen() != null) {
+			return true;
+		}
+		EscSteps.Step step = EscSteps.next(new EscSteps.State(session.mouseMode(), session.markBox().on(),
+			session.marks().size() > 0, session.clipboard().setFixed(), effortless && EffortlessShapes.shapeUnderWay(),
+			effortless && !EffortlessShapes.disableMode()));
+		if (repeat || step == EscSteps.Step.PAUSE) {
+			return step == EscSteps.Step.PAUSE;
+		}
+		switch (step) {
+			case END_BOX, END_DELETE -> session.modeAction(MouseMode.Action.RIGHT_CLICK);
+			case END_DELETE_BOX, CLEAR_MARKS -> session.clearMarks();
+			case DROP_SET -> session.dropSet();
+			case PUT_COPY_AWAY -> session.modeAction(MouseMode.Action.LEFT_CLICK);
+			case CANCEL_SHAPE -> ClickRule.cancelShape();
+			case DISABLE_BUILD_MODE -> EffortlessShapes.disable();
+			case PAUSE -> {
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Hook M8: the top of the held item's name, which the game gives as {@code drawnAt}: 2 above the top of the highest
+	 * row of Building Planner's lines above the hotbar while one shows, or {@code drawnAt}.
+	 */
+	public static int itemNameTop(int drawnAt) {
+		return modeHud == null ? drawnAt : modeHud.itemNameTop(drawnAt);
+	}
+
 	/** Whether Building Planner is on for this server, so Effortless Building's hooks draw ghost blocks. */
 	public static boolean active() {
 		return session != null;
@@ -762,7 +822,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	}
 
 	/**
-	 * Hooks L4 and L5: whether the placement is a tile or the copy or one of its row's, which Litematica never selects
+	 * Hooks L4 and L5: whether the placement is a tile or the copy or one of its set's, which Litematica never selects
 	 * or lists.
 	 */
 	public static boolean isOurs(SchematicPlacement placement) {
@@ -774,7 +834,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		return session != null && session.tiles().holds(container);
 	}
 
-	/** Hooks L5 and L6: the placements without the tiles, the copy and its row. */
+	/** Hooks L5 and L6: the placements without the tiles, the copy and its set. */
 	public static List<SchematicPlacement> withoutOurs(Collection<SchematicPlacement> placements) {
 		if (session == null) {
 			return placements instanceof List<SchematicPlacement> list ? list : List.copyOf(placements);

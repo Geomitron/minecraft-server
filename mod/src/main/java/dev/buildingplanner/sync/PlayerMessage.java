@@ -99,14 +99,9 @@ public record PlayerMessage(String key, List<String> args) {
 		return new PlayerMessage(PREFIX + "paste.nothing", List.of());
 	}
 
-	/** The player's Delete box erased {@code blocks} ghost blocks, the count written with digit grouping ("16,001"). */
+	/** The player's Delete erased {@code blocks} ghost blocks, the count written with digit grouping ("16,001"). */
 	public static PlayerMessage erased(int blocks) {
 		return blocks == 1 ? new PlayerMessage(PREFIX + "delete.done_one", List.of())
 			: new PlayerMessage(PREFIX + "delete.done", List.of(String.format(Locale.US, "%,d", blocks)));
-	}
-
-	/** The player's Delete box holds no ghost blocks, so it erased nothing. */
-	public static PlayerMessage nothingToErase() {
-		return new PlayerMessage(PREFIX + "delete.nothing", List.of());
 	}
 }

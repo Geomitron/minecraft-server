@@ -8,33 +8,37 @@ import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 class MouseModeTest {
-	/** Pasting, turning, mirroring, undo and redo keep the copy at the aim; everything else puts it away. */
+	/**
+	 * Pasting with the right click, turning, mirroring, undo and redo keep the copy at the aim; everything else, the left
+	 * click among them, puts it away.
+	 */
 	@Test
-	void theCopyAtTheAimEndsWithARightClickAndTheModsOtherActions() {
-		assertEquals(EnumSet.of(Action.RIGHT_CLICK, Action.CHOOSE_BUILD_MODE, Action.SHOW_OR_HIDE, Action.COPY_BUTTON,
+	void theCopyAtTheAimEndsWithALeftClickAndTheModsOtherActions() {
+		assertEquals(EnumSet.of(Action.LEFT_CLICK, Action.CHOOSE_BUILD_MODE, Action.SHOW_OR_HIDE, Action.COPY_BUTTON,
 			Action.DELETE_BUTTON, Action.MATERIAL_LIST_BUTTON, Action.PASTE_BUTTON, Action.BLOCK_MIX, Action.LEAVE),
 			ending(MouseMode.COPY_AT_AIM));
 	}
 
 	/**
-	 * A box keeps going through its left clicks, the wheel, the middle click, undo and redo, and through Copy, Delete
-	 * and "Material list", which end or switch it themselves; everything else ends it.
+	 * A box keeps going through its left clicks, the wheel, the middle click, undo and redo, and through Copy and
+	 * "Material list", which end or switch it themselves; everything else ends it, Delete among them.
 	 */
 	@Test
 	void aBoxEndsWithARightClickAndTheModsOtherActionsButItsOwnButtons() {
-		assertEquals(EnumSet.of(Action.RIGHT_CLICK, Action.CHOOSE_BUILD_MODE, Action.SHOW_OR_HIDE, Action.PASTE_BUTTON,
-			Action.BLOCK_MIX, Action.LEAVE), ending(MouseMode.BOX));
+		assertEquals(EnumSet.of(Action.RIGHT_CLICK, Action.CHOOSE_BUILD_MODE, Action.SHOW_OR_HIDE, Action.DELETE_BUTTON,
+			Action.PASTE_BUTTON, Action.BLOCK_MIX, Action.LEAVE), ending(MouseMode.BOX));
 	}
 
 	/**
-	 * Delete by aim keeps going through its clicks, the wheel, undo and redo; Copy, Delete and "Material list" end it, as
-	 * the rest do. Its right click ends it only once no ghost block is marked, which the session checks first.
+	 * Delete keeps going through its clicks, the wheel, undo and redo; Copy, Delete and "Material list" end it, as the
+	 * rest do. Its right click ends it only once no ghost block is marked and no box is drawn, which the session checks
+	 * first.
 	 */
 	@Test
-	void deleteByAimEndsWithItsRightClickAndTheModsOtherActions() {
+	void deleteEndsWithItsRightClickAndTheModsOtherActions() {
 		assertEquals(EnumSet.of(Action.RIGHT_CLICK, Action.CHOOSE_BUILD_MODE, Action.SHOW_OR_HIDE, Action.COPY_BUTTON,
 			Action.DELETE_BUTTON, Action.MATERIAL_LIST_BUTTON, Action.PASTE_BUTTON, Action.BLOCK_MIX, Action.LEAVE),
-			ending(MouseMode.DELETE_AIM));
+			ending(MouseMode.DELETE));
 	}
 
 	private static Set<Action> ending(MouseMode mode) {

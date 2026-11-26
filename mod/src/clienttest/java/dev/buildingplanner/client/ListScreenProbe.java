@@ -8,6 +8,7 @@ import fi.dy.masa.litematica.gui.widgets.WidgetMaterialListEntry;
 import fi.dy.masa.malilib.gui.GuiBase;
 import fi.dy.masa.malilib.gui.GuiListBase;
 import fi.dy.masa.malilib.gui.button.ButtonBase;
+import fi.dy.masa.malilib.gui.widgets.WidgetInfoIcon;
 import fi.dy.masa.malilib.gui.widgets.WidgetListBase;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -51,6 +52,23 @@ final class ListScreenProbe {
 			if (label(button).startsWith(prefix)) {
 				return (int) ((button.getX() + button.getWidth() / 2.0) * scale) + " "
 					+ (int) ((button.getY() + button.getHeight() / 2.0) * scale);
+			}
+		}
+		return "none";
+	}
+
+	/** The window position of the middle of the (i) icon on the open MaLiLib screen, or none. */
+	static String infoIcon(Minecraft mc) throws Exception {
+		if (!(mc.gui.screen() instanceof GuiBase screen)) {
+			return "none";
+		}
+		Field f = GuiBase.class.getDeclaredField("widgets");
+		f.setAccessible(true);
+		double scale = mc.getWindow().getGuiScale();
+		for (Object widget : (List<?>) f.get(screen)) {
+			if (widget instanceof WidgetInfoIcon icon) {
+				return (int) ((icon.getX() + icon.getWidth() / 2.0) * scale) + " "
+					+ (int) ((icon.getY() + icon.getHeight() / 2.0) * scale);
 			}
 		}
 		return "none";

@@ -94,7 +94,8 @@ walk() {
 }
 
 # hold_while_walking <button>: holds that mouse button for 2.5 seconds, as a real press, while Planner1 walks on past
-# the end of the hold, so the button never stays down over a block it has already acted on.
+# the end of the hold. The game's commands pace the walk unevenly, so a repeat now and then goes out from the block the
+# one before did: the checks on the row count the blocks the edits changed (the hold log's blocks), not the edits.
 hold_while_walking() {
 	local steps
 	mapfile -t steps < <(walk 3 40)
@@ -119,6 +120,16 @@ hold_ok() {
 	[[ $gaps != *,* ]] || [[ $(tr ',' '\n' <<< "${gaps#*,}" | sort -u) == "$3" ]]
 }
 
+# row_count_is <client> <n>: within 4 seconds, that client's plans show n stone bricks along the row z 5 at y -60.
+row_count_is() {
+	local tries
+	for ((tries = 0; tries < 20; tries++)); do
+		[[ $(val "$1" "countblocks 2 40 -60 5 minecraft:stone_bricks") == "$2" ]] && return 0
+		drv "$1" "wait 4" > /dev/null
+	done
+	return 1
+}
+
 # Both players stand south of the row.
 drv 1 "cmd tp @s 5 -60 -3 0 10" "cmd tp Planner2 6 -60 -3 0 10" "wait 40" > /dev/null
 
@@ -130,12 +141,10 @@ drv 1 "wait 20" > /dev/null
 placed_log=$(val 1 holdlog)
 echo "  hold use: $placed_log" >> /out/checks.log
 check "holding use sends an edit when it goes down and every 4 ticks after" hold_ok "$placed_log" use 4
-placed=${placed_log#*edits=}
+placed=${placed_log#*blocks=}
 placed=${placed%% *}
-check "each repeat put a ghost block in the row, on client 1 and on client 2" eval \
-	'drv 1 "await block 2 -60 5 minecraft:stone_bricks" > /dev/null &&
-	 [[ $(val 1 "countblocks 2 40 -60 5 minecraft:stone_bricks") == '"$placed"' ]] &&
-	 [[ $(val 2 "countblocks 2 40 -60 5 minecraft:stone_bricks") == '"$placed"' ]]'
+check "each repeat put a ghost block in a new block of the row, on client 1 and on client 2" eval \
+	'row_count_is 1 '"$placed"' && row_count_is 2 '"$placed"
 check "and placed no real block" eval '[[ $(val 1 "real 2 -60 5") == minecraft:air ]]'
 drv 1 "cmd tp @s 20 -55 -5 0 40" "wait 20" "notoasts" "wait 5" "shot hold-placed" > /dev/null
 
@@ -147,11 +156,10 @@ drv 1 "wait 20" > /dev/null
 erased_log=$(val 1 holdlog)
 echo "  hold attack: $erased_log" >> /out/checks.log
 check "holding attack sends an edit when it goes down and every 6 ticks after" hold_ok "$erased_log" attack 6
-erased=${erased_log#*edits=}
+erased=${erased_log#*blocks=}
 erased=${erased%% *}
-check "each repeat erased one ghost block, on client 1 and on client 2" eval \
-	'[[ $(val 1 "countblocks 2 40 -60 5 minecraft:stone_bricks") == '"$((39 - erased))"' ]] &&
-	 [[ $(val 2 "countblocks 2 40 -60 5 minecraft:stone_bricks") == '"$((39 - erased))"' ]]'
+check "each repeat erased the ghost block of a new block of the row, on client 1 and on client 2" eval \
+	'row_count_is 1 '"$((39 - erased))"' && row_count_is 2 '"$((39 - erased))"
 check "and left the real blocks" eval '[[ $(val 1 "real 2 -61 5") == minecraft:grass_block ]]'
 
 # The other modes keep Effortless Building's own behaviour: a held click in Line mode, which needs two clicks, sends
@@ -192,7 +200,7 @@ check "and at GUI scale 4" radial_at 1920 1080 4
 drv 1 "window 854 480 2" "wait 20" > /dev/null
 
 # The menu's buttons' names, which texts lists after the sliders' labels.
-buttons="Show or hide ghost blocks | Block mix | Material list | Copy | Paste | Material lists | Delete"
+buttons="Show or hide ghost blocks | Copy | Paste | Delete | Block mix | Material list | Material lists"
 xdo 1 keydown Alt_L
 check "the radial menu shows both sliders at their first settings" eval 'drv 1 "await screen Build Modes" > /dev/null &&
 	[[ $(val 1 texts) == "Build speed: 5 blocks/s | Break speed: 3.33 blocks/s | $buttons" ]]'
@@ -400,8 +408,8 @@ cam_shot freecam-copy
 # The camera faces north and Planner1 east: a middle click mirrors it left to right for the camera's facing.
 xdo 1 click 2
 check "a middle click mirrors the copy by the camera's facing" drv 1 "await copy at 59,-60,21..67,-60,21 FRONT_BACK NONE"
-use_click 1
-check "a right click puts the copy away" eval 'drv 1 "wait 10" > /dev/null && [[ $(val 1 copy) == "away "* ]]'
+attack_click 1
+check "a left click puts the copy away" eval 'drv 1 "wait 10" > /dev/null && [[ $(val 1 copy) == "away "* ]]'
 
 # The radial menu and N work as without Freecam: letting the menu's key go over its show or hide button hides ghost
 # blocks, and N shows them again.

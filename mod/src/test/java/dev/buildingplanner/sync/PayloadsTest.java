@@ -241,7 +241,8 @@ class PayloadsTest {
 
 	/**
 	 * Every message the add-on can send has its text in en_us.json, with one %s per argument, and every other text there
-	 * is a key binding's ({@code key.}) or a screen's ({@code buildingplanner.ui.}).
+	 * is a key binding's ({@code key.}), a screen's ({@code buildingplanner.ui.}) or a screen's (i) icon's
+	 * ({@code buildingplanner.info.}).
 	 */
 	@Test
 	void everyPlayerMessageHasItsText() throws Exception {
@@ -267,7 +268,8 @@ class PayloadsTest {
 		}
 		Set<String> others = new HashSet<>(lang.keySet());
 		others.removeAll(used);
-		others.removeIf(key -> key.startsWith("key.") || key.startsWith("buildingplanner.ui."));
+		others.removeIf(key -> key.startsWith("key.") || key.startsWith("buildingplanner.ui.")
+			|| key.startsWith("buildingplanner.info."));
 		assertEquals(Set.of(), others, "en_us.json holds only messages the add-on sends, key bindings and screens");
 	}
 }

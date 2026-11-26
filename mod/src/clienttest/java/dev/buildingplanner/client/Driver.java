@@ -56,6 +56,7 @@ import net.minecraft.commands.arguments.blocks.BlockStateParser;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.permissions.Permissions;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
@@ -230,26 +231,28 @@ public final class Driver implements ClientModInitializer {
 				return copy();
 			}
 			case "copymode" -> {
-				// copymode: the copy's build mode, SINGLE, ZOOP or VERTICAL.
+				// copymode: the copy's mode, OFF, LINE, WALL or FLOOR.
 				return ClientSession.copyMode().name();
 			}
 			case "copycolour" -> {
-				// copycolour: the colour Building Planner draws the box of the copy at the aim, or of the one ghost block
-				// locked or in a fixed row, in: BLUE, YELLOW or RED with the server's reason (RED BUILD_HEIGHT, say), or
+				// copycolour: the colour Building Planner draws the box of the copy at the aim, or around the build modes'
+				// locked positions, in: BLUE, YELLOW or RED with the server's reason (RED BUILD_HEIGHT, say), or
 				// none.
 				return copyColour();
 			}
-			case "copyrow" -> {
-				// copyrow: the zoop's row at the copy (see row()).
-				return row();
+			case "copyset" -> {
+				// copyset: the copy's set (see set()).
+				return set();
 			}
 			case "pastehere" -> {
 				// pastehere x1 y1 z1 x2 y2 z2: copies the box, as Copy does, and pastes the copy at once where it was
-				// copied from, as a left click with the copy there would; the box's lowest corner must hold a block.
+				// copied from, as a right click with the copy there would; the box's lowest corner must hold a block.
+				// Gives the copy as it was pasted, since after the paste it follows the aim again.
 				session().copy(pos(a, 1), pos(a, 4));
 				clipboard().moveTo(pos(a, 1));
+				String pasted = copy();
 				session().paste();
-				return copy();
+				return pasted;
 			}
 			case "lookat" -> {
 				// lookat x y z: turns the player to look at that point, which may be fractional, as a real mouse move
@@ -314,6 +317,10 @@ public final class Driver implements ClientModInitializer {
 				// malilibbutton <text>: the window position of the middle of the MaLiLib button whose label starts with
 				// <text>, or none.
 				return ListScreenProbe.malilibButton(mc, line.substring(a[0].length() + 1));
+			}
+			case "infoicon" -> {
+				// infoicon: the window position of the middle of the (i) icon on the open MaLiLib screen, or none.
+				return ListScreenProbe.infoIcon(mc);
 			}
 			case "widgets" -> {
 				// widgets: each shown widget on the open screen as its text (a text field's value as field=<value>),
@@ -663,15 +670,11 @@ public final class Driver implements ClientModInitializer {
 				return !clipboard.exists() ? "none" : !clipboard.atAim() ? "away"
 					: clipboard.locked() ? "locked" : "unlocked";
 			}
-			case "single" -> {
-				// single: the one ghost block in Single mode: "locked x,y,z" or "unlocked", then whether its controls
-				// are active now; await single <text> waits for it.
-				return single();
-			}
-			case "singlerow" -> {
-				// singlerow: the one ghost block's mode, then its fixed row's length and ends, "<n> x,y,z..x,y,z", or none;
-				// await singlerow <text> waits for it.
-				return singleRow();
+			case "lock" -> {
+				// lock: the build modes' lock: "locked" and each locked position as x,y,z (during a shape, the positions
+				// its clicks have set, its first first), or "unlocked", then whether its controls are active now; await
+				// lock <text> waits for it.
+				return lock();
 			}
 			case "preview" -> {
 				// preview: the positions Effortless Building's preview drew in the last whole frame, as x,y,z, or none;
@@ -907,6 +910,17 @@ public final class Driver implements ClientModInitializer {
 				// drawntexts: each string the last frame drew as plain text, separated by " | ".
 				return ScreenProbe.drawnTexts();
 			}
+			case "operator" -> {
+				// operator: whether the game counts the player an operator, as the radial menu asks before it adds
+				// "Functional Settings": "operator" or "not an operator".
+				return mc.player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER) ? "operator"
+					: "not an operator";
+			}
+			case "tooltips" -> {
+				// tooltips: each tooltip the last frame set (a radial menu button's hover text, say), its lines separated
+				// by spaces, the tooltips by " | ", or none.
+				return ScreenProbe.tooltips();
+			}
 			case "cornertext" -> {
 				// cornertext: the string the last frame drew at the screen's lower right, as Effortless Building's
 				// radial menu draws its name, then " | " and its window box (left top right bottom), or none.
@@ -916,6 +930,16 @@ public final class Driver implements ClientModInitializer {
 				// keybinds: opens the key binds screen (Options, Controls, Key Binds).
 				ScreenProbe.openKeyBinds(mc);
 				return "ok";
+			}
+			case "visualsettings" -> {
+				// visualsettings: opens Effortless Building's "Visual Settings" screen, as its radial menu's button does.
+				EffortlessDriver.visualSettings(mc);
+				return "ok";
+			}
+			case "settingrow" -> {
+				// settingrow <label>: the text of the widget on the open screen's row whose label the last frame drew as
+				// <label> (a switch's "ON" or "OFF"), then the widget's centre in window pixels; or none.
+				return ScreenProbe.settingRow(mc, line.substring("settingrow ".length()));
 			}
 			case "keybindlist" -> {
 				// keybindlist: the key binds screen's headings, each with its keys in order: "Heading: key, key ; ...".
@@ -961,6 +985,16 @@ public final class Driver implements ClientModInitializer {
 				return message == null || time.getInt(mc.gui.hud) <= 0 ? "none"
 					: ((Component) message).getString();
 			}
+			case "drawnbox" -> {
+				// drawnbox <text>: the window box (left top right bottom) of each text the last frame drew as a component
+				// whose text is that text, separated by " | ", or none; as the held item's name and the mode's name.
+				return ScreenProbe.drawnBoxes(mc, line.substring("drawnbox ".length()));
+			}
+			case "ringat" -> {
+				// ringat <mode>: the window position on the open radial menu's ring segment of that build mode, 45 GUI
+				// pixels from the menu's middle along the segment's middle line, for pointing at it.
+				return EffortlessDriver.segmentAt(mc, a[1]);
+			}
 			case "modebox" -> {
 				// modebox: the window box (left top right bottom, in the window's pixels) of the controls as drawn now, or
 				// hidden; for the shots' outlines.
@@ -980,9 +1014,19 @@ public final class Driver implements ClientModInitializer {
 				// window's pixels) and its text in [ ], separated by " | ", the rows by " / ", or hidden.
 				return modeHud().rectBoxes();
 			}
+			case "erasebar" -> {
+				// erasebar: the erase's progress bar as drawn now, its window box (left top right bottom, in the window's
+				// pixels) and "fill" with the right of its fill, or hidden.
+				return modeHud().eraseBar();
+			}
+			case "markbox" -> {
+				// markbox: Delete's box as it shows: "mark" or "unmark", its lowest and highest corners and its colour,
+				// with "unaimed" while the aim meets nothing, or none.
+				return session().markBox().describe();
+			}
 			case "erasing" -> {
-				// erasing: Delete by aim's hold toward the erase, in percent, or -1 while the left button isn't held to
-				// erase or Aim is off; await erasing <percent> waits for it.
+				// erasing: the ticks Delete's left button has been held toward the erase, or -1 while it isn't held to
+				// erase or Delete is off; await erasing <ticks> waits for it.
 				return String.valueOf(erasing());
 			}
 			case "bindkey" -> {
@@ -996,6 +1040,20 @@ public final class Driver implements ClientModInitializer {
 			case "modewrap" -> {
 				// modewrap: the controls as they wrap on the screen now, lines separated by " / ", or hidden.
 				return modeHud().wrappedText();
+			}
+			case "boxlistbackgrounds" -> {
+				// boxlistbackgrounds: the window box (left top right bottom) of the dark background under each row of
+				// the list under the crosshair, top row first, separated by " | ", or hidden.
+				return modeHud().listBackgrounds();
+			}
+			case "boxshade" -> {
+				// boxshade: the block whose top face shows shaded under the box's first corner, as x,y,z, or none.
+				return session().box().describeShade();
+			}
+			case "shotdarker" -> {
+				// shotdarker <shot> <shot>: how many pixels of the first screenshot's upper 6 tenths are darker than the
+				// second's by more than a little, as something dark drawn over the view makes them.
+				return AreaProbe.shotDarker(mc.gameDirectory.toPath().resolve("screenshots"), a[1], a[2]);
 			}
 			case "boxlist" -> {
 				// boxlist: the list under the crosshair: the right edge of its cells, the screen's width, the bottom of
@@ -1074,6 +1132,15 @@ public final class Driver implements ClientModInitializer {
 					+ " tiles, " + DataManager.getSchematicPlacementManager().getAllSchematicsPlacements().size()
 					+ " placements";
 			}
+			case "wrongblocks" -> {
+				// wrongblocks: the wrong blocks the last frame drew through walls, as "red x,y,z ... orange x,y,z ...",
+				// or none.
+				return WrongBlocksProbe.drawn();
+			}
+			case "wrongscan" -> {
+				// wrongscan <times>: how long finding the wrong blocks takes with ghost blocks filling its range.
+				return WrongBlocksProbe.scanCost(Integer.parseInt(a[1]));
+			}
 			case "toolitem" -> {
 				// toolitem: whether Litematica's tool item is on.
 				return String.valueOf(Configs.Generic.TOOL_ITEM_ENABLED.getBooleanValue());
@@ -1084,15 +1151,11 @@ public final class Driver implements ClientModInitializer {
 					+ " erase=" + RepeatSpeed.ERASING.ticks(BuildingPlannerClient.config());
 			}
 			case "mousemode" -> {
-				// mousemode: Building Planner's mouse mode now (BOX, COPY_AT_AIM, DELETE_AIM), or none.
+				// mousemode: Building Planner's mouse mode now (BOX, COPY_AT_AIM, DELETE), or none.
 				return String.valueOf(session().mouseMode()).replace("null", "none");
 			}
-			case "deletemode" -> {
-				// deletemode: the mode Delete starts in, BOX or AIM.
-				return ClientSession.deleteMode().name();
-			}
 			case "marks" -> {
-				// marks: Delete by aim's marks: how many, how many positions erasing them takes, then each as x,y,z
+				// marks: Delete's marks: how many, how many positions erasing them takes, then each as x,y,z
 				// when there are no more than 40.
 				return MarksProbe.marks(session());
 			}
@@ -1117,7 +1180,7 @@ public final class Driver implements ClientModInitializer {
 			}
 			case "timeaims" -> {
 				// timeaims x1 y1 z1 x2 y2 z2 <repeats>: times a frame's sweep from looking at the first point to looking
-				// at the second, aiming as Delete by aim does, that many times.
+				// at the second, aiming as Delete's sweep does, that many times.
 				return MarksProbe.timeAims(session(), vec(a, 1), vec(a, 4), Integer.parseInt(a[7]));
 			}
 			case "timeoutline" -> {
@@ -1153,11 +1216,70 @@ public final class Driver implements ClientModInitializer {
 			case "shot" -> {
 				Screenshot.grab(mc.gameDirectory, a[1] + ".png", mc.gameRenderer.mainRenderTarget(), 1, c -> {
 				});
+				writeShotBoxes(mc, a[1]);
 				return "ok";
 			}
 			default -> {
 				return "unknown command";
 			}
+		}
+	}
+
+	/** The driver's reads written beside each shot, for outlining what the shot shows. */
+	private static final List<String> SHOT_READS = List.of("moderects", "eblinerects", "erasebar", "modebox", "buttons",
+		"widgets", "malilibbuttons", "infoicon", "drawbox", "markbox", "marks", "preview", "previewred", "copy",
+		"copyset", "lock", "wrongblocks");
+	private static final java.util.regex.Pattern POSITION = java.util.regex.Pattern.compile("(-?\\d+),(-?\\d+),(-?\\d+)");
+
+	/**
+	 * Writes {@code screenshots/<name>.boxes} beside the shot: the window's size and GUI scale; each of
+	 * {@link #SHOT_READS} as the driver gives it; for each read that names block positions, the window box the blocks
+	 * between its lowest and highest positions cover ("world <read> left top right bottom"), and for the wrong blocks
+	 * each block's own; then every text and tooltip background the last frame drew ({@link ScreenProbe#drawnAll}).
+	 */
+	private void writeShotBoxes(Minecraft mc, String name) {
+		List<String> out = new ArrayList<>();
+		out.add("window " + mc.getWindow().getWidth() + " " + mc.getWindow().getHeight() + " scale "
+			+ mc.getWindow().getGuiScale());
+		for (String read : SHOT_READS) {
+			String result;
+			try {
+				result = run(mc, read);
+			} catch (Throwable t) {
+				result = "ERROR " + t;
+			}
+			out.add(read + ": " + result);
+			if (mc.player == null || result.startsWith("ERROR")) {
+				continue;
+			}
+			java.util.regex.Matcher m = POSITION.matcher(result);
+			List<BlockPos> positions = new ArrayList<>();
+			while (m.find()) {
+				positions.add(new BlockPos(Integer.parseInt(m.group(1)), Integer.parseInt(m.group(2)),
+					Integer.parseInt(m.group(3))));
+			}
+			if (positions.isEmpty()) {
+				continue;
+			}
+			BlockPos min = positions.stream().reduce((p, q) -> new BlockPos(Math.min(p.getX(), q.getX()),
+				Math.min(p.getY(), q.getY()), Math.min(p.getZ(), q.getZ()))).orElseThrow();
+			BlockPos max = positions.stream().reduce((p, q) -> new BlockPos(Math.max(p.getX(), q.getX()),
+				Math.max(p.getY(), q.getY()), Math.max(p.getZ(), q.getZ()))).orElseThrow();
+			out.add("world " + read + " " + screenBox(mc, min, max));
+			if (read.equals("wrongblocks")) {
+				for (BlockPos pos : positions) {
+					out.add("world wrongblock " + pos.getX() + "," + pos.getY() + "," + pos.getZ() + " "
+						+ screenBox(mc, pos, pos));
+				}
+			}
+		}
+		out.addAll(ScreenProbe.drawnAll(mc));
+		try {
+			Path dir = mc.gameDirectory.toPath().resolve("screenshots");
+			Files.createDirectories(dir);
+			Files.write(dir.resolve(name + ".boxes"), out, StandardCharsets.UTF_8);
+		} catch (Exception e) {
+			throw new IllegalStateException(e);
 		}
 	}
 
@@ -1167,31 +1289,19 @@ public final class Driver implements ClientModInitializer {
 		return screen == null ? "none" : screen.getClass().getName();
 	}
 
-	/** Delete by aim's hold toward the erase, in percent, or -1 while it isn't counting or Aim is off. */
+	/** The ticks Delete's left button has been held toward the erase, or -1 while it isn't counting or Delete is off. */
 	private static int erasing() throws Exception {
-		ControlsLine.AimState state = session() == null ? null : session().aimState();
-		return state == null ? -1 : state.erasing();
+		return session() == null ? -1 : session().eraseTicks();
 	}
 
-	/** The one ghost block, for the driver's {@code single}. */
-	private static String single() throws Exception {
-		SingleBlock block = session().single();
-		BlockPos pos = block.locked() ? block.pos() : null;
-		return (pos == null ? "unlocked" : "locked " + pos.getX() + "," + pos.getY() + "," + pos.getZ())
-			+ (BuildingPlannerClient.singleActive() ? " active" : " inactive");
-	}
-
-	/** The one ghost block's mode and its fixed row, for the driver's {@code singlerow}. */
-	private static String singleRow() throws Exception {
-		SingleBlock block = session().single();
-		if (!block.rowFixed()) {
-			return SingleBlock.mode() + " none";
+	/** The build modes' lock, for the driver's {@code lock}. */
+	private static String lock() throws Exception {
+		List<BlockPos> locked = EffortlessShapes.lockedPositions(session().lock());
+		StringBuilder text = new StringBuilder(locked.isEmpty() ? "unlocked" : "locked");
+		for (BlockPos pos : locked) {
+			text.append(' ').append(pos.getX()).append(',').append(pos.getY()).append(',').append(pos.getZ());
 		}
-		List<BlockPos> row = block.row();
-		BlockPos first = row.getFirst();
-		BlockPos last = row.getLast();
-		return SingleBlock.mode() + " " + row.size() + " " + first.getX() + "," + first.getY() + "," + first.getZ() + ".."
-			+ last.getX() + "," + last.getY() + "," + last.getZ();
+		return text.append(BuildingPlannerClient.lockActive() ? " active" : " inactive").toString();
 	}
 
 	/** The conditions {@code await} takes. */
@@ -1212,12 +1322,11 @@ public final class Driver implements ClientModInitializer {
 			case "tile" -> String.valueOf(tile(Integer.parseInt(a[1]), Integer.parseInt(a[2]))).equals(a[3]);
 			case "glow" -> glows().contains(what.substring(5));
 			case "copy" -> copy().startsWith(what.substring(5));
-			case "row" -> row().startsWith(what.substring(4));
+			case "set" -> set().startsWith(what.substring(4));
 			case "copycolour" -> copyColour().equals(what.substring(11));
 			case "sprint" -> mc.options.keySprint.isDown() == Boolean.parseBoolean(a[1]);
 			case "preview" -> PreviewProbe.positions().equals(what.substring(8));
-			case "single" -> single().equals(what.substring(7));
-			case "singlerow" -> singleRow().equals(what.substring(10));
+			case "lock" -> lock().equals(what.substring(5));
 			case "turned" -> FrameProbe.turned();
 			case "framestimed" -> FrameProbe.timed();
 			case "erasing" -> String.valueOf(erasing()).equals(a[1]);
@@ -1243,7 +1352,7 @@ public final class Driver implements ClientModInitializer {
 				case "glow" -> glows();
 				case "erasing" -> String.valueOf(erasing());
 				case "copy" -> copy();
-				case "row" -> row();
+				case "set" -> set();
 				case "copycolour" -> copyColour();
 				case "layer" -> LayerProbe.compare(Minecraft.getInstance().gameDirectory.toPath().resolve(a[2]));
 				case "listfile" -> "file " + ListProbe.lastCounted(Minecraft.getInstance().gameDirectory.toPath()
@@ -1451,7 +1560,7 @@ public final class Driver implements ClientModInitializer {
 	}
 
 	/**
-	 * The colour of the box Building Planner draws for the copy at the aim or the one ghost block, as
+	 * The colour of the box Building Planner draws for the copy at the aim or the build modes' locked positions, as
 	 * {@code copycolour} gives it.
 	 */
 	private static String copyColour() throws Exception {
@@ -1464,20 +1573,20 @@ public final class Driver implements ClientModInitializer {
 	}
 
 	/**
-	 * The zoop's row at the copy: {@code none} while no row is fixed, otherwise how many copies it has, how many of
-	 * Litematica's placements are the copy's or its row's, with the mirrors and rotations they have (one, when every copy
+	 * The copy's set: {@code none} while no set is fixed, otherwise how many copies it has, how many of
+	 * Litematica's placements are the copy's or its set's, with the mirrors and rotations they have (one, when every copy
 	 * is turned alike), then each copy's box, the first's first: {@code 2 copies, 2 placements NONE NONE:
 	 * 4,-60,20..6,-59,21 ; 7,-60,20..9,-59,21}.
 	 */
-	private static String row() throws Exception {
+	private static String set() throws Exception {
 		if (session() == null) {
 			return "nosession";
 		}
 		Clipboard clipboard = clipboard();
-		if (!clipboard.rowFixed()) {
+		if (!clipboard.setFixed()) {
 			return "none";
 		}
-		List<CopyPlacement.Spot> spots = clipboard.rowSpots();
+		List<CopyPlacement.Spot> spots = clipboard.setSpots();
 		List<SchematicPlacement> placements = DataManager.getSchematicPlacementManager().getAllSchematicsPlacements()
 			.stream().filter(clipboard::holds).toList();
 		String turns = placements.stream().map(p -> p.getMirror() + " " + p.getRotation()).distinct()

@@ -20,6 +20,7 @@ import nl.requios.effortlessbuilding.buildpipeline.BuildPipelineClient;
 import nl.requios.effortlessbuilding.modifier.ArrayModifier;
 import nl.requios.effortlessbuilding.modifier.MirrorModifier;
 import nl.requios.effortlessbuilding.modifier.ModifierSystem;
+import nl.requios.effortlessbuilding.screen.ClientConfigScreen;
 import nl.requios.effortlessbuilding.utilities.BreakDisplayTracker;
 
 /**
@@ -33,6 +34,11 @@ final class EffortlessDriver {
 	/** Effortless Building's build mode, as its radial menu sets it. */
 	static void mode(String mode) {
 		BuildModes.CLIENT.setBuildMode(BuildModeEnum.valueOf(mode));
+	}
+
+	/** Opens Effortless Building's "Visual Settings" screen, as its radial menu's button does. */
+	static void visualSettings(Minecraft mc) {
+		mc.setScreenAndShow(new ClientConfigScreen());
 	}
 
 	/** Effortless Building's build mode. */
@@ -99,6 +105,19 @@ final class EffortlessDriver {
 		return selected.isEmpty() ? "none" : String.join(" ", selected);
 	}
 
+	/**
+	 * The window position on the radial menu's ring segment of {@code mode}, 45 GUI pixels from the menu's middle along
+	 * the segment's middle line, between the coloured category line (30 to 32) and the ring's outer edge (65).
+	 */
+	static String segmentAt(Minecraft mc, String mode) {
+		double slice = 2 * Math.PI / BuildModeEnum.values().length;
+		double angle = (BuildModeEnum.valueOf(mode).ordinal() + 0.5) * slice - Math.PI / 2;
+		double scale = mc.getWindow().getGuiScale();
+		int x = (int) (mc.getWindow().getWidth() / 2.0 + Math.cos(angle) * 45 * scale);
+		int y = (int) (mc.getWindow().getHeight() / 2.0 + Math.sin(angle) * 45 * scale);
+		return x + " " + y;
+	}
+
 	/** A box on the screen, in GUI pixels, with what it is. */
 	private record Box(String what, double left, double top, double right, double bottom) {
 		boolean meets(Box other) {
@@ -116,10 +135,11 @@ final class EffortlessDriver {
 	 * each other, the speed sliders, and everything Effortless Building 4.3's {@code RadialMenu} draws, wherever the
 	 * pointer is and whichever mode is chosen. Its numbers are that class's: the ring's outer edge 65 from the middle,
 	 * the side buttons 20 across at {@code buttonDistance} 105, the left-hand ones in rows 13 above and below the
-	 * middle, each mode's options at 105 + 26 j right of the middle in rows -13 + 39 i, with their names 96 right and
-	 * -37 + 39 i down, a hovered mode's name 75 out along its slice, as {@code drawTexts} places it, its description 100
-	 * below the middle, and the "Effortless Building" mark in the bottom right corner. The menu has reached its full
-	 * size, as it does a moment after it opens.
+	 * middle (but for "Functional Settings" under the wrench, which hook E34 leaves out during a session), each mode's
+	 * options at 105 + 26 j right of the middle in rows -13 + 39 i, with their names 96 right and -37 + 39 i down, a
+	 * hovered mode's name 75 out along its slice, as {@code drawTexts} places it, its description 100 below the middle,
+	 * and the "Effortless Building" mark in the bottom right corner. The menu has reached its full size, as it does a
+	 * moment after it opens.
 	 */
 	static String radialConflicts(Screen screen) {
 		Font font = Minecraft.getInstance().font;
@@ -135,7 +155,7 @@ final class EffortlessDriver {
 					w.getX() + w.getWidth(), w.getY() + w.getHeight()));
 			}
 		}
-		for (int[] button : new int[][] {{-157, -13}, {-131, -13}, {-105, -13}, {-157, 13}, {-131, 13}, {-105, 13}}) {
+		for (int[] button : new int[][] {{-157, -13}, {-131, -13}, {-105, -13}, {-131, 13}, {-105, 13}}) {
 			theirs.add(new Box("Effortless Building's button at " + button[0] + "," + button[1], mx + button[0] - 10,
 				my + button[1] - 10, mx + button[0] + 10, my + button[1] + 10));
 		}

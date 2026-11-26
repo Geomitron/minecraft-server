@@ -22,11 +22,11 @@ import net.minecraft.world.phys.Vec3;
 import org.joml.Vector4f;
 
 /**
- * Delete by aim's sweep (see "Delete by aim"): each frame while Aim is on, with no screen open and Minecraft's sprint key
- * held, it aims as hook E9 aims, from where the player aims from ({@link Aim}), at ghost blocks up to
- * {@link BoxCorners#REACH} from the eyes, a real block in front of a ghost block stopping the aim, along the look
- * directions between the last frame's and this one's ({@link DeleteMarks#swept}), and marks or unmarks each ghost block
- * it meets. It runs where MaLiLib draws after the world, once a frame, registered before the marks' outline
+ * Delete's sweep (see "Delete": "Marking by sweeping"): each frame while Delete is on, with no screen open, Minecraft's
+ * sprint key held, and neither the left button down nor Delete's box drawn ({@link MarkBox}), it aims as hook E9 aims,
+ * from where the player aims from ({@link Aim}), at ghost blocks up to {@link BoxCorners#REACH} from the eyes, a real
+ * block in front of a ghost block stopping the aim, along the look directions between the last frame's and this one's
+ * ({@link DeleteMarks#swept}), and marks or unmarks each ghost block it meets. It runs where MaLiLib draws after the world, once a frame, registered before the marks' outline
  * ({@link MarksOutline}), which then draws the marks as they stand.
  */
 final class DeleteAim implements IRenderer {
@@ -56,7 +56,7 @@ final class DeleteAim implements IRenderer {
 		Minecraft mc = Minecraft.getInstance();
 		Entity from = Aim.entity();
 		DeleteMarks marks = now.marks();
-		if (!now.aimOn() || mc.gui.screen() != null || !mc.options.keySprint.isDown() || from == null
+		if (!now.deleteOn() || mc.gui.screen() != null || !mc.options.keySprint.isDown() || from == null
 			|| mc.level == null) {
 			marks.endSweep();
 			last = null;
@@ -65,6 +65,11 @@ final class DeleteAim implements IRenderer {
 		if (!marks.sweeping()) {
 			marks.startSweep();
 			last = null;
+		}
+		// The hold goes on, but while the left button is down or the box is drawn, the sweep marks nothing.
+		if (mc.options.keyAttack.isDown() || now.markBox().on()) {
+			last = null;
+			return;
 		}
 		profiler.push("buildingplanner_delete_aim");
 		DeleteMarks.View view = new DeleteMarks.View(from.getEyePosition(), from.getLookAngle());

@@ -8,7 +8,9 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.MultiLineTextWidget;
+import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsList;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsScreen;
@@ -38,6 +40,12 @@ public final class ScreenProbe {
 	/** The same for the components. */
 	private static List<DrawnComponent> currentComponents = new ArrayList<>();
 	private static List<DrawnComponent> lastComponents = List.of();
+	/** The same for the tooltips set for the next frame, each its lines joined by spaces. */
+	private static List<String> currentTooltips = new ArrayList<>();
+	private static List<String> lastTooltips = List.of();
+	/** The same for each tooltip background drawn, as its visible frame: left, top, right and bottom in GUI pixels. */
+	private static List<int[]> currentTooltipBackgrounds = new ArrayList<>();
+	private static List<int[]> lastTooltipBackgrounds = List.of();
 
 	private ScreenProbe() {
 	}
@@ -52,12 +60,49 @@ public final class ScreenProbe {
 		currentComponents.add(new DrawnComponent(text, x, y, font.width(text)));
 	}
 
+	/** A tooltip of these lines is being set for the next frame. */
+	public static void tooltip(List<Component> lines) {
+		currentTooltips.add(lines.stream().map(Component::getString).collect(Collectors.joining(" ")));
+	}
+
+	/**
+	 * A tooltip background is being drawn around content {@code width} by {@code height} at {@code x}, {@code y}; its
+	 * frame shows 3 outside that ({@code TooltipRenderUtil.extractTooltipBackground}).
+	 */
+	public static void tooltipBackground(int x, int y, int width, int height) {
+		currentTooltipBackgrounds.add(new int[] {x - 3, y - 3, x + width + 3, y + height + 3});
+	}
+
 	/** A frame has been drawn. */
 	public static void frameDrawn() {
 		last = current;
 		current = new ArrayList<>();
 		lastComponents = currentComponents;
 		currentComponents = new ArrayList<>();
+		lastTooltips = currentTooltips;
+		currentTooltips = new ArrayList<>();
+		lastTooltipBackgrounds = currentTooltipBackgrounds;
+		currentTooltipBackgrounds = new ArrayList<>();
+	}
+
+	/**
+	 * Every text and tooltip background the last frame drew, one a line, for outlining them in a screenshot: "text",
+	 * "component" or "tooltip", then the window box (left top right bottom), then the text.
+	 */
+	static List<String> drawnAll(Minecraft mc) {
+		double scale = mc.getWindow().getGuiScale();
+		List<String> out = new ArrayList<>();
+		for (Drawn d : last) {
+			out.add("text " + box(scale, d.x(), d.y(), d.x() + d.width(), d.y() + FONT_HEIGHT) + " " + d.text());
+		}
+		for (DrawnComponent d : lastComponents) {
+			out.add("component " + box(scale, d.x(), d.y(), d.x() + d.width(), d.y() + FONT_HEIGHT) + " "
+				+ d.text().getString());
+		}
+		for (int[] b : lastTooltipBackgrounds) {
+			out.add("tooltip " + box(scale, b[0], b[1], b[2], b[3]));
+		}
+		return out;
 	}
 
 	/**
@@ -108,6 +153,22 @@ public final class ScreenProbe {
 			d.y() + FONT_HEIGHT) + " [" + d.text().getString() + "]").collect(Collectors.joining(" | "));
 	}
 
+	/** Each tooltip the last frame set, in the order set, separated by " | ", or none. */
+	static String tooltips() {
+		return lastTooltips.isEmpty() ? "none" : String.join(" | ", lastTooltips);
+	}
+
+	/**
+	 * The window box (left top right bottom: its text's own, one line high) of each component the last frame drew whose
+	 * text is {@code text}, separated by " | ", or none; as the held item's name and the mode's name beside the hotbar.
+	 */
+	static String drawnBoxes(Minecraft mc, String text) {
+		double scale = mc.getWindow().getGuiScale();
+		List<String> boxes = lastComponents.stream().filter(d -> d.text().getString().equals(text))
+			.map(d -> box(scale, d.x(), d.y(), d.x() + d.width(), d.y() + FONT_HEIGHT)).toList();
+		return boxes.isEmpty() ? "none" : String.join(" | ", boxes);
+	}
+
 	/** Each string drawn in the last frame, separated by " | ". */
 	static String drawnTexts() {
 		return last.stream().map(Drawn::text).collect(Collectors.joining(" | "));
@@ -123,6 +184,27 @@ public final class ScreenProbe {
 		for (Drawn d : last) {
 			if (d.y() == screen.height - 10 && d.x() + d.width() == screen.width - 4) {
 				return d.text() + " | " + box(scale, d.x(), d.y(), d.x() + d.width(), d.y() + FONT_HEIGHT);
+			}
+		}
+		return "none";
+	}
+
+	/**
+	 * The text of the widget on the open screen to the right of the label the last frame drew as {@code label}, on its
+	 * row (the label's top within the widget's height), then the widget's centre in window pixels; or none.
+	 */
+	static String settingRow(Minecraft mc, String label) {
+		double scale = mc.getWindow().getGuiScale();
+		for (DrawnComponent d : lastComponents) {
+			if (!d.text().getString().equals(label)) {
+				continue;
+			}
+			for (GuiEventListener child : mc.gui.screen().children()) {
+				if (child instanceof AbstractWidget w && w.visible && w.getX() > d.x() + d.width() && w.getY() <= d.y()
+					&& d.y() < w.getY() + w.getHeight()) {
+					return w.getMessage().getString() + " " + (int) ((w.getX() + w.getWidth() / 2.0) * scale) + " "
+						+ (int) ((w.getY() + w.getHeight() / 2.0) * scale);
+				}
 			}
 		}
 		return "none";

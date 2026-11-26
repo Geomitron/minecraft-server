@@ -19,7 +19,7 @@ import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-/** Erasing ghost blocks: the Delete box's count and erase edit, and hook E2's filter. */
+/** Erasing ghost blocks: Delete's count and erase edit, and hook E2's filter. */
 class GhostEraseTest {
 	private static BlockState stone;
 	private static BlockState air;
@@ -35,62 +35,6 @@ class GhostEraseTest {
 		lowerDoor = Blocks.OAK_DOOR.defaultBlockState().setValue(BlockStateProperties.DOUBLE_BLOCK_HALF,
 			DoubleBlockHalf.LOWER);
 		upperDoor = lowerDoor.setValue(BlockStateProperties.DOUBLE_BLOCK_HALF, DoubleBlockHalf.UPPER);
-	}
-
-	@Test
-	void theBoxErasesOnlyThePositionsWithGhostBlocks() {
-		Layer layer = new Layer();
-		layer.set(new BlockPos(0, 64, 0), stone);
-		layer.set(new BlockPos(3, 66, 2), Blocks.GLASS.defaultBlockState());
-		layer.set(new BlockPos(5, 64, 0), stone);
-
-		Map<BlockPos, BlockState> erase = GhostErase.inBox(layer, new BlockPos(0, 64, 0), new BlockPos(4, 70, 4));
-
-		assertEquals(Map.of(new BlockPos(0, 64, 0), air, new BlockPos(3, 66, 2), air), erase);
-	}
-
-	@Test
-	void theBoxErasesBothHalvesOfADoorItCuts() {
-		Layer layer = new Layer();
-		layer.set(new BlockPos(1, 64, 1), lowerDoor);
-		layer.set(new BlockPos(1, 65, 1), upperDoor);
-
-		assertEquals(Set.of(new BlockPos(1, 64, 1), new BlockPos(1, 65, 1)),
-			GhostErase.inBox(layer, new BlockPos(0, 60, 0), new BlockPos(2, 64, 2)).keySet(), "the lower half in the box");
-		assertEquals(Set.of(new BlockPos(1, 64, 1), new BlockPos(1, 65, 1)),
-			GhostErase.inBox(layer, new BlockPos(0, 65, 0), new BlockPos(2, 70, 2)).keySet(), "the upper half in the box");
-	}
-
-	@Test
-	void theBoxErasesBothPartsOfABed() {
-		Layer layer = new Layer();
-		BlockState foot = Blocks.STRAW_BED.defaultBlockState().setValue(BlockStateProperties.HORIZONTAL_FACING,
-			Direction.EAST).setValue(BlockStateProperties.BED_PART, BedPart.FOOT);
-		layer.set(new BlockPos(0, 64, 0), foot);
-		layer.set(new BlockPos(1, 64, 0), foot.setValue(BlockStateProperties.BED_PART, BedPart.HEAD));
-
-		assertEquals(Set.of(new BlockPos(0, 64, 0), new BlockPos(1, 64, 0)),
-			GhostErase.inBox(layer, new BlockPos(0, 64, 0), new BlockPos(0, 64, 0)).keySet());
-	}
-
-	@Test
-	void anotherBlockWhereTheOtherHalfWouldBeStays() {
-		Layer layer = new Layer();
-		layer.set(new BlockPos(1, 64, 1), lowerDoor);
-		layer.set(new BlockPos(1, 65, 1), stone);
-		layer.set(new BlockPos(2, 64, 1), lowerDoor);
-		layer.set(new BlockPos(2, 65, 1), lowerDoor);
-
-		assertEquals(Set.of(new BlockPos(1, 64, 1), new BlockPos(2, 64, 1)),
-			GhostErase.inBox(layer, new BlockPos(1, 64, 1), new BlockPos(2, 64, 1)).keySet());
-	}
-
-	@Test
-	void aBoxWithoutGhostBlocksErasesNothing() {
-		Layer layer = new Layer();
-		layer.set(new BlockPos(20, 64, 20), stone);
-
-		assertTrue(GhostErase.inBox(layer, new BlockPos(0, 60, 0), new BlockPos(10, 70, 10)).isEmpty());
 	}
 
 	@Test

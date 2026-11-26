@@ -1,7 +1,6 @@
 package dev.buildingplanner.client;
 
 import dev.buildingplanner.input.CopyPlacement;
-import dev.buildingplanner.input.CopyRow;
 import dev.buildingplanner.input.CopyPlacement.Spot;
 import dev.buildingplanner.plan.Turn;
 import fi.dy.masa.litematica.data.DataManager;
@@ -36,8 +35,8 @@ import net.minecraft.world.level.block.state.BlockState;
  * list, as for tiles. At the aim, the placement is in Litematica, and its origin is set so that the copy, as it's
  * turned and mirrored, sits in the box {@link CopyPlacement} and {@code PasteBoxes} give for the player's aim. Put
  * away, it's out of Litematica, and the same placement, with its schematic, turn and mirror, comes back to the aim.
- * Locked, it stays where it is instead of following the aim, and the nudge keys move it. In Zoop and Vertical, a row
- * fixed at the copy has the row's other copies as placements of the same schematic, which Litematica draws as it draws
+ * Locked, it stays where it is instead of following the aim, and the nudge keys move it. In Line, Wall and Floor, a set
+ * fixed at the copy has the set's other copies as placements of the same schematic, which Litematica draws as it draws
  * the copy, and which hooks L4 and L5 treat as the copy.
  */
 final class Clipboard {
@@ -46,14 +45,14 @@ final class Clipboard {
 	/** The most recent copy, at the aim or put away; null before the first copy. */
 	private SchematicPlacement placement;
 	private boolean atAim;
-	/** Whether the copy stays where it is, not following the aim; a paste keeps it locked. */
+	/** Whether the copy stays where it is, not following the aim; a paste unlocks it. */
 	private boolean locked;
-	/** Whether a zoop's first click has fixed the copy as the start of a row. */
-	private boolean rowFixed;
-	/** The row's copies after the first, while a row is fixed, in the row's order. */
-	private final List<SchematicPlacement> row = new ArrayList<>();
-	/** The boxes of the row's copies, the copy's own first, as {@link #showRow} last set them. */
-	private List<Spot> rowSpots = List.of();
+	/** Whether the first click in Line, Wall or Floor has fixed the copy as the first of a set. */
+	private boolean setFixed;
+	/** The set's copies after the first, while a set is fixed, in the set's order. */
+	private final List<SchematicPlacement> others = new ArrayList<>();
+	/** The boxes of the set's copies, the copy's own first, as {@link #showSet} last set them. */
+	private List<Spot> setSpots = List.of();
 	/** {@link #blocksFromCorner} as last worked out, for this placement turned this way; null before. */
 	private Map<BlockPos, BlockState> fromCorner;
 	private SchematicPlacement fromCornerPlacement;
@@ -81,55 +80,60 @@ final class Clipboard {
 		}
 	}
 
+	/** Unlocks the copy, so it follows the aim again. */
+	void unlock() {
+		locked = false;
+	}
+
 	/** Moves the copy one block that way, as it's turned and mirrored. */
 	void nudge(Direction direction) {
 		moveTo(spot().min().relative(direction));
 	}
 
-	/** Once a tick: the copy counts as put away once Litematica no longer has its placement, and its row goes. */
+	/** Once a tick: the copy counts as put away once Litematica no longer has its placement, and its set goes. */
 	void tick() {
 		if (atAim && !manager().getAllSchematicsPlacements().contains(placement)) {
 			atAim = false;
-			dropRow();
+			dropSet();
 		}
 	}
 
-	/** Whether a zoop's first click has fixed the copy at the aim as the start of a row. */
-	boolean rowFixed() {
-		return atAim && rowFixed;
+	/** Whether the first click in Line, Wall or Floor has fixed the copy at the aim as the first of a set. */
+	boolean setFixed() {
+		return atAim && setFixed;
 	}
 
-	/** Fixes the copy at the aim where it is, as the first copy of a row. */
-	void fixRow() {
+	/** Fixes the copy at the aim where it is, as the first copy of a set. */
+	void fixSet() {
 		if (atAim) {
-			rowFixed = true;
-			rowSpots = List.of(spot());
+			setFixed = true;
+			setSpots = List.of(spot());
 		}
 	}
 
 	/**
-	 * Shows the row's copies in the boxes {@code spots}, the first being the copy's own: adds or removes placements so
-	 * the row has as many, turns and mirrors each as the copy is, and moves each into its box. Each placement goes into
+	 * Shows the set's copies in the boxes {@code spots}, the first being the copy's own: adds or removes placements so
+	 * the set has as many, turns and mirrors each as the copy is, and moves each into its box. Each placement goes into
 	 * Litematica before it changes, as in {@link #bringBack}.
 	 */
-	void showRow(List<Spot> spots) {
-		if (!rowFixed()) {
+	void showSet(List<Spot> spots) {
+		if (!setFixed()) {
 			return;
 		}
-		while (row.size() > spots.size() - 1) {
-			manager().removeSchematicPlacement(row.removeLast());
+		while (others.size() > spots.size() - 1) {
+			manager().removeSchematicPlacement(others.removeLast());
 		}
-		while (row.size() < spots.size() - 1) {
+		while (others.size() < spots.size() - 1) {
 			SchematicPlacement copy = SchematicPlacement.createFor(placement.getSchematic(), placement.getOrigin(),
 				placement.getName(), true, true);
 			// Known as the copy before it's added, so hook L4 keeps Litematica from selecting it.
-			row.add(copy);
+			others.add(copy);
 			manager().addSchematicPlacement(copy, false);
 		}
 		Turn turn = turnNow();
 		Vec3i size = size();
-		for (int i = 0; i < row.size(); i++) {
-			SchematicPlacement copy = row.get(i);
+		for (int i = 0; i < others.size(); i++) {
+			SchematicPlacement copy = others.get(i);
 			if (copy.getMirror() != turn.mirror()) {
 				copy.setMirror(turn.mirror(), LITEMATICA_MESSAGES);
 			}
@@ -142,31 +146,31 @@ final class Clipboard {
 					message -> InfoUtils.showGuiOrInGameMessage(Message.MessageType.WARNING, message));
 			}
 		}
-		rowSpots = List.copyOf(spots);
+		setSpots = List.copyOf(spots);
 	}
 
-	/** The boxes of the fixed row's copies, the copy's own first; the copy's box alone without a row. */
-	List<Spot> rowSpots() {
-		return rowFixed() ? rowSpots : List.of(spot());
+	/** The boxes of the fixed set's copies, the copy's own first; the copy's box alone without a set. */
+	List<Spot> setSpots() {
+		return setFixed() ? setSpots : List.of(spot());
 	}
 
-	/** Drops the row's other copies, leaving the copy at the aim. */
-	void dropRow() {
-		for (SchematicPlacement copy : row) {
+	/** Drops the set's other copies, leaving the copy at the aim. */
+	void dropSet() {
+		for (SchematicPlacement copy : others) {
 			manager().removeSchematicPlacement(copy);
 		}
-		row.clear();
-		rowFixed = false;
-		rowSpots = List.of();
+		others.clear();
+		setFixed = false;
+		setSpots = List.of();
 	}
 
 	/**
-	 * The blocks of every copy in the row, as {@link #worldBlocks} gives the copy's own; the copies touch without
+	 * The blocks of every copy in the set, as {@link #worldBlocks} gives the copy's own; the copies touch without
 	 * overlapping, so no position comes twice.
 	 */
-	Map<BlockPos, BlockState> rowBlocks() {
+	Map<BlockPos, BlockState> setBlocks() {
 		Map<BlockPos, BlockState> first = worldBlocks();
-		List<Spot> spots = rowSpots();
+		List<Spot> spots = setSpots();
 		BlockPos start = spots.getFirst().min();
 		Map<BlockPos, BlockState> blocks = new LinkedHashMap<>();
 		for (Spot spot : spots) {
@@ -176,18 +180,13 @@ final class Clipboard {
 		return blocks;
 	}
 
-	/** The box around every copy in the row. */
-	Spot rowBox() {
-		return CopyRow.box(rowSpots());
-	}
-
 	SchematicPlacement placement() {
 		return placement;
 	}
 
-	/** Whether the placement is the copy's, or one of its row's. */
+	/** Whether the placement is the copy's, or one of its set's. */
 	boolean holds(SchematicPlacement placement) {
-		return placement != null && (placement == this.placement || row.contains(placement));
+		return placement != null && (placement == this.placement || others.contains(placement));
 	}
 
 	/**
@@ -233,7 +232,7 @@ final class Clipboard {
 
 	/** Takes the copy out of Litematica, keeping it, as it's turned and mirrored, for {@link #bringBack}. */
 	void putAway() {
-		dropRow();
+		dropSet();
 		if (atAim()) {
 			manager().removeSchematicPlacement(placement);
 		}
@@ -342,7 +341,7 @@ final class Clipboard {
 		}
 		manager().removeSchematicPlacement(placement, false);
 		manager().addSchematicPlacement(placement, false);
-		for (SchematicPlacement copy : row) {
+		for (SchematicPlacement copy : others) {
 			manager().removeSchematicPlacement(copy, false);
 			manager().addSchematicPlacement(copy, false);
 		}

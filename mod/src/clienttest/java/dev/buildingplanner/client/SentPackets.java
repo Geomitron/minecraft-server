@@ -3,16 +3,22 @@ package dev.buildingplanner.client;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.HashSet;
 import java.util.concurrent.ConcurrentSkipListSet;
+
+import dev.buildingplanner.sync.LayerChange;
+import net.minecraft.core.BlockPos;
 
 /**
  * The custom payloads this client has sent to the server, for the driver's {@code ebsent} (the kinds of Effortless
  * Building packet) and {@code holdlog} (the client ticks Building Planner's edits went out on, and how long each mouse
- * button was down).
+ * button was down, and how many different blocks the edits changed).
  */
 public final class SentPackets {
 	private static final Set<String> EFFORTLESS = new ConcurrentSkipListSet<>();
 	private static final List<Integer> EDITS = new ArrayList<>();
+	/** The blocks the edits sent so far changed. */
+	private static final Set<BlockPos> CHANGED = new HashSet<>();
 	private static volatile int tick;
 	private static int useDown;
 	private static int attackDown;
@@ -23,12 +29,15 @@ public final class SentPackets {
 	}
 
 	/** A packet with this namespace and path went out on the connection. */
-	public static void sent(String namespace, String path) {
+	public static void sent(String namespace, String path, List<LayerChange> changes) {
 		if (namespace.equals("effortlessbuilding")) {
 			EFFORTLESS.add(path);
 		} else if (namespace.equals("buildingplanner") && path.equals("edit")) {
 			synchronized (EDITS) {
 				EDITS.add(tick);
+				for (LayerChange change : changes) {
+					CHANGED.add(change.pos());
+				}
 			}
 		}
 	}
@@ -67,6 +76,7 @@ public final class SentPackets {
 	static void resetHoldLog() {
 		synchronized (EDITS) {
 			EDITS.clear();
+			CHANGED.clear();
 			useDown = 0;
 			attackDown = 0;
 		}
@@ -74,7 +84,9 @@ public final class SentPackets {
 
 	/**
 	 * The hold log: ticks the use and attack buttons were down, how many edits went out, the gaps in ticks between them,
-	 * for example {@code use=41 attack=0 edits=11 gaps=4,4,4,4,4,4,4,4,4,4}.
+	 * for example {@code use=41 attack=0 edits=11 blocks=11 gaps=4,4,4,4,4,4,4,4,4,4}. {@code blocks} is the number of
+	 * different blocks the edits changed: it falls short of {@code edits} when two repeats edit the same block, as a
+	 * walk paced unevenly by the game's commands lets them.
 	 */
 	static String holdLog() {
 		synchronized (EDITS) {
@@ -82,7 +94,8 @@ public final class SentPackets {
 			for (int i = 1; i < EDITS.size(); i++) {
 				gaps.add(Integer.toString(EDITS.get(i) - EDITS.get(i - 1)));
 			}
-			return "use=" + useDown + " attack=" + attackDown + " edits=" + EDITS.size() + " gaps=" + String.join(",", gaps);
+			return "use=" + useDown + " attack=" + attackDown + " edits=" + EDITS.size() + " blocks=" + CHANGED.size()
+				+ " gaps=" + String.join(",", gaps);
 		}
 	}
 

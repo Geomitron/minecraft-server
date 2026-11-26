@@ -53,8 +53,8 @@ class CopyColourTest {
 		return List.of(new Spot(new BlockPos(x, y, z), SIZE));
 	}
 
-	private static Shown colour(List<Spot> row, Layer layer, int maxEditBlocks) {
-		return CopyColour.of(row, blocks.size(), WORLD, maxEditBlocks, () -> CopyColour.overGhosts(row, blocks, layer));
+	private static Shown colour(List<Spot> set, Layer layer, int maxEditBlocks) {
+		return CopyColour.of(set, blocks.size(), WORLD, maxEditBlocks, () -> CopyColour.overGhosts(set, blocks, layer));
 	}
 
 	@Test
@@ -87,13 +87,13 @@ class CopyColourTest {
 	}
 
 	@Test
-	void aRowIsYellowWhenAnyOfItsCopiesWouldReplaceAGhostBlock() {
-		List<Spot> row = List.of(new Spot(new BlockPos(0, 0, 0), SIZE), new Spot(new BlockPos(2, 0, 0), SIZE),
+	void aSetIsYellowWhenAnyOfItsCopiesWouldReplaceAGhostBlock() {
+		List<Spot> set = List.of(new Spot(new BlockPos(0, 0, 0), SIZE), new Spot(new BlockPos(2, 0, 0), SIZE),
 			new Spot(new BlockPos(4, 0, 0), SIZE));
 		Layer layer = new Layer();
 		layer.set(new BlockPos(4, 0, 0), dirt);
-		assertEquals(Shown.YELLOW, colour(row, layer, 100));
-		assertEquals(Shown.BLUE, colour(row.subList(0, 2), layer, 100));
+		assertEquals(Shown.YELLOW, colour(set, layer, 100));
+		assertEquals(Shown.BLUE, colour(set.subList(0, 2), layer, 100));
 	}
 
 	@Test
@@ -119,20 +119,20 @@ class CopyColourTest {
 	}
 
 	@Test
-	void aRowOverTheBlockCapIsRed() {
+	void aSetOverTheBlockCapIsRed() {
 		// 4 copies of 2 blocks: 8, against caps of 7 and 8.
-		List<Spot> row = List.of(new Spot(new BlockPos(0, 0, 0), SIZE), new Spot(new BlockPos(2, 0, 0), SIZE),
+		List<Spot> set = List.of(new Spot(new BlockPos(0, 0, 0), SIZE), new Spot(new BlockPos(2, 0, 0), SIZE),
 			new Spot(new BlockPos(4, 0, 0), SIZE), new Spot(new BlockPos(6, 0, 0), SIZE));
-		assertEquals(Shown.red(Refusal.TOO_MANY_BLOCKS), colour(row, new Layer(), 7));
-		assertEquals(Shown.BLUE, colour(row, new Layer(), 8));
-		assertEquals(Shown.BLUE, colour(row.subList(0, 3), new Layer(), 7));
+		assertEquals(Shown.red(Refusal.TOO_MANY_BLOCKS), colour(set, new Layer(), 7));
+		assertEquals(Shown.BLUE, colour(set, new Layer(), 8));
+		assertEquals(Shown.BLUE, colour(set.subList(0, 3), new Layer(), 7));
 	}
 
 	@Test
 	void aRowReachingPastTheBuildHeightIsRedThoughItsFirstCopyIsnt() {
-		List<Spot> row = List.of(new Spot(new BlockPos(0, 317, 0), SIZE), new Spot(new BlockPos(0, 319, 0), SIZE));
-		assertEquals(Shown.red(Refusal.BUILD_HEIGHT), colour(row, new Layer(), 100));
-		assertEquals(Shown.BLUE, colour(row.subList(0, 1), new Layer(), 100));
+		List<Spot> set = List.of(new Spot(new BlockPos(0, 317, 0), SIZE), new Spot(new BlockPos(0, 319, 0), SIZE));
+		assertEquals(Shown.red(Refusal.BUILD_HEIGHT), colour(set, new Layer(), 100));
+		assertEquals(Shown.BLUE, colour(set.subList(0, 1), new Layer(), 100));
 	}
 
 	@Test
@@ -159,14 +159,14 @@ class CopyColourTest {
 
 	@Test
 	void aRowOfOneBlocksIsYellowWhereAnyOfItsBlocksWouldReplaceADifferentGhostBlockAndRedWherePartIsOutside() {
-		List<BlockPos> row = List.of(new BlockPos(0, 0, 0), new BlockPos(1, 0, 0), new BlockPos(2, 0, 0));
-		// A mix's blocks along the row: the ghost glass at the middle is the glass placed there, the dirt at the end isn't.
-		Map<BlockPos, BlockState> placed = Map.of(row.get(0), stone, row.get(1), glass, row.get(2), stone);
+		List<BlockPos> set = List.of(new BlockPos(0, 0, 0), new BlockPos(1, 0, 0), new BlockPos(2, 0, 0));
+		// A mix's blocks along the set: the ghost glass at the middle is the glass placed there, the dirt at the end isn't.
+		Map<BlockPos, BlockState> placed = Map.of(set.get(0), stone, set.get(1), glass, set.get(2), stone);
 		Layer layer = new Layer();
-		layer.set(row.get(1), glass);
-		assertEquals(Shown.BLUE, CopyColour.ofBlocks(row, placed, WORLD, 100, layer));
-		layer.set(row.get(2), dirt);
-		assertEquals(Shown.YELLOW, CopyColour.ofBlocks(row, placed, WORLD, 100, layer));
+		layer.set(set.get(1), glass);
+		assertEquals(Shown.BLUE, CopyColour.ofBlocks(set, placed, WORLD, 100, layer));
+		layer.set(set.get(2), dirt);
+		assertEquals(Shown.YELLOW, CopyColour.ofBlocks(set, placed, WORLD, 100, layer));
 		List<BlockPos> crossing = List.of(new BlockPos(98, 0, 0), new BlockPos(99, 0, 0), new BlockPos(100, 0, 0));
 		assertEquals(Shown.red(Refusal.WORLD_BORDER), CopyColour.ofBlocks(crossing,
 			Map.of(crossing.get(0), stone, crossing.get(1), stone), WORLD, 100, new Layer()));

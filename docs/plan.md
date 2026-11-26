@@ -579,8 +579,12 @@ where a step says so. 0.7.0 keeps protocol version 5 and changes nothing on the 
 15. **Texts and screenshots for Geo**: every text steps 1 to 14 add or change (each controls line, "Change copy mode",
     "[Esc: exit mode]", the (i) text, the "Match ghost blocks" row and its tooltip, Delete's lines and messages)
     goes to Geo as editable text, with every step's screenshots, the changes outlined in red, each text following the
-    rule Geo approved for the game's texts (985 Q1 A). Geo's version is built in, with `ControlsLineTest` and
-    `step9.sh` checking each text exactly. The same step sets the version 0.7.0.
+    rule Geo approved for the game's texts (985 Q1 A; 1313). Geo's version is built in: no controls line has a label,
+    the tools' names ("Copy", "Material list", "Paste", "Delete") showing beside the hotbar in the build mode's name's place;
+    "Match ghost blocks" acts only while ghost blocks show, with Geo's tooltip; and the wrong blocks' outline through a
+    wall is drawn at 80% opacity. `ControlsLineTest` and `step9.sh` check each text exactly, `step9.sh` the name
+    beside the hotbar (and "Paste" with the copy at the aim), and `filled.sh` that a stair placed into a hidden ghost stair faces as the player does. The same
+    step sets the version 0.7.0, and the release request shows the changed parts in the game, outlined in red.
 16. **The release**: after Geo's approval, released as 0.6.0 was: `overlap.sh`, `filled.sh` and `import.sh` on the
     release commit; the GitHub release `building-planner-0.7.0`; then, in one sitting, the server (a backup of the
     world named for 0.7.0, the jar in `mods/` in place of 0.6.0's, and a restart whose log shows Building Planner
@@ -593,7 +597,7 @@ where a step says so. 0.7.0 keeps protocol version 5 and changes nothing on the 
 
 [building-planner.md](building-planner.md) is the spec: what players get, how each goal above is met, the technical
 design with every hook checked in the source, and what's unverified. Geo's decisions are above. The texts players see
-are in the wording Geo approved, except those marked as proposed for 0.7.0, which Geo edits in its step 15.
+are in the wording Geo approved, 0.7.0's in its step 15 (1313).
 
 ### Source evidence (read 2026-11-13)
 

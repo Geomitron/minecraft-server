@@ -1,27 +1,29 @@
 package dev.buildingplanner.client;
 
-import dev.buildingplanner.input.CopyMode;
-import dev.buildingplanner.input.CopyPlacement;
 import dev.buildingplanner.input.BlockTurn;
 import dev.buildingplanner.input.CopyColour;
-import dev.buildingplanner.input.CopyRow;
+import dev.buildingplanner.input.CopyMode;
 import dev.buildingplanner.input.DisablePreview;
+import dev.buildingplanner.input.GhostMatch;
 import dev.buildingplanner.input.MixRule;
-import dev.buildingplanner.input.SingleRule;
+import dev.buildingplanner.input.ShapeLock;
 import dev.buildingplanner.layer.GhostErase;
 import dev.buildingplanner.layer.OtherHalf;
+import dev.buildingplanner.look.ControlsLine;
 import dev.buildingplanner.mixin.effortless.BuildPipelineClientAccessor;
+import dev.buildingplanner.mixin.effortless.ThreeClicksBuildModeAccessor;
+import dev.buildingplanner.mixin.effortless.TwoClicksBuildModeAccessor;
 import dev.buildingplanner.mixin.minecraft.BlockItemInvoker;
 import dev.buildingplanner.server.PlaceTurns;
 import dev.buildingplanner.sync.EditKind;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.Vec3i;
-import net.minecraft.sounds.SoundSource;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
@@ -31,16 +33,20 @@ import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import nl.requios.effortlessbuilding.buildmode.BuildModeEnum;
 import nl.requios.effortlessbuilding.buildmode.BuildModes;
+import nl.requios.effortlessbuilding.buildmode.IBuildMode;
+import nl.requios.effortlessbuilding.buildmode.buildmodes.Floor;
+import nl.requios.effortlessbuilding.buildmode.buildmodes.Line;
+import nl.requios.effortlessbuilding.buildmode.buildmodes.Wall;
 import nl.requios.effortlessbuilding.buildpipeline.BuildPipeline;
 import nl.requios.effortlessbuilding.buildpipeline.BuildPipelineClient;
 import nl.requios.effortlessbuilding.config.ServerConfig;
+import nl.requios.effortlessbuilding.screen.RadialMenu;
 import nl.requios.effortlessbuilding.utilities.BlockEntry;
 import nl.requios.effortlessbuilding.utilities.BlockSet;
 
@@ -68,15 +74,44 @@ public final class EffortlessShapes {
 	}
 
 	/**
+	 * The block a set of copies reaches in Line, Wall or Floor: the block Effortless Building's {@code Line.findLine},
+	 * {@code Wall.findWall} or {@code Floor.findFloor} gives from {@code first}, the first copy's middle, with its reach
+	 * and its aim from the camera (hooks E25 and E26), as its preview finds a shape's second position; or null where it
+	 * finds none, and in Off.
+	 */
+	static BlockPos copyReach(CopyMode mode, BlockPos first) {
+		Player player = Minecraft.getInstance().player;
+		if (player == null) {
+			return null;
+		}
+		return switch (mode) {
+			case OFF -> null;
+			case LINE -> Line.findLine(player, first, true);
+			case WALL -> Wall.findWall(player, first, true);
+			case FLOOR -> Floor.findFloor(player, first, true);
+		};
+	}
+
+	/** Which shape is under way, for the build modes' line: none, one drawn with the place click, or the break click. */
+	static ControlsLine.Underway underway() {
+		BuildPipeline.BuildState state = BuildPipelineClient.getBuildState();
+		if (state == null) {
+			return ControlsLine.Underway.NONE;
+		}
+		return state == BuildPipeline.BuildState.BREAKING ? ControlsLine.Underway.BREAKING : ControlsLine.Underway.PLACING;
+	}
+
+	/**
 	 * Hook E1: the player finished a shape with the place click. Each valid entry gets the block Effortless Building
 	 * would place: the mix's (set by hook E5) or the held block, by its placement rules with the first click's face and
 	 * the facing of the player at the aim (Freecam's camera while it's on, see {@link Aim}), then the turn of the block in
 	 * hand while the turning controls are active ({@link HeldTurn}), then the shape's mirror and turn from the modifiers.
-	 * {@code first} is the hit the states come from: the shape's first click (E1), or the locked block's
-	 * ({@link SingleBlock#hit}); with none, the top face at the middle of the shape's first position.
+	 * {@code first} is the hit the states come from: the shape's first click (E1), which a locked position's hit is
+	 * (E9); with none, the top face at the middle of the shape's first position. The click that finishes the shape ends the lock.
 	 */
 	public static void place(BlockSet blocks, BlockHitResult first) {
 		BuildingPlannerClient.captureShape(EditKind.SHAPE, states(blocks, first));
+		BuildingPlannerClient.shapeFinished();
 	}
 
 	/**
@@ -122,7 +157,8 @@ public final class EffortlessShapes {
 	/**
 	 * Hook E2: the player finished a shape with the break click, which erases the ghost blocks among its positions in
 	 * the game's copy of the layer, with the other half of each two-block ghost block, as breaking either half of a real
-	 * door or bed breaks both ({@link GhostErase#of}). A shape over no ghost blocks sends nothing.
+	 * door or bed breaks both ({@link GhostErase#of}). A shape over no ghost blocks sends nothing. The click that
+	 * finishes the shape ends the lock, as a placing one does (1239 Q1 A).
 	 */
 	public static void erase(BlockSet blocks) {
 		ClientSession session = BuildingPlannerClient.session();
@@ -130,9 +166,10 @@ public final class EffortlessShapes {
 			BuildingPlannerClient.captureShape(EditKind.ERASE,
 				GhostErase.of(session.replica().layer(), blocks.validPositions()));
 		}
+		BuildingPlannerClient.shapeFinished();
 	}
 
-	/** Whether Effortless Building's mode is Single, where the one ghost block's controls act. */
+	/** Whether Effortless Building's mode is Single, whose line places and erases where the others start shapes. */
 	static boolean singleMode() {
 		return BuildModes.CLIENT.getBuildMode() == BuildModeEnum.SINGLE;
 	}
@@ -142,15 +179,30 @@ public final class EffortlessShapes {
 		return BuildModes.CLIENT.getBuildMode() == BuildModeEnum.DISABLED;
 	}
 
+	/**
+	 * Esc's step out of a build mode (hook M7): Effortless Building's mode becomes Disable, with the radial menu's click
+	 * sound, as choosing Disable in the menu does; choosing it ends the lock (hook E21).
+	 */
+	static void disable() {
+		RadialMenu.playRadialMenuSound();
+		BuildModes.CLIENT.setBuildMode(BuildModeEnum.DISABLED);
+	}
+
+	/** The name of Effortless Building's mode ("Line", say), or null in Disable. */
+	static Component modeName() {
+		BuildModeEnum mode = BuildModes.CLIENT.getBuildMode();
+		return mode == BuildModeEnum.DISABLED ? null : Component.translatable(mode.getNameKey());
+	}
+
 	/** Whether a shape drawn with the break click is under way: it erases, so the turning controls aren't active. */
 	static boolean breakShapeUnderWay() {
 		return BuildPipelineClient.getBuildState() == BuildPipeline.BuildState.BREAKING;
 	}
 
 	/**
-	 * Where a right click would place the one ghost block now: beside the aimed face, at the position Effortless
-	 * Building's preview draws its first block (its {@code resolveFirstClickPos}), aimed as its preview aims: with
-	 * Single's reach, at ghost blocks too (E9) and from Freecam's camera while it's on (E24). Null with nothing aimed at.
+	 * Where a right click would start now, unlocked: beside the aimed face, at the position Effortless Building's preview
+	 * draws its first block (its {@code resolveFirstClickPos}), aimed as its preview aims: with its reach, at ghost
+	 * blocks too (E9) and from Freecam's camera while it's on (E24). Null with nothing aimed at.
 	 */
 	private static Aimed aimed() {
 		Minecraft mc = Minecraft.getInstance();
@@ -175,26 +227,97 @@ public final class EffortlessShapes {
 	}
 
 	/**
-	 * H: locks the one ghost block where a right click would place it now ({@link #aimed}). Returns whether anything was
-	 * aimed at; with nothing, the block stays unlocked.
+	 * H, unlocked: during a shape, locks the positions its clicks have set so far, with its first click's hit; before
+	 * the first click, locks the first click's position where a right click would start now ({@link #aimed}), or with
+	 * nothing aimed at does nothing.
 	 */
-	static boolean lock(SingleBlock block) {
-		Aimed aimed = aimed();
-		if (aimed == null) {
-			return false;
+	static void lock(ShapeLock lock) {
+		if (shapeUnderWay()) {
+			List<BlockPos> set = shapePositions();
+			BlockHitResult hit = BuildPipelineClientAccessor.buildingplanner$firstClickHit();
+			if (!set.isEmpty() && hit != null) {
+				lock.lock(set.getFirst(), hit);
+			}
+			return;
 		}
-		block.lock(aimed.pos(), aimed.hit());
-		return true;
+		Aimed aimed = aimed();
+		if (aimed != null) {
+			lock.lock(aimed.pos(), aimed.hit());
+		}
 	}
 
 	/**
-	 * The block as Building Planner shows it, while it's locked or its row is fixed: the row's positions, or the locked
-	 * block alone, as a set whose first and last positions are the row's ends, run through Effortless Building's
-	 * modifiers, the block mix and its constraints ({@code processBlocks}), as its shapes are: what its preview draws
-	 * (hook E27) and a right click places.
+	 * A nudge key while the lock is on: moves the locked position one block that way, and during a shape every position
+	 * its clicks have set and the first click's hit with them (hook E33). Effortless Building's {@code findCoordinates}
+	 * reads them each frame, so the preview and the finished shape follow.
 	 */
-	static BlockSet shownSet(SingleBlock block) {
-		List<BlockPos> positions = block.rowFixed() ? block.row() : List.of(block.pos());
+	static void nudge(ShapeLock lock, Direction direction) {
+		lock.nudge(direction);
+		if (!shapeUnderWay()) {
+			return;
+		}
+		IBuildMode mode = BuildModes.CLIENT.getBuildMode().instance;
+		if (mode instanceof TwoClicksBuildModeAccessor two) {
+			two.buildingplanner$setFirstBlockEntry(moved(two.buildingplanner$firstBlockEntry(), direction));
+		} else if (mode instanceof ThreeClicksBuildModeAccessor three) {
+			three.buildingplanner$setFirstBlockEntry(moved(three.buildingplanner$firstBlockEntry(), direction));
+			three.buildingplanner$setSecondBlockEntry(moved(three.buildingplanner$secondBlockEntry(), direction));
+		}
+		BlockHitResult hit = BuildPipelineClientAccessor.buildingplanner$firstClickHit();
+		if (hit != null) {
+			BuildPipelineClientAccessor.buildingplanner$setFirstClickHit(ShapeLock.moved(hit, direction));
+		}
+	}
+
+	/** {@code entry} one block over that way, as a new entry, or null for none (a second click not made yet). */
+	private static BlockEntry moved(BlockEntry entry, Direction direction) {
+		return entry == null ? null : new BlockEntry(entry.blockPos.relative(direction));
+	}
+
+	/**
+	 * The positions the clicks of the shape under way have set, its first first: the first in a mode of two clicks, and
+	 * the second too after the second click in a mode of three.
+	 */
+	private static List<BlockPos> shapePositions() {
+		IBuildMode mode = BuildModes.CLIENT.getBuildMode().instance;
+		List<BlockPos> positions = new ArrayList<>(2);
+		if (mode instanceof TwoClicksBuildModeAccessor two && two.buildingplanner$firstBlockEntry() != null) {
+			positions.add(two.buildingplanner$firstBlockEntry().blockPos);
+		} else if (mode instanceof ThreeClicksBuildModeAccessor three
+			&& three.buildingplanner$firstBlockEntry() != null) {
+			positions.add(three.buildingplanner$firstBlockEntry().blockPos);
+			if (three.buildingplanner$secondBlockEntry() != null) {
+				positions.add(three.buildingplanner$secondBlockEntry().blockPos);
+			}
+		}
+		return positions;
+	}
+
+	/**
+	 * The locked positions the copy's box shows around (see "Locking and the first click": "Colours"), while the lock is
+	 * on: during a shape, the positions its clicks have set; before the first click, the locked position.
+	 */
+	static List<BlockPos> lockedPositions(ShapeLock lock) {
+		if (!lock.on()) {
+			return List.of();
+		}
+		return shapeUnderWay() ? shapePositions() : List.of(lock.pos());
+	}
+
+	/**
+	 * The lock's colour over its locked positions {@code own} ({@link #lockedPositions}), with the locked position's hit
+	 * before the first click or the first click's during a shape ({@link #colour}).
+	 */
+	static CopyColour.Shown lockColour(ShapeLock lock, List<BlockPos> own) {
+		return colour(own, shapeUnderWay() ? BuildPipelineClient.getFirstClickHit() : lock.hit());
+	}
+
+	/**
+	 * The locked positions as a set whose first and last positions are the list's ends, run through Effortless
+	 * Building's modifiers, the block mix and its constraints ({@code processBlocks}), as its shapes are, so their colour
+	 * covers what a right click places.
+	 */
+	private static BlockSet shownSet(List<BlockPos> positions) {
 		BlockSet blocks = new BlockSet();
 		positions.forEach(pos -> blocks.add(new BlockEntry(pos)));
 		blocks.firstPos = positions.getFirst();
@@ -205,14 +328,13 @@ public final class EffortlessShapes {
 	}
 
 	/**
-	 * The one ghost block's colour while it's locked or its row is fixed (see "One ghost block": "Colours",
-	 * {@link ClientSession#singleColour}): its own positions, the row's or the locked one, and the blocks a right click
-	 * would place there, with the other half of a two-block one. The copies Effortless Building's modifiers make are left
-	 * out, as its constraints leave out those outside the world.
+	 * The colour of the locked positions (see "Locking and the first click": "Colours", {@link ClientSession#lockColour}):
+	 * the positions {@code own}, and the blocks a right click
+	 * would place there with {@code hit}, with the other half of a two-block one. The copies Effortless Building's
+	 * modifiers make are left out, as its constraints leave out those outside the world.
 	 */
-	static CopyColour.Shown singleColour(SingleBlock block) {
-		List<BlockPos> own = block.rowFixed() ? block.row() : List.of(block.pos());
-		Map<BlockPos, BlockState> all = states(shownSet(block), block.hit());
+	private static CopyColour.Shown colour(List<BlockPos> own, BlockHitResult hit) {
+		Map<BlockPos, BlockState> all = states(shownSet(own), hit);
 		Map<BlockPos, BlockState> placed = new LinkedHashMap<>();
 		for (BlockPos pos : own) {
 			BlockState state = all.get(pos);
@@ -225,122 +347,33 @@ public final class EffortlessShapes {
 				placed.put(other, all.get(other));
 			}
 		}
-		return BuildingPlannerClient.session().singleColour(own, placed);
+		return BuildingPlannerClient.session().lockColour(own, placed);
 	}
 
 	/**
-	 * Hook M2: the right click that's the block's ({@link SingleRule#takesPlace}). In Single, locked, it places the block
-	 * where it's locked. In Zoop and Vertical the first click fixes the row's start where the block is (where it's
-	 * locked, if it is, or where a right click would place it) and sends nothing; with nothing aimed at and the block
-	 * unlocked, it does nothing. The second places the whole row as one shape edit and drops the row, and the block
-	 * follows the aim again, or stays locked where it was. While the block or the row is red ({@link #singleColour}), a
-	 * click that would place places nothing and sends no edit; the first click, which places nothing anyway, still fixes
-	 * the row.
-	 */
-	static void rightClick(SingleBlock block) {
-		if (SingleBlock.mode() == CopyMode.SINGLE || block.rowFixed()) {
-			if (singleColour(block).red()) {
-				// A red block or row places nothing and sends no edit; the row stays fixed.
-				return;
-			}
-			placeShown(block);
-			block.dropRow();
-		} else if (block.locked()) {
-			block.fixRow(block.pos(), block.hit());
-		} else {
-			Aimed aimed = aimed();
-			if (aimed != null) {
-				block.fixRow(aimed.pos(), aimed.hit());
-			}
-		}
-	}
-
-	/**
-	 * Once a client tick while the block's row is fixed and its controls are active: lays the row from its start toward
-	 * the aim ({@link CopyRow#row}, up to {@link CopyRow#MAX_BLOCKS}): in Zoop toward where a right click would place,
-	 * leaving the row as it was while the player aims at nothing; in Vertical toward the view's height above or below the
-	 * start ({@link CopyRow#verticalAim}), within Single's reach.
-	 */
-	static void followRow(SingleBlock block) {
-		Player player = Minecraft.getInstance().player;
-		if (player == null) {
-			return;
-		}
-		CopyPlacement.Spot start = new CopyPlacement.Spot(block.rowStart(), new Vec3i(1, 1, 1));
-		BlockPos toward;
-		if (SingleBlock.mode() == CopyMode.VERTICAL) {
-			Entity view = Aim.forEffortless(player);
-			toward = CopyRow.verticalAim(start, view.getEyePosition(), view.getLookAngle(),
-				ServerConfig.INSTANCE.getReach(player));
-		} else {
-			Aimed aimed = aimed();
-			if (aimed == null) {
-				return;
-			}
-			toward = aimed.pos();
-		}
-		block.showRow(CopyRow.row(SingleBlock.mode(), start, toward, CopyRow.MAX_BLOCKS).stream()
-			.map(CopyPlacement.Spot::min).toList());
-	}
-
-	/**
-	 * Places the block where it's locked, or its fixed row, as one shape edit, with the hit it was locked or fixed with
-	 * and the player's facing now, as a Single click would place it there.
-	 */
-	private static void placeShown(SingleBlock block) {
-		BlockSet blocks = shownSet(block);
-		place(blocks, block.hit());
-		Minecraft mc = Minecraft.getInstance();
-		if (!blocks.validEntries().isEmpty() && mc.player.getMainHandItem().getItem() instanceof BlockItem item) {
-			SoundType sound = item.getBlock().defaultBlockState().getSoundType();
-			mc.level.playLocalSound(blocks.firstPos, sound.getPlaceSound(), SoundSource.BLOCKS, sound.getVolume(),
-				sound.getPitch(), false);
-		}
-	}
-
-	/**
-	 * Hook M1: the left click that's the block's ({@link SingleRule#takesBreak}). With a row fixed, it drops the row and
-	 * erases nothing. Otherwise the block is locked, and it erases every ghost block a right click would place
-	 * ({@link #shownSet}: the locked position and the copies Effortless Building's mirror, radial mirror and array make
-	 * of it, 1074 Q1 A), whatever the player aims at, with the other half of a two-block ghost block
-	 * ({@link GhostErase#of}); with no ghost block there, it sends nothing.
-	 */
-	static void leftClick(SingleBlock block) {
-		if (block.rowFixed()) {
-			block.dropRow();
-			return;
-		}
-		ClientSession session = BuildingPlannerClient.session();
-		Map<BlockPos, BlockState> erased = GhostErase.of(session.replica().layer(), shownSet(block).validPositions());
-		if (erased.isEmpty()) {
-			return;
-		}
-		// The sound of the first ghost block erased, read before the erase empties it.
-		BlockPos first = erased.keySet().iterator().next();
-		SoundType sound = session.replica().layer().get(first).getSoundType();
-		if (session.sendShape(EditKind.ERASE, erased)) {
-			Minecraft.getInstance().level.playLocalSound(first, sound.getBreakSound(), SoundSource.BLOCKS,
-				sound.getVolume(), sound.getPitch(), false);
-		}
-	}
-
-	/**
-	 * The preview's state (hook E28): for the one ghost block locked or in a fixed row, the held block's placement rules
-	 * with the hit it was locked or its row fixed with and the player's facing now, and otherwise the state Effortless
-	 * Building found; then, while the shapes take the turn (every mode but Disable), the turn of the block in hand, so
-	 * the preview shows the blocks a right click places. In Disable, while its preview shows, the state the right click
-	 * would place ({@link #disableShown}).
+	 * The preview's state (hook E28): while the lock takes the first click, the held block's placement rules with the hit
+	 * the position was locked with, moved by the nudges, and the player's facing now; otherwise the state Effortless Building found; then, while the shapes take the turn
+	 * (every mode but Disable), the turn of the block in hand, so the preview shows the blocks a right click places. In
+	 * Disable, while its preview shows, the state the right click would place ({@link #disableShown}).
 	 */
 	public static BlockState previewState(BlockItem item, ItemStack stack, BlockState aimed) {
 		if (disableMode()) {
 			DisableShown shown = disableShown();
 			return shown == null ? aimed : shown.state();
 		}
-		SingleBlock block = BuildingPlannerClient.shownSingle();
-		BlockState state = block == null ? aimed : placementState(item, stack, block.hit());
+		BlockHitResult shown = shownHit();
+		BlockState state = shown == null ? aimed : placementState(item, stack, shown);
 		Player player = Minecraft.getInstance().player;
 		return BuildingPlannerClient.shapesTakeTurn() && player != null
 			? HeldTurn.apply(state, player.getMainHandItem().getItem()) : state;
+	}
+
+	/**
+	 * The hit Building Planner gives the preview's block in place of the aim: the locked position's while the lock takes
+	 * the first click; otherwise null.
+	 */
+	private static BlockHitResult shownHit() {
+		return BuildingPlannerClient.lockTakesFirstClick() ? BuildingPlannerClient.session().lock().hit() : null;
 	}
 
 	/**
@@ -355,7 +388,7 @@ public final class EffortlessShapes {
 
 	/**
 	 * The block in hand as Minecraft would place it now, before any turn, as the preview shows it: with the hit the
-	 * one ghost block was locked or its row fixed with, the shape's first click, or the aim; in Disable, as Minecraft's
+	 * first position was locked with, the shape's first click, or the aim; in Disable, as Minecraft's
 	 * own right click would place it ({@link #placedByMinecraft}); aimed at nothing, the block's default state. Null
 	 * without a block in hand.
 	 */
@@ -367,8 +400,8 @@ public final class EffortlessShapes {
 		if (disableMode()) {
 			return placedByMinecraft(item, mc.player.getMainHandItem());
 		}
-		SingleBlock block = BuildingPlannerClient.shownSingle();
-		BlockHitResult hit = block != null ? block.hit() : BuildPipelineClient.getFirstClickHit();
+		BlockHitResult shown = shownHit();
+		BlockHitResult hit = shown != null ? shown : BuildPipelineClient.getFirstClickHit();
 		if (hit == null) {
 			Aimed aimed = aimed();
 			if (aimed == null) {
@@ -399,7 +432,8 @@ public final class EffortlessShapes {
 	 * ({@link BuildingPlannerClient#disablePreviewOn}), the block a right click would place, from Minecraft's own aim
 	 * ({@code Minecraft.hitResult}, at its reach), where the item's own placing puts it
 	 * ({@code BlockPlaceContext.getClickedPos}, after {@code updatePlacementContext}), in the state hook S2 would give it
-	 * with the turn of the block in hand ({@link PlaceTurns#place}), and whether it would go in. Null while the preview
+	 * with the turn of the block in hand, or the ghost block's turn that "Match ghost blocks" gives there
+	 * ({@link #withGhostTurn}, {@link PlaceTurns#place}), and whether it would go in. Null while the preview
 	 * doesn't show, the aim isn't a block, the player is beyond the reach the server places within
 	 * ({@link DisablePreview#withinReach}, from the player, not Freecam's camera), or the block can't go there at all
 	 * ({@code BlockPlaceContext.canPlace}).
@@ -425,8 +459,9 @@ public final class EffortlessShapes {
 			BlockState block = item.getBlock().defaultBlockState();
 			return new DisableShown(context.getClickedPos(), turn == null ? block : BlockTurn.apply(block, turn), false);
 		}
-		PlaceTurns.Placed turned = PlaceTurns.place(context, placed,
-			turn == null ? BlockTurn.Held.NONE : new BlockTurn.Held(item, turn),
+		BlockTurn.Held held = withGhostTurn(context, item, placed,
+			turn == null ? BlockTurn.Held.NONE : new BlockTurn.Held(item, turn));
+		PlaceTurns.Placed turned = PlaceTurns.place(context, placed, held,
 			state -> invoker.buildingplanner$canPlace(context, state));
 		// BlockItem.place checks a state the turn leaves as it was too (a player standing in its way, say).
 		boolean goes = turned.stays() && invoker.buildingplanner$canPlace(context, turned.state());
@@ -435,6 +470,50 @@ public final class EffortlessShapes {
 
 	/** Disable's preview: where the block goes, its state, and whether it goes in, or is drawn red. */
 	record DisableShown(BlockPos pos, BlockState state, boolean goes) {
+	}
+
+	/**
+	 * Hook M6, in Disable: the turn a right click with {@code hit} takes, which is {@code otherwise} (Disable's turn,
+	 * {@link dev.buildingplanner.input.DisableTurn#clickTakes}) unless "Match ghost blocks" gives the ghost block's turn
+	 * there ({@link #withGhostTurn}). The click places where the item's own placing puts it
+	 * ({@code BlockPlaceContext.getClickedPos}, after {@code updatePlacementContext}), as Disable's preview finds it.
+	 */
+	static BlockTurn.Held clickTurn(BlockHitResult hit, BlockTurn.Held otherwise) {
+		Player player = Minecraft.getInstance().player;
+		if (!(player.getMainHandItem().getItem() instanceof BlockItem item)) {
+			return otherwise;
+		}
+		BlockPlaceContext context = item.updatePlacementContext(
+			new BlockPlaceContext(player, InteractionHand.MAIN_HAND, player.getMainHandItem(), hit));
+		if (context == null || !context.canPlace()) {
+			return otherwise;
+		}
+		return withGhostTurn(context, item, ((BlockItemInvoker) item).buildingplanner$placementState(context),
+			otherwise);
+	}
+
+	/**
+	 * "Match ghost blocks" (see "Settings"): with the setting on and ghost blocks shown, where the player's copy of the layer has a ghost block
+	 * of the block Minecraft would place ({@code placed}, {@link GhostMatch#turn}), the ghost block's turn when the block
+	 * turned so can stay (hook S2's step, {@link PlaceTurns#place}, and {@code BlockItem.canPlace}); otherwise
+	 * {@code otherwise}, the turn the click takes with the setting off.
+	 */
+	private static BlockTurn.Held withGhostTurn(BlockPlaceContext context, BlockItem item, BlockState placed,
+		BlockTurn.Held otherwise) {
+		ClientSession session = BuildingPlannerClient.session();
+		if (session == null) {
+			return otherwise;
+		}
+		BlockTurn.Held ghost = GhostMatch.turn(BuildingPlannerClient.matchGhost(), session.ghostsShown(),
+			session.replica().layer().get(context.getClickedPos()), placed, item);
+		if (ghost.turn() == null) {
+			return otherwise;
+		}
+		BlockItemInvoker invoker = (BlockItemInvoker) item;
+		PlaceTurns.Placed turned = PlaceTurns.place(context, placed, ghost,
+			state -> invoker.buildingplanner$canPlace(context, state));
+		return GhostMatch.clickTakes(ghost, turned.stays() && invoker.buildingplanner$canPlace(context, turned.state()),
+			otherwise);
 	}
 
 	/**
@@ -504,25 +583,34 @@ public final class EffortlessShapes {
 	}
 
 	/**
-	 * Hook E27: while the one ghost block is locked or its row is fixed, and its controls are active, the preview draws
-	 * the locked block or the row ({@link #shownSet}) in place of the block at the aim.
+	 * Hook E30: the preview skips a set of one block while no shape is under way, so it would draw nothing before a
+	 * mode's first click; the first click's block, at the aim or at the locked position, is drawn in every mode but
+	 * Disable while the lock's controls are active ({@link ShapeLock#drawnBeforeFirstClick}), and so is Disable's block
+	 * while its preview shows. A set of copies, with the mirror or array on, is
+	 * already more than one block and is drawn once.
 	 */
-	public static BlockSet previewBlocks(BlockSet aimed) {
-		SingleBlock block = BuildingPlannerClient.shownSingle();
-		return block == null ? aimed : shownSet(block);
+	public static int previewSize(int size) {
+		boolean drawn = ShapeLock.drawnBeforeFirstClick(BuildingPlannerClient.lockActive(), size)
+			|| size == 1 && BuildingPlannerClient.disablePreviewOn();
+		return size <= 1 && drawn ? 2 : size;
 	}
 
 	/**
-	 * Hook E30: the preview skips a set of one block while no shape is under way, so Effortless Building's Single mode
-	 * draws nothing for the block at the aim; the locked block, which may be far from the aim, a row of one, and the
-	 * block following the aim, in Single and in Zoop and Vertical before their first click, are drawn, and so is
-	 * Disable's block while its preview shows. A set of copies, with the mirror or array on, is already more than
-	 * one block and is drawn once.
+	 * Hook E9, for Effortless Building's first click and its preview: while the lock takes the first click, the hit the
+	 * position was locked with, moved by the nudges, whatever the player aims at, so that click starts from the locked
+	 * position (hook E32) and {@code getFirstClickHit()} gives E1 that hit's face; otherwise {@link #nearerHit}.
 	 */
-	public static int previewSize(int size) {
-		boolean drawn = BuildingPlannerClient.shownSingle() != null
-			|| size == 1 && (BuildingPlannerClient.singleAtAim() || BuildingPlannerClient.disablePreviewOn());
-		return size <= 1 && drawn ? 2 : size;
+	public static BlockHitResult shapeAim(BlockHitResult real, ClipContext context) {
+		return BuildingPlannerClient.lockTakesFirstClick() ? BuildingPlannerClient.session().lock().hit()
+			: nearerHit(real, context);
+	}
+
+	/**
+	 * Hook E32: while the lock takes the first click, the locked position, for the place click and the break click
+	 * alike; otherwise the position Effortless Building found, {@code found}.
+	 */
+	public static BlockPos firstClickPos(BlockPos found) {
+		return BuildingPlannerClient.lockTakesFirstClick() ? BuildingPlannerClient.session().lock().pos() : found;
 	}
 
 	/**

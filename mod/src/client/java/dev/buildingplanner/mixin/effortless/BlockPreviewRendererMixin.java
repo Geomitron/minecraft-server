@@ -24,8 +24,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 /**
  * Hook E6: while the mix applies, the preview draws each position's block from the mix. Hook E22: no preview while a
  * mouse mode is on. Hook E24: the preview's first block aims, and faces, from Freecam's camera while it's on. Hooks
- * E28 and E30: the locked one ghost block, or its fixed row, is drawn, in the state the hit it was locked or fixed with
- * gives it, and so is Disable's block, in the state a right click would place.
+ * E28 and E30: the first click's block is drawn, at a locked position in the state the hit it was locked with gives
+ * it, and so is Disable's block, in the state a right click would place.
  */
 @Mixin(value = BlockPreviewRenderer.class, remap = false)
 abstract class BlockPreviewRendererMixin {
@@ -45,8 +45,9 @@ abstract class BlockPreviewRendererMixin {
 
 	/**
 	 * Hook E30: the method skips a set of one block while no shape is under way (its first {@code BlockSet.size()}), so
-	 * Single's block at the aim would draw nothing; the one ghost block is drawn locked, in a row of one, or following the
-	 * aim in Single and in Zoop and Vertical before their first click, and so is Disable's block while its preview shows.
+	 * the first click's block would draw nothing; it is drawn, at the aim or at the locked position, in every mode but
+	 * Disable while the lock's controls are active ({@code ShapeLock.drawnBeforeFirstClick}), and so are the one ghost
+	 * block's row of one and Disable's block while its preview shows.
 	 */
 	@ModifyExpressionValue(method = "render", at = @At(value = "INVOKE",
 		target = "Lnl/requios/effortlessbuilding/utilities/BlockSet;size()I", ordinal = 0))
@@ -75,8 +76,8 @@ abstract class BlockPreviewRendererMixin {
 	}
 
 	/**
-	 * Hook E28: while the one ghost block is locked or its row is fixed, the preview's block takes its state from the hit
-	 * it was locked or fixed with, as a right click places it, not from the aim. In Disable, while its preview shows,
+	 * Hook E28: while a first position is locked, the preview's block takes its state from the hit it was locked with,
+	 * as a right click places it, not from the aim. In Disable, while its preview shows,
 	 * the state a right click would place, turned.
 	 */
 	@ModifyReturnValue(method = PLACEMENT_STATE, at = @At("RETURN"))

@@ -1,6 +1,8 @@
 package dev.buildingplanner.client.mixin;
 
 import dev.buildingplanner.client.SentPackets;
+import dev.buildingplanner.sync.Payloads;
+import java.util.List;
 import io.netty.channel.ChannelFutureListener;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.Packet;
@@ -19,7 +21,8 @@ abstract class ConnectionMixin {
 		CallbackInfo ci) {
 		if (packet instanceof ServerboundCustomPayloadPacket custom) {
 			var id = custom.payload().type().id();
-			SentPackets.sent(id.getNamespace(), id.getPath());
+			SentPackets.sent(id.getNamespace(), id.getPath(),
+				custom.payload() instanceof Payloads.Edit edit ? edit.changes() : List.of());
 		}
 	}
 }
