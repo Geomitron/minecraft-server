@@ -50,3 +50,166 @@ If you've played Minecraft on this computer before, you can bring your controls,
 3. Minecraft starts. Click "Multiplayer", then "Add Server", and enter the server address.
 
 Always start Minecraft from the "Server Pack" instance. Starting it anywhere else skips the mod updates.
+
+## Build Plans
+
+You plan a build in ghost blocks: see-through blocks that show where real blocks will go. Everyone on the server sees the same ghost blocks, anyone can add or erase them, and each change shows for everyone as it's made. Ghost blocks never turn into real blocks and don't use up your items. Once a plan looks right, you build it for real by hand.
+
+### Keys
+
+These are the keys for planning. You can change any of them in Controls, under the "Building Planner", "Effortless Building", and "Freecam" headings.
+
+| Key | Name in Controls | Use |
+| --- | --- | --- |
+| Left Alt (hold) | "Open Radial Menu" | Open the radial menu, where you choose a build mode or a planning tool. |
+| N | "Show or hide ghost blocks" | Hide all ghost blocks on your screen, or show them again. |
+| B | "Block mix" | Open the block mix. |
+| H | "Lock or unlock" | Lock where your next shape starts, or lock the copy in place. |
+| Arrow keys, Page Up, Page Down | "Nudge forward", "Nudge back", "Nudge left", "Nudge right", "Nudge up", "Nudge down" | Move what's locked by one block. |
+| R | "Change copy mode" | Switch the copy between Off, Line, Wall, and Floor. |
+| Ctrl+Z | "Undo" | Undo your newest change to the ghost blocks. |
+| Ctrl+Y | "Redo" | Redo the change you undid. |
+| F4 | "Toggle Freecam" | Fly the camera away from your character. |
+| M | "Config GUI" | Open Freecam's settings. |
+
+Controls shows "Undo" and "Redo" as Z and Y alone, and you hold Ctrl with them. Left Control, Minecraft's "Sprint" key, also turns blocks, lines up the copy, and marks ghost blocks in Delete. It still makes you sprint if you walk forward while you hold it.
+
+### Ghost Blocks
+
+Each ghost block is tinted to show what's built there:
+
+- **Light blue:** nothing is built there yet.
+- **Red:** a different block is there.
+- **Orange:** the right block is there, but facing another way, or with a different number of a block that stacks in one space, such as candles.
+
+Red and orange ghost blocks within 32 blocks of you also show through walls, so you can find mistakes.
+
+When you place the same block as a ghost block, facing the same way, the ghost block disappears for everyone. Breaking the real block later doesn't bring the ghost block back.
+
+When someone else changes ghost blocks, the blocks they changed glow for a few seconds, with their name beside them.
+
+Press N to hide all ghost blocks on your own screen, and press it again to show them. Chat says "Ghost blocks hidden." or "Ghost blocks shown.", and the game remembers your choice. If you draw a shape while they're hidden, they show again first.
+
+### Radial Menu
+
+Hold Left Alt to open the radial menu. Point at a build mode or a button, and click it or let go of Left Alt to choose it. Pointing at a button shows its name.
+
+- **Build modes:** the ring around the middle shows "Disable", "Single", "Line", "Wall", "Floor", "Cube", "Diagonal Line", "Diagonal Wall", "Slope Floor", "Circle", "Cylinder", and "Sphere".
+- **Effortless Building's buttons:** undo, redo, "Visual Settings", and the wrench, which opens "Modifier Settings", where you can turn on mirror, radial mirror, and array to repeat each shape.
+- **Building Planner's buttons:** "Copy", "Paste", and "Delete" in the row above the wrench, and "Block mix", "Material list", and "Material lists" in the row above that. The button under the wrench shows or hides ghost blocks, as N does.
+- **Sliders:** "Build speed" and "Break speed", under the buttons.
+
+### Shapes
+
+1. Hold Left Alt and choose a build mode, such as "Wall". Its name shows to the left of your hotbar while it's on.
+2. Hold a block, or another item that places a block, such as redstone dust, a fence, a door, or seeds.
+3. Aim where the shape starts. The block your click would place shows there. Right-click.
+4. Aim where the shape ends, and right-click again. "Cube", "Cylinder", "Sphere", "Slope Floor", "Diagonal Line", and "Diagonal Wall" need a third right-click for the height.
+
+To erase ghost blocks, draw a shape with left-clicks instead. In "Single", each right-click places one ghost block and each left-click erases one. Hold the button to keep placing or erasing, at the speed the "Build speed" and "Break speed" sliders set.
+
+A shape can start on a ghost block or on a real block. A line above the hotbar shows the controls you can use at each moment. With a tool, food, or an empty hand, clicks break and use real blocks as they do without mods. To place real blocks with a block in hand, choose "Disable".
+
+### Locking and Nudging
+
+Press H to lock where your next shape starts. The locked block stays where it is while you walk or fly around it. The arrow keys move it one block forward, back, left, or right of the way you face, and Page Up and Page Down move it up or down. Your next click starts the shape at the locked block, wherever you aim.
+
+During a shape, H locks every point your clicks have set so far, and the nudge keys move them together while the far end still follows your aim. The lock ends once the shape is placed or erased, or when you press H again.
+
+While a block is locked, a box shows around it: blue where the block will go in, yellow where it would replace a different ghost block, and red where it's outside the world, where a click places nothing.
+
+### Turning and Flipping
+
+With a block in hand, hold Left Control and scroll to give the block a quarter turn, or middle-click to flip it, such as a stair upside down or a log on its side. The block stays turned, whichever way you face, until you switch to a different block. Shapes, and the blocks shown before you click, use the turn.
+
+This works for real blocks in "Disable" too. Hold Left Control to see the block where a right-click will place it, turn or flip it, and right-click while you still hold Left Control. Without Left Control, a right-click places the block as usual. A turned block that can't stay where it would go, such as a torch turned away from its wall, shows red, and the right-click doesn't place it.
+
+To place real blocks facing the way their ghost blocks face:
+
+1. Hold Left Alt and click "Visual Settings".
+2. Turn on "Match ghost blocks", and click "Save".
+
+With it on, while ghost blocks show, a block you place into a ghost block of the same block faces the way the ghost block does, whichever way you stand.
+
+### Block Mix
+
+A block mix draws shapes with several blocks at once, each in its own share, such as 80 cobblestone to 20 mossy cobblestone. A mix of one block lets you plan with a block you don't have.
+
+1. Press B, or choose "Block mix" in the radial menu. The "Block mix" screen lists the blocks in your inventory. Turn off "Only my inventory" to list every block in the game, and type in "Search blocks" to find one.
+2. Click up to nine blocks to add them to the mix. Click a block again to take it out.
+3. Under each block in the mix, type its share. The screen shows each block's percentage of the mix.
+4. Click "Use mix". Chat shows "Block mix on. Press B to edit or clear it."
+
+While you hold a block in any build mode but "Disable", shapes use the mix instead of the block you hold, and a panel at the right edge of the screen shows the mix. Press B to change the mix, or click "Clear Mix" to empty it and turn it off. The mix lasts until you close the game.
+
+### Undo
+
+Press Ctrl+Z, or click the undo button in the radial menu, to undo your newest change: a whole shape, paste, or erase at a time. Press Ctrl+Y, or click the redo button, to redo it, until you make a new change.
+
+Undo takes back only your own changes. If someone else has changed one of those blocks since, the block stays as they left it, and chat tells you how many blocks were left.
+
+### Delete
+
+Delete erases many ghost blocks at once: you mark them, then erase every marked one.
+
+1. Hold Left Alt and choose "Delete".
+2. Hold Left Control and sweep your aim across ghost blocks. Each ghost block the crosshair passes over is marked: it shows red, and the marked blocks are listed beside the crosshair.
+3. To mark everything in a box, hold Left Control, press the left mouse button on one block, and let go on another. Every ghost block in the box between them is marked.
+4. Hold the left mouse button, without Left Control, for one second. A bar in the middle of the screen fills while you hold it, and then the marked ghost blocks are erased. Chat says how many, such as "Erased 120 ghost blocks."
+
+A sweep or a box that starts on a marked ghost block unmarks instead. Right-click or press Esc to clear the marks, and do it again to leave Delete. One undo brings back everything one erase took.
+
+### Copy and Paste
+
+Copy takes the blocks in a box, ghost blocks and real blocks alike, and pastes them as ghost blocks wherever you aim. Only you see the copy until you paste it.
+
+1. Hold Left Alt and choose "Copy".
+2. Left-click to set one corner of the box, left-click again to set the opposite corner on the same level, and left-click a third time to set the height. The box shows white, with its size and the blocks in it. If you aim at the top of a block, the first corner is the space above it, so a box started on the ground includes what stands on it.
+3. Chat says how many blocks were copied, and the copy follows your aim.
+
+A box can be up to 256 blocks along each side. Right-click or press Esc to cancel it. While ghost blocks are hidden, Copy copies only real blocks.
+
+With the copy at your aim:
+
+- **Paste:** right-click. The copy stays at your aim for more pastes, and one undo takes back one paste. The empty space in a copy leaves the ghost blocks under it as they are.
+- **Turn and mirror:** scroll to turn the copy, and middle-click to mirror it.
+- **Lock:** press H to lock the copy in place, so you can walk or fly around it. The arrow keys, Page Up, and Page Down then nudge it one block. It unlocks once you paste it.
+- **Rows of copies:** press R to switch between Off, Line, Wall, and Floor. In Line, Wall, or Floor, right-click to set the first copy, aim to add copies beside it (up to 10 along each side), and right-click again to paste them all.
+- **Close:** left-click or press Esc to put the copy away. In Line, Wall, or Floor after the first right-click, this cancels the row and leaves the copy at your aim.
+
+The copy snaps flush to the sides of your recent pastes. Hold Left Control to keep it in line with your latest paste. Its box shows blue where it will paste, yellow where it would replace ghost blocks (it still pastes), and red where it can't paste, with the reason above the hotbar.
+
+Choosing a build mode or another planning tool, or showing or hiding ghost blocks, puts the copy away. Choose "Paste" in the radial menu to bring your latest copy back. Leaving the server or changing dimension forgets it.
+
+### Material Lists
+
+A material list counts the blocks a plan needs.
+
+1. Hold Left Alt and choose "Material list".
+2. Draw a box around the plan with three left-clicks, as for Copy. The box shows blue.
+3. The material list opens. "Total" counts each block in the box, ghost blocks and real blocks alike. "Missing" is how many of each block the ghost blocks still need: green once it's done, gold when you carry enough, and red otherwise. "Available" is how many you carry.
+
+On the list's screen:
+
+- Click a column's heading to sort the list by it.
+- "Multiplier" multiplies the counts, for building the plan more than once.
+- "Refresh" counts the box again, while you're near it.
+- "Info HUD" pins the list to the top-left corner of your screen, with each block's "All", "Hold", and "Need". While you're near the box, the panel counts it again every 2 seconds, so "Need" drops as the group builds. The panel stays on after you restart the game, until you turn it off.
+- "Save list" saves the list under a name, and "Saved lists" opens a list you saved. Your latest list counted from a box is always saved too, as "Last counted". The server stores your lists, so they're the same from any computer.
+- "Close" closes the screen.
+
+Choose "Material lists" in the radial menu to open the current list again.
+
+### Esc
+
+Each press of Esc steps out of one thing, in this order: a row of copies, the copy, a box, Delete's marks, Delete, a shape you've started, then the build mode, back to "Disable". Once nothing is left, Esc pauses the game. With a screen open, Esc closes it as usual.
+
+### Freecam
+
+Freecam moves the camera away from your character, so you can look at a build from any side.
+
+1. Press F4. Your character stays where it is.
+2. Move the camera with your usual walking keys. Jump moves it up, and sneak moves it down.
+3. Press F4 again to go back to your character.
+
+While the camera is away, shapes, boxes, the copy, and Delete aim from the camera, as if you stood there, and the nudge keys go by the way the camera faces. With Freecam's settings as they start, clicks on real blocks don't reach the world from the camera, so go back to your character to build for real. Ghost blocks show and change only near your character, where your game has loaded the world.
