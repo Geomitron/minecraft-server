@@ -26,9 +26,9 @@ except 0.8.0's changes, from Geo's trial of 0.7.0 (1359, comments c1 to c7; "Bui
 The build steps are in [plan.md](plan.md) ("Agent-ready work"). `OPEN:` marks a choice still Geo's, with the inbox
 request that asks it.
 
-**Proposed for 0.9.0.** The setting "Place real blocks", with which the server places a shape's real blocks (Geo's
-comment c4 on 1359, 1368 Q2 A), is designed in "Place real blocks" and not built; every part of this spec that
-mentions it is marked as proposed for 0.9.0. Its build steps follow 0.8.0's in [plan.md](plan.md).
+**Proposed for 0.9.0.** The setting "Place real blocks", with which the server places the real blocks of a shape or a
+paste (Geo's comment c4 on 1359, 1368 Q2 A, 1372), is designed in "Place real blocks" and not built; every part of
+this spec that mentions it is marked as proposed for 0.9.0. Its build steps follow 0.8.0's in [plan.md](plan.md).
 
 ## What players get
 
@@ -93,9 +93,9 @@ mentions it is marked as proposed for 0.9.0. Its build steps follow 0.8.0's in [
   block; with anything else in hand, clicks act as without mods. While the mix applies, a small panel at the right edge
   of the screen shows each block's icon and share, and "B: Edit mix" under them. "Clear Mix" empties the mix and turns
   it off. A mix of one block lets a survival player plan with a block they don't have.
-- **Undo and redo.** Undo takes back only that player's own changes, newest first: a whole shape or paste at a time,
-  in any dimension, and, as proposed for 0.9.0, a shape's real blocks too (`OPEN:` the "Place real blocks: open
-  choices" request, Q5; see "Place real blocks"). A block someone else has changed since stays as they left it.
+- **Undo and redo.** Undo takes back only that player's own changes to ghost blocks, newest first: a whole shape or
+  paste at a time, in any dimension. A block someone else has changed since stays as they left it. Real blocks placed
+  with the setting "Place real blocks" (proposed for 0.9.0) aren't undone: they come out by hand.
   Effortless Building's Ctrl+Z (and the undo button in its radial menu) undoes, and its Ctrl+Y (and the redo button)
   redoes the newest undone change, until the player's next new change.
 - **Others' edits.** When someone else changes ghost blocks, the changed blocks glow for a few seconds, with the
@@ -136,7 +136,9 @@ mentions it is marked as proposed for 0.9.0. Its build steps follow 0.8.0's in [
   the ghost blocks under it as they are. Doing anything else in Building
   Planner or Effortless Building, such as choosing "Wall", pressing "Material list", or showing or hiding ghost
   blocks, also puts the copy away; undo, redo and the speed sliders keep it at the aim. The radial menu's Paste button
-  brings back the most recent copy at the aim.
+  brings back the most recent copy at the aim. With the setting "Place real blocks" on (proposed for 0.9.0), a right
+  click pastes real blocks from the player's inventory instead, by the same rules as a shape (see "Place real
+  blocks").
 - **Material list.** The player presses the "Material list" button in the radial menu and draws a box: Litematica's
   material list screen opens for the blocks inside, ghost blocks and real blocks alike, with how many of each block the
   ghost blocks still need. While ghost blocks are hidden, it lists only the real blocks and leaves the ghost blocks
@@ -150,7 +152,7 @@ mentions it is marked as proposed for 0.9.0. Its build steps follow 0.8.0's in [
 - **Settings.** Effortless Building's "Visual Settings" screen, and the radial menu's button that opens it, are named
   "Settings". The setting "Match ghost blocks" in it, off at first, places a real block turned as the ghost block it
   fills (see "Settings"). The setting "Place real blocks", proposed for 0.9.0 and off at first, makes the server
-  place a shape's real blocks instead of ghost blocks (see "Place real blocks").
+  place the real blocks of a shape or a paste instead of ghost blocks (see "Place real blocks").
 - **Building Planner's name.** Where players see Effortless Building's name in the game, the corner of the radial
   menu, it reads "Building Planner". Effortless Building's four keys in Controls show under the "Building Planner"
   heading, with Building Planner's own.
@@ -447,8 +449,8 @@ Payloads (namespace `buildingplanner`, protocol version 5):
   changes)` where `kind` is shape or erase and `changes` is a list of world position and block state (air for an
   erase), `undo` and `redo`; for material lists `save_list`, `delete_list`, `open_list` and `current_list` (see
   "The lists on the server"); `place_turn(item, properties)`, the turn of the real block a right click places in
-  Disable (see "Turning real blocks in Disable"); and, proposed for 0.9.0, `place(dimension, face, hit, blocks)`, a
-  shape's real blocks (see "Place real blocks"), which protocol version 5 takes as one more payload.
+  Disable (see "Turning real blocks in Disable"); and, proposed for 0.9.0, `place(dimension, face, hit, blocks)`, the
+  real blocks of a shape or a paste (see "Place real blocks"), which protocol version 5 takes as one more payload.
 - Server to client: `hello(protocolVersion, limits)` at join, where `limits` is the block cap for an edit;
   `columns(dimension, columns)`, each column its position and its sections, each section its height, palette and
   packed blocks; `applied(dimension, author, clientSeq, changes)`, whose author is the nil UUID for ghost blocks real blocks filled (see
@@ -537,8 +539,8 @@ the server restarts. Each block in a step takes about 64 bytes of the server's m
 steps of 200,000 blocks would take about 640 MB of each player's share of its 6 GB. The list also drops its oldest steps
 while the player's steps hold more than 2,000,000 blocks in all (about 128 MB a player), always keeping the newest. The
 part of a step an undo changed goes onto the player's redo list; a redo applies it forward by the same rule, and the
-player's next new edit clears the list. As proposed for 0.9.0, a shape's real blocks make a step on the same list (see
-"Place real blocks": "Undo").
+player's next new edit clears the list. A shape or a paste of real blocks, proposed for 0.9.0, makes no step on either
+list (see "Place real blocks": "Undo").
 
 ### Ghost blocks the real world fills
 
@@ -1270,7 +1272,9 @@ forgets the pastes.
   at the world position where Litematica draws it, with its state mirrored and turned as the copy is, so the server's
   order, the glow for other players, undo, redo and the block cap work as they do for shapes. The copy's empty space
   leaves the layer's blocks as they are. The copy stays at the aim for more pastes, and a locked copy unlocks once
-  pasted, as a build mode's lock ends once its blocks are placed (Geo's comment c5; 1239 Q2 A).
+  pasted, as a build mode's lock ends once its blocks are placed (Geo's comment c5; 1239 Q2 A). With the setting
+  "Place real blocks" on (proposed for 0.9.0), the paste places real blocks instead (see "Place real blocks": "A
+  paste").
 - Each notch of the scroll wheel (M5) gives the copy a quarter turn around its middle: clockwise, seen from above, for
   a notch up, and counterclockwise for a notch down, as Satisfactory's "Rotate Hologram Right" is the wheel up (806 Q2
   B).
@@ -1762,9 +1766,8 @@ Proposed for 0.9.0, not built. Geo asked for a setting "Place real blocks" (comm
 for "place real blocks""), weighed against Building Planner working from the player's computer alone on other servers,
 and picked "Yes, on servers that run Building Planner: the server places the whole shape" (1368 Q2 A). It is an
 exception to Geo's rule that Effortless Building's shapes, mirror, repeat and Randomizer edit only ghost blocks, never
-real blocks (402 r2, c1), and it holds only while the setting is on. Each choice still Geo's carries an `OPEN:` mark
-naming its question in the request "Place real blocks: open choices"; the text describes the option the request
-recommends.
+real blocks (402 r2, c1), and it holds only while the setting is on. Geo settled how it works in the request "Place
+real blocks: open choices" (1372).
 
 **The setting.** "Place real blocks" is a row of "Settings" after "Match ghost blocks", drawn, explained and saved as
 that row is (hook E36's list of label keys gains its key; `VisualSettingsRow`): off at first, saved in
@@ -1780,35 +1783,42 @@ Building's mirror, radial mirror and array, and with the block mix's blocks whil
 state the preview shows (the placing rules with the first click's face, the turn of the block in hand, the mirror's and
 the array's turns, and, with "Match ghost blocks" on while ghost blocks show, the turn of a ghost block of the same
 block that it fills, by `GhostMatch`'s rule). Single places one real block a click, and holding the button repeats at
-the build speed. Disable stays as it is: its right click is Minecraft's already. Everything else keeps editing ghost
-blocks: the break (left) click's shape erases ghost blocks (`OPEN:` Q4), a paste writes ghost blocks (`OPEN:` Q6), and
-Delete, the boxes and the material list mark and count ghost blocks. A shape drawn while ghost blocks are hidden
-leaves them hidden. A real block that fills a ghost block takes it out of the layer, as any real block does (see "Ghost
-blocks the real world fills").
+the build speed. Disable stays as it is: its right click is Minecraft's already. A paste places real blocks too, by
+the same rules (1372 Q6 B; see "A paste" below). Everything else keeps editing ghost blocks: the break (left) click's
+shape erases ghost blocks, as with the setting off (1372 Q4 A), and Delete, the boxes and the material list mark and
+count ghost blocks. A shape or a paste of real blocks leaves hidden ghost blocks hidden. A real block that fills a
+ghost block takes it out of the layer, as any real block does (see "Ghost blocks the real world fills").
 
-**How the server places each block.** The game sends the shape as one `place(dimension, face, hit, blocks)`: the first
-click's face and hit, and each block's position and state (the layer's codec for a change), nearest the player first,
-without the other half of a two-part block, which Minecraft places itself. The server places each block as the
-player's own right click would place it there, through Minecraft's `BlockItem.place` with a `BlockPlaceContext` at
-that position (read in the 26.3 jar): Minecraft checks that the block is enabled and that the space takes a block
-(`BlockPlaceContext.canPlace`: air, water, lava, grass, a single snow layer), asks the item for the state
-(`getPlacementState`, which hook S2 turns), checks that the state can stay and that no entity is in its way
-(`canPlace`), sets it, fills its block entity from the item, completes a door or a bed (`Block.setPlacedBy`), triggers
-the advancements for placing (`ItemUsedOnLocationTrigger`), plays the place sound to the players nearby, and uses up
-one item of the stack (`ItemStack.consume`, which uses none in creative). An operator's block, such as a command
-block, places only for an operator (`GameMasterBlockItem.getPlacementState`). Each block's context has the shape's
+**How the server places each block.** The game sends a shape as one `place(dimension, face, hit, blocks)`: the first
+click's face and hit, and each block's position and state (the layer's codec for a change), without the other half of
+a two-part block, which Minecraft places itself. The server places the blocks from the lowest level up, and gives
+each block that couldn't stay one more try after the rest, so a torch or a hanging lantern whose support the same
+`place` puts in goes in too (`RealPlace.order`). It places each block as the player's own right click would place it
+there, through Minecraft's `BlockItem.place` with a `BlockPlaceContext` at that position (read in the 26.3 jar):
+Minecraft checks that the block is enabled and that the space takes a block (`BlockPlaceContext.canPlace`: air,
+water, lava, grass, a single snow layer), asks the item for the state (`getPlacementState`, which hook S2 turns),
+checks that the state can stay and that no entity is in its way (`canPlace`), sets it, fills its block entity from the
+item, completes a door or a bed (`Block.setPlacedBy`), triggers the advancements for placing
+(`ItemUsedOnLocationTrigger`), plays the place sound to the players nearby, and uses up one item of the stack
+(`ItemStack.consume`; in creative the server places from a stack of the block's item that it makes, and uses none).
+For a block made of several items, such as a double slab, `RealPlacer` uses up the rest too (see "The inventory"). An
+operator's block, such as a command block, places only for an operator (`GameMasterBlockItem.getPlacementState`).
+Each block's context has the shape's
 face and the hit at the block's own height, as Building Planner's ghost blocks and Effortless Building's server take
 it (`EffortlessShapes.states`, `PacketHandler.handlePlaceBuildMode`). During that call, hook S2 gives the state the
 orientation of the shape's state (its values of the properties `BlockTurn` sets, through `PlaceTurn.accepted`) in
-place of the player's turn for Disable, and returns null when the state Minecraft gives isn't the shape's block, so a
-wall torch that Minecraft would place as a standing torch places nothing. A block that doesn't go in uses no item.
+place of the player's turn for Disable, and the count of a block made of several items. Where Minecraft gives the
+other form of the same item, such as a standing torch for a wall torch or a standing sign for a wall sign
+(`StandingAndWallBlockItem`, whose form depends on where the player looks), S2 takes the shape's form, turned the same
+way; it returns null when Minecraft's state is any other block. A block that doesn't go in uses no item.
 
 Before it places, the server checks the shape as `ServerGamePacketListenerImpl.handleUseItemOn` checks a right click
 (read in the 26.3 jar), and skips each block that fails: the dimension is the player's own; the player's game mode
 lets them build (`Player.mayBuild`, false in adventure and spectator); the block's chunk is loaded
 (`ServerChunkCache.getChunkNow`, so placing never loads a chunk); the block is within the build height, inside the
-world border and outside spawn protection (`MinecraftServer.isUnderSpawnProtection`, `ServerLevel.mayInteract`); and
-it is within 64 blocks of the player's eyes, the player's and not Freecam's camera's (`OPEN:` Q2). Effortless
+world border and outside spawn protection (`MinecraftServer.isUnderSpawnProtection`, `ServerLevel.mayInteract`);
+it is within 64 blocks of the player's eyes, the player's and not Freecam's camera's (1372 Q2 A); and an item places
+it (`Block.asItem` gives a `BlockItem`: water, lava, fire, a portal and a piston's head have none). Effortless
 Building's own server checks no distance: its `handlePlaceBuildMode` places wherever the game's packet says. Its game
 aims each click of a shape within its reach, 32 in survival, so a Line, Wall, Floor or Cube between such clicks stays
 within 56 blocks of the eyes (32 times the square root of 3); a circle drawn from its centre, and the copies of the
@@ -1816,58 +1826,78 @@ mirror (up to 256 blocks across) and the array (up to 64 copies 64 apart), reach
 stay out. A protection mod that hooks the right click (Fabric API's `UseBlockCallback`) doesn't see these blocks; the
 server runs none.
 
-- **The inventory** (`OPEN:` Q1). In survival, each block uses an item of its block (`Block.asItem`: a torch for a
+- **The inventory** (1372 Q1 C). In survival, each block uses an item of its block (`Block.asItem`: a torch for a
   wall torch) from the player's inventory, the main hand's stack first and then the inventory's slots in order, as
-  Effortless Building's server takes them (`InventoryHelper.consumeItems`). When the inventory runs out of an item,
-  the blocks still to place with it, the farthest from the player, don't go in. With the block mix, each block counts
-  on its own. A stack with components (a named block, a filled shulker box) places as by hand, its components going to
-  the block entity.
-- **Real blocks in the way** (`OPEN:` Q3). A block goes only into a space a right click could place it into
-  (`BlockPlaceContext.canPlace`), so a shape never replaces a real block. Effortless Building's "Replace mode" button in
+  Effortless Building's server takes them (`InventoryHelper.consumeItems`). A block made of several items uses that
+  many, as by hand: a double slab two slabs, and three candles three candles, as for sea pickles, snow layers, turtle
+  eggs and pink petals. Nothing goes in unless the inventory contains every item the blocks that pass the checks above
+  need: the blocks those checks leave out need none, every block of the mirror's and the array's copies counts, and
+  with the block mix each block counts as its own item (a Line of 16 cobblestone and 4 mossy cobblestone needs 16 and
+  4). When the inventory lacks any of them, the server places nothing and its `notice` names each item short and how
+  many, in the wording Geo approves in build step 5. A stack with components (a named block, a filled shulker box)
+  places as by hand, its components going to the block entity.
+- **Real blocks in the way** (1372 Q3 A). A block goes only into a space a right click could place it into
+  (`BlockPlaceContext.canPlace`), so a shape or a paste never replaces a real block. Effortless Building's "Replace
+  mode" button in
   the radial menu changes nothing, as with the setting off: its modes act only in the packet Building Planner never
   sends.
-- **The cap.** The server refuses a `place` of more than `max-place-blocks` blocks
-  (`config/buildingplanner.properties`, 2,000 at first: Effortless Building's own cap on a survival player's shape,
-  `ServerConfig.survivalMaxBlocksPlaced`, which such a shape never passes), and one that would take a player past that
-  many real blocks in a second, with a `notice`, and places none of it.
-- **One sound.** Hook S3 lets only the shape's first block play its place sound to the players nearby; the player hears
-  it from their own game, which plays it at the shape's first block before it sends (`BuildPipelineClient.handleClick`).
+- **The cap.** The server refuses a `place` of more than 2,000 blocks (`RealPlace.MAX_BLOCKS`: Effortless Building's
+  own cap on a survival player's shape, `ServerConfig.survivalMaxBlocksPlaced`, which such a shape never passes), and
+  one that would take a player past that many real blocks in a second, with a `notice`, and places none of it. The cap
+  is fixed rather than a server setting, so the player's game knows it too, and the copy shows red past it (see "A
+  paste").
+- **One sound.** Hook S3 lets only the first block placed play its place sound to the players nearby. The player hears
+  a shape's from their own game, which plays it at the shape's first block as the click sends
+  (`BuildPipelineClient.handleClick`), unless the inventory doesn't cover the shape (hook E41); a paste's first block
+  plays its sound to the player too, since the game plays none for a paste.
 - **The notice.** When the server leaves out blocks the player's preview showed going in (someone built there since,
   spawn protection, a chunk the server hasn't loaded), a `notice` says how many, in the wording Geo approves in build
   step 5. A shape whose blocks all go in sends nothing back; the player sees the blocks arrive as any block changes.
 
 **The preview.** While the setting acts, Effortless Building's preview counts the inventory as it does on its own
-servers: hook E8 lets `ItemUsageTracker.compute` run, so the blocks the inventory doesn't cover, the farthest from the
-player, draw red (`BlockPreviewRenderer.render`, from `ItemUsageTracker.missingPositions`), and the icons beside the
-crosshair show how many of each block the shape uses, with the missing count in red (`RenderHandler.drawPlacingStacks`).
-Hook E40 adds to that red set each block the server would leave out by the rule the player's computer can check: a
-space that doesn't take a block, a block past the reach, and a turned block that can't stay or has an entity in its
-way (`RealPlace`, the pure rule the server's placing uses too; spawn protection and later changes are the server's
-alone). The controls line shows the state on the right click's own control, by Geo's rule for the lines (1313 [c1]):
+servers, over the blocks that would go in: hook E8 lets `ItemUsageTracker.compute` run on the blocks `RealPlace`
+lets in, in the form that counts each block's own item (`compute(Player, BlockSet, boolean)`), so the icons beside
+the crosshair show how many of each block the click uses, with the missing count in red
+(`RenderHandler.drawPlacingStacks`). Hook E40 then sets the blocks the preview draws red
+(`ItemUsageTracker.missingPositions`, which `BlockPreviewRenderer.render` reads): the whole shape when the inventory
+lacks any item (`ItemUsageTracker.hasMissing`), since then nothing goes in, and otherwise each block the server would
+leave out by the rule the player's computer can check: a space that doesn't take a block, a block past the reach, and
+a turned block that can't stay or has an entity in its way (`RealPlace`, the pure rule the server's placing uses too;
+spawn protection and later changes are the server's alone). The controls line shows the state on the right click's
+own control, by Geo's rule for the lines (1313 [c1]):
 "[Right-click: place real blocks]" in Single and "[Right-click: start placing real blocks]" before a shape's first
 click, in the wording Geo approves in build step 5.
 
-**Undo** (`OPEN:` Q5). A shape's real blocks are one step on the player's undo list, beside the layer's steps, newest
-first, within the same 50 steps and block budget (see "Undo"):
+**A paste** (1372 Q6 B). While the setting acts, the copy's right click (hook M2; see "Copy and paste") places the
+copy's blocks as real blocks instead of writing ghost blocks, by the rules for a shape above: within 64 blocks of the
+player's eyes, only into spaces a right click could place into, nothing unless the inventory contains every item the
+paste needs, and at most 2,000 blocks. A paste sends one `place` of each block of the copy other than air and
+structure void, at the position and in the state where Litematica draws it, and a Line, Wall or Floor of copies sends
+one `place` for the whole set at its second click. A paste has no first click, so its `place` carries the top face
+and a hit at the bottom middle of its first block, as if each block were placed onto the block under it; hook S2 then
+gives each block the copy's orientation. The copy leaves out block entities' contents, so a pasted chest is empty and a
+pasted sign blank. The copy stays at the aim for more pastes, and each paste's box joins the recent pastes the copy
+snaps to (`PasteBoxes`), as a paste of ghost blocks does.
 
-- The step stores each block it placed: its position, the state placed, the space's state before, the stack it used
-  (one item, with its components), and, for a block with a block entity, the entity's saved data just after placing.
-- From then on, a block is marked changed the first time hook S1 sees its position take a state that doesn't fill it
-  by the rule for ghost blocks (`FillRule`: another block, or the same block placed another way; a fence joining a new
-  neighbour or a crop growing doesn't count). The mark stays even when the same block comes back, so a block broken
-  and placed again by hand stays.
-- Ctrl+Z removes each of the step's blocks that isn't marked, whose chunk the server has loaded, and whose block
-  entity, if it has one, holds the data saved after placing, so a chest someone has filled since stays. Each space
-  goes back to air, or to the water or lava it held; grass or snow the block replaced doesn't come back. In survival,
-  each removed block's stack goes back into the inventory, or drops at the player's feet when it's full, as Effortless
-  Building's `InventoryHelper.giveOrDropItems` does; creative gets nothing back. The undo's `notice` counts the blocks
-  left as they are, as an undo of ghost blocks does.
-- Ctrl+Y places the undone blocks again, from the inventory, by the same rule as a shape: only where the space still
-  takes a block.
+While the setting acts, the copy's colour (`CopyColour`) follows the rules for real blocks:
 
-Effortless Building's own undo (`UndoManager.undo`, read, not run) gives back a placed block's item in survival only
-while the block is exactly as placed, and puts back a block its replace mode broke without using an item, while the
-player keeps that block's drops.
+- blue where every block of the copy would go in, as far as the player's game can tell;
+- yellow where some blocks wouldn't and the rest would, as Satisfactory's yellow still builds: a space that doesn't
+  take a block (a real block there), a block past the reach, outside the build height or the border, or a block no
+  item places, such as water. Ghost blocks under the copy don't make it yellow, since real blocks don't replace them.
+  Whether each block can stay is the server's alone, since the copy's own blocks may hold it up;
+- red where nothing would go in: more than 2,000 blocks in the paste or the set, checked first, as on the server, or,
+  in survival, an inventory without every item the paste needs, counted as for a shape.
+
+While the copy is red, the reason shows in red in place of the right click's control, "[Can't paste: too many
+blocks]" or "[Can't paste: not enough blocks]", and a right click pastes nothing and sends nothing, as for a red copy
+of ghost blocks. Otherwise the right click's control says the paste places real blocks, "[Right-click: paste real
+blocks]" and "[Right-click: paste 4 copies as real blocks]", in the wording Geo approves in build step 5.
+
+**Undo** (1372 Q5 B). Ctrl+Z and Ctrl+Y undo and redo only changes to ghost blocks: a shape or a paste of real blocks
+makes no step on the player's undo list and leaves the redo list as it is (see "Undo"). So Ctrl+Z right after a shape
+of real blocks undoes the player's newest change to ghost blocks, made before that shape, and the real blocks come out
+only by hand.
 
 **Compatibility.** 0.9.0 keeps protocol version 5: the game's check at joining asks for the same ten payloads (see
 "When the server lacks the mod"), and the `place` payload decides only whether the setting acts, so a 0.8.0 game and
@@ -1876,14 +1906,15 @@ a 0.9.0 server work together, and so do a 0.9.0 game and a 0.8.0 server, with gh
 | # | File, method | Hook | Purpose |
 |---|---|---|---|
 | E1 | `buildpipeline/BuildPipelineClient.java`, `handleClick` | the same hook | While the setting acts, the shape goes to the server as `place` instead of into the layer (`EffortlessShapes.place`). |
-| E8 | `buildpipeline/BuildPipelineClient.java`, `updateDisplayTrackers` | the same hook | While the setting acts, the place click's trackers compute as Effortless Building's own, so the inventory's shortfall draws red; the break click's list stays cleared. |
-| E40 | `buildpipeline/BuildPipelineClient.java`, private static `updateDisplayTrackers(Player, BlockSet)` | `@Inject` at tail | While the setting acts, add the blocks `RealPlace` refuses to `ITEM_USAGE.missingPositions`, as hook E29 adds Disable's one block. |
-| S1 | `LevelChunk.setBlockState` | the same hook | Also mark a real step's position changed (`RealUndo`). |
-| S2 | `BlockItem.place`, `getPlacementState` | the same hook | While the server places a shape, the shape's orientation for that block in place of the player's turn, and null when Minecraft's state isn't the shape's block. |
-| S3 | `net/minecraft/world/item/BlockItem.java`, `place(BlockPlaceContext)` | `@WrapWithCondition` on `Level.playSound(Entity, BlockPos, SoundEvent, SoundSource, float, float)` | While the server places a shape, only its first block plays the place sound. |
+| E8 | `buildpipeline/BuildPipelineClient.java`, `updateDisplayTrackers` | the same hook | While the setting acts, the place click's tracker computes as Effortless Building's own, over the blocks `RealPlace` lets in and counting each block's own item (`compute(Player, BlockSet, boolean)`), so the icons count what the click uses; the break click's list stays cleared. |
+| E40 | `buildpipeline/BuildPipelineClient.java`, private static `updateDisplayTrackers(Player, BlockSet)` | `@Inject` at tail | While the setting acts, set `ITEM_USAGE.missingPositions` to every block of the shape when `ITEM_USAGE.hasMissing()`, and otherwise to the blocks `RealPlace` refuses, as hook E29 marks Disable's one block. |
+| E41 | `buildpipeline/BuildPipelineClient.java`, private static `handleClick(Minecraft, BuildPipeline.BuildState)` | `@WrapWithCondition` on `ClientLevel.playLocalSound(BlockPos, SoundEvent, SoundSource, float, float, boolean)` | While the setting acts, play the place sound only when `RealPlace` finds that the inventory covers the click's blocks (the local `BlockSet blocks`), since otherwise nothing goes in. |
+| M2 | `Minecraft.java`, `startUseItem()` | the same hook | While the setting acts, a paste goes to the server as `place` instead of as an edit, and a red copy's click sends nothing. |
+| S2 | `BlockItem.place`, `getPlacementState` | the same hook | While the server places a shape or a paste, the shape's orientation and count for that block in place of the player's turn, the shape's form where Minecraft gives the other form of the same item (`StandingAndWallBlockItem`), and null when Minecraft's state is any other block. |
+| S3 | `net/minecraft/world/item/BlockItem.java`, `place(BlockPlaceContext)` | `@WrapWithCondition` on `Level.playSound(Entity, BlockPos, SoundEvent, SoundSource, float, float)` | While the server places a shape or a paste, only its first block plays the place sound; a paste's first block plays it to the player too (`Level.playSound(null, …)`). |
 
-`RealPlace` (common) is the rule for each block and the order, which the game's preview and the server's placing
-share; `RealPlacer` (server) applies a `place`; `RealUndo` (server) keeps the marks and undoes and redoes a real step.
+`RealPlace` (common) is the rule for each block, the order, the inventory and the cap, which the game's preview, the
+copy's colour and the server's placing share; `RealPlacer` (server) applies a `place`.
 
 ### The material list
 
@@ -2824,24 +2855,28 @@ world's spawn, where Planner2, who isn't an operator, may build:
   block. Turned on and saved again, the row shows it on once client 1 has restarted twice. "Visual Settings" is shot
   without and with the row's tooltip (which covers the row), and Planner2's view of both stairs, at 854 by 480 and 1920 by 1080, GUI scale 2.
 
-`real.sh`, "Place real blocks" (proposed for 0.9.0; the checks follow the options the request recommends), more than 16
+`real.sh`, "Place real blocks" (proposed for 0.9.0), more than 16
 blocks from the world's spawn unless a check says otherwise, with Planner1 in survival (`/gamemode`) and its inventory
 set with `/clear` and `/give`. "On the server" means the dev server's own world, as `/execute if block` finds it (the
 scripts' `server_has`), and every real block checked there is checked on both clients too:
 
 - Planner1's "Settings" has the row "Place real blocks" after "Match ghost blocks", off at first; a click on its switch
   and "Save" saves `place-real-blocks=true`, and the row shows it on after a restart.
-- With 5 oak planks in hand and 5 elsewhere in the inventory, a 20-block Line places the 10 blocks nearest Planner1 as
-  real oak planks on the server, the other 10 don't go in, no ghost block appears, and the inventory holds no oak
-  planks. Before the click, the preview draws the 10 farthest red and the icons beside the crosshair show 10 and a red
-  10. The controls line reads "[Right-click: start placing real blocks]" before the first click, and Single's reads
-  "[Right-click: place real blocks]".
+- With 10 oak planks in hand and 10 elsewhere in the inventory, a 20-block Line places all 20 as real oak planks on
+  the server, no ghost block appears, and the inventory holds no oak planks. The controls line reads "[Right-click:
+  start placing real blocks]" before the first click, and Single's reads "[Right-click: place real blocks]".
+- With 19 oak planks, the preview of the same Line draws all 20 red and the icons beside the crosshair show 20 and a
+  red 1; the click places nothing, Planner1's game plays no place sound, the notice names 1 oak plank short, and the
+  inventory still has its 19.
 - Oak stairs in a Wall, turned with the wheel and with Effortless Building's mirror on, face on the server as the
   preview showed them, and the stairs beside each other join as by hand. A door has both halves and a bed both parts.
-- With the mix of 80 cobblestone and 20 mossy cobblestone and 10 of each in the inventory, each block of a 20-block Line
-  on the server is the mix's block at its position until that block's items run out, nearest first.
-- A Line through a real stone block and a cow leaves the stone and the cow's space as they were and places the rest; the
-  preview showed both red.
+  A Line of torches along a wall, aimed at the wall's side, places wall torches.
+- With the mix of 80 cobblestone and 20 mossy cobblestone, each block of a 20-block Line on the server is the block the
+  preview showed there when the inventory contains as many of each block as the preview uses, and nothing goes in
+  when it has one mossy cobblestone fewer. With the mirror on, a Line and its mirrored copy count together: an
+  inventory that covers only one of them places nothing.
+- A Line through a real stone block and a cow, with oak planks for only the other blocks, leaves the stone and the
+  cow's space as they were and places the rest; the preview showed both red.
 - With the array set to copies 70 blocks apart, the copy past 64 blocks from Planner1's eyes isn't placed and draws
   red, and the one at 63 is placed.
 - A Floor of oak planks over a ghost floor of oak planks takes those ghost blocks out of the layer; over ghost stone
@@ -2853,25 +2888,35 @@ scripts' `server_has`), and every real block checked there is checked on both cl
   `logs/debug.log`), goes to the checks' log and "Unverified".
 - Planner2's game plays one place sound for Planner1's 20-block Line (a count of the sounds the game plays, which the
   driver gains for this check).
-- Ctrl+Z right after the 20-block Line removes its 10 oak planks on the server and puts 10 back into Planner1's
-  inventory. Of a second Line, Planner2 breaks one block and places it back by hand, and fills a chest the shape
-  placed: Ctrl+Z leaves both, its notice counts 2, and Planner1 gets the other blocks' items back. Ctrl+Y places the
-  undone blocks again from the inventory. After a ghost shape drawn with the setting off after a Line, Ctrl+Z undoes
-  the ghost shape first and the Line next.
-- With the setting on, the break click's shape erases ghost blocks and breaks no real block, and a paste writes ghost
-  blocks. Turned off, shapes draw ghost blocks again.
+- A copy of a hut (a cobblestone floor and walls, an oak door, a wall torch inside, a lantern hanging from its roof, a
+  double stone slab, 3 candles and a water block) shows yellow (for the water) with "[Right-click: paste real
+  blocks]", and, with exactly the items it needs, pastes as one `place`: on the server each block is as the copy
+  shows it, the door with both halves, the torch on its wall and the lantern under the roof, the water isn't placed,
+  and the inventory has none of those items left (2 stone slabs for the double slab, 3 candles). Planner1 and Planner2
+  each hear one place sound. With one cobblestone fewer, the box is red, the line reads "[Can't paste: not enough
+  blocks]", and a right click places nothing and sends nothing. Pasted over a real stone block, the paste leaves the
+  stone and places the rest. A Line of 3 copies of a 4-block copy places all 12 blocks at its second click, as one
+  `place`, and a Floor of copies over 2,000 blocks draws red with "[Can't paste: too many blocks]".
+- After a ghost shape, then a Line of real blocks, Ctrl+Z undoes the ghost shape and leaves the Line's real blocks, and
+  Ctrl+Y redoes the ghost shape; with no change to ghost blocks left to undo, Ctrl+Z says there's nothing to undo and
+  the real blocks stay.
+- With the setting on, the break click's shape erases ghost blocks and breaks no real block. Turned off, shapes and
+  pastes draw ghost blocks again.
 - Shots, at 854 by 480 and 1920 by 1080, GUI scale 2: "Settings" with the row, the preview with its red blocks and the
-  crosshair's icons, the controls line in Single and in Line, and Planner2's view of the placed Wall.
+  crosshair's icons, the whole Line red for 1 oak plank short, the controls line in Single and in Line, the copy's box
+  yellow and red with its lines, and Planner2's view of the placed Wall and the pasted hut.
 
-`RealPlaceTest` covers the rule for each block: the order (nearest the player's block position first, ties in the
-shape's order), the inventory (the main hand's stack first, each mix block on its own, nothing used in creative), the
-reach (63, 64 and 65 blocks from the eyes along each axis and a diagonal), a space that doesn't take a block, and the
-setting acting only during a session whose server takes `place`, in every mode but Disable, with an item that places a
-block. `RealUndoTest` covers the marks (another block, the same block turned, a fence joining a neighbour that doesn't
-count, a block back after a break that stays marked), which blocks an undo removes (none marked, none in an unloaded
-chunk, a block entity whose data changed staying), what the space goes back to (air, water and lava; grass to air),
-the items back in survival and none in creative, and a redo only where the space still takes a block. `PayloadsTest`
-covers `place` and its limits, and `ControlsLineTest` the lines with the setting on.
+`RealPlaceTest` covers the rule for each block: the order (the lowest level first, and a block that can't stay tried
+again after the rest), the inventory (the main hand's stack first, each mix block as its own item, every block of the
+mirror's and the array's copies counted, none for a block the checks leave out, 2 slabs for a double slab and as many
+items as a block is made of, nothing going in when one item is short, and nothing used in creative), the reach (63,
+64 and 65 blocks from the eyes along each axis and a diagonal), a space that doesn't take a block, a block no item
+places, the cap of 2,000, and the setting acting only during a session whose server takes `place`, in every mode but
+Disable, with an item that places a block. `CopyColourTest` covers the copy's colours with the setting on: blue on
+clear ground and over ghost blocks; yellow for a real block in a space, a block past the reach, one outside the build
+height or the border, and water; red past 2,000 blocks, checked first, and in survival for an inventory one item
+short. `PayloadsTest` covers `place` and its limits, and `ControlsLineTest` the lines with the setting on, the copy's
+included.
 
 The copy's placement has unit tests as pure functions. `CopyPlacementTest` covers the copy against each of the six
 faces, with sides of odd and even lengths, the origin for each turn and mirror filling the turned box, and a turn or
@@ -3091,8 +3136,12 @@ other in the game's own copy of the layer, again after a restart, which doesn't 
 - "Place real blocks" (proposed for 0.9.0), read in the 26.3 jar and Effortless Building's source, not run: that
   `BlockItem.place` with a context at each of a shape's positions places as the player's right click would there; how
   long the server takes to place 2,000 blocks in one tick; that `Block.asItem` gives the item that places every block a
-  shape can hold; and how often a shape of signs opens the sign editor, which Minecraft opens for the player as each
-  sign is placed.
+  shape can hold; and how often a shape or a paste of signs opens the sign editor, which Minecraft opens for the player
+  as each sign is placed. Not read: that `StandingAndWallBlockItem` picks its form from where the player looks and that
+  S2 can give the shape's form in its place; which blocks are made of several items (a double slab, candles, sea
+  pickles, snow layers, turtle eggs, pink petals), each to be listed from the 26.3 jar's block state properties; and
+  that a paste's context, the top face with a hit at each block's bottom middle, gives each block of a copy its own
+  state once S2 turns it.
 - How Freecam 1.5.1 stops a right click while "Allow interaction" is off, and that `Aim` can read the option by
   reflection, as it reads "Player control"; its source wasn't read for either.
 - That every orientation property `BlockTurn` stores is a separate property from the one a two-part block uses for its

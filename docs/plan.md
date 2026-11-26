@@ -64,7 +64,8 @@ From inbox requests 401 and 402 (revisions 1 to 4):
   as a plan everyone on the server sees, which the group then builds for real by hand (402 r1).
 - Effortless Building's shapes, mirror, repeat and Randomizer edit only Litematica ghost plans, never real blocks
   (402 r2, comment c1), except that with the setting "Place real blocks" on, on servers that run Building Planner, the
-  server places the whole shape (1368 Q2 A; "Building Planner 0.9.0" below).
+  server places the whole shape, or the paste, from the player's inventory (1368 Q2 A, 1372 Q6 B; "Building Planner
+  0.9.0" below).
 - Randomized block mixes, such as cobblestone with some mossy cobblestone (402 r2, c1).
 - Layout guides are shared with everyone on the server; client-only guides like MiniHUD's are rejected (402 r2, c2).
 - No automation (block placers, breakers, quarries) for now (402 r2).
@@ -531,8 +532,21 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
     Effortless Building's shapes, mirror, repeat and Randomizer edit only Litematica ghost plans, never real blocks
     (402 r2, c1): while the setting is on, the place click's shape places real blocks.
 
+  Geo's answers to the request "Place real blocks: open choices" (1372):
+  - in survival, a shape's real blocks come from the inventory, all or nothing: "Your inventory, and nothing goes in
+    unless it has every block the shape needs." (1372 Q1 C);
+  - a shape places real blocks within 64 blocks of the player: "Up to 64 blocks." (1372 Q2 A);
+  - a real block in a shape's space stays: "It stays; the shape fills only spaces a right click could place into (air,
+    water, lava, grass, or a snow layer)." (1372 Q3 A);
+  - with the setting on, the break (left) click's shape erases only ghost blocks: "Erase ghost blocks only, as with
+    the setting off." (1372 Q4 A);
+  - Ctrl+Z doesn't undo real blocks: "No: Ctrl+Z undoes only ghost blocks, and real blocks come out by hand." (1372
+    Q5 B);
+  - with the setting on, a paste places real blocks: "Place real blocks from your inventory, by the same rules as a
+    shape." (1372 Q6 B).
+
   The design ("Place real blocks" in [building-planner.md](building-planner.md)) settles how it works within Geo's
-  answer:
+  answers:
   - the setting is a row of "Settings" after "Match ghost blocks", off at first and saved with the screen's "Save"; it
     acts on a server whose Building Planner takes the new payload `place`, and 0.9.0 keeps protocol version 5, so a
     0.8.0 game and a 0.9.0 server work together;
@@ -540,22 +554,31 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
     radial mirror, the array and the block mix, each block turned as the preview shows it, and with "Match ghost
     blocks" on, each block that fills a ghost block of its own block turned as that ghost block is; Single places one
     real block a click, repeated at the build speed while the button is held;
+  - a paste places the copy's blocks as real blocks, and a Line, Wall or Floor of copies places the whole set at its
+    second click, by the same rules as a shape;
   - the server places each block as the player's own right click would place it there, through Minecraft's
     `BlockItem.place`, with a right click's checks (a game mode that builds, a loaded chunk, the build height, the
     world border, spawn protection, a block that can stay, no entity in its way, operators' blocks only for
-    operators);
-  - at most 2,000 real blocks a shape, and a second, for each player (`max-place-blocks`, Effortless Building's own cap
-    on a survival player's shape), and one place sound a shape;
-  - the preview draws red each block the player's game can tell won't go in, Effortless Building's own icons beside
-    the crosshair count the blocks the shape uses, and the right click's control says it places real blocks (Geo's
-    rule for the controls lines, 1313 [c1]), in words Geo approves in build step 5;
+    operators), from the lowest level up, giving a block whose support the same shape or paste places one more try
+    after the rest;
+  - in survival, nothing goes in unless the inventory contains an item for every block that passes those checks: every
+    block of the mirror's and the array's copies counts, each block of the mix counts as its own item, and a block
+    made of several items, such as a double slab, counts as that many; blocks left out for their space or the
+    reach need none, and when the inventory falls short, a notice names the items short;
+  - at most 2,000 real blocks a shape or a paste, and a second, for each player (Effortless Building's own cap on a
+    survival player's shape), fixed rather than a server setting so that the game can draw a copy past it red; and
+    one place sound a shape or a paste;
+  - the preview draws red each block the player's game can tell won't go in, and the whole shape when the inventory
+    doesn't cover it; Effortless Building's own icons beside the crosshair count the blocks the click uses; and the
+    right click's control says it places real blocks (Geo's rule for the controls lines, 1313 [c1]), in words Geo
+    approves in build step 5;
+  - the copy's box is blue where every block would go in, yellow where some wouldn't (a real block in the space, past
+    the reach, outside the world, or a block no item places, such as water), and red where nothing would (over 2,000
+    blocks, or an inventory that doesn't cover it), with the reason on the controls line and a click that pastes
+    nothing;
+  - a shape or a paste of real blocks makes no undo step, so Ctrl+Z right after one undoes the player's newest change
+    to ghost blocks, made before it;
   - a real block that fills a ghost block takes it out of the layer, as any real block does.
-
-  Open, in the request "Place real blocks: open choices", each recommending A: Q1, where a shape's blocks come from in
-  survival (A: the inventory, the blocks nearest the player going in when it runs short); Q2, how far from the player
-  (A: 64 blocks); Q3, real blocks in the way (A: never replaced); Q4, the left click (A: erases ghost blocks, as with
-  the setting off); Q5, undo (A: Ctrl+Z undoes real blocks too, their items back to the inventory); Q6, a paste (A:
-  ghost blocks, as with the setting off).
 - The shared layer replaces the decisions above that concern separate plans: named plans that move and turn as a whole
   (411 Q1), plan growth (411 Q2), who deletes a plan (411 Q3, 420 Q9), starting a plan with N (420 Q1, 469 Q1), hiding
   a plan with Litematica or Syncmatica (420 Q2, 469 Q2), the paste's target plan (485 Q3), Litematica's Edit Schematic
@@ -637,45 +660,49 @@ at 854 by 480 and 1920 by 1080, GUI scale 2, plus GUI scale 4 where a step says 
    which `overlap.sh`, `filled.sh` and `import.sh` passed, run by the server and the pack (see "Current setup"), with
    the guide's changed sentences in Geo's wording.
 
-**Building Planner 0.9.0** (the bullet "Building Planner 0.9.0" in "Decisions" above: Geo's comment c4 on 1359 and
-1368 Q2 A). "Place real blocks" in [building-planner.md](building-planner.md) is the design; each choice still Geo's
-carries an `OPEN:` mark naming its question in the request "Place real blocks: open choices", and the text describes
-the option the request recommends. A pick other than the recommended one on a question sends the design of what it
-changes back to Geo before the steps that build it. 0.9.0 starts once 0.8.0 is released, and keeps protocol version 5.
+**Building Planner 0.9.0** (the bullet "Building Planner 0.9.0" in "Decisions" above: Geo's comment c4 on 1359,
+1368 Q2 A and Geo's answers in 1372). "Place real blocks" in [building-planner.md](building-planner.md) is the design.
+0.9.0 starts once 0.8.0 is released, and keeps protocol version 5.
 
 The steps come in this order, each needing the one before it, and each small enough for one child. 0.8.0's rules for
 commits, screenshots, the spec's "In-game checks" and the full set of in-game scripts apply; the full set runs once, on
 step 5's last build. The in-game checks of real blocks are in `real.sh`, which step 2 adds.
 
-1. **The rule for each block** ("Place real blocks": "How the server places each block" and the checks before it).
-   Waits on Q1, Q2 and Q3. `RealPlace` (common), the pure rule the game's preview and the server's placing share: the
-   order, the inventory, the reach and a space that takes a block. Done when `RealPlaceTest` covers what the spec's
-   unit tests' paragraph lists for it.
+1. **The rule for each block** ("Place real blocks": "How the server places each block", the checks before it, "The
+   inventory" and "The cap"). `RealPlace` (common), the pure rule the game's preview, the copy's colour and the
+   server's placing share: the order, the inventory and its all-or-nothing count, the reach, a space that takes a
+   block, a block an item places, and the cap. Done when `RealPlaceTest` covers what the spec's unit tests' paragraph
+   lists for it.
 2. **The server places a shape** ("How the server places each block", "The cap", "One sound", "The notice",
-   "Compatibility"). The payload `place`, `RealPlacer`, hook S2 turning each block to the shape's state, hook S3, the
-   setting `max-place-blocks` (the cap on a shape and on a second), and the notice. Done when `PayloadsTest` covers
-   `place` and its limits, `filled.sh` and `overlap.sh` pass (hook S2 still turns Disable's blocks and matches ghost
-   blocks), and `real.sh`'s checks of what lands on the server pass, with the driver sending each shape's `place`
-   itself (a driver command that step 3 keeps for the cap's check): the Line's nearest blocks, the stairs, door and
-   bed, the mix, real blocks and the cow in the way, the reach, ghost blocks filled, spawn protection and adventure
-   mode, the cap and its time, and one sound.
-3. **The setting in the game** ("The setting", "What a shape does", "The preview"). Waits on Q4 and Q6, which decide
-   what the break click and a paste do with the setting on. The row in "Settings" (hook E36's label keys,
-   `VisualSettingsRow`), hook E1 sending the shape as `place`, hooks E8 and E40, and the controls lines. Done when
-   `ControlsLineTest` covers the lines with the setting on and off, `filled.sh`'s settings checks pass with the new
-   row, `step9.sh`'s controls line checks pass unchanged with the setting off, and every `real.sh` check but undo's
-   passes through Planner1's own clicks, with the preview's red blocks and the crosshair's icons. Shots as `real.sh`
-   lists them.
-4. **Undo and redo of real blocks** ("Undo", and "Undo and redo" in "What players get"). Waits on Q5. The undo list's
-   second kind of step, hook S1's marks and `RealUndo`. Done when `RealUndoTest` covers what the spec's unit tests'
-   paragraph lists for it, `UndoHistoryTest` and `LayerUndoTest` cover a real step beside the layer's steps within the
-   50 steps and the block budget, and `step6.sh`'s undo checks and `real.sh`'s undo checks pass.
+   "Compatibility"). The payload `place`, `RealPlacer`, hook S2 giving each block the shape's orientation, form and
+   count, hook S3, the cap on a shape and on a second, and the notices. Done when `PayloadsTest` covers `place` and its
+   limits, `filled.sh` and `overlap.sh` pass (hook S2 still turns Disable's blocks and matches ghost blocks), and
+   `real.sh`'s checks of what lands on the server pass, with the driver sending each shape's `place` itself (a driver
+   command that steps 3 and 4 keep for the cap's check): the whole Line and the Line 1 oak plank short, the stairs,
+   door, bed and wall torches, the mix and the mirror, real blocks and the cow in the way, the reach, ghost blocks
+   filled, spawn protection and adventure mode, the cap and its time, and one sound.
+3. **The setting in the game** ("The setting", "What a shape does", "The preview", "Undo"). The row in "Settings"
+   (hook E36's label keys, `VisualSettingsRow`), hook E1 sending the shape as `place`, hooks E8, E40 and E41, and the
+   controls lines. Done when `ControlsLineTest` covers the lines with the setting on and off, `filled.sh`'s settings
+   checks pass with the new row, `step9.sh`'s controls line checks pass unchanged with the setting off, and every
+   `real.sh` check of a shape passes through Planner1's own clicks, with the preview's red blocks, the whole Line red
+   and no sound when it's 1 oak plank short, the crosshair's icons, and Ctrl+Z after a Line undoing the ghost shape
+   before it.
+   Shots as `real.sh` lists them for shapes.
+4. **A paste of real blocks** ("A paste"). Hook M2 sending a paste, or a Line, Wall or Floor of copies, as `place`
+   with a paste's face and hit; `CopyColour`'s colours for real blocks; and the copy's controls lines with the setting
+   on. Done when `CopyColourTest` and `ControlsLineTest` cover what the spec's unit tests' paragraph lists for them,
+   `step9.sh`'s copy and paste checks pass unchanged with the setting off, and `real.sh`'s paste checks pass through
+   Planner1's own clicks: the hut with its door, wall torch, hanging lantern, double slab and candles, yellow for its
+   water, red 1 cobblestone short, a real block in the way, a Line of 3 copies, a Floor over 2,000 blocks, and one
+   sound for each player. Shots as `real.sh` lists them for the copy.
 5. **Texts and screenshots for Geo**: every text steps 2 to 4 add (the row's label and tooltip, the controls lines'
-   words, the notices for blocks left out, the cap and an undo), and the player guide's sentences on "Place real
-   blocks", go to Geo as editable text, with every step's screenshots, the changes outlined in red, each text following
-   the rule Geo approved for the game's texts (985 Q1 A; 1313). Geo's version is built in, `ControlsLineTest` and
-   `real.sh` check each text exactly, and the full set of in-game scripts runs on the last build. The same step sets
-   the version 0.9.0, and the release request shows the setting and a placed shape in the game, outlined in red.
+   words, the copy's lines and its reasons, and the notices for blocks left out, an inventory that falls short and the
+   cap), and the player guide's sentences on "Place real blocks", go to Geo as editable text, with every step's
+   screenshots, the changes outlined in red, each text following the rule Geo approved for the game's texts (985 Q1 A;
+   1313). Geo's version is built in, `ControlsLineTest` and `real.sh` check each text exactly, and the full set of
+   in-game scripts runs on the last build. The same step sets the version 0.9.0, and the release request shows the
+   setting, a placed shape and a paste in the game, outlined in red.
 6. **The release**, once Geo approves it: the GitHub release `building-planner-0.9.0`, not latest, from the commit on
    which the full set passed, run by the server and the pack (see "Current setup"), with the guide's new sentences in
    Geo's wording.
