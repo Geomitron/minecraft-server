@@ -18,10 +18,10 @@ import net.minecraft.client.Minecraft;
 
 /**
  * Sets how Litematica draws ghost blocks and its tool item, turns its drawing of area selections off, and gives M to
- * Freecam's menu instead of Litematica's, and frees Page Up and Page Down from its layer hotkeys, once each on a
- * player's computer, whether or not they join a server with Building Planner: translucent blocks at 0.8 opacity and no
- * tool item, then no area selections drawn, then M, then Page Up and Page Down, for each option the player hasn't
- * changed from its default. Each group saves the config it changed, then records that in
+ * Freecam's menu instead of Litematica's, frees Page Up and Page Down from its layer hotkeys, and stops its status
+ * panel showing itself, once each on a player's computer, whether or not they join a server with Building Planner:
+ * translucent blocks at 0.8 opacity and no tool item, then no area selections drawn, then M, then Page Up and Page
+ * Down, then no status panel, for each option the player hasn't changed from its default. Each group saves the config it changed, then records that in
  * the player's {@link ClientConfig} under a record of its own, so a later change of the player's own stays and a
  * player who ran an earlier version gets each group it lacks.
  */
@@ -51,6 +51,14 @@ final class LitematicaLook {
 		}
 		setMenuKey(config);
 		setLayerKeys(config);
+		try {
+			LookDefaults.setStatusPanelOnce(config, () -> {
+				setStatusPanel();
+				Configs.saveToFile();
+			});
+		} catch (IOException | RuntimeException e) {
+			BuildingPlanner.LOGGER.warn("Couldn't turn off Litematica's status panel showing itself", e);
+		}
 	}
 
 	/**
@@ -138,6 +146,15 @@ final class LitematicaLook {
 			areaSelection.getDefaultBooleanValue(), LookDefaults.AREA_SELECTION_RENDERING);
 		if (areaSelectionNow != areaSelection.getBooleanValue()) {
 			areaSelection.setBooleanValue(areaSelectionNow);
+		}
+	}
+
+	private static void setStatusPanel() {
+		ConfigBoolean auto = Configs.InfoOverlays.STATUS_INFO_HUD_AUTO;
+		boolean autoNow = LookDefaults.choose(auto.getBooleanValue(), auto.getDefaultBooleanValue(),
+			LookDefaults.STATUS_PANEL_AUTO);
+		if (autoNow != auto.getBooleanValue()) {
+			auto.setBooleanValue(autoNow);
 		}
 	}
 }

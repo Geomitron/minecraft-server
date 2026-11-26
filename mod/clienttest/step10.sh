@@ -1,11 +1,11 @@
 # Step 10's in-game checks: hold to repeat in Effortless Building's Single mode, with the radial menu's speed sliders,
-# editing from Freecam's camera, and the look Building Planner sets for Litematica's ghost blocks once. Sourced by
-# inside.sh, which provides drv, val, check, keys, xdo, use_click, attack_click, client_said, start_client, stop_client
-# and stop_server. Each client starts with a fresh game folder, so its first start is the first start.
+# editing from Freecam's camera, and the settings Building Planner changes once, Litematica's status panel among them.
+# Sourced by inside.sh, which provides drv, val, check, keys, xdo, use_click, attack_click, client_said, start_client,
+# stop_client and stop_server. Each client starts with a fresh game folder, so its first start is the first start.
 
-# The look, on a first start: both of Litematica's look options are set and its tool item and its drawing of area
-# selections turned off, saved to its config, and recorded. Each client also saved a first start before it joined the
-# server.
+# The look, on a first start: both of Litematica's look options are set and its tool item, its drawing of area
+# selections and its status panel's showing itself turned off, saved to its config, and recorded. Each client also
+# saved a first start before it joined the server.
 marker=config/buildingplanner-client.properties
 
 # layer_json <client> <hotkey>: that hotkey's entry in the client's Litematica config, compacted, up to the next entry
@@ -49,6 +49,13 @@ for n in 1 2; do
 		 ! layer_json '$n' layerNext | grep -q PAGE_ && ! layer_json '$n' layerPrevious | grep -q PAGE_'
 	check "client $n recorded the layer keys group in Building Planner's own config" eval \
 		'grep -q "^layer-keys-applied=true" run/client'$n'/'$marker
+	check "client $n's first start stops Litematica's status panel showing itself" eval \
+		'[[ $(val '$n' statusoption) == false ]]'
+	check "and saves that to Litematica's config" eval \
+		'tr -d " \n\r" < run/client'$n'/config/litematica.json |
+		 grep -Eq "\"statusInfoHudAuto\":(false|\{\"enabled\":false)"'
+	check "client $n recorded the status panel group in Building Planner's own config" eval \
+		'grep -q "^status-panel-off-applied=true" run/client'$n'/'$marker
 done
 
 # M opens Freecam's screen, and no screen of Litematica's. Litematica's M,L hotkey for its material list (M held, then
@@ -240,10 +247,19 @@ hold_at() {
 check "holding use now sends an edit 4 ticks after it goes down, then every 2 ticks" hold_at 3 use 2
 check "and holding attack one every 10" hold_at 1 attack 10
 
-# Both settings survive a restart: the sliders show them, and hold to repeat uses them.
+# Both settings survive a restart: the sliders show them, and hold to repeat uses them. Planner1 joins again beside
+# the row's ghost blocks, whose columns Building Planner adds to Litematica as their chunks load; with Litematica's
+# drawing of area selections off, each would show Litematica's status panel for 10 seconds if it still showed itself.
+# The screen is shot 5 seconds after joining, with the bottom left corner where Litematica draws the panel, and for
+# 15 seconds the driver reads at each client tick whether the panel is to draw.
 stop_client 1
 start_client 1
 check "client 1 starts a session again" drv 1 "await session" "await noscreen"
+drv 1 "await ingame 90" "notoasts" "wait 5" "notoasts" "wait 5" "shot status-panel-off" > /dev/null
+check "for 15 seconds after Planner1 joins beside ghost blocks, Litematica's status panel never draws" eval \
+	'drv 1 "await ingame 300" > /dev/null && panel=$(val 1 statuspanel) &&
+	 echo "  status panel: $panel" >> /out/checks.log && [[ $panel =~ ^drawn\ 0\ of\ [0-9]+\ ticks$ ]] &&
+	 (($(val 1 "countblocks 2 40 -59 5 minecraft:stone_bricks") > 0))'
 check "after a restart, hold to repeat keeps both settings" eval '[[ $(val 1 repeat) == "place=2 erase=10" ]]'
 drv 1 "cmd tp @s 20 -58 -5 0 30" "wait 20" > /dev/null
 xdo 1 keydown Alt_L
@@ -460,15 +476,17 @@ check "Freecam's camera goes off" eval '[[ $(val 1 "freecam false") == false ]] 
 	[[ $(val 1 camera) == LocalPlayer* ]]'
 drv 1 "cmd clear @s" "ebmode DISABLED" > /dev/null
 
-# The look, after the player's own change: translucent off and alpha 0.3, and the drawing of area selections turned
-# back on, saved; a restart keeps all three.
-drv 2 "setlook false 0.3" "setareaoption true" > /dev/null
+# The look, after the player's own change: translucent off and alpha 0.3, and the drawing of area selections and the
+# status panel's showing itself turned back on, saved; a restart keeps all four.
+drv 2 "setlook false 0.3" "setareaoption true" "setstatusoption true" > /dev/null
 stop_client 2
 start_client 2
 check "client 2 starts a session again" drv 2 "await session" "await noscreen"
 check "a restart keeps the player's own look, not Building Planner's" \
 	eval '[[ $(val 2 look) == "translucent=false alpha=0.3" ]]'
 check "and the drawing of area selections the player turned back on" eval '[[ $(val 2 areaoption) == true ]]'
+check "and the status panel's showing itself, which the player turned back on" eval \
+	'[[ $(val 2 statusoption) == true ]] && grep -q "^status-panel-off-applied=true" run/client2/'$marker
 
 # With the record gone but the alpha still the player's own, only the option left at Litematica's default is set, and
 # on a client that never joins a server with Building Planner: the server is stopped first.
@@ -479,8 +497,10 @@ start_client 2
 check "a client that joins no server sets the option left at its default, and keeps the player's alpha" \
 	eval 'drv 2 "wait 60" > /dev/null && [[ $(val 2 look) == "translucent=true alpha=0.3" ]]'
 check "and turns the drawing of area selections, which was at its default, off" eval '[[ $(val 2 areaoption) == false ]]'
+check "and the status panel's showing itself, which was at its default, off" eval '[[ $(val 2 statusoption) == false ]]'
 check "and records each group" eval \
-	'grep -q "^look-defaults-applied=true" run/client2/'$marker' && grep -q "^area-selection-off-applied=true" run/client2/'$marker
+	'grep -q "^look-defaults-applied=true" run/client2/'$marker' && grep -q "^area-selection-off-applied=true" run/client2/'$marker' &&
+	 grep -q "^status-panel-off-applied=true" run/client2/'$marker
 check "and saves it" eval \
 	'tr -d " \n\r" < run/client2/config/litematica.json | grep -q "\"ghostBlockAlpha\":0.3"'
 

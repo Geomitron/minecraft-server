@@ -3005,12 +3005,16 @@ the row; the checks on the row count the blocks the edits changed, not the edits
   hides ghost blocks, N shows them again, a Line shape with the block mix on takes the mix's blocks, and Ctrl+Z and
   Ctrl+Y undo and redo it. A left click with a stick aimed at a real stone breaks nothing. A shape's preview, a box and
   the copy are shot from the camera at 854 by 480 and 1920 by 1080, GUI scale 2.
-- Each client's first start leaves Litematica's options at on and 0.8 (and the tool item and the drawing of area
-  selections off), Freecam's "Config GUI" key at M, Litematica's `openGuiMainMenu`, `layerNext` and `layerPrevious`
-  with no key, saved in Litematica's config and Minecraft's `options.txt`, and the four records in Building Planner's
-  client config.
-- A player's own change (off and 0.3) survives a restart. With the records gone and the server stopped, so the client
-  joins nothing, a start sets only the option still at its default (on) and keeps the 0.3. With only
+- Each client's first start leaves Litematica's options at on and 0.8 (and the tool item, the drawing of area
+  selections and `statusInfoHudAuto` off), Freecam's "Config GUI" key at M, Litematica's `openGuiMainMenu`,
+  `layerNext` and `layerPrevious` with no key, saved in Litematica's config and Minecraft's `options.txt`, and the five
+  records in Building Planner's client config.
+- Planner1, joining again after a restart beside ghost blocks (the hold rows'), never has Litematica's status panel to
+  draw in the 15 seconds after joining: the driver reads `StatusInfoRenderer.shouldRenderStatusInfoHud()` at the end
+  of each client tick. The screen is shot 5 seconds after joining, with the bottom left corner where the panel draws.
+- A player's own change (off and 0.3, and `statusInfoHudAuto` turned back on with its record there) survives a
+  restart. With the records gone and the server stopped, so the client joins nothing, a start sets only the options
+  still at their defaults (on, and `statusInfoHudAuto` off) and keeps the 0.3. With only
   `area-selection-off-applied` gone and the drawing of area selections turned back on, a start turns it off and
   changes nothing else. With only `look-defaults-applied` gone and the look at Litematica's defaults, a start sets the
   look and leaves the drawing of area selections the player turned on; with every record left, nothing changes.
@@ -3025,6 +3029,13 @@ the row; the checks on the row count the blocks the edits changed, not the edits
 - In the game, M opens Freecam's settings screen (the driver's `screenclass` reads the open screen's class, Cloth
   Config's) and no Litematica screen; M held with L pressed opens no Litematica screen either. Escape closes Freecam's
   screen. Both screens are shot.
+
+The settings changed once have unit tests as pure functions. `LookDefaultsTest` covers each group's choice (the
+player's own value kept, Litematica's default replaced) and each group's record: written and read back, its own beside
+the others', and kept with the player's other settings. For the status panel group, it covers `statusInfoHudAuto`
+turned off from its default and left off where the player turned it off, the group set and its record written once,
+no record when saving fails (the next start tries again), and the group reaching a file that holds only the earlier
+groups' records. `MenuKeyTest` and `LayerKeysTest` cover the key groups' rules and records.
 
 `overlap.sh`, overlapping shapes and the self-check ("Overlapping shapes"). "Drawn" means Litematica's schematic world
 holds the block (the driver's `countbox`), and some checks also compare what Litematica's renderer last built of each
@@ -3445,7 +3456,8 @@ other in the game's own copy of the layer, again after a restart, which doesn't 
 - That a locked step's position, moved by nudges where the aim could never put it, gives each mode the shape the
   directions in "Locking and nudging" describe: read in Line, Wall, Floor and Cube, not in Circle, Cylinder, Sphere,
   Diagonal Line, Diagonal Wall and Slope Floor.
-- That turning off `statusInfoHudAuto` keeps Litematica's status panel off in every case Geo saw it: read in
+- That turning off `statusInfoHudAuto` keeps Litematica's status panel off in every case Geo saw it: run for a join
+  beside ghost blocks (`step10.sh`); for ghost blocks shown again, the copy and a selection's change, read in
   `StatusInfoRenderer` (Litematica 0.29.1), not run.
 - That hook E32's wrap of `resolveFirstClickPos` reaches every mode's first click: `handleClick` and
   `getPreviewBlocks` both call it (source read), and no mode was seen finding its first position another way.

@@ -19,6 +19,7 @@ import fi.dy.masa.litematica.materials.MaterialListBase;
 import fi.dy.masa.litematica.materials.MaterialListEntry;
 import fi.dy.masa.litematica.render.LitematicaRenderer;
 import fi.dy.masa.litematica.render.OverlayRenderer;
+import fi.dy.masa.litematica.render.infohud.StatusInfoRenderer;
 import fi.dy.masa.litematica.schematic.LitematicaSchematic;
 import fi.dy.masa.litematica.schematic.placement.SchematicPlacement;
 import fi.dy.masa.litematica.selection.AreaSelection;
@@ -89,6 +90,12 @@ public final class Driver implements ClientModInitializer {
 	/** The real block {@code watchblock} reads at the end of every client tick, and the states it read, in order. */
 	private BlockPos watchedPos;
 	private final List<String> watchedStates = new ArrayList<>();
+	/**
+	 * The client ticks of this game run with the player in a world, and those of them at whose end Litematica's status
+	 * panel was to draw ({@code StatusInfoRenderer.shouldRenderStatusInfoHud()}).
+	 */
+	private static int inGameTicks;
+	private static int statusPanelTicks;
 
 	@Override
 	public void onInitializeClient() {
@@ -111,6 +118,12 @@ public final class Driver implements ClientModInitializer {
 		}
 		if (watchedPos != null && mc.level != null) {
 			watchedStates.add(mc.level.getBlockState(watchedPos).toString());
+		}
+		if (mc.level != null && mc.player != null) {
+			inGameTicks++;
+			if (StatusInfoRenderer.getInstance().shouldRenderStatusInfoHud()) {
+				statusPanelTicks++;
+			}
 		}
 		if (quickClick != null) {
 			if (quickClick.isDown() && mc.gui.screen() == null) {
@@ -611,6 +624,21 @@ public final class Driver implements ClientModInitializer {
 				Configs.Visuals.GHOST_BLOCK_ALPHA.setDoubleValue(Double.parseDouble(a[2]));
 				Configs.saveToFile();
 				return "ok";
+			}
+			case "statusoption" -> {
+				// statusoption: Litematica's statusInfoHudAuto now, which shows its status panel by itself.
+				return String.valueOf(Configs.InfoOverlays.STATUS_INFO_HUD_AUTO.getBooleanValue());
+			}
+			case "setstatusoption" -> {
+				// setstatusoption <on>: the player's own change in Litematica's settings, saved as its screen does.
+				Configs.InfoOverlays.STATUS_INFO_HUD_AUTO.setBooleanValue(Boolean.parseBoolean(a[1]));
+				Configs.saveToFile();
+				return "ok";
+			}
+			case "statuspanel" -> {
+				// statuspanel: of the client ticks since the player joined in this game run, how many ended with
+				// Litematica's status panel to draw.
+				return "drawn " + statusPanelTicks + " of " + inGameTicks + " ticks";
 			}
 			case "areaoption" -> {
 				// areaoption: Litematica's enableAreaSelectionBoxesRendering now.
@@ -1333,6 +1361,7 @@ public final class Driver implements ClientModInitializer {
 			case "noglow" -> glows().isEmpty();
 			case "held" -> SentPackets.held(a[1].equals("use"));
 			case "pressedafter" -> SentPackets.presses() > Integer.parseInt(a[1]);
+			case "ingame" -> inGameTicks >= Integer.parseInt(a[1]);
 			case "layer" -> LayerProbe.matches(mc.gameDirectory.toPath().resolve(a[1]));
 			case "listfile" -> ListProbe.fileHasCurrent(mc.gameDirectory.toPath().resolve(a[1]));
 			default -> throw new IllegalArgumentException(what);
