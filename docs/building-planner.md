@@ -5,29 +5,8 @@ ghost blocks that everyone on the server sees and edits live, then builds them b
 Building; Litematica draws the ghost blocks, out of sight. It hooks into unchanged copies of both. Geo's decisions
 behind it are in [plan.md](plan.md) ("Decisions").
 
-**What's built.** The server and the player pack run Building Planner 0.6.0, which has everything this spec describes
-except 0.7.0's changes, from Geo's walkthrough of 0.6.0 (815 revision 2, comments c2 to c19; "Building Planner 0.7.0"
-in [plan.md](plan.md) "Decisions"):
-
-- the radial menu's buttons in new rows (see "The radial menu's buttons and sliders");
-- ghost blocks with the wrong block or the wrong state in them seen through walls from nearby (see "Wrong
-  blocks through walls");
-- the block a click would place drawn before the first click, and locking and nudging the first click's position and
-  the positions a shape has set, in every build mode (see "Locking and the first click");
-- Single mode without Zoop and Vertical, and the copy's "Mode" (Off, Line, Wall and Floor) in place of its Zoop and
-  Vertical, with the copy pasted by a right click (see "Copy and paste");
-- Delete as one mode, which marks with a box drawn by Left Control and a held left click, and erases the marks with a
-  held left click and a progress bar (see "Delete");
-- Esc stepping out of one mode a press at a time before it pauses, the build mode's name beside the hotbar, and the held
-  item's name above the controls lines (see "Esc" and "The build mode's name and the held item's name");
-- boxes in a colour for each purpose, the first corner's face shaded, and the blocks listed under the crosshair on a
-  dark background (see "Boxes for Copy and the material list");
-- a setting in Effortless Building's "Visual Settings" screen that places a block turned as the ghost block it fills
-  (see "Settings");
-- the material list screens' "Close" button and Building Planner's own (i) text (see "The screen's buttons").
-
+**What's built.** The server and the player pack run Building Planner 0.7.0, which has everything this spec describes.
 0.7.0 keeps protocol version 5: it changes nothing the server does, so a 0.6.0 game and a 0.7.0 server work together.
-The build steps are in [plan.md](plan.md) ("Agent-ready work").
 
 ## What players get
 
