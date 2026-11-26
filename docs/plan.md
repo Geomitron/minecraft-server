@@ -642,6 +642,19 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
   new keyboard press that's displayed while you're pasting. It would have a menu like the saved materials lists.
   Copies would save automatically, with the most recent 10, but you can view any of those copies in that menu and
   rename it, which saves it until you delete it."
+
+  The design ("Saved copies" in [building-planner.md](building-planner.md)), proposed for 0.11.0, settles how it works
+  within Geo's words, and the request "Saved copies" asks Geo what's still open (Q1 to Q4):
+  - each copy Copy makes is saved at once, named by its date and time; the 10 most recent copies not renamed stay, and
+    a renamed copy stays until deleted, without counting among the 10 (Q3);
+  - the copies are kept on the player's computer, a set for each account, the same on every server, so 0.11.0 changes
+    nothing the server does and keeps protocol version 5 (Q1);
+  - the key "Saved copies" (V) opens the screen whenever no screen is open, and the copy's controls line shows it as
+    "[V: saved copies]" (Q2);
+  - the screen "Saved copies", laid out as "Saved lists", lists them newest first, each with a picture of the player's
+    view as the copy was made (Q4), its name, size and block count, and "Paste", "Rename" and "Delete"; "Rename" opens
+    a screen laid out as "Save list", and saving it makes the copy stay until it's deleted;
+  - with no copy since the game started, the radial menu's Paste button brings back the newest saved copy.
 - The shared layer replaces the decisions above that concern separate plans: named plans that move and turn as a whole
   (411 Q1), plan growth (411 Q2), who deletes a plan (411 Q3, 420 Q9), starting a plan with N (420 Q1, 469 Q1), hiding
   a plan with Litematica or Syncmatica (420 Q2, 469 Q2), the paste's target plan (485 Q3), Litematica's Edit Schematic
@@ -825,6 +838,43 @@ checks that need both kinds of server. Those of the player's own worlds are in `
    0.10.0, and the release request shows ghost blocks on a server without Building Planner with the radial menu's line,
    and ghost blocks a LAN guest shares in the player's own world, outlined in red.
 9. **The release**, once Geo approves it: the GitHub release `building-planner-0.10.0`, not latest, from the commit on
+   which the full set passed, run by the pack, with the guide's new sentences in Geo's wording. The release request
+   asks whether the server takes it too, since it changes nothing the server does.
+
+**Building Planner 0.11.0** (the bullet "Saved copies" in "Decisions" above: Geo's comment on 1375 Q1). "Saved copies"
+in [building-planner.md](building-planner.md) is the design; each choice still Geo's carries an `OPEN:` mark naming its
+question in the request "Saved copies", and the text describes the option the request recommends. A pick other than
+the recommended one sends the design of what it changes back to Geo before the steps that build it; with Q4 A (no
+picture), step 3 isn't needed. 0.11.0 starts once 0.10.0 is released, keeps protocol version 5, and changes nothing
+the server does.
+
+The steps come in this order, each needing the one before it, and each small enough for one child. 0.8.0's rules for
+commits, screenshots, the spec's "In-game checks" and the full set of in-game scripts apply; the full set runs once,
+on step 4's last build, before the release. The in-game checks of saved copies are in `saved.sh`, which step 1 adds.
+
+1. **The saved copies and their files** ("Saved copies": "Which copies stay", "Where they're kept", "The files" and
+   "After a restart"). Waits on Q1 and Q3. `CopyHistory` and the index's format (common), `SavedCopies` with its
+   background thread, each copy saved as Copy makes it, the 11th dropping the oldest not renamed, and the radial
+   menu's Paste button bringing back the newest saved copy after a restart; the driver renames, picks and deletes
+   copies through commands of its own until step 2 adds the screen. Done when `CopyHistoryTest` and `CopyIndexTest`
+   pass, `saved.sh`'s checks of the files, the 11th copy, a rename kept, unreadable files, the restart and the server
+   without Building Planner pass, and `step9.sh`'s copy checks pass unchanged.
+2. **The screen and its key** ("The key" and "The screen"). Waits on Q2. `SavedCopiesScreen`, `RenameCopyScreen`,
+   the key `key.buildingplanner.saved_copies` (V), and its control in `ControlsLine.copy`, with the rows' pictures left
+   blank until step 3. Done when `ControlsLineTest` covers the key's control, `saved.sh`'s checks of the screen, the
+   key and the controls line pass through Planner1's own presses and clicks, and `step9.sh`'s controls line checks
+   pass with the new control. Shots as `saved.sh` lists them, without pictures.
+3. **The picture** ("The picture"). Waits on Q4. `PictureCrop`, the frame after Copy's last click drawn without the
+   box, the picture read and scaled to 120 by 120, its file, and the rows showing it. Done when `PictureCropTest`
+   passes and `saved.sh`'s picture check and shots pass with pictures.
+4. **Texts and screenshots for Geo**: every text steps 1 to 3 add (the key's name, the control, the screens' titles,
+   line, buttons and field, the rows' size and block count, the delete question, the empty screen's line and the
+   message for a copy that can't be read), and the player guide's sentences on saved copies, go to Geo as editable
+   text, with every step's screenshots, the changes outlined in red, each text following the rule Geo approved for the
+   game's texts (985 Q1 A; 1313). Geo's version is built in, `ControlsLineTest` and `saved.sh` check each text
+   exactly, and the full set of in-game scripts runs on the last build. The same step sets the version 0.11.0, and the
+   release request shows "Saved copies" and the controls line with the key in the game, outlined in red.
+5. **The release**, once Geo approves it: the GitHub release `building-planner-0.11.0`, not latest, from the commit on
    which the full set passed, run by the pack, with the guide's new sentences in Geo's wording. The release request
    asks whether the server takes it too, since it changes nothing the server does.
 
