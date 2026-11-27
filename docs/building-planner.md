@@ -1932,7 +1932,10 @@ orientation of the shape's state (its values of the properties `BlockTurn` sets,
 place of the player's turn for Disable, and the count of a block made of several items. Where Minecraft gives the
 other form of the same item, such as a standing torch for a wall torch or a standing sign for a wall sign
 (`StandingAndWallBlockItem`, whose form depends on where the player looks), S2 takes the shape's form, turned the same
-way; it returns null when Minecraft's state is any other block. S2 then checks the turned state as it checks
+way; it returns null when Minecraft's state is any other block. So a shape places the form Effortless Building gives
+it: a Line of torches aimed at a wall's side is standing torches, as are signs, banners, heads and coral fans, which
+can't stay beside the wall, so none goes in, the player keeps every item, and no notice comes (1408 Q1 C). A paste
+places the copy's own form, a wall torch as a wall torch. S2 then checks the turned state as it checks
 Disable's (`PlaceTurns.checked`: shaped by its neighbours, and placed only where it can stay). A block that doesn't go
 in uses no item. `RealPlacer` sorts each block Minecraft refuses: one that can't stay (Minecraft or S2 gave no state
 because it can't stay there, or an entity is in its way), which the order tries again; or one refused for another
@@ -1995,10 +1998,10 @@ server runs none.
   game can't check (another dimension, a game mode that can't build, a chunk the server hasn't loaded, spawn
   protection): the blocks that pass the checks the game makes too (`RealPlace.goingIn` over the world as the server
   has it, with a chunk it hasn't loaded taken as empty), less those that pass all of them. It adds the blocks
-  Minecraft refused for a reason other than one the preview shows (see `RealPlacer`'s sorting above). A block someone
-  built in the way since the preview drew isn't counted: the server can't tell it from a real block the preview
-  already showed red. A shape whose blocks all go in sends nothing back; the player sees the blocks arrive as any
-  block changes.
+  Minecraft refused for a reason other than one the preview shows (see `RealPlacer`'s sorting above). A block another
+  player built in a spot between the preview and the click is skipped silently, like the spots the preview already
+  showed red (1408 Q2 A): the server can't tell it from a real block the preview showed red. A shape whose blocks all
+  go in sends nothing back; the player sees the blocks arrive as any block changes.
 
 **The preview.** While the setting acts, Effortless Building's preview counts the inventory as it does on its own
 servers, over the blocks that would go in: hook E8 lets `ItemUsageTracker.compute` run on the blocks `RealPlace`
@@ -2011,9 +2014,9 @@ and otherwise each block the server would leave out by the rule the player's com
 take a block, a block past the reach, and a turned block that can't stay or has an entity in its way (`RealPlace`, the
 pure rule the server's placing uses too; spawn protection and later changes are the server's alone). Whether a block
 can stay is checked against the world as it is, so a block held up only by another block of the same shape, such as a
-torch on a wall the shape also builds, draws red though the server's order places it. Hook E43 draws each block in the
-state the click sends (`RealShape`), so a block that fills a ghost block shows the ghost block's turn while "Match
-ghost blocks" acts. The game works the shape out once a client tick for each set of positions the preview shows, and
+torch standing on a block the shape also builds under it, draws red though the server's order places it. Hook E43
+draws each block in the state the click sends (`RealShape`), so a block that fills a ghost block shows the ghost
+block's turn while "Match ghost blocks" acts. The game works the shape out once a client tick for each set of positions the preview shows, and
 the place sound (hook E41) plays when `RealPlace`'s count of the inventory covers the blocks going in. The controls
 line shows the state on the right click's own control, by Geo's rule for the lines (1313 [c1]):
 "[Right-click: place real blocks]" in Single and "[Right-click: start placing real blocks]" before a shape's first

@@ -816,8 +816,8 @@ step 5's last build. The in-game checks of real blocks are in `real.sh`, which s
    limits, `filled.sh` and `overlap.sh` pass (hook S2 still turns Disable's blocks and matches ghost blocks), and
    `real.sh`'s checks of what lands on the server pass, with the driver sending each shape's `place` itself (a driver
    command that steps 3 and 4 keep for the cap's check): the whole Line and the Line 1 oak plank short, the stairs,
-   door, bed and wall torches, the mix and the mirror, real blocks and the cow in the way, the reach, ghost blocks
-   filled, spawn protection and adventure mode, the cap and its time, and one sound.
+   door, bed and torches along a wall, the mix and the mirror, real blocks and the cow in the way, the reach, ghost
+   blocks filled, spawn protection and adventure mode, the cap and its time, and one sound.
 3. **The setting in the game** ("The setting", "What a shape does", "The preview", "Undo"). The row in "Settings"
    (hook E36's label keys, `VisualSettingsRow`), hook E1 sending the shape as `place`, hooks E8, E40 and E41, and the
    controls lines. Done when `ControlsLineTest` covers the lines with the setting on and off, `filled.sh`'s settings
