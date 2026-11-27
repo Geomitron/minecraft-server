@@ -2015,11 +2015,10 @@ server runs none.
 
 **The preview.** While the setting acts, Effortless Building's preview counts the inventory as it does on its own
 servers, over the blocks that would go in: hook E8 lets `ItemUsageTracker.compute` run on the blocks `RealPlace`
-lets in, in the form that counts each block's own item (`compute(Player, BlockSet, boolean)`), so the icons beside
-the crosshair show how many of each block the inventory gives the click, with the count it lacks in red beside it
-(`RenderHandler.drawPlacingStacks`): 19 and a red 1 for a Line of 20 oak planks with 19 in the inventory. While the
-click's panel shows the same counts (below), hook E44 leaves those icons out. Hook E40
-then sets the blocks the preview draws red (`ItemUsageTracker.missingPositions`, which `BlockPreviewRenderer.render`
+lets in, in the form that counts each block's own item (`compute(Player, BlockSet, boolean)`). Effortless Building
+shows that count as icons beside the crosshair while a shape is under way (`RenderHandler.drawPlacingStacks`), which
+in survival is while the click's panel (below) shows the same counts, so hook E44 leaves the icons out while the panel
+shows (1411 revision 3, Q4 A). Hook E40 then sets the blocks the preview draws red (`ItemUsageTracker.missingPositions`, which `BlockPreviewRenderer.render`
 reads): the whole shape when the inventory lacks any item (`ItemUsageTracker.hasMissing`), since then nothing goes in,
 and otherwise each block the server would leave out by the rule the player's computer can check: a space that doesn't
 take a block, a block past the reach, and a turned block that can't stay or has an entity in its way (`RealPlace`, the
@@ -2095,13 +2094,15 @@ of ghost blocks. Otherwise the copy's lines read as without the setting (1411 [c
 "[Right-click: paste 4 copies]" and "[Right-click: paste 1 copy]", and before a Line, Wall or Floor's first click
 "[Right-click: set the start]", after the reason while the copy is red.
 
-**The click's panel** (Geo's comment [c1] on 1411 revision 1; revision 2, Q1 A and Q2 A). In survival, while the
-setting acts, a panel lists the items the place click uses: from a shape's first click until it is placed or
-cancelled, in every build mode but Single and Disable, and while the copy is at the aim. It is drawn as the material
-list panel is (`CountPanel`, which `MaterialPanel` draws with too): the title "This click", then a row for each item
-with its icon, how many the click uses ("Uses"), how many the inventory holds, every slot together ("Hold",
-`RealPlace.Inventory.holds`), and how many are missing ("Need"), red where some are and green where none are
-(`ClickPanel`). It counts what the server's all-or-nothing check counts (`RealPlace.needs`): for a shape, the blocks
+**The click's panel** (Geo's comment [c1] on 1411 revision 1; revision 2, Q1 A and Q2 A; revision 3, Q1 A to Q4 A).
+In survival, while the setting acts, a panel lists the items the place click uses: from a shape's first click until
+it is placed or cancelled, in every build mode but Single and Disable, and while the copy is at the aim. It is drawn
+as the material list panel is (`CountPanel`, which `MaterialPanel` draws with too): the title "Required blocks" (Geo's
+wording), then a row for each item with its icon, how many the click uses ("Uses"), how many the inventory holds,
+every slot together ("Hold", `RealPlace.Inventory.holds`), and how many are missing ("Need"), red where some are and
+green where none are (`ClickPanel`). The items short come first, then the rest, each most used first and equal counts
+by name, in at most 10 rows, as on the material list panel, with the rows past them counted in "+N more" as the
+material list panel counts its own (`ClickItems.rows`). It counts what the server's all-or-nothing check counts (`RealPlace.needs`): for a shape, the blocks
 the preview shows going in, with the mirror's and the array's copies, each block of the mix as its own item, and a
 double slab as two slabs (`RealShape.needs`, worked out with the preview once a client tick); for a paste, the copy's
 blocks that would go in (`CopyColour.counted`, with the copy's colour), one copy before a Line, Wall or Floor of copies
@@ -2110,17 +2111,12 @@ the reach or anything else, count for nothing. The panel doesn't show before a s
 creative or spectator (`Player.hasInfiniteMaterials`), while the setting doesn't act, while a screen is open or the HUD
 is hidden (F1), and for a paste or a set of more than 2,000 blocks, which the server refuses before it counts.
 
-Where the panel goes, which rows it shows and whether Effortless Building's icons still show are open choices in 1411
-revision 3. The build has each recommendation in `ClickItems.Layout.RECOMMENDED`, which the in-game checks switch: at
-the top right (`Spot.TOP_RIGHT`; the others are `TOP_MIDDLE` and `TOP_LEFT`, under the material list panel); at most
-10 rows, the items short first and then the rest, each most used first (`Order.SHORT_FIRST`; `MOST_FIRST` orders by
-use alone), with the rows past them counted in "+N more" as the material list panel counts its
-own; and Effortless Building's icons beside the crosshair hidden while the panel shows (hook E44). The panel starts 4
-GUI pixels below the screen's top edge and goes down as far as it has room (`PanelRoom.below`), 4 pixels clear of the
-material list panel, the mix panel, the effect icons, Litematica's lines about the ghost block at the crosshair (its
-`blockInfoLinesEnabled`, on by default at the top right in half-size text; hook L13), the crosshair and Effortless
-Building's icons beside it while they show, chat's area (its width and unfocused height from the chat settings, whether
-or not a message shows), and the controls lines and the hotbar (`ModeHud.controlsTop`). Once Litematica's lines have
+The panel goes in the top-right corner, 4 GUI pixels from the screen's right edge, starting 4 pixels below its top
+edge, and goes down as far as it has room (`PanelRoom.below`), 4 pixels clear of the material list panel, the mix
+panel, the effect icons, Litematica's lines about the ghost block at the crosshair (its `blockInfoLinesEnabled`, on by
+default at the top right in half-size text; hook L13), the crosshair, chat's area (its width and unfocused height from
+the chat settings, whether or not a message shows), and the controls lines and the hotbar (`ModeHud.controlsTop`).
+Effortless Building's icons beside the crosshair don't show while the panel shows (hook E44). Once Litematica's lines have
 shown, the panel stays clear of where they showed until it hides, so it doesn't jump as the crosshair crosses ghost
 blocks. Rows that don't fit go to "+N more": at 854 by 480 and GUI scale 2, chat's area reaches under the top-right
 corner's column, so a panel there has room for 2 or 3 rows. For a Wall of 2,000 blocks (20 by 10 with 9 array
@@ -2143,7 +2139,7 @@ a 0.9.0 server work together, and so do a 0.9.0 game and a 0.8.0 server, with gh
 | E40 | `buildpipeline/BuildPipelineClient.java`, private static `updateDisplayTrackers(Player, BlockSet)` | `@Inject` at tail | While the setting acts, set `ITEM_USAGE.missingPositions` to every block of the shape when `ITEM_USAGE.hasMissing()`, and otherwise to the blocks `RealPlace` refuses, as hook E29 marks Disable's one block. |
 | E41 | `buildpipeline/BuildPipelineClient.java`, private static `handleClick(Minecraft, BuildPipeline.BuildState)` | `@WrapWithCondition` on `ClientLevel.playLocalSound(BlockPos, SoundEvent, SoundSource, float, float, boolean)` | While the setting acts, play the place sound only when `RealPlace` finds that the inventory covers the click's blocks (the local `BlockSet blocks`), since otherwise nothing goes in. |
 | E43 | `render/BlockPreviewRenderer.java`, `render` | `@WrapOperation` on `BlockEntry.applyTransforms(BlockState)` | While the setting acts, outside the break click's shape, each block drawn in the state the click sends where that differs, which is the turn of a ghost block it fills (`RealShape.drawn`). |
-| E44 | `render/RenderHandler.java`, `drawStacks` | `@WrapWithCondition` on `drawPlacingStacks(GuiGraphicsExtractor, Minecraft, int, int)`, `require = 0` | During a session, leave out the icons beside the crosshair while the click's panel shows, unless its layout keeps them (`BuildingPlannerClient.stacksShow`). |
+| E44 | `render/RenderHandler.java`, `drawStacks` | `@WrapWithCondition` on `drawPlacingStacks(GuiGraphicsExtractor, Minecraft, int, int)`, `require = 0` | During a session, leave out the icons beside the crosshair while the click's panel shows (`BuildingPlannerClient.stacksShow`). |
 | L13 | `render/OverlayRenderer.java`, private fields `blockInfoLines` and `infoUpdateTime` | `@Accessor` on each | The lines Litematica shows about the ghost block at the crosshair, and when it last wrote them (every 50 ms while it draws them), so the click's panel keeps clear of them. |
 | M2 | `Minecraft.java`, `startUseItem()` | the same hook | While the setting acts, a paste, or a set of copies at its second click, goes to the server as one `place` instead of as an edit (`ClientSession.sendPaste`), and a red copy's click sends nothing. |
 | M9 | `net/minecraft/world/level/Level.java`, `getBlockState(BlockPos)` and `getFluidState(BlockPos)` | `@ModifyReturnValue`, in the mixin config's client section | While the preview works a shape out in the server's order, on the game's thread, in the player's level, the shape's blocks placed so far, and the other halves Minecraft places with them, in place of the world's (`ShapeOverlay`); otherwise the world's, after one check of a field. |
@@ -3287,19 +3283,18 @@ driver's `realstates`):
 - With the setting on, the break click's shape over the real Line breaks none of it, and over ghost stone bricks erases
   them on both clients.
 - With the setting off, the click's panel doesn't show during a Line (the driver's `clickpanel`, the panel's lines as
-  the player reads them); with it on, it doesn't show before a Line's first click, nor in Single.
+  the player reads them, which each check below compares exactly, from the title "Required blocks" and the headings
+  "Uses", "Hold" and "Need"); with it on, it doesn't show before a Line's first click, nor in Single.
 - With 10 oak planks in hand and 10 elsewhere in the inventory (the driver's `itemcount`), the preview of a 20-block
   Line draws none red, and the click's panel shows oak planks, 20 used, 20 held and none missing, in green. Effortless
   Building's icons beside the crosshair don't show while it does (the driver's `stacks`, the stacks Effortless
-  Building's `RenderHandler` draws in a frame), and with the layout that keeps them, they count 20 oak planks. In
-  creative the panel doesn't show, and in survival again it does. The click places all 20 as real oak planks on the server, no
-  ghost block appears, and the inventory holds no oak planks. The server sends Planner2's game one place sound for the
+  Building's `RenderHandler` draws in a frame). In creative the panel doesn't show, and in survival again it does.
+  The click places all 20 as real oak planks on the server, no ghost block appears, and the inventory holds no oak planks. The server sends Planner2's game one place sound for the
   20 blocks and Planner1's game none (the driver's `serversounds`, a count of the sounds the server sent each game
   since `soundreset`), and Planner1's own game plays the click's place sound once (the driver's `sounds`, a count of
   every sound the game plays, its own included).
-- With 19 oak planks, the preview of the same Line draws all 20 red, the panel shows 20 used, 19 held and a red 1
-  missing, and with the layout that keeps the icons, they show 19 oak planks and a red 1. The click places nothing,
-  the notice reads "Nothing was placed (not enough blocks)", the panel goes with the shape, the inventory still has
+- With 19 oak planks, the preview of the same Line draws all 20 red, and the panel shows 20 used, 19 held and a red 1
+  missing. The click places nothing, the notice reads "Nothing was placed (not enough blocks)", the panel goes with the shape, the inventory still has
   its 19, and Planner1's game plays no place sound.
 - A Line of 8 torches along a real stone wall, aimed at the wall's side, draws all 8 red, as standing torches that
   can't stay there, and its click places nothing on the server or either client: Planner1 keeps all 8 torches, and
@@ -3317,11 +3312,15 @@ driver's `realstates`):
   preview showed there when the inventory contains as many of each block as the preview uses, and none is left. The
   first Line's material list, opened with a box and pinned with its Info HUD, shows the material list panel. With 2
   cobblestone and 1 mossy cobblestone fewer than a second Line uses, the click's panel shows both items' counts, the
-  one the Line uses more of first, both missing in red, and overlaps neither the material list panel nor the mix panel
-  at both window sizes, at each of its three spots (the driver's `clickpanelbox`, `matpanelbox` and `mixpanelbox`);
-  it shows at each of 20 reads a tick apart at 1920 by 1080, where frames come slowest, and with the layout that
-  keeps Effortless Building's icons, they show too. The click places nothing and gets the same
-  notice. With the mirror on, a Line of 5 and its mirrored copy count together: the panel shows 10 oak planks used, 5
+  one the Line uses more of first, both missing in red, and overlaps nothing it keeps out of at both window sizes,
+  before and after the chat fades (the driver's `clickpanelbox`, `matpanelbox` and `mixpanelbox`, and
+  `clickpanelkeptout`, the boxes of everything else the panel keeps out of: the effect icons, Litematica's lines, the
+  crosshair, chat, the controls lines and the hotbar); it shows at each of 20 reads a tick apart at 1920 by 1080, where
+  frames come slowest. The click places nothing and gets the same notice. Once the material list panel is off the
+  screen, the mix's Line again, 1 short of the item it uses fewer of and with the other covered: the panel lists the
+  item short first, in red, then the other, in green, the whole Line is red, and the panel overlaps nothing it keeps
+  out of at both window sizes. With both covered, the panel shows none missing and none of the Line is red, and the
+  click places the Line, each block the one the preview showed, on the server and both clients. With the mirror on, a Line of 5 and its mirrored copy count together: the panel shows 10 oak planks used, 5
   held and 5 missing, and the click places nothing and gets the same notice.
 - Oak stairs in a Wall of 4 by 2, turned with the wheel and mirrored, face on the server as the preview showed them.
   Behind one end of each wall's bottom row stands a real stair at a right angle, and the stair there joins it as by
@@ -3363,7 +3362,8 @@ driver's `realstates`):
   shows blue and places the door hinged on the left, both halves, on the server and both clients, using the one door.
 - A copy of 28 blocks of 14 kinds, pasted with 3 of the kinds short: at 1920 by 1080 the click's panel shows the 3
   short first, then the 7 the paste uses most, and "+4 more", clear of Litematica's lines about the ghost block at the
-  crosshair (the driver's `linesbox`). A left click puts the copy away, and the panel goes with it.
+  crosshair (the driver's `linesbox`). At 854 by 480 the panel shows its title and headings and overlaps nothing it
+  keeps out of. A left click puts the copy away, and the panel goes with it.
 - In adventure mode, Planner2's place of 5 blocks places nothing, and Planner2 gets the notice "5 blocks weren't
   placed (not allowed there)"; a place of 1 block gets "1 block wasn't placed (not allowed there)".
 - In creative, a place of 2,001 blocks places nothing and gets the notice "Nothing was placed (2,001 blocks, over the
@@ -3385,10 +3385,10 @@ driver's `realstates`):
   line in Line and in Single, the whole Line red for 1 oak plank short with its panel, the Line through the stone and
   the cow with its red blocks and panel, the Lines of torches and of scaffolding along the wall red, the Line of heads
   there, the Line of scaffolding up from the ground, Planner2's view of the placed Wall, the copy of the hut yellow and
-  red with its lines, Planner2's view of the pasted hut, and the Line of 3 copies with its line; for the layout choices
-  in 1411 revision 3, the mix's Line short of two items with the click's panel at each of its spots and with
-  Effortless Building's icons kept, and the copy of 14 kinds with each choice of rows, with each panel's box in the
-  checks' log; and, while the chat shows each, the notices for 1 oak plank short, the cap, the cap a second, and
+  red with its lines, Planner2's view of the pasted hut, and the Line of 3 copies with its line; the mix's Line short
+  of two items with the click's panel beside the material list panel and the mix panel, and the copy of 14 kinds with
+  its panel, with each panel's box in the checks' log; for the release request, the mix's Line 1 short with its panel,
+  and then placed; and, while the chat shows each, the notices for 1 oak plank short, the cap, the cap a second, and
   Planner2's Line within the spawn protection.
 
 `RealPlaceTest` covers the rule for each block: the order (the lowest level first, in the shape's order within a
@@ -3428,8 +3428,10 @@ below) or the border, water, and an entity in a block's way; red past 2,000 bloc
 before an empty inventory and blocks past the reach; 1,000 copies are blue), and in survival for an inventory one item
 short, for one copy and for a set of two, while a block that doesn't go in needs no item; a door's upper half
 needing no item of its own; and the click's panel's count of a paste, the items of the blocks that go in, none past
-2,000 blocks. `ClickItemsTest` covers the click's panel's rows (uses, holds, and missing in red unless none are), both
-orders, and the rows past the most going to "+N more"; `PanelRoomTest` its room: all of it with nothing in the
+2,000 blocks. `ClickItemsTest` covers the click's panel's title "Required blocks" and headings "Uses", "Hold" and
+"Need" exactly as `en_us.json` has them, its rows (uses, holds, and missing in red unless none are), the items short
+first and then the rest, each most used first and equal counts by name, and the rows past 10 going to "+N more";
+`PanelRoomTest` its room: all of it with nothing in the
 column, below what reaches its top and above what's under it, past overlapping boxes, and none left above the
 controls lines. `PayloadsTest` covers `place`: a shape's and a
 paste's round trip, a `place` of as many blocks as an `edit` carries fitting the room it's registered with, and a hit

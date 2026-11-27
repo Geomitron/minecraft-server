@@ -34,20 +34,15 @@ import net.minecraft.world.item.ItemStack;
  * is under way and while a copy is at the aim with "Place real blocks" acting, a panel drawn as the material list
  * panel's ({@link CountPanel}) lists each item the click uses, how many it uses, how many the player holds and how many
  * are missing, in red. It counts what the server's all-or-nothing check counts: the shape's preview's count
- * ({@link RealShape#needs}) or the paste's ({@link ClientSession#copyNeeds}). Where it goes, the order of its rows, how
- * many it shows and whether Effortless Building's icons beside the crosshair still show are {@link #layout}'s, which
- * the in-game checks switch. It keeps out of the screen's other parts ({@link PanelRoom}), Litematica's lines about
- * the ghost block at the crosshair among them, and hides while a screen is open, while the HUD is hidden (F1), without
- * a session, and while the click uses no items.
+ * ({@link RealShape#needs}) or the paste's ({@link ClientSession#copyNeeds}), in {@link ClickItems#rows}'s order. It
+ * goes in the top-right corner, below the effect icons and Litematica's lines about the ghost block at the crosshair
+ * while they show, and keeps out of the screen's other parts ({@link PanelRoom}); Effortless Building's icons beside
+ * the crosshair don't show while it does (1411 revision 3, Q1 A and Q4 A). It hides while a screen is open, while the
+ * HUD is hidden (F1), without a session, and while the click uses no items.
  */
 final class ClickPanel implements HudElement {
 	/** From the screen's edges to the panel, in GUI pixels, as the material list panel's. */
 	private static final int EDGE = MaterialPanel.EDGE;
-	private static final String[] COLUMNS = {"buildingplanner.ui.click_panel.uses",
-		"buildingplanner.ui.click_panel.holds", "buildingplanner.ui.click_panel.missing"};
-
-	/** The panel's layout: the recommendation for each of Geo's open choices, which the in-game checks switch. */
-	static ClickItems.Layout layout = ClickItems.Layout.RECOMMENDED;
 
 	/**
 	 * How long after Litematica last wrote its lines about the block at the crosshair they count as showing: it writes
@@ -95,32 +90,29 @@ final class ClickPanel implements HudElement {
 		return needs == null || needs.isEmpty() ? null : needs;
 	}
 
-	/** Whether Effortless Building's icons beside the crosshair show while the panel does. */
+	/** Whether Effortless Building's icons beside the crosshair hide: while the panel shows the same counts. */
 	boolean hidesIcons() {
-		return !layout.iconsShow() && needs() != null;
+		return needs() != null;
 	}
 
 	private static CountPanel.Texts texts() {
-		Component[] headings = new Component[COLUMNS.length];
-		for (int i = 0; i < COLUMNS.length; i++) {
-			headings[i] = Component.translatable(COLUMNS[i]);
-		}
-		return new CountPanel.Texts(Component.translatable("buildingplanner.ui.click_panel.title"), headings,
+		Component[] headings = ClickItems.HEADING_KEYS.stream().map(Component::translatable).toArray(Component[]::new);
+		return new CountPanel.Texts(Component.translatable(ClickItems.TITLE_KEY), headings,
 			Component.empty(), MaterialPanel::more);
 	}
 
-	/** The panel's rows before the room it has cuts them: at most {@link ClickItems.Layout#maxRows}, in its order. */
+	/** The panel's rows before the room it has cuts them ({@link ClickItems#rows}). */
 	private static MaterialPanelRows<ItemStack> rows(Map<Item, Integer> needs, Player player) {
 		RealPlace.Inventory inventory = RealPlace.Inventory.of(player);
 		List<ClickItems.Entry<ItemStack>> entries = new ArrayList<>();
 		needs.forEach((item, uses) -> entries.add(new ClickItems.Entry<>(new ItemStack(item),
 			BuiltInRegistries.ITEM.getKey(item).toString(), uses, inventory.holds(item))));
-		return ClickItems.rows(entries, layout.order(), layout.maxRows());
+		return ClickItems.rows(entries);
 	}
 
 	/**
-	 * Where the panel goes and the rows it shows: at its spot, then down as far as it has room, below what the screen
-	 * shows above it and above what it shows below; rows that don't fit go to "+N more".
+	 * Where the panel goes and the rows it shows: at the top right, then down as far as it has room, below what the
+	 * screen shows above it and above what it shows below; rows that don't fit go to "+N more".
 	 */
 	private Placed placed() {
 		Map<Item, Integer> needs = needs();
@@ -137,26 +129,17 @@ final class ClickPanel implements HudElement {
 		MaterialPanelRows<ItemStack> rows = rows(needs, mc.player);
 		CountPanel.Layout full = CountPanel.Layout.of(font, texts, rows);
 		int panelWidth = (int) Math.ceil(full.guiWidth());
-		int left = left(width, panelWidth);
+		int left = width - EDGE - panelWidth;
 		PanelRoom.Room room = PanelRoom.below(left, left + panelWidth, EDGE, height - ContextualBar.MARGIN_BOTTOM,
-			boxes(mc, width, height, needs.size()));
+			boxes(mc, width, height));
 		int units = (int) (room.height() / CountPanel.scale());
 		CountPanel.Layout cut = CountPanel.Layout.of(font, texts,
 			rows.within(units - CountPanel.fixedHeight(font), CountPanel.ROW, CountPanel.moreHeight(font)));
-		return new Placed(cut, left(width, (int) Math.ceil(cut.guiWidth())), room.top());
-	}
-
-	/** The panel's left edge at its spot, for a panel {@code panelWidth} wide. */
-	private static int left(int width, int panelWidth) {
-		return switch (layout.spot()) {
-			case TOP_RIGHT -> width - EDGE - panelWidth;
-			case TOP_MIDDLE -> (width - panelWidth) / 2;
-			case TOP_LEFT -> EDGE;
-		};
+		return new Placed(cut, width - EDGE - (int) Math.ceil(cut.guiWidth()), room.top());
 	}
 
 	/** What else the screen shows, which the panel keeps out of. */
-	private List<PanelRoom.Box> boxes(Minecraft mc, int width, int height, int items) {
+	private List<PanelRoom.Box> boxes(Minecraft mc, int width, int height) {
 		List<PanelRoom.Box> boxes = new ArrayList<>();
 		PanelRoom.Box material = MaterialPanel.guiBox();
 		if (material != null) {
@@ -172,12 +155,8 @@ final class ClickPanel implements HudElement {
 		}
 		int middleX = width / 2;
 		int middleY = height / 2;
-		// The crosshair, and Effortless Building's icons, which start 10 right of the middle, 20 apart, with their counts
-		// under them.
+		// The crosshair; Effortless Building's icons beside it don't show while the panel does.
 		boxes.add(new PanelRoom.Box(middleX - 8, middleY - 8, middleX + 8, middleY + 8));
-		if (layout.iconsShow()) {
-			boxes.add(new PanelRoom.Box(middleX + 10, middleY - 8, middleX + 10 + 20 * items, middleY + 16));
-		}
 		boxes.add(chat(mc, height));
 		boxes.add(new PanelRoom.Box(0, controlsTop.getAsInt(), width, height));
 		PanelRoom.Box lines = litematicaLines(mc, width);
@@ -279,9 +258,30 @@ final class ClickPanel implements HudElement {
 		Minecraft mc = Minecraft.getInstance();
 		Window window = mc.getWindow();
 		PanelRoom.Box box = mc.player == null ? null : litematicaLines(mc, window.getGuiScaledWidth());
-		int scale = window.getGuiScale();
-		return box == null ? "none" : box.left() * scale + " " + box.top() * scale + " "
-			+ (box.right() - box.left()) * scale + " " + (box.bottom() - box.top()) * scale;
+		return box == null ? "none" : windowBox(box, window.getGuiScale());
+	}
+
+	/** {@code box} in the window's pixels (x y width height), at GUI scale {@code scale}. */
+	private static String windowBox(PanelRoom.Box box, int scale) {
+		return box.left() * scale + " " + box.top() * scale + " " + (box.right() - box.left()) * scale + " "
+			+ (box.bottom() - box.top()) * scale;
+	}
+
+	/**
+	 * Everything the panel keeps out of while it shows, each as its box in the window's pixels (x y width height),
+	 * separated by " | ", or {@code hidden}; for the in-game checks that the panel overlaps none of them.
+	 */
+	String keptOut() {
+		if (needs() == null) {
+			return "hidden";
+		}
+		Minecraft mc = Minecraft.getInstance();
+		Window window = mc.getWindow();
+		List<String> boxes = new ArrayList<>();
+		for (PanelRoom.Box box : boxes(mc, window.getGuiScaledWidth(), window.getGuiScaledHeight())) {
+			boxes.add(windowBox(box, window.getGuiScale()));
+		}
+		return String.join(" | ", boxes);
 	}
 
 	/**

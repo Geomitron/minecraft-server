@@ -5,8 +5,8 @@ import java.util.List;
 /**
  * The room a panel has on the screen, in GUI pixels, clear of what else the screen shows there: the click's panel (see
  * "Place real blocks": "The click's panel") keeps out of the material list panel, the mix panel, the effect icons,
- * Litematica's lines about the ghost block at the crosshair, the crosshair and Effortless Building's icons beside it,
- * chat, and the controls lines and hotbar at the bottom.
+ * Litematica's lines about the ghost block at the crosshair, the crosshair, chat, and the controls lines and hotbar at
+ * the bottom.
  */
 public final class PanelRoom {
 	/** Between the panel and anything beside it, in GUI pixels. */
@@ -32,8 +32,8 @@ public final class PanelRoom {
 	/**
 	 * The room a panel has in the column from {@code left} to {@code right}, starting at {@code top} and going down at
 	 * most to {@code bottom}: below each box in the column that reaches the panel's top, {@link #GAP} under it (the
-	 * effect icons in the top-right corner, the material list panel in the top-left), and down to {@link #GAP} above the
-	 * first box in the column below that.
+	 * effect icons and Litematica's lines in the top-right corner), and down to {@link #GAP} above the first box in the
+	 * column below that.
 	 */
 	public static Room below(int left, int right, int top, int bottom, List<Box> boxes) {
 		int start = top;

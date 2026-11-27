@@ -6,7 +6,6 @@ import dev.buildingplanner.input.CopyColour;
 import dev.buildingplanner.input.CopyNudge;
 import dev.buildingplanner.input.CopyPlacement;
 import dev.buildingplanner.input.RepeatSpeed;
-import dev.buildingplanner.look.ClickItems;
 import dev.buildingplanner.look.ControlsLine;
 import dev.buildingplanner.look.PanelRoom;
 import dev.buildingplanner.sync.EditKind;
@@ -389,14 +388,11 @@ public final class Driver implements ClientModInitializer {
 				// clickpanelbox: the click's panel's box in the window (x y width height), or hidden.
 				return BuildingPlannerClient.clickPanel().box();
 			}
-			case "clickpanellayout" -> {
-				// clickpanellayout <spot> <order> <rows> <icons>: the click's panel's layout, for the shots of Geo's
-				// open choices: top_right, top_middle or top_left; short_first or most_first; the most rows, or all;
-				// whether Effortless Building's icons still show. clickpanellayout: back to the recommendation.
-				ClickPanel.layout = a.length == 1 ? ClickItems.Layout.RECOMMENDED : new ClickItems.Layout(
-					ClickItems.Spot.valueOf(a[1].toUpperCase()), ClickItems.Order.valueOf(a[2].toUpperCase()),
-					a[3].equals("all") ? Integer.MAX_VALUE : Integer.parseInt(a[3]), Boolean.parseBoolean(a[4]));
-				return "ok";
+			case "clickpanelkeptout" -> {
+				// clickpanelkeptout: everything the click's panel keeps out of while it shows (the other panels, the
+				// effect icons, Litematica's lines, the crosshair, chat, the controls lines and the hotbar), each as
+				// its box in the window (x y width height), separated by " | "; or hidden.
+				return BuildingPlannerClient.clickPanel().keptOut();
 			}
 			case "clickpanelcost" -> {
 				// clickpanelcost <repeats>: the mean time, in microseconds, of the shape preview's count of the items

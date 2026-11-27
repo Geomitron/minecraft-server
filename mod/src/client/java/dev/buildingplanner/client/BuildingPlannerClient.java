@@ -856,7 +856,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 
 	/**
 	 * Hook E44: whether Effortless Building's icons beside the crosshair show, which they don't while the click's panel
-	 * shows the same counts, unless its layout keeps them ({@link ClickPanel}).
+	 * shows the same counts ({@link ClickPanel}).
 	 */
 	public static boolean stacksShow() {
 		return clickPanel == null || !clickPanel.hidesIcons();

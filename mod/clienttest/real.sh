@@ -11,11 +11,12 @@
 # red, ghost blocks filled and left red, a copy of a hut with a door, a wall torch, a hanging lantern, a double slab,
 # candles and water, yellow, red 1 cobblestone short, pasted with one place sound for each player and around a real
 # block in its way, a Floor of its copies red past 2,000 blocks, a Line of 3 copies, and a copied door keeping its
-# hinge where Minecraft would hinge it on the other side; the click's panel along the way, with its rows for the Line 1
-# oak plank short, a mix short of two items, the mirror's copies, the hut and a Line of copies, and none before a
-# shape's first click, in Single, in creative, past the cap and with the setting off; the shots of its layouts for
-# 1411 revision 3, beside the material list panel and the mix panel and for a copy of 14 kinds of block, and its cost
-# on a shape of 2,000 blocks;
+# hinge where Minecraft would hinge it on the other side; the click's panel along the way, "Required blocks" with its
+# rows for the Line 1 oak plank short, a mix short of two items, the mirror's copies, the hut and a Line of copies, and
+# none before a shape's first click, in Single, in creative, past the cap and with the setting off; Effortless
+# Building's icons beside the crosshair hidden while it shows; the panel clear of everything it keeps out of, with its
+# shots, beside the material list panel and the mix panel and for a copy of 14 kinds of block, and its cost on a shape
+# of 2,000 blocks; the release request's shots of the mix's Line short of an item, with the panel, and then placed;
 # in creative, the reach and the copy past it red, the cap of 2,000 blocks a place and a second, and the time a place
 # of 2,000 takes; for Planner2, who isn't an operator, adventure mode and, once the server has started again with spawn
 # protection, the spawn; then the setting off again, for a shape and a paste. Everything else happens more than 16
@@ -145,7 +146,7 @@ chat_shots() {
 }
 
 # The click's panel. panel_head: its title and column headings, before its rows.
-panel_head="This click | Uses Hold Need"
+panel_head="Required blocks | Uses Hold Need"
 # panel_steady: at 1920 by 1080, where frames come slowest, client 1's panel shows at each of 20 reads a tick apart.
 panel_steady() {
 	local i shown=0
@@ -175,14 +176,26 @@ apart() {
 	read -r x2 y2 w2 h2 <<< "$2"
 	((x1 + w1 <= x2 || x2 + w2 <= x1 || y1 + h1 <= y2 || y2 + h2 <= y1))
 }
-# panel_clear: the click's panel shows and overlaps neither the material list panel nor the mix panel, at 854 by 480
-# and at 1920 by 1080.
+# panel_apart: the click's panel shows and overlaps nothing it keeps out of: the material list panel, the mix panel,
+# the effect icons, Litematica's lines about the ghost block at the crosshair, the crosshair, chat, the controls lines
+# and the hotbar. The boxes go to checks.log.
+panel_apart() {
+	local panel kept box
+	panel=$(val 1 clickpanelbox)
+	kept=$(val 1 clickpanelkeptout)
+	echo "  the click's panel $panel, clear of: $kept" >> /out/checks.log
+	[[ $panel != hidden && $kept != hidden ]] || return 1
+	apart "$panel" "$(val 1 matpanelbox)" && apart "$panel" "$(val 1 mixpanelbox)" || return 1
+	while read -r box; do
+		apart "$panel" "$box" || return 1
+	done <<< "${kept// | /$'\n'}"
+}
+# panel_clear: panel_apart at 1920 by 1080 and at 854 by 480.
 panel_clear() {
 	local size
 	for size in "1920 1080" "854 480"; do
 		drv 1 "window $size 2" "wait 20" > /dev/null
-		[[ $(val 1 clickpanelbox) != hidden ]] && apart "$(val 1 clickpanelbox)" "$(val 1 matpanelbox)" &&
-			apart "$(val 1 clickpanelbox)" "$(val 1 mixpanelbox)" || return 1
+		panel_apart || return 1
 	done
 }
 # list_box <ax ay az> <y1> <x2 z2> <y3>: box's clicks for a material list, the last one a press and a release that the
@@ -478,10 +491,7 @@ check "none of them red" eval '[[ $(red 1) == none ]]'
 check "the click's panel shows the 20 oak planks the Line uses, the 20 Planner1 holds, and none missing" eval \
 	'[[ $(val 1 clickpanel) == "$panel_head | minecraft:oak_planks 20 20 0 green" ]]'
 check "and Effortless Building's icons beside the crosshair don't show while it does" eval '[[ $(icons) == none ]]'
-drv 1 "clickpanellayout top_right short_first 10 true" > /dev/null
-check "with the layout that keeps the icons, they count the 20 oak planks too" eval \
-	'[[ $(icons) == "minecraft:oak_planks 20" ]]'
-drv 1 "clickpanellayout" "cmd gamemode creative @s" "wait 10" > /dev/null
+drv 1 "cmd gamemode creative @s" "wait 10" > /dev/null
 check "in creative, where shapes use no items, the panel doesn't show" eval '[[ $(val 1 clickpanel) == hidden ]]'
 drv 1 "cmd gamemode survival @s" "wait 10" > /dev/null
 check "and in survival again it does" eval '[[ $(val 1 clickpanel) == "$panel_head | "* ]]'
@@ -506,10 +516,6 @@ check "with 19 oak planks, a Line of 20 draws 20 blocks" preview_is 1 20
 check "all 20 red" eval '[[ $(red 1 | wc -w) == 20 ]]'
 check "the click's panel shows the 20 oak planks it uses, the 19 held, and 1 missing, in red" eval \
 	'[[ $(val 1 clickpanel) == "$panel_head | minecraft:oak_planks 20 19 1 red" ]]'
-drv 1 "clickpanellayout top_right short_first 10 true" > /dev/null
-check "and with the layout that keeps the icons, they show 19 oak planks and a red 1" eval \
-	'[[ $(icons) == "minecraft:oak_planks 19, minecraft:oak_planks 1 red" ]]'
-drv 1 "clickpanellayout" > /dev/null
 shots 1 real-line-short
 drv 1 "soundreset" > /dev/null
 place_click 1
@@ -716,21 +722,13 @@ mossy_row="minecraft:mossy_cobblestone $mossy $((mossy - 1)) 1 red"
 if ((mossy > cobble)); then mix_rows="$mossy_row | $cobble_row"; else mix_rows="$cobble_row | $mossy_row"; fi
 check "short of 2 cobblestone and 1 mossy cobblestone, the click's panel shows each item's counts, both missing in red" \
 	eval '[[ $(val 1 clickpanel) == "$panel_head | $mix_rows" ]]'
-check "beside the material list panel and the mix panel, at both window sizes" panel_clear
+check "beside the material list panel and the mix panel, it overlaps nothing it keeps out of, at both window sizes" \
+	panel_clear
 check "and it shows at each of 20 reads a tick apart, at 1920 by 1080" panel_steady
-# The shots of the panel's layouts for 1411 revision 3: its three spots, then the recommended one with Effortless
-# Building's icons kept, once the chat has faded.
+# The shots of the panel beside the other two, once the chat has faded.
 drv 1 "wait 210" > /dev/null
-for spot in top_right top_middle top_left; do
-	drv 1 "clickpanellayout $spot short_first 10 false" > /dev/null
-	check "at $spot, the panel overlaps neither of the others" panel_clear
-	panel_shots "real-panel-$spot"
-done
-drv 1 "clickpanellayout top_right short_first 10 true" > /dev/null
-check "with the layout that keeps the icons, they show beside the crosshair with the panel" eval \
-	'[[ $(icons) == *"red"* ]]'
-panel_shots real-panel-icons
-drv 1 "clickpanellayout" > /dev/null
+check "with the chat faded, it still overlaps nothing it keeps out of" panel_clear
+panel_shots real-panel-mix
 place_click 1
 check "short of two items, the notice is the same" client_said 1 "Nothing was placed (not enough blocks)"
 check "and nothing went in" eval '[[ $(server_count minecraft:cobblestone 40 -60 55 59 -60 55) == 0 &&
@@ -740,6 +738,49 @@ drv 1 "setmix" "openlist" "await screen Material list for the blocks in the box"
 click 1 $(val 1 "malilibbutton Info HUD")
 drv 1 "close" "wait 10" > /dev/null
 check "the list's Info HUD again takes the material list panel off the screen" eval '[[ $(val 1 matpanel) == hidden ]]'
+
+# The release request's shots of a shape short of items, then placed: the mix's Line at z 55 again, 1 short of the item
+# it uses fewer of, with the other covered, then with both covered.
+drv 1 "setmix minecraft:cobblestone:80,minecraft:mossy_cobblestone:20" "wait 5" > /dev/null
+stock minecraft:cobblestone 64
+draw 1 40 -60 55 59 -60 55
+check "the mix's Line at z 55 draws 20 blocks again" preview_is 1 20
+shown=$(mix_states 55)
+cobble=$(count_of minecraft:cobblestone "$shown")
+mossy=$(count_of minecraft:mossy_cobblestone "$shown")
+echo "  the preview uses $cobble cobblestone and $mossy mossy cobblestone" >> /out/checks.log
+if ((mossy > 1)); then
+	stock minecraft:cobblestone "$cobble" minecraft:mossy_cobblestone $((mossy - 1))
+elif ((mossy == 1)); then
+	stock minecraft:cobblestone "$cobble"
+else
+	stock minecraft:cobblestone $((cobble - 1))
+fi
+if ((mossy > 0)); then
+	short_rows="minecraft:mossy_cobblestone $mossy $((mossy - 1)) 1 red | minecraft:cobblestone $cobble $cobble 0 green"
+else
+	short_rows="minecraft:cobblestone 20 19 1 red"
+fi
+check "1 block short, the panel \"Required blocks\" lists the item short first, in red, then the other" eval \
+	'[[ $(val 1 clickpanel) == "$panel_head | $short_rows" ]]'
+check "and the whole Line is red" eval '[[ $(red 1 | wc -w) == 20 ]]'
+check "and the panel overlaps nothing it keeps out of, at both window sizes" panel_clear
+shots 1 real-release-short
+if ((mossy > 0)); then
+	stock minecraft:cobblestone "$cobble" minecraft:mossy_cobblestone "$mossy"
+else
+	stock minecraft:cobblestone "$cobble"
+fi
+check "with both covered, the panel shows none missing and none of the Line is red" eval \
+	'[[ $(val 1 clickpanel) == "$panel_head | minecraft:"* && $(val 1 clickpanel) != *red* && $(red 1) == none ]]'
+place_click 1
+check "the click places the Line, each block the one the preview showed, as both clients show" eval \
+	'drv 1 "await real 59 -60 55 $(tail -1 <<< "$shown")" > /dev/null &&
+	drv 2 "await real 59 -60 55 $(tail -1 <<< "$shown")" > /dev/null && mix_on_server 55 && mix_matches 1 55 &&
+	mix_matches 2 55'
+check "and the panel goes with the shape" eval '[[ $(val 1 clickpanel) == hidden ]]'
+shots 1 real-release-placed
+drv 1 "setmix" > /dev/null
 
 # With the mirror across x 50, a Line of 5 from 40 to 44 at z 60 and its copy from 55 to 59 need 10 oak planks.
 drv 1 "cmd tp @s 49.5 -60 56.5 180 30" "wait 20" "ebmirror 50" "wait 5" > /dev/null
@@ -1154,13 +1195,12 @@ echo "  Litematica's lines about the ghost block at the crosshair: $(val 1 lines
 	>> /out/checks.log
 check "the panel keeps clear of Litematica's lines about the ghost block at the crosshair, at the top right" eval \
 	'[[ $(val 1 linesbox) != none ]] && apart "$(val 1 clickpanelbox)" "$(val 1 linesbox)"'
-drv 1 "window 854 480 2" "wait 210" > /dev/null
-for rows in "short_first 10" "most_first 10" "short_first all"; do
-	drv 1 "clickpanellayout top_right $rows false" > /dev/null
-	echo "  rows $rows: $(val 1 clickpanel)" >> /out/checks.log
-	panel_shots "real-panel-rows-${rows// /-}"
-done
-drv 1 "clickpanellayout" > /dev/null
+drv 1 "window 854 480 2" "wait 20" > /dev/null
+echo "  at 854 by 480: $(val 1 clickpanel)" >> /out/checks.log
+check "at 854 by 480, the panel \"Required blocks\" and its headings overlap nothing it keeps out of" \
+	eval '[[ $(val 1 clickpanel) == "$panel_head | "* ]] && panel_apart'
+drv 1 "wait 190" > /dev/null
+panel_shots real-panel-rows
 attack_click 1
 check "a left click puts the copy away, and the panel goes with it" eval \
 	'drv 1 "wait 5" > /dev/null && [[ $(val 1 copy) == away* && $(val 1 clickpanel) == hidden ]]'

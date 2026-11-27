@@ -59,7 +59,7 @@
 	"buildingplanner.ui.material_panel.missing": "Need",
 	"buildingplanner.ui.material_panel.more": "+%s more",
 	"buildingplanner.ui.material_panel.empty": "No blocks to list.",
-	"buildingplanner.ui.click_panel.title": "This click",
+	"buildingplanner.ui.click_panel.title": "Required blocks",
 	"buildingplanner.ui.click_panel.uses": "Uses",
 	"buildingplanner.ui.click_panel.holds": "Hold",
 	"buildingplanner.ui.click_panel.missing": "Need",
