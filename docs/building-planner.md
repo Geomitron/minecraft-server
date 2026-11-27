@@ -5,25 +5,8 @@ ghost blocks that everyone on the server sees and edits live, then builds them b
 Building; Litematica draws the ghost blocks, out of sight. It hooks into unchanged copies of both. Geo's decisions
 behind it are in [plan.md](plan.md) ("Decisions").
 
-**What's built.** The server and the player pack run Building Planner 0.7.0, which has everything this spec describes
-except 0.8.0's changes, from Geo's trial of 0.7.0 (1359, comments c1 to c7; "Building Planner 0.8.0" in
-[plan.md](plan.md) "Decisions"):
-
-- Litematica's status panel ("Layer Mode: All", "Renderers: …") kept off players' screens (see "Litematica's status
-  panel");
-- every ghost block within 32 blocks shown through walls, light blue where its block is missing (see "Ghost blocks
-  through walls");
-- a lock for each step of a shape: H locks the step the aim is setting, and the nudge keys then move that step's
-  position, or the whole shape along a direction the step doesn't use (see "Locking and the first click");
-- before the first click, the block a left click would start from framed in red beside the block a right click would
-  place (see "Locking and the first click": "The first click's blocks");
-- "Build speed" and "Break speed" as sections on the radial menu's right side, shown only in Single (see "The radial
-  menu's buttons and sliders");
-- "Visual Settings" renamed "Settings" (see "Settings");
-- Delete's controls line saying "toggle mark" (see "Delete").
-
-0.8.0 keeps protocol version 5: it changes nothing the server does, so a 0.7.0 game and a 0.8.0 server work together.
-The build steps are in [plan.md](plan.md) ("Agent-ready work"). `OPEN:` marks a choice still Geo's, with the inbox
+**What's built.** The server and the player pack run Building Planner 0.8.0, which has everything this spec describes
+except the parts proposed for 0.9.0, 0.10.0 and 0.11.0 below. `OPEN:` marks a choice still Geo's, with the inbox
 request that asks it.
 
 **Proposed for 0.9.0.** The setting "Place real blocks", with which the server places the real blocks of a shape or a
