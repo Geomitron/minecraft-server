@@ -4,16 +4,26 @@
 
 **Server.** Minecraft 26.3 on Fabric (loader 0.20.1, server launcher 1.1.2) with Fabric API 0.166.2+26.3 and
 Building Planner 0.8.0 from the release `building-planner-0.8.0` (`/home/minecraft/mods/`), on Geo's VPS, with
-`max-edit-blocks=200000` in `config/buildingplanner.properties`. The systemd unit `minecraft.service` runs it as root
-from `/home/minecraft`:
+`max-edit-blocks=200000` in `config/buildingplanner.properties`. The systemd unit `minecraft.service` runs it under its
+own account, `minecraft`, from `/home/minecraft`:
 `/usr/lib/jvm/java-25-openjdk-amd64/bin/java -Xmx6G -Xms1G -jar fabric-server-mc.26.3-loader.0.20.1-launcher.1.1.2.jar nogui`,
-port 25565. Survival, hard, whitelist enforced (11 players), online mode. None of the mods adds blocks or items, so players without
+port 25565. systemd locks it down: the server can write only in `/home/minecraft` and a private `/tmp`, and it cannot
+gain privileges or use capabilities, devices, or kernel settings (`NoNewPrivileges`, `CapabilityBoundingSet=`, `ProtectSystem=strict`,
+`ProtectHome=read-only`, `ReadWritePaths=/home/minecraft`, `PrivateTmp`, `PrivateDevices`, `ProtectKernelTunables`,
+`ProtectKernelModules`, `ProtectKernelLogs`, `ProtectControlGroups`, `ProtectClock`, `ProtectHostname`,
+`RestrictSUIDSGID`, `RestrictRealtime`, `RestrictNamespaces`, `LockPersonality`, `SystemCallArchitectures=native`;
+not `MemoryDenyWriteExecute`, which breaks Java's JIT). `minecraft` owns `/home/minecraft` and everything in it except
+the archives. Run `chown minecraft:minecraft` on each file copied there as root, such as a release's jar or an edited
+config, so the server can write it like the rest.
+Survival, hard, whitelist enforced (11 players), online mode. None of the mods adds blocks or items, so players without
 mods can join: an unmodded 26.3 client joined a dev server with the same mods (`b739caf`). The world (`world/`) is 1.9 GB.
 Building Planner keeps the shared ghost blocks in `world/building-planner/layer/`, and each player's material lists
 in `world/building-planner/material-lists/`, a folder it creates once a player counts a box. Its one-time import of Syncmatica's shared
 plans found none (Syncmatica's list in `world/syncmatica/placements.json` was empty), so the ghost blocks started
 empty; Syncmatica's files, `world/syncmatica/` and `syncmatics/`, stay as they were.
-Archives sit beside it: `minecraft-backup-2026-11-27-pre-building-planner-0.8.0.tar.gz` (the world and `syncmatics/`
+Archives sit beside it, readable only by root (mode 600):
+`minecraft-backup-2026-11-27-pre-own-account.tar.gz` (the world and `syncmatics/` just before the server first ran
+under its own account, 1.5 GB), `minecraft-backup-2026-11-27-pre-building-planner-0.8.0.tar.gz` (the world and `syncmatics/`
 just before Building Planner 0.8.0 was installed, 1.5 GB), `minecraft-backup-2026-11-26-pre-building-planner-0.7.0.tar.gz` (the world and `syncmatics/`
 just before Building Planner 0.7.0 was installed, 1.5 GB), `minecraft-backup-2026-11-23-pre-building-planner-0.6.0.tar.gz` (the world and `syncmatics/`
 just before Building Planner 0.6.0 was installed, 1.5 GB), `minecraft-backup-2026-11-20-pre-building-planner-0.5.0.tar.gz` (the world and `syncmatics/`
