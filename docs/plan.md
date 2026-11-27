@@ -618,8 +618,13 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
     places nothing because the inventory is short, "Only that something is missing, for one item or several:
     "Nothing was placed (not enough blocks)"" (Q3 B, which replaces Geo's earlier wording "Nothing was placed
     (missing 1 oak planks)"); and for "[Can't paste: not enough blocks]" on a copy that's red for being short, "Yes,
-    as "[Can't paste: too many blocks]" shows for a copy over the limit." (Q4 A). Where the panel goes, its headings,
-    how many rows it shows and whether the icons beside the crosshair still show go to Geo in 1411's next revision;
+    as "[Can't paste: too many blocks]" shows for a copy over the limit." (Q4 A). Asked in 1411 revision 3, Geo
+    picked, for where the panel goes, "The top-right corner, below the effect icons and Litematica's lines about the
+    ghost block at your crosshair while they show." (Q1 A); for its rows, "At most 10, as on the material list
+    panel." (Q2 A); for which rows show, "The items you're short of first, then the rest, each most used first."
+    (Q3 A); and for Effortless Building's icons beside the crosshair while the panel shows, "No, since the panel
+    shows the same counts." (Q4 A). The panel's title is "Required blocks" (Geo's wording) and its headings "Uses",
+    "Hold" and "Need" (1411 revision 3, PR11);
   - Geo approved, as proposed in 1411 revision 2, the other notices "Nothing was placed (2,001 blocks, over the limit
     of 2,000 at once)", "Nothing was placed (over the limit of 2,000 blocks a second)", "1 block wasn't placed (not
     allowed there)" and "7 blocks weren't placed (not allowed there)", the guide's paragraph on items without the
