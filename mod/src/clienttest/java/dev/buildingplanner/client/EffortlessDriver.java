@@ -1,7 +1,5 @@
 package dev.buildingplanner.client;
 
-import dev.buildingplanner.sync.LayerChange;
-import dev.buildingplanner.sync.Payloads;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -14,10 +12,6 @@ import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.resources.language.I18n;
-import net.minecraft.core.Direction;
-import net.minecraft.world.phys.BlockHitResult;
-import net.minecraft.world.phys.HitResult;
-import net.minecraft.world.phys.Vec3;
 import nl.requios.effortlessbuilding.buildmode.BuildModeEnum;
 import nl.requios.effortlessbuilding.buildmode.BuildModes;
 import nl.requios.effortlessbuilding.buildmode.ModeOptions;
@@ -27,7 +21,6 @@ import nl.requios.effortlessbuilding.modifier.ArrayModifier;
 import nl.requios.effortlessbuilding.modifier.MirrorModifier;
 import nl.requios.effortlessbuilding.modifier.ModifierSystem;
 import nl.requios.effortlessbuilding.screen.ClientConfigScreen;
-import nl.requios.effortlessbuilding.utilities.BlockSet;
 import nl.requios.effortlessbuilding.utilities.BreakDisplayTracker;
 
 /**
@@ -36,33 +29,6 @@ import nl.requios.effortlessbuilding.utilities.BreakDisplayTracker;
  */
 final class EffortlessDriver {
 	private EffortlessDriver() {
-	}
-
-	/**
-	 * A {@code place} of the blocks Effortless Building's preview shows, each in the state hook E1 gives it
-	 * ({@code EffortlessShapes.states}), with the face and hit they come from: the shape's first click's, or before a
-	 * shape's first click (Single) the aim's; null while the preview shows none. The shape underway is cancelled, so
-	 * its click makes no ghost blocks.
-	 */
-	static Payloads.Place previewPlace(Minecraft mc, boolean paste) {
-		BlockSet blocks = BuildPipelineClient.getPreviewBlocks(mc);
-		if (blocks == null) {
-			return null;
-		}
-		BlockHitResult first = BuildPipelineClient.getBuildState() != null ? BuildPipelineClient.getFirstClickHit() : null;
-		if (first == null && mc.hitResult instanceof BlockHitResult aim && aim.getType() == HitResult.Type.BLOCK) {
-			first = aim;
-		}
-		List<LayerChange> changes = EffortlessShapes.states(blocks, first).entrySet().stream()
-			.map(block -> new LayerChange(block.getKey(), block.getValue())).toList();
-		if (changes.isEmpty()) {
-			return null;
-		}
-		if (BuildPipelineClient.getBuildState() != null) {
-			BuildPipelineClient.cancelCurrentSequence();
-		}
-		return new Payloads.Place(mc.level.dimension().identifier(), first != null ? first.getDirection() : Direction.UP,
-			first != null ? first.getLocation() : Vec3.atCenterOf(blocks.firstPos), paste, changes);
 	}
 
 	/** Effortless Building's build mode, as its radial menu sets it. */

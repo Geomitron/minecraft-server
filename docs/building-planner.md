@@ -3177,23 +3177,37 @@ world's spawn, where Planner2, who isn't an operator, may build:
 
 `real.sh`, "Place real blocks" (proposed for 0.9.0), more than 16 blocks from the world's spawn, which the script sets
 at 0 -60 0, unless a check says otherwise, with Planner1 in survival (`/gamemode`) and its inventory set with `/clear`
-and `/item`. Each shape is drawn in Effortless Building's preview from Planner1's real first click, and the driver's
-`placepreview` sends it as the one `place` the place click sends while the setting acts: the preview's blocks, each in
-the state hook E1 gives it (`EffortlessShapes.states`), with the first click's face and hit, and the shape under way
-cancelled, so it makes no ghost blocks. A few checks send boxes of blocks with the driver's `sendplace` instead, with a
-face and a hit of their own. Each shape is drawn by a player standing south of it, with nothing real between their eyes
-and its clicks, and the script kills the animals the world made with its land, so none is in a shape's way. "On the
-server" means the dev server's own world, as `/execute if block` finds it (the script's
-`server_count`), and every real block checked there is checked on both clients too (the driver's `realstates`):
+and `/item`. Planner1 and Planner2 turn the setting on in "Settings" with real clicks, and each shape is drawn and
+placed with the player's own clicks, which send it as one `place` while the setting acts. A few checks send boxes of
+blocks with the driver's `sendplace` instead, with a face and a hit of their own. Each shape is drawn by a player
+standing south of it, with nothing real between their eyes and its clicks, and the script kills the animals the world
+made with its land, so none is in a shape's way. "On the server" means the dev server's own world, as `/execute if
+block` finds it (the script's `server_count`), and every real block checked there is checked on both clients too (the
+driver's `realstates`):
 
-- With 10 oak planks in hand and 10 elsewhere in the inventory (the driver's `itemcount`), a 20-block Line places all
-  20 as real oak planks on the server, no ghost block appears, and the inventory holds no oak planks. The server sends
-  Planner2's game one place sound for the 20 blocks and Planner1's game none (the driver's `serversounds`, a count of
-  the sounds the server sent each game since `soundreset`).
-- With 19 oak planks, the same Line places nothing, the notice names 1 oak plank short, and the inventory still has its
-  19.
+- Planner1's "Settings" has the row "Place real blocks" right after "Match ghost blocks", off at first. A click on its
+  switch turns it on and saves nothing until "Save" saves `place-real-blocks=true`; the row shows it on when the screen
+  opens again and after a restart.
+- The controls line reads "[Right-click: start placing real blocks]" before a Line's first click, and Single's reads
+  "[Right-click: place real blocks]".
+- After a Line of ghost stone bricks drawn with the setting off and then a Line of 5 real oak planks, Ctrl+Z undoes the
+  ghost Line on both clients and leaves the real blocks, and Ctrl+Y redoes it; with no change to ghost blocks left to
+  undo, Ctrl+Z says "Nothing to undo." and the real blocks stay.
+- With the setting on, the break click's shape over the real Line breaks none of it, and over ghost stone bricks erases
+  them on both clients.
+- With 10 oak planks in hand and 10 elsewhere in the inventory (the driver's `itemcount`), the preview of a 20-block
+  Line draws none red and the icons beside the crosshair show 20 oak planks (the driver's `stacks`, the stacks
+  Effortless Building's `RenderHandler` draws in a frame). The click places all 20 as real oak planks on the server, no
+  ghost block appears, and the inventory holds no oak planks. The server sends Planner2's game one place sound for the
+  20 blocks and Planner1's game none (the driver's `serversounds`, a count of the sounds the server sent each game
+  since `soundreset`), and Planner1's own game plays the click's place sound once (the driver's `sounds`, a count of
+  every sound the game plays, its own included).
+- With 19 oak planks, the preview of the same Line draws all 20 red and the icons show 19 oak planks and a red 1; the
+  click places nothing, the notice names 1 oak plank short, the inventory still has its 19, and Planner1's game plays
+  no place sound.
 - A Line of 8 torches along a real stone wall, aimed at the wall's side, places 8 wall torches facing away from the
-  wall. In Single, a door has both halves and a bed both parts, its head on the far side, each using its one item.
+  wall. In Single, a door has both halves and a bed both parts, its head on the far side, each placed with one click
+  and using its one item.
 - With the mix of 80 cobblestone and 20 mossy cobblestone, each block of a 20-block Line on the server is the block the
   preview showed there when the inventory contains as many of each block as the preview uses, and none is left. With
   one mossy cobblestone fewer than a second Line uses, nothing goes in and the notice names 1 mossy cobblestone short.
@@ -3202,13 +3216,16 @@ server" means the dev server's own world, as `/execute if block` finds it (the s
 - Oak stairs in a Wall of 4 by 2, turned with the wheel and mirrored, face on the server as the preview showed them.
   Behind one end of each wall's bottom row stands a real stair at a right angle, and the stair there joins it as by
   hand (`inner_left`).
-- A Line of 10 through a real stone block and a cow, with 8 oak planks, leaves the stone and the cow's space as they
-  were and places the other 8.
-- In creative, a Single block and the array's 2 copies 66 blocks apart: the block and the copy 63 blocks from
-  Planner1's eyes are placed, and the one 129 blocks away isn't. Of two blocks level with the eyes sent as a box, the
-  one whose nearest face is 64 blocks from them is placed and the one at 65 isn't.
+- A Line of 10 through a real stone block and a cow, with 8 oak planks: the preview draws those two blocks red and the
+  icons count the 8 oak planks the others use, and the click leaves the stone and the cow's space as they were and
+  places the other 8.
+- In creative, a Single block and the array's 2 copies 66 blocks apart: the preview draws the copy 129 blocks from
+  Planner1's eyes red, and the click places the block and the copy 63 blocks away and not the one at 129. Of two blocks
+  level with the eyes sent as a box, the one whose nearest face is 64 blocks from them is placed and the one at 65
+  isn't.
 - Floors of oak planks sent over a ghost floor of oak planks and over one of ghost stone bricks take the ghost oak
-  planks out of the layer on both clients and leave the ghost stone bricks.
+  planks out of the layer on both clients and leave the ghost stone bricks, which Litematica marks red as wrong blocks
+  (the driver's `overlay`).
 - A paste of 5 oak planks sent as one `place`: the server sends Planner1's game and Planner2's each one place sound.
 - In adventure mode, Planner2's place of 5 blocks places nothing, and Planner2 gets the notice "5 blocks weren't
   placed: the server doesn't allow them there."
@@ -3218,22 +3235,18 @@ server" means the dev server's own world, as `/execute if block` finds it (the s
   goes to the checks' log and "Unverified".
 - The dev server starts with no spawn protection (`build.gradle`'s `prepareDevServer`), and Minecraft reads it only as
   the server starts, so the script starts the server again with Minecraft's usual 16 blocks and both games join it
-  again. Planner2, who isn't an operator, draws a Line of 7 within those 16 blocks: nothing goes in, and Planner2 gets
-  the notice.
+  again. Planner2, who isn't an operator, draws and places a Line of 7 within those 16 blocks with its own clicks:
+  nothing goes in, and Planner2 gets the notice.
+- Turned off with the switch and "Save", the setting saves `place-real-blocks=false`, Line's controls line reads
+  "[Right-click: start placing]" again, and a Line draws ghost blocks on both clients, places no real block and uses no
+  item.
 - Neither client's log has a self-check warning, before the server starts again or after.
+- Shots, at 854 by 480 and 1920 by 1080, GUI scale 2: "Settings" with the row on, the controls line in Line and in
+  Single, the whole Line red for 1 oak plank short with its icons, the Line through the stone and the cow with its red
+  blocks and icons, and Planner2's view of the placed Wall.
 
-Steps 3 and 4 of 0.9.0 make the checks of shapes and pastes through Planner1's own clicks with the setting on, and add
-these:
+Step 4 of 0.9.0 makes the paste's checks through Planner1's own clicks with the setting on, and adds these:
 
-- Planner1's "Settings" has the row "Place real blocks" after "Match ghost blocks", off at first; a click on its switch
-  and "Save" saves `place-real-blocks=true`, and the row shows it on after a restart.
-- The controls line reads "[Right-click: start placing real blocks]" before a Line's first click, and Single's reads
-  "[Right-click: place real blocks]".
-- With 19 oak planks, the preview of the 20-block Line draws all 20 red and the icons beside the crosshair show 20 and a
-  red 1; the click places nothing, and Planner1's game plays no place sound (the driver's `sounds`, a count of every
-  sound the game plays, its own included).
-- The preview of the Line through the stone and the cow draws both red, and the array's copy past 64 blocks draws red.
-  The Floor over ghost stone bricks leaves them red.
 - A copy of a hut (a cobblestone floor and walls, an oak door, a wall torch inside, a lantern hanging from its roof, a
   double stone slab, 3 candles and a water block) shows yellow (for the water) with "[Right-click: paste real
   blocks]", and, with exactly the items it needs, pastes as one `place`: on the server each block is as the copy
@@ -3243,14 +3256,9 @@ these:
   blocks]", and a right click places nothing and sends nothing. Pasted over a real stone block, the paste leaves the
   stone and places the rest. A Line of 3 copies of a 4-block copy places all 12 blocks at its second click, as one
   `place`, and a Floor of copies over 2,000 blocks draws red with "[Can't paste: too many blocks]".
-- After a ghost shape, then a Line of real blocks, Ctrl+Z undoes the ghost shape and leaves the Line's real blocks, and
-  Ctrl+Y redoes the ghost shape; with no change to ghost blocks left to undo, Ctrl+Z says there's nothing to undo and
-  the real blocks stay.
-- With the setting on, the break click's shape erases ghost blocks and breaks no real block. Turned off, shapes and
-  pastes draw ghost blocks again.
-- Shots, at 854 by 480 and 1920 by 1080, GUI scale 2: "Settings" with the row, the preview with its red blocks and the
-  crosshair's icons, the whole Line red for 1 oak plank short, the controls line in Single and in Line, the copy's box
-  yellow and red with its lines, and Planner2's view of the placed Wall and the pasted hut.
+- Turned off, pastes draw ghost blocks again.
+- Shots, at 854 by 480 and 1920 by 1080, GUI scale 2: the copy's box yellow and red with its lines, and Planner2's view
+  of the pasted hut.
 
 `RealPlaceTest` covers the rule for each block: the order (the lowest level first, in the shape's order within a
 level, and a block that can't stay tried again after the rest, from the highest level down, with a wall torch, a

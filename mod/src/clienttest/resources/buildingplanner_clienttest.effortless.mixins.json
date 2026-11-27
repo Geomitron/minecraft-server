@@ -4,6 +4,7 @@
 	"package": "dev.buildingplanner.client.mixin.effortless",
 	"compatibilityLevel": "JAVA_25",
 	"client": [
-		"BlockPreviewRendererMixin"
+		"BlockPreviewRendererMixin",
+		"RenderHandlerMixin"
 	]
 }

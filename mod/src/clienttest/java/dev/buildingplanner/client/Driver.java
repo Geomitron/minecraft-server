@@ -718,6 +718,12 @@ public final class Driver implements ClientModInitializer {
 				// it can't place, as x,y,z, or none.
 				return PreviewProbe.red();
 			}
+			case "stacks" -> {
+				// stacks: the item icons Effortless Building drew beside the crosshair in the last whole frame, each as
+				// its item, count and "red" where drawn as missing, such as "minecraft:oak_planks 19,
+				// minecraft:oak_planks 1 red", or none.
+				return StackProbe.drawn();
+			}
 			case "redframe" -> {
 				// redframe: the positions the red frame for the left click covered in the last whole frame (hook
 				// E38), as x,y,z, or none.
@@ -734,19 +740,6 @@ public final class Driver implements ClientModInitializer {
 				// previewstate x y z: the state Effortless Building's preview drew there in the last whole frame, with its
 				// properties, such as minecraft:oak_stairs[facing=east,...], or none.
 				return PreviewProbe.state(pos(a, 1));
-			}
-			case "placepreview" -> {
-				// placepreview [paste]: sends the server one place of the blocks Effortless Building's preview shows, each
-				// in the state hook E1 gives it, with the shape's first click's face and hit (the aim's before a shape's
-				// first click), as the place click will while "Place real blocks" acts, and cancels the shape underway, so
-				// its click makes no ghost blocks; with paste, as a paste. Gives "N blocks" sent, a two-part block's
-				// other half included, which the server leaves out.
-				Payloads.Place place = EffortlessDriver.previewPlace(mc, a.length > 1 && a[1].equals("paste"));
-				if (place == null) {
-					return "nothing drawn";
-				}
-				ClientPlayNetworking.send(place);
-				return place.blocks().size() + " blocks";
 			}
 			case "sendplace" -> {
 				// sendplace <face> <hx> <hy> <hz> shape|paste {<x1> <y1> <z1> <x2> <y2> <z2> <state>}...: sends the

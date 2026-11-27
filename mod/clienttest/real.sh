@@ -1,15 +1,18 @@
-# "Place real blocks" (proposed for 0.9.0), what lands on the server: shapes drawn with Effortless Building's preview
-# and sent by the driver as one place, as the place click will send them while the setting acts (placepreview), or sent
-# as boxes (sendplace). With Planner1 in survival, its inventory set with /clear and /item: a whole Line from the main
-# hand and the inventory and its one place sound, nothing for a Line 1 oak plank short, wall torches, a door, a bed, the
-# mix, the mirror's copies counted, stairs in a Wall turned with the wheel and mirrored, a real block and a cow in the
-# way, ghost blocks filled, a paste's sound; in creative, the reach, the cap of 2,000 blocks a place and a second, and
-# the time a place of 2,000 takes; for Planner2, who isn't an operator, adventure mode and, once the server has started
-# again with spawn protection, the spawn. Everything else happens more than 16 blocks from the world's spawn, which the
-# script sets at 0 -60 0. Each shape is drawn by a player standing south of it, with nothing real between their eyes
-# and its clicks. "On the server" means the dev server's own world, as /execute if block finds it, and every real block
-# checked there is checked on both clients too. Sourced by inside.sh, which provides drv, val, check, xdo, use_click,
-# client_said, wait_for and the server's and clients' start and stop.
+# "Place real blocks" (proposed for 0.9.0): the setting's row in "Settings", saved by its "Save" button, and what lands
+# on the server. Each shape is drawn and placed with Planner1's own clicks while the setting acts; a few checks send
+# boxes of blocks with the driver's sendplace instead. With Planner1 in survival, its inventory set with /clear and
+# /item: the controls lines, Ctrl+Z and Ctrl+Y after a ghost shape and a Line of real blocks, the break click erasing
+# ghost blocks only, a whole Line from the main hand and the inventory and its one place sound, nothing, the whole Line
+# red and no sound for a Line 1 oak plank short, wall torches, a door, a bed, the mix, the mirror's copies counted,
+# stairs in a Wall turned with the wheel and mirrored, a real block and a cow in the way and red, ghost blocks filled and
+# left red, a paste's sound; in creative, the reach and the copy past it red, the cap of 2,000 blocks a place and a
+# second, and the time a place of 2,000 takes; for Planner2, who isn't an operator, adventure mode and, once the server
+# has started again with spawn protection, the spawn; then the setting off again. Everything else happens more than 16
+# blocks from the world's spawn, which the script sets at 0 -60 0. Each shape is drawn by a player standing south of
+# it, with nothing real between their eyes and its clicks. "On the server" means the dev server's own world, as
+# /execute if block finds it, and every real block checked there is checked on both clients too. Sourced by inside.sh,
+# which provides drv, val, check, xdo, click, keys, use_click, attack_click, client_said, wait_for and the server's and
+# clients' start and stop.
 
 # half <n>: n + 0.5.
 half() {
@@ -51,6 +54,23 @@ preview_is() {
 	((n == $2))
 }
 
+# red <client>: the positions that client's preview drew red in the last whole frame, after 10 ticks, as x,y,z sorted
+# and joined with spaces, or none; they go to checks.log too.
+red() {
+	local positions
+	positions=$(drv "$1" "wait 10" "previewred" | tail -1 | sed 's/^.* => //' | tr ' ' '\n' | sort | paste -sd ' ')
+	echo "  client$1's preview drew red: $positions" >> /out/checks.log
+	echo "$positions"
+}
+
+# icons: the item icons beside Planner1's crosshair in the last whole frame, after 10 ticks; they go to checks.log too.
+icons() {
+	local drawn
+	drawn=$(drv 1 "wait 10" "stacks" | tail -1 | sed 's/^.* => //')
+	echo "  the crosshair's icons: $drawn" >> /out/checks.log
+	echo "$drawn"
+}
+
 # draw <client> <x1 y1 z1> <x2 y2 z2>: a Line's first click aimed at the top of the block under x1 y1 z1, then the aim
 # at the middle of the side of x2 y2 z2 facing the player, who stands south of it. Effortless Building ends the Line
 # where the look crosses the plane of the first block's side, so it ends at x2 y2 z2 exactly.
@@ -58,6 +78,22 @@ draw() {
 	aim "$1" "$2" "$3" "$4"
 	use_click "$1"
 	drv "$1" "lookat $(half "$5") $(half "$6") $7" "wait 5" > /dev/null
+}
+
+# erase <x1 y1 z1> <x2 y2 z2>: Planner1's shape drawn with the break click from the block x1 y1 z1, aimed at its top,
+# to x2 y2 z2, as draw aims it.
+erase() {
+	aim 1 "$1" $(($2 + 1)) "$3"
+	attack_click 1
+	drv 1 "lookat $(half "$4") $(half "$5") $6" "wait 5" > /dev/null
+	attack_click 1
+	drv 1 "wait 10" > /dev/null
+}
+
+# place_click <client>: the right click that finishes the shape under way, or places in Single.
+place_click() {
+	use_click "$1"
+	drv "$1" "wait 10" > /dev/null
 }
 
 # stock <item> <count> [<item> <count>]...: Planner1's inventory holds only these, the first in the main hand and each
@@ -82,6 +118,41 @@ items() {
 # count_of <text> <lines>: how many of the lines are exactly the text.
 count_of() {
 	grep -cxF -- "$1" <<< "$2" || true
+}
+
+# shots <client> <name>: that client's screen at 854 by 480 and at 1920 by 1080, GUI scale 2, once the chat has faded,
+# as <name>-<size>-gui2; the window is 854 by 480 again after.
+shots() {
+	drv "$1" "wait 210" "notoasts" "wait 5" "shot $2-854x480-gui2" "window 1920 1080 2" "wait 20" "notoasts" \
+		"shot $2-1920x1080-gui2" "window 854 480 2" "wait 20" > /dev/null
+}
+
+# The setting's row in "Settings" and its switch, clicked with the client's own mouse.
+# settings_screen <client>: opens the client's "Settings" screen, as its radial menu's button does.
+settings_screen() {
+	drv "$1" "close" "settings" "await screen Settings" "wait 10" > /dev/null
+}
+# row <client> <label>: the switch of the open screen's row with that label: its text, then its centre.
+row() {
+	val "$1" "settingrow $2"
+}
+# real_switch <client>: a real click on the switch of "Place real blocks".
+real_switch() {
+	local text x y
+	read -r text x y < <(row "$1" "Place real blocks")
+	click "$1" "$x" "$y"
+	drv "$1" "wait 5" > /dev/null
+}
+# save_settings <client>: a real click on the screen's "Save" button, which closes it.
+save_settings() {
+	local x y
+	read -r x y < <(val "$1" "widget 0 Save")
+	click "$1" "$x" "$y"
+	drv "$1" "await noscreen" "wait 5" > /dev/null
+}
+# setting_saved <client> <value>: the client's settings file saves the setting with that value.
+setting_saved() {
+	grep -qx "place-real-blocks=$2" "run/client$1/config/buildingplanner-client.properties"
 }
 
 # The log of the server the clients play on.
@@ -141,7 +212,13 @@ arrive() {
 	drv 1 "await real $1 $2 $3 $4" > /dev/null && drv 2 "await real $1 $2 $3 $4" > /dev/null
 }
 
-# sent <client> <command>: the driver's placepreview or sendplace, which gives "N blocks".
+# ghosts_are <client> <x1> <x2> <y> <z> <block> <count>: that client's copy of the layer holds that many ghost blocks
+# of that block in the row from x1 to x2 at y z.
+ghosts_are() {
+	[[ $(val "$1" "countblocks $2 $3 $4 $5 $6") == "$7" ]]
+}
+
+# sent <client> <command>: the driver's sendplace, which gives "N blocks".
 sent() {
 	val "$1" "$2" | tee -a /out/checks.log
 }
@@ -150,20 +227,105 @@ check "client 1 starts a session on hello" drv 1 "await session" "await noscreen
 check "client 2 starts a session on hello" drv 2 "await session" "await noscreen"
 
 # Planner1 in survival, facing north 3.5 blocks south of each Line, with Planner2 nearby; the Lines run eastward, 5
-# blocks apart. The animals the world made with its land are killed, so none is in a shape's way.
-drv 1 "cmd setworldspawn 0 -60 0" "cmd gamemode survival @s" "cmd tp @s 49.5 -60 36.5 180 30" \
-	"cmd tp Planner2 50.5 -60 35.5 180 30" "ebmode LINE" "wait 40" "cmd kill @e[type=!minecraft:player]" \
+# blocks apart. The animals the world made with its land are killed, so none is in a shape's way. Both windows are 854
+# by 480 at GUI scale 2.
+drv 1 "window 854 480 2" "cmd setworldspawn 0 -60 0" "cmd gamemode survival @s" "cmd tp @s 102.5 -60 36.5 180 30" \
+	"cmd tp Planner2 103.5 -60 35.5 180 30" "ebmode LINE" "wait 40" "cmd kill @e[type=!minecraft:player]" \
 	"wait 10" > /dev/null
-drv 2 "ebmode DISABLED" > /dev/null
+drv 2 "window 854 480 2" "ebmode DISABLED" > /dev/null
+
+# A ghost shape for undo, drawn with the setting off as it starts: a Line of ghost stone bricks from 100 -60 44 to
+# 104 -60 44.
+stock minecraft:stone_bricks 64
+draw 1 100 -60 44 104 -60 44
+place_click 1
+check "with the setting off, a Line draws ghost stone bricks on both clients" eval \
+	'drv 1 "await block 104 -60 44 minecraft:stone_bricks" > /dev/null &&
+	drv 2 "await block 104 -60 44 minecraft:stone_bricks" > /dev/null && ghosts_are 1 100 104 -60 44 minecraft:stone_bricks 5'
+check "and no real block" eval '[[ $(clients_count 100 -60 44 104 -60 44 stone_bricks) == "0 0" ]]'
+
+# "Settings": the row "Place real blocks" after "Match ghost blocks", off at first, turned on with a real click and
+# saved by "Save"; Planner2 turns it on the same way, for the Line near the spawn below.
+settings_screen 1
+read -r _ _ match_y < <(row 1 "Match ghost blocks")
+read -r real_text _ real_y < <(row 1 "Place real blocks")
+echo "  the rows' switches: \"Match ghost blocks\" at y $match_y, \"Place real blocks\" $real_text at y $real_y" \
+	>> /out/checks.log
+check "Planner1's \"Settings\" has the row \"Place real blocks\" right after \"Match ghost blocks\", off at first" eval \
+	'[[ $real_text == OFF ]] && ((real_y - match_y == 48))'
+real_switch 1
+check "a click on its switch turns it on, and saves nothing yet" eval \
+	'[[ $(row 1 "Place real blocks") == "ON "* ]] && ! grep -q "^place-real-blocks=" run/client1/config/buildingplanner-client.properties'
+save_settings 1
+check "\"Save\" closes the screen and saves place-real-blocks=true" setting_saved 1 true
+# The screen reads its settings again whenever it lays itself out, as for a new window size, so its shots are taken
+# once it shows the saved setting.
+settings_screen 1
+check "opened again, the screen shows it on" eval '[[ $(row 1 "Place real blocks") == "ON "* ]]'
+xdo 1 mousemove --window %w 2 2
+shots 1 real-settings
+drv 1 "close" > /dev/null
+settings_screen 2
+real_switch 2
+save_settings 2
+check "Planner2 turns it on too" setting_saved 2 true
+
+# The controls lines with the setting on, oak planks in hand: Line's before its first click, and Single's.
+stock minecraft:oak_planks 5
+aim 1 100 -60 40
+check "Line's controls line reads \"[Right-click: start placing real blocks]\"" eval \
+	'[[ $(val 1 modehud) == "[Right-click: start placing real blocks][Left-click: start erasing][H: Lock (Off)][Esc: exit mode]" ]]'
+shots 1 real-line-controls
+drv 1 "ebmode SINGLE" "wait 5" > /dev/null
+check "Single's reads \"[Right-click: place real blocks]\"" eval \
+	'[[ $(val 1 modehud) == "[Right-click: place real blocks][Left-click: erase][H: Lock (Off)][Esc: exit mode]" ]]'
+shots 1 real-single-controls
+drv 1 "ebmode LINE" "wait 5" > /dev/null
+
+# Undo: a Line of 5 real oak planks from 100 -60 40 to 104 -60 40, after the ghost Line, makes no step of its own.
+draw 1 100 -60 40 104 -60 40
+place_click 1
+check "a Line of real blocks places 5 real oak planks, as both clients show" eval \
+	'arrive 104 -60 40 minecraft:oak_planks && lands minecraft:oak_planks oak_planks 100 -60 40 104 -60 40 5'
+keys 1 keydown ctrl key z sleep 0.3 keyup ctrl
+check "Ctrl+Z after it undoes the ghost Line before it, on both clients" eval \
+	'drv 1 "await block 104 -60 44 minecraft:air" > /dev/null && drv 2 "await block 100 -60 44 minecraft:air" > /dev/null'
+check "and leaves the Line's real blocks" lands minecraft:oak_planks oak_planks 100 -60 40 104 -60 40 5
+keys 1 keydown ctrl key y sleep 0.3 keyup ctrl
+check "Ctrl+Y redoes the ghost Line on both clients" eval \
+	'drv 1 "await block 104 -60 44 minecraft:stone_bricks" > /dev/null &&
+	drv 2 "await block 100 -60 44 minecraft:stone_bricks" > /dev/null'
+keys 1 keydown ctrl key z sleep 0.3 keyup ctrl
+drv 1 "await block 104 -60 44 minecraft:air" > /dev/null
+keys 1 keydown ctrl key z sleep 0.3 keyup ctrl
+check "with no change to ghost blocks left to undo, Ctrl+Z says there's nothing to undo" client_said 1 "Nothing to undo."
+check "and the real blocks stay" lands minecraft:oak_planks oak_planks 100 -60 40 104 -60 40 5
+
+# The break click with the setting on: over the real Line, then over ghost stone bricks from 100 -60 42 to 104 -60 42.
+stock minecraft:oak_planks 5
+drv 1 "edit 100 -60 42 104 -60 42 minecraft:stone_bricks" > /dev/null
+check "both clients see the ghost stone bricks" eval 'drv 1 "await block 104 -60 42 minecraft:stone_bricks" > /dev/null &&
+	drv 2 "await block 104 -60 42 minecraft:stone_bricks" > /dev/null'
+erase 100 -60 40 104 -60 40
+check "a shape drawn with the break click over the real Line breaks none of it" eval \
+	'drv 1 "wait 20" > /dev/null && lands minecraft:oak_planks oak_planks 100 -60 40 104 -60 40 5'
+erase 100 -60 42 104 -60 42
+check "and over the ghost stone bricks erases them, on both clients" eval \
+	'drv 1 "await block 104 -60 42 minecraft:air" > /dev/null && drv 2 "await block 100 -60 42 minecraft:air" > /dev/null &&
+	ghosts_are 1 100 104 -60 42 minecraft:stone_bricks 0 && ghosts_are 2 100 104 -60 42 minecraft:stone_bricks 0'
 
 # A Line of 20 oak planks from 40 -60 40 to 59 -60 40, with 10 oak planks in hand and 10 elsewhere.
+drv 1 "cmd tp @s 49.5 -60 36.5 180 30" "cmd tp Planner2 50.5 -60 35.5 180 30" "wait 40" > /dev/null
 stock minecraft:oak_planks 10 minecraft:oak_planks 10
-drv 1 "soundreset" > /dev/null
-drv 2 "soundreset" > /dev/null
 draw 1 40 -60 40 59 -60 40
 check "a Line from 40 -60 40 to 59 -60 40 draws 20 blocks" preview_is 1 20
-check "the driver sends it as one place of 20 blocks" eval '[[ $(sent 1 placepreview) == "20 blocks" ]]'
-check "on the server, all 20 are real oak planks, as both clients show" eval \
+check "none of them red" eval '[[ $(red 1) == none ]]'
+check "and the icons beside the crosshair count the 20 oak planks it uses" eval \
+	'[[ $(icons) == "minecraft:oak_planks 20" ]]'
+drv 1 "soundreset" > /dev/null
+drv 2 "soundreset" > /dev/null
+place_click 1
+check "the click places all 20 as real oak planks on the server, as both clients show" eval \
 	'arrive 59 -60 40 minecraft:oak_planks && lands minecraft:oak_planks oak_planks 40 -60 40 59 -60 40 20'
 check "no ghost block appears" eval '[[ $(val 1 "countblocks 40 59 -60 40 minecraft:oak_planks") == 0 &&
 	$(val 2 "countblocks 40 59 -60 40 minecraft:oak_planks") == 0 ]]'
@@ -171,17 +333,24 @@ check "Planner1's inventory holds no oak planks" eval '[[ $(items minecraft:oak_
 check "the server sends Planner2's game one place sound for the 20 blocks" eval \
 	'[[ $(val 2 "serversounds block.wood.place") == 1 ]]'
 check "and Planner1's game none" eval '[[ $(val 1 "serversounds block.wood.place") == 0 ]]'
+check "Planner1's own game plays the click's place sound once" eval '[[ $(val 1 "sounds block.wood.place") == 1 ]]'
 
 # The same Line at z 45 with 19 oak planks.
 drv 1 "cmd tp @s 49.5 -60 41.5 180 30" "wait 20" > /dev/null
 stock minecraft:oak_planks 10 minecraft:oak_planks 9
 draw 1 40 -60 45 59 -60 45
 check "with 19 oak planks, a Line of 20 draws 20 blocks" preview_is 1 20
-check "the driver sends it" eval '[[ $(sent 1 placepreview) == "20 blocks" ]]'
-check "the notice names 1 oak plank short" client_said 1 \
+check "all 20 red" eval '[[ $(red 1 | wc -w) == 20 ]]'
+check "and the icons beside the crosshair show 19 oak planks and a red 1" eval \
+	'[[ $(icons) == "minecraft:oak_planks 19, minecraft:oak_planks 1 red" ]]'
+shots 1 real-line-short
+drv 1 "soundreset" > /dev/null
+place_click 1
+check "the click gets the notice naming 1 oak plank short" client_said 1 \
 	"Not enough items, so nothing was placed. You're short of 1 Oak Planks."
 check "nothing went in on the server or either client" lands minecraft:oak_planks oak_planks 40 -60 45 59 -60 45 0
 check "the inventory still has its 19" eval '[[ $(items minecraft:oak_planks) == 19 ]]'
+check "and Planner1's game played no place sound" eval '[[ $(val 1 "sounds block.wood.place") == 0 ]]'
 
 # A Line of torches along the south side of a real stone wall from 70 -60 30 to 79 -58 30, aimed at the wall's side.
 drv 1 "cmd fill 70 -60 30 79 -58 30 minecraft:stone" "cmd tp @s 74.5 -60 35.5 180 30" \
@@ -192,18 +361,17 @@ use_click 1
 drv 1 "lookat 77.5 -58.5 31" "wait 5" > /dev/null
 check "a Line of torches along the wall's side draws 8 blocks" preview_is 1 8
 echo "  the preview's first torch: $(val 1 "previewstate 70 -59 31")" >> /out/checks.log
-check "the driver sends it" eval '[[ $(sent 1 placepreview) == "8 blocks" ]]'
+place_click 1
 check "on the server, the Line is 8 wall torches on the wall's side, as both clients show" eval \
 	'arrive 77 -59 31 minecraft:wall_torch &&
 	lands "minecraft:wall_torch[facing=south]" "wall_torch}[facing=south" 70 -59 31 77 -59 31 8'
 check "the inventory has no torch left" eval '[[ $(items minecraft:torch) == 0 ]]'
 
-# In Single, a door at 62 -60 32 and a bed at 65 -60 32, Planner1 facing north. The driver sends each with its other
-# half, which the server leaves out, as a shape's place carries it.
+# In Single, a door at 62 -60 32 and a bed at 65 -60 32, Planner1 facing north, each placed with one click.
 drv 1 "ebmode SINGLE" "cmd tp @s 63.5 -60 35.5 180 30" "cmd tp Planner2 64.5 -60 36.5 180 30" "wait 20" > /dev/null
 stock minecraft:oak_door 1
 aim 1 62 -60 32
-check "the driver sends the door Single's preview shows" eval '[[ $(sent 1 placepreview) == [12]" blocks" ]]'
+place_click 1
 check "on the server, the door has both halves, as both clients show" eval \
 	'arrive 62 -59 32 minecraft:oak_door && server_has 62 -60 32 "minecraft:oak_door[half=lower]" &&
 	server_has 62 -59 32 "minecraft:oak_door[half=upper]" &&
@@ -211,7 +379,7 @@ check "on the server, the door has both halves, as both clients show" eval \
 check "and it used the one door" eval '[[ $(items minecraft:oak_door) == 0 ]]'
 stock minecraft:red_bed 1
 aim 1 65 -60 32
-check "the driver sends the bed Single's preview shows" eval '[[ $(sent 1 placepreview) == [12]" blocks" ]]'
+place_click 1
 check "on the server, the bed has both parts, its head north of its foot, as both clients show" eval \
 	'arrive 65 -60 31 minecraft:red_bed && server_has 65 -60 32 "minecraft:red_bed[part=foot,facing=north]" &&
 	server_has 65 -60 31 "minecraft:red_bed[part=head,facing=north]" &&
@@ -262,7 +430,7 @@ else
 fi
 check "with as many of each as the preview uses, the preview draws the same blocks" eval \
 	'[[ $(mix_states 50) == "$shown" ]]'
-check "the driver sends the Line" eval '[[ $(sent 1 placepreview) == "20 blocks" ]]'
+place_click 1
 check "on the server, each block of the Line is the one the preview showed there, as both clients show" eval \
 	'drv 1 "await real 59 -60 50 $(tail -1 <<< "$shown")" > /dev/null &&
 	drv 2 "await real 59 -60 50 $(tail -1 <<< "$shown")" > /dev/null && mix_on_server 50 && mix_matches 1 50 &&
@@ -282,9 +450,9 @@ if ((mossy > 1)); then
 else
 	stock minecraft:cobblestone "$cobble"
 fi
-check "with one mossy cobblestone fewer than it uses, the driver sends it" eval \
-	'((mossy > 0)) && [[ $(sent 1 placepreview) == "20 blocks" ]]'
-check "the notice names 1 mossy cobblestone short" client_said 1 \
+check "the second Line uses some mossy cobblestone" eval '((mossy > 0))'
+place_click 1
+check "with one mossy cobblestone fewer than it uses, the notice names 1 mossy cobblestone short" client_said 1 \
 	"Not enough items, so nothing was placed. You're short of 1 Mossy Cobblestone."
 check "and nothing went in" eval '[[ $(server_count minecraft:cobblestone 40 -60 55 59 -60 55) == 0 &&
 	$(server_count minecraft:mossy_cobblestone 40 -60 55 59 -60 55) == 0 &&
@@ -296,7 +464,7 @@ drv 1 "cmd tp @s 49.5 -60 56.5 180 30" "wait 20" "ebmirror 50" "wait 5" > /dev/n
 stock minecraft:oak_planks 5
 draw 1 40 -60 60 44 -60 60
 check "with the mirror on, a Line of 5 draws 10 blocks" preview_is 1 10
-check "the driver sends all 10" eval '[[ $(sent 1 placepreview) == "10 blocks" ]]'
+place_click 1
 check "with oak planks for only one of them, the notice names 5 oak planks short" client_said 1 \
 	"Not enough items, so nothing was placed. You're short of 5 Oak Planks."
 check "and nothing went in" lands minecraft:oak_planks oak_planks 40 -60 60 59 -60 60 0
@@ -356,7 +524,7 @@ stair_states() {
 }
 stairs=$(stair_states)
 echo "$stairs" | sed 's/^/  preview: /' >> /out/checks.log
-check "the driver sends the 16 stairs" eval '[[ $(sent 1 placepreview) == "16 blocks" ]]'
+place_click 1
 # stairs_as_shown <client>: each stair on that client faces as the preview showed it, in the same half.
 stairs_as_shown() {
 	local x y z f h state
@@ -382,15 +550,23 @@ check "the stair beside the real one behind each wall joins it, as by hand" eval
 	server_has $copy_join -60 65 "minecraft:oak_stairs[facing=$copy_facing,shape=inner_left]" &&
 	[[ $(val 1 "realstate $join -60 65") == *shape=inner_left* && $(val 2 "realstate $copy_join -60 65") == *shape=inner_left* ]]'
 check "the inventory has no stairs left" eval '[[ $(items minecraft:oak_stairs) == 0 ]]'
+# Planner1 steps out of Planner2's view of the Wall for its shots.
+drv 1 "cmd tp @s 38.5 -60 58.5" "wait 5" > /dev/null
+drv 2 "lookat 45 -59 65" "wait 5" > /dev/null
+shots 2 real-wall-placed
 drv 1 "ebarray 0" > /dev/null
 
 # A Line of 10 at z 70 through a real stone at 43 -60 70 and a cow at 46 -60 70, with 8 oak planks.
-drv 1 "ebmode LINE" "cmd tp @s 44.5 -60 66.5 180 30" "cmd tp Planner2 45.5 -60 67.5 180 30" \
+drv 1 "ebmode LINE" "cmd tp @s 44.5 -60 66.5 180 30" "cmd tp Planner2 45.5 -60 64.5 180 30" \
 	"cmd setblock 43 -60 70 minecraft:stone" "cmd summon minecraft:cow 46.5 -60 70.5 {NoAI:1b}" "wait 20" > /dev/null
 stock minecraft:oak_planks 8
 draw 1 40 -60 70 49 -60 70
 echo "  the Line through the stone and the cow draws $(drawn 1) blocks" >> /out/checks.log
-check "the driver sends it" eval '[[ $(sent 1 placepreview) =~ ^(8|9|10)\ blocks$ ]]'
+check "the preview draws the stone's and the cow's blocks red" eval '[[ $(red 1) == "43,-60,70 46,-60,70" ]]'
+check "and the icons beside the crosshair count the 8 oak planks the others use" eval \
+	'[[ $(icons) == "minecraft:oak_planks 8" ]]'
+shots 1 real-line-red-icons
+place_click 1
 check "on the server, the other 8 are oak planks, the stone stays and the cow's space is empty, as both clients show" \
 	eval 'arrive 49 -60 70 minecraft:oak_planks && arrive 45 -60 70 minecraft:oak_planks &&
 	[[ $(server_count minecraft:oak_planks 40 -60 70 49 -60 70) == 8 ]] && server_has 43 -60 70 minecraft:stone &&
@@ -405,7 +581,8 @@ drv 1 "cmd gamemode creative @s" "ebmode SINGLE" "ebarray 2 66 0 0" "cmd forcelo
 stock minecraft:oak_planks 1
 aim 1 97 -60 105
 echo "  the Single block and the array's copies draw $(drawn 1) blocks" >> /out/checks.log
-check "the driver sends them" eval '[[ $(sent 1 placepreview) == [23]" blocks" ]]'
+check "the preview draws the copy past 64 blocks red" eval '[[ $(red 1) == "229,-60,105" ]]'
+place_click 1
 check "on the server, the block and the copy at 63 blocks are placed, and the one at 129 isn't, as both clients show" \
 	eval 'arrive 163 -60 105 minecraft:oak_planks && server_has 97 -60 105 minecraft:oak_planks &&
 	server_has 163 -60 105 minecraft:oak_planks && server_has 229 -60 105 minecraft:air &&
@@ -444,6 +621,7 @@ check "the oak planks take the ghost oak planks out of the layer, on both client
 	'drv 1 "wait 10" > /dev/null && [[ $(ghosts_left 1 40 44 minecraft:oak_planks) == 0 && $(ghosts_left 2 40 44 minecraft:oak_planks) == 0 ]]'
 check "and leave the ghost stone bricks" eval \
 	'[[ $(ghosts_left 1 50 54 minecraft:stone_bricks) == 25 && $(ghosts_left 2 50 54 minecraft:stone_bricks) == 25 ]]'
+check "which Litematica marks red for Planner1, as wrong blocks" eval '[[ $(val 1 "overlay 52 -60 82") == WRONG_BLOCK ]]'
 
 # A paste of 5 oak planks from 40 -60 28 to 44 -60 28: the server sends its place sound to Planner1 too.
 drv 1 "cmd tp @s 45.5 -60 32.5 180 30" "cmd tp Planner2 46.5 -60 32.5 180 30" "wait 20" > /dev/null
@@ -512,15 +690,38 @@ start_client 1
 start_client 2
 check "with spawn protection, both clients start a session again" eval \
 	'drv 1 "await session" "await noscreen" > /dev/null && drv 2 "await session" "await noscreen" > /dev/null'
+settings_screen 1
+check "after the restart, Planner1's \"Place real blocks\" shows on, as saved" eval \
+	'[[ $(row 1 "Place real blocks") == "ON "* ]]'
+drv 1 "close" > /dev/null
 # Planner2, who isn't an operator, near the spawn: a Line of 7 from 2 -60 4 to 8 -60 4, within the spawn protection's
-# 16 blocks.
-drv 1 "cmd tp Planner2 4.5 -60 0.5 0 30" "cmd item replace entity Planner2 weapon.mainhand with minecraft:oak_planks" \
+# 16 blocks, drawn and placed with Planner2's own clicks.
+drv 1 "cmd tp Planner2 4.5 -60 0.5 0 30" "cmd item replace entity Planner2 weapon.mainhand with minecraft:oak_planks 7" \
 	"cmd tp @s 5.5 -60 -2.5 0 30" "wait 40" > /dev/null
 drv 2 "ebmode LINE" "wait 5" > /dev/null
 draw 2 2 -60 4 8 -60 4
 check "Planner2's Line within the spawn protection draws 7 blocks" preview_is 2 7
-check "the driver sends it" eval '[[ $(sent 2 placepreview) == "7 blocks" ]]'
-check "Planner2 gets the notice" client_said 2 "7 blocks weren't placed: the server doesn't allow them there."
+place_click 2
+check "Planner2's click gets the notice" client_said 2 "7 blocks weren't placed: the server doesn't allow them there."
 check "and nothing went in" lands minecraft:oak_planks oak_planks 2 -60 4 8 -60 4 0
-check "nor does either client's log since they started again" eval \
+
+# Turned off, a shape draws ghost blocks again: a Line of 5 from 100 -60 46 to 104 -60 46.
+settings_screen 1
+real_switch 1
+save_settings 1
+check "a click on the switch and \"Save\" turn the setting off" setting_saved 1 false
+drv 1 "window 854 480 2" "cmd gamemode survival @s" "ebmode LINE" "cmd tp @s 102.5 -60 41.5 180 30" \
+	"cmd tp Planner2 103.5 -60 38.5 180 30" "wait 40" > /dev/null
+stock minecraft:oak_planks 5
+aim 1 100 -60 46
+check "Line's controls line reads \"[Right-click: start placing]\" again" eval \
+	'[[ $(val 1 modehud) == "[Right-click: start placing][Left-click: start erasing][H: Lock (Off)][Esc: exit mode]" ]]'
+draw 1 100 -60 46 104 -60 46
+place_click 1
+check "the Line draws ghost oak planks on both clients" eval \
+	'drv 1 "await block 104 -60 46 minecraft:oak_planks" > /dev/null &&
+	drv 2 "await block 104 -60 46 minecraft:oak_planks" > /dev/null && ghosts_are 1 100 104 -60 46 minecraft:oak_planks 5'
+check "places no real block and uses no item" eval \
+	'lands minecraft:oak_planks oak_planks 100 -60 46 104 -60 46 0 && [[ $(items minecraft:oak_planks) == 5 ]]'
+check "nor does either client's log have a self-check warning since they started again" eval \
 	'! grep -F "Self-check:" /out/client1.log /out/client2.log >> /out/checks.log'
