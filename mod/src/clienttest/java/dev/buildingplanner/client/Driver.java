@@ -6,7 +6,9 @@ import dev.buildingplanner.input.CopyColour;
 import dev.buildingplanner.input.CopyNudge;
 import dev.buildingplanner.input.CopyPlacement;
 import dev.buildingplanner.input.RepeatSpeed;
+import dev.buildingplanner.look.ClickItems;
 import dev.buildingplanner.look.ControlsLine;
+import dev.buildingplanner.look.PanelRoom;
 import dev.buildingplanner.sync.EditKind;
 import dev.buildingplanner.sync.LayerChange;
 import dev.buildingplanner.sync.Payloads;
@@ -377,6 +379,60 @@ public final class Driver implements ClientModInitializer {
 			case "matpanelbox" -> {
 				// matpanelbox: the material list panel's box in the window (x y width height), or hidden.
 				return MaterialPanel.box();
+			}
+			case "clickpanel" -> {
+				// clickpanel: the click's panel's lines, separated by " | ", each row as its item, how many the click
+				// uses, holds and is missing, and missing's colour; or hidden.
+				return BuildingPlannerClient.clickPanel().text();
+			}
+			case "clickpanelbox" -> {
+				// clickpanelbox: the click's panel's box in the window (x y width height), or hidden.
+				return BuildingPlannerClient.clickPanel().box();
+			}
+			case "clickpanellayout" -> {
+				// clickpanellayout <spot> <order> <rows> <icons>: the click's panel's layout, for the shots of Geo's
+				// open choices: top_right, top_middle or top_left; short_first or most_first; the most rows, or all;
+				// whether Effortless Building's icons still show. clickpanellayout: back to the recommendation.
+				ClickPanel.layout = a.length == 1 ? ClickItems.Layout.RECOMMENDED : new ClickItems.Layout(
+					ClickItems.Spot.valueOf(a[1].toUpperCase()), ClickItems.Order.valueOf(a[2].toUpperCase()),
+					a[3].equals("all") ? Integer.MAX_VALUE : Integer.parseInt(a[3]), Boolean.parseBoolean(a[4]));
+				return "ok";
+			}
+			case "clickpanelcost" -> {
+				// clickpanelcost <repeats>: the mean time, in microseconds, of the shape preview's count of the items
+				// its blocks use (once a tick) and of the panel's work for a frame, each run that many times, with how
+				// many blocks go in.
+				int repeats = Integer.parseInt(a[1]);
+				List<dev.buildingplanner.input.RealPlace.Entry> going = RealShape.shownGoingIn();
+				long start = System.nanoTime();
+				for (int i = 0; i < repeats; i++) {
+					dev.buildingplanner.input.RealPlace.needs(going);
+				}
+				long counted = System.nanoTime() - start;
+				ClickPanel panel = BuildingPlannerClient.clickPanel();
+				start = System.nanoTime();
+				for (int i = 0; i < repeats; i++) {
+					panel.text();
+				}
+				long drawn = System.nanoTime() - start;
+				return "blocks " + going.size() + " count " + counted / 1000 / repeats + " panel " + drawn / 1000 / repeats;
+			}
+			case "linesbox" -> {
+				// linesbox: Litematica's lines about the ghost block at the crosshair, as the click's panel keeps clear
+				// of them, in the window (x y width height), or none.
+				return ClickPanel.linesBox();
+			}
+			case "stacksbox" -> {
+				// stacksbox: the box Effortless Building's icons beside the crosshair covered in the last whole frame,
+				// in the window (x y width height), or none.
+				return StackProbe.box();
+			}
+			case "mixpanelbox" -> {
+				// mixpanelbox: the mix panel's box in the window (x y width height), or hidden.
+				PanelRoom.Box box = BuildingPlannerClient.mixPanelBox();
+				int scale = mc.getWindow().getGuiScale();
+				return box == null ? "hidden" : box.left() * scale + " " + box.top() * scale + " "
+					+ (box.right() - box.left()) * scale + " " + (box.bottom() - box.top()) * scale;
 			}
 			case "infohud" -> {
 				// infohud: whether the current material list's Info HUD, the panel's switch, is on.
@@ -1344,7 +1400,7 @@ public final class Driver implements ClientModInitializer {
 	/** The driver's reads written beside each shot, for outlining what the shot shows. */
 	private static final List<String> SHOT_READS = List.of("moderects", "eblinerects", "erasebar", "modebox", "buttons",
 		"widgets", "malilibbuttons", "infoicon", "drawbox", "markbox", "marks", "preview", "previewred", "copy",
-		"copyset", "lock", "throughwalls");
+		"copyset", "lock", "throughwalls", "matpanelbox", "clickpanelbox", "mixpanelbox", "stacksbox", "linesbox");
 	private static final java.util.regex.Pattern POSITION = java.util.regex.Pattern.compile("(-?\\d+),(-?\\d+),(-?\\d+)");
 
 	/**

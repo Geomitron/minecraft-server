@@ -10,6 +10,7 @@ import java.util.Optional;
 import java.util.function.BooleanSupplier;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
@@ -148,8 +149,22 @@ public final class CopyColour {
 	 */
 	public static Shown ofReal(List<Spot> set, Map<BlockPos, BlockState> blocks, RealPlace.World world, Vec3 eyes,
 		RealPlace.Inventory inventory) {
+		return counted(set, blocks, world, eyes, inventory).shown();
+	}
+
+	/**
+	 * The copy's colour for real blocks ({@link #ofReal}) and the items its paste needs, which the click's panel lists:
+	 * the server's all-or-nothing count ({@link RealPlace#needs} of the blocks that go in), by item in the order first
+	 * needed; null past the cap, where the server refuses the paste before it counts the inventory.
+	 */
+	public record Counted(Shown shown, Map<Item, Integer> needs) {
+	}
+
+	/** The copy's colour for real blocks and the items its paste needs ({@link Counted}), worked out together. */
+	public static Counted counted(List<Spot> set, Map<BlockPos, BlockState> blocks, RealPlace.World world, Vec3 eyes,
+		RealPlace.Inventory inventory) {
 		if (RealPlace.tooMany((long) set.size() * blocks.size())) {
-			return Shown.red(Refusal.TOO_MANY_BLOCKS);
+			return new Counted(Shown.red(Refusal.TOO_MANY_BLOCKS), null);
 		}
 		List<RealPlace.Entry> placed = new ArrayList<>(set.size() * blocks.size());
 		for (Spot spot : set) {
@@ -158,10 +173,11 @@ public final class CopyColour {
 		}
 		List<RealPlace.Entry> own = RealPlace.withoutSecondHalves(placed);
 		List<RealPlace.Entry> going = RealPlace.goingIn(own, world, eyes);
-		if (!inventory.covers(RealPlace.needs(going))) {
-			return Shown.red(Refusal.NOT_ENOUGH_BLOCKS);
+		Map<Item, Integer> needs = RealPlace.needs(going);
+		if (!inventory.covers(needs)) {
+			return new Counted(Shown.red(Refusal.NOT_ENOUGH_BLOCKS), needs);
 		}
-		return going.size() == own.size() ? Shown.BLUE : Shown.YELLOW;
+		return new Counted(going.size() == own.size() ? Shown.BLUE : Shown.YELLOW, needs);
 	}
 
 	private static boolean anyColumn(Layer layer, Spot box) {

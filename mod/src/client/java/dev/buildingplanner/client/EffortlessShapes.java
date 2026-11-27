@@ -29,6 +29,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.ClipContext;
@@ -92,6 +93,16 @@ public final class EffortlessShapes {
 			case WALL -> Wall.findWall(player, first, true);
 			case FLOOR -> Floor.findFloor(player, first, true);
 		};
+	}
+
+	/**
+	 * The items the place click of the shape under way uses, for the click's panel ({@link RealShape#needs}): from the
+	 * shape's first click until it's placed, while the click places real blocks ({@link RealShape#places}); null before
+	 * the first click, in Single, whose click places at once, and while the shape is drawn with the break click.
+	 */
+	static Map<Item, Integer> clickNeeds() {
+		return BuildPipelineClient.getBuildState() == BuildPipeline.BuildState.PLACING && !singleMode()
+			&& RealShape.places() ? RealShape.needs() : null;
 	}
 
 	/** Which shape is under way, for the build modes' line: none, one drawn with the place click, or the break click. */

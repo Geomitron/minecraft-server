@@ -11,7 +11,11 @@
 # red, ghost blocks filled and left red, a copy of a hut with a door, a wall torch, a hanging lantern, a double slab,
 # candles and water, yellow, red 1 cobblestone short, pasted with one place sound for each player and around a real
 # block in its way, a Floor of its copies red past 2,000 blocks, a Line of 3 copies, and a copied door keeping its
-# hinge where Minecraft would hinge it on the other side;
+# hinge where Minecraft would hinge it on the other side; the click's panel along the way, with its rows for the Line 1
+# oak plank short, a mix short of two items, the mirror's copies, the hut and a Line of copies, and none before a
+# shape's first click, in Single, in creative, past the cap and with the setting off; the shots of its layouts for
+# 1411 revision 3, beside the material list panel and the mix panel and for a copy of 14 kinds of block, and its cost
+# on a shape of 2,000 blocks;
 # in creative, the reach and the copy past it red, the cap of 2,000 blocks a place and a second, and the time a place
 # of 2,000 takes; for Planner2, who isn't an operator, adventure mode and, once the server has started again with spawn
 # protection, the spawn; then the setting off again, for a shape and a paste. Everything else happens more than 16
@@ -138,6 +142,61 @@ shots() {
 chat_shots() {
 	drv "$1" "notoasts" "wait 5" "shot $2-854x480-gui2" "window 1920 1080 2" "wait 20" "notoasts" \
 		"shot $2-1920x1080-gui2" "window 854 480 2" "wait 20" > /dev/null
+}
+
+# The click's panel. panel_head: its title and column headings, before its rows.
+panel_head="This click | Uses Hold Need"
+# panel_steady: at 1920 by 1080, where frames come slowest, client 1's panel shows at each of 20 reads a tick apart.
+panel_steady() {
+	local i shown=0
+	drv 1 "window 1920 1080 2" "wait 20" > /dev/null
+	for i in $(seq 20); do
+		[[ $(val 1 clickpanel) != hidden ]] && shown=$((shown + 1))
+		drv 1 "wait 1" > /dev/null
+	done
+	drv 1 "window 854 480 2" "wait 20" > /dev/null
+	echo "  the click's panel showed at $shown of 20 reads" >> /out/checks.log
+	((shown == 20))
+}
+# panel_shots <name>: Planner1's shots, as chat_shots takes them, with the panel's box and the material list panel's and
+# the mix panel's at each size in checks.log.
+panel_shots() {
+	drv 1 "notoasts" "wait 5" "shot $1-854x480-gui2" > /dev/null
+	echo "  $1-854x480-gui2: click panel $(val 1 clickpanelbox), material list panel $(val 1 matpanelbox), mix panel $(val 1 mixpanelbox)" >> /out/checks.log
+	drv 1 "window 1920 1080 2" "wait 20" "notoasts" "shot $1-1920x1080-gui2" > /dev/null
+	echo "  $1-1920x1080-gui2: click panel $(val 1 clickpanelbox), material list panel $(val 1 matpanelbox), mix panel $(val 1 mixpanelbox)" >> /out/checks.log
+	drv 1 "window 854 480 2" "wait 20" > /dev/null
+}
+# apart <box> <box>: the two window boxes (x y width height), or hidden, don't overlap.
+apart() {
+	[[ $1 == hidden || $2 == hidden ]] && return 0
+	local x1 y1 w1 h1 x2 y2 w2 h2
+	read -r x1 y1 w1 h1 <<< "$1"
+	read -r x2 y2 w2 h2 <<< "$2"
+	((x1 + w1 <= x2 || x2 + w2 <= x1 || y1 + h1 <= y2 || y2 + h2 <= y1))
+}
+# panel_clear: the click's panel shows and overlaps neither the material list panel nor the mix panel, at 854 by 480
+# and at 1920 by 1080.
+panel_clear() {
+	local size
+	for size in "1920 1080" "854 480"; do
+		drv 1 "window $size 2" "wait 20" > /dev/null
+		[[ $(val 1 clickpanelbox) != hidden ]] && apart "$(val 1 clickpanelbox)" "$(val 1 matpanelbox)" &&
+			apart "$(val 1 clickpanelbox)" "$(val 1 mixpanelbox)" || return 1
+	done
+}
+# list_box <ax ay az> <y1> <x2 z2> <y3>: box's clicks for a material list, the last one a press and a release that the
+# list's screen, which it opens, takes from the game.
+list_box() {
+	drv 1 "lookat $1 $2 $3" "wait 5" > /dev/null
+	attack_click 1
+	drv 1 "lookat $(half "$5") $4 $(half "$6")" "wait 5" > /dev/null
+	attack_click 1
+	drv 1 "lookat $(half "$5") $(half "$7") $(half "$6")" "wait 10" > /dev/null
+	xdo 1 mousedown 1
+	drv 1 "wait 10" > /dev/null
+	xdo 1 mouseup 1
+	drv 1 "wait 10" > /dev/null
 }
 
 # The setting's row in "Settings" and its switch, clicked with the client's own mouse.
@@ -270,12 +329,16 @@ press() {
 	keys "$1" key "$2"
 	drv "$1" "await pressedafter $before" "wait 2" > /dev/null
 }
-# copy_button: a real click on the radial menu's Copy button, with the menu's key (left Alt) held, which starts a box.
+# radial_button <label>: a real click on the radial menu's button with that label, with the menu's key (left Alt) held.
+# copy_button: its Copy button, which starts a box for a copy.
 copy_button() {
+	radial_button Copy
+}
+radial_button() {
 	local x y
 	xdo 1 keydown Alt_L
 	drv 1 "await screen Build Modes" "wait 10" > /dev/null
-	read -r x y < <(val 1 "widget 0 Copy")
+	read -r x y < <(val 1 "widget 0 $1")
 	xdo 1 mousemove --window %w "$x" "$y"
 	drv 1 "wait 5" > /dev/null
 	xdo 1 click 1
@@ -312,6 +375,7 @@ drv 2 "window 854 480 2" "ebmode DISABLED" > /dev/null
 # 104 -60 44.
 stock minecraft:stone_bricks 64
 draw 1 100 -60 44 104 -60 44
+check "with the setting off, the click's panel doesn't show during the Line" eval '[[ $(val 1 clickpanel) == hidden ]]'
 place_click 1
 check "with the setting off, a Line draws ghost stone bricks on both clients" eval \
 	'drv 1 "await block 104 -60 44 minecraft:stone_bricks" > /dev/null &&
@@ -362,10 +426,12 @@ stock minecraft:oak_planks 5
 aim 1 100 -60 40
 check "Line's controls line reads \"[Right-click: start placing]\", as with the setting off" eval \
 	'[[ $(val 1 modehud) == "[Right-click: start placing][Left-click: start erasing][H: Lock (Off)][Esc: exit mode]" ]]'
+check "and the click's panel doesn't show before the Line's first click" eval '[[ $(val 1 clickpanel) == hidden ]]'
 shots 1 real-line-controls
 drv 1 "ebmode SINGLE" "wait 5" > /dev/null
 check "Single's reads \"[Right-click: place]\"" eval \
 	'[[ $(val 1 modehud) == "[Right-click: place][Left-click: erase][H: Lock (Off)][Esc: exit mode]" ]]'
+check "nor does the panel in Single, whose click places at once" eval '[[ $(val 1 clickpanel) == hidden ]]'
 shots 1 real-single-controls
 drv 1 "ebmode LINE" "wait 5" > /dev/null
 
@@ -409,8 +475,16 @@ stock minecraft:oak_planks 10 minecraft:oak_planks 10
 draw 1 40 -60 40 59 -60 40
 check "a Line from 40 -60 40 to 59 -60 40 draws 20 blocks" preview_is 1 20
 check "none of them red" eval '[[ $(red 1) == none ]]'
-check "and the icons beside the crosshair count the 20 oak planks it uses" eval \
+check "the click's panel shows the 20 oak planks the Line uses, the 20 Planner1 holds, and none missing" eval \
+	'[[ $(val 1 clickpanel) == "$panel_head | minecraft:oak_planks 20 20 0 green" ]]'
+check "and Effortless Building's icons beside the crosshair don't show while it does" eval '[[ $(icons) == none ]]'
+drv 1 "clickpanellayout top_right short_first 10 true" > /dev/null
+check "with the layout that keeps the icons, they count the 20 oak planks too" eval \
 	'[[ $(icons) == "minecraft:oak_planks 20" ]]'
+drv 1 "clickpanellayout" "cmd gamemode creative @s" "wait 10" > /dev/null
+check "in creative, where shapes use no items, the panel doesn't show" eval '[[ $(val 1 clickpanel) == hidden ]]'
+drv 1 "cmd gamemode survival @s" "wait 10" > /dev/null
+check "and in survival again it does" eval '[[ $(val 1 clickpanel) == "$panel_head | "* ]]'
 drv 1 "soundreset" > /dev/null
 drv 2 "soundreset" > /dev/null
 place_click 1
@@ -430,13 +504,17 @@ stock minecraft:oak_planks 10 minecraft:oak_planks 9
 draw 1 40 -60 45 59 -60 45
 check "with 19 oak planks, a Line of 20 draws 20 blocks" preview_is 1 20
 check "all 20 red" eval '[[ $(red 1 | wc -w) == 20 ]]'
-check "and the icons beside the crosshair show 19 oak planks and a red 1" eval \
+check "the click's panel shows the 20 oak planks it uses, the 19 held, and 1 missing, in red" eval \
+	'[[ $(val 1 clickpanel) == "$panel_head | minecraft:oak_planks 20 19 1 red" ]]'
+drv 1 "clickpanellayout top_right short_first 10 true" > /dev/null
+check "and with the layout that keeps the icons, they show 19 oak planks and a red 1" eval \
 	'[[ $(icons) == "minecraft:oak_planks 19, minecraft:oak_planks 1 red" ]]'
+drv 1 "clickpanellayout" > /dev/null
 shots 1 real-line-short
 drv 1 "soundreset" > /dev/null
 place_click 1
-check "the click gets the notice naming 1 oak plank short" client_said 1 \
-	"Nothing was placed (missing 1 oak planks)"
+check "the click gets the notice that it had not enough blocks" client_said 1 "Nothing was placed (not enough blocks)"
+check "and the panel goes with the shape" eval '[[ $(val 1 clickpanel) == hidden ]]'
 chat_shots 1 real-short-notice
 check "nothing went in on the server or either client" lands minecraft:oak_planks oak_planks 40 -60 45 59 -60 45 0
 check "the inventory still has its 19" eval '[[ $(items minecraft:oak_planks) == 19 ]]'
@@ -610,6 +688,14 @@ check "on the server, each block of the Line is the one the preview showed there
 check "the inventory has none of either left" eval \
 	'[[ $(items minecraft:cobblestone) == 0 && $(items minecraft:mossy_cobblestone) == 0 ]]'
 drv 1 "cmd tp @s 49.5 -60 51.5 180 30" "wait 20" > /dev/null
+# The first Line's material list, pinned to the screen by its Info HUD, for the shots of the click's panel beside it.
+radial_button "Material list"
+list_box 40.5 -59 50.5 -59 59 50 -60
+check "a box around the first Line opens its material list" drv 1 "await screen Material list for the blocks in the box"
+click 1 $(val 1 "malilibbutton Info HUD")
+drv 1 "close" "wait 10" > /dev/null
+check "whose Info HUD pins the material list panel to the screen" eval \
+	'[[ $(val 1 matpanel) == "Material list | All Hold Need | "* ]]'
 stock minecraft:cobblestone 64
 draw 1 40 -60 55 59 -60 55
 check "a second Line of the mix draws 20 blocks" preview_is 1 20
@@ -618,27 +704,53 @@ cobble=$(count_of minecraft:cobblestone "$shown")
 mossy=$(count_of minecraft:mossy_cobblestone "$shown")
 echo "  the preview uses $cobble cobblestone and $mossy mossy cobblestone" >> /out/checks.log
 if ((mossy > 1)); then
-	stock minecraft:cobblestone "$cobble" minecraft:mossy_cobblestone $((mossy - 1))
+	stock minecraft:cobblestone $((cobble - 2)) minecraft:mossy_cobblestone $((mossy - 1))
 else
-	stock minecraft:cobblestone "$cobble"
+	stock minecraft:cobblestone $((cobble - 2))
 fi
 check "the second Line uses some mossy cobblestone" eval '((mossy > 0))'
+# With 2 cobblestone and 1 mossy cobblestone fewer than the Line uses, the panel shows both short, the one the Line uses
+# more of first.
+cobble_row="minecraft:cobblestone $cobble $((cobble - 2)) 2 red"
+mossy_row="minecraft:mossy_cobblestone $mossy $((mossy - 1)) 1 red"
+if ((mossy > cobble)); then mix_rows="$mossy_row | $cobble_row"; else mix_rows="$cobble_row | $mossy_row"; fi
+check "short of 2 cobblestone and 1 mossy cobblestone, the click's panel shows each item's counts, both missing in red" \
+	eval '[[ $(val 1 clickpanel) == "$panel_head | $mix_rows" ]]'
+check "beside the material list panel and the mix panel, at both window sizes" panel_clear
+check "and it shows at each of 20 reads a tick apart, at 1920 by 1080" panel_steady
+# The shots of the panel's layouts for 1411 revision 3: its three spots, then the recommended one with Effortless
+# Building's icons kept, once the chat has faded.
+drv 1 "wait 210" > /dev/null
+for spot in top_right top_middle top_left; do
+	drv 1 "clickpanellayout $spot short_first 10 false" > /dev/null
+	check "at $spot, the panel overlaps neither of the others" panel_clear
+	panel_shots "real-panel-$spot"
+done
+drv 1 "clickpanellayout top_right short_first 10 true" > /dev/null
+check "with the layout that keeps the icons, they show beside the crosshair with the panel" eval \
+	'[[ $(icons) == *"red"* ]]'
+panel_shots real-panel-icons
+drv 1 "clickpanellayout" > /dev/null
 place_click 1
-check "with one mossy cobblestone fewer than it uses, the notice names 1 mossy cobblestone short" client_said 1 \
-	"Nothing was placed (missing 1 mossy cobblestone)"
+check "short of two items, the notice is the same" client_said 1 "Nothing was placed (not enough blocks)"
 check "and nothing went in" eval '[[ $(server_count minecraft:cobblestone 40 -60 55 59 -60 55) == 0 &&
 	$(server_count minecraft:mossy_cobblestone 40 -60 55 59 -60 55) == 0 &&
 	$(clients_count 40 -60 55 59 -60 55 cobblestone) == "0 0" ]]'
-drv 1 "setmix" > /dev/null
+drv 1 "setmix" "openlist" "await screen Material list for the blocks in the box" "wait 10" > /dev/null
+click 1 $(val 1 "malilibbutton Info HUD")
+drv 1 "close" "wait 10" > /dev/null
+check "the list's Info HUD again takes the material list panel off the screen" eval '[[ $(val 1 matpanel) == hidden ]]'
 
 # With the mirror across x 50, a Line of 5 from 40 to 44 at z 60 and its copy from 55 to 59 need 10 oak planks.
 drv 1 "cmd tp @s 49.5 -60 56.5 180 30" "wait 20" "ebmirror 50" "wait 5" > /dev/null
 stock minecraft:oak_planks 5
 draw 1 40 -60 60 44 -60 60
 check "with the mirror on, a Line of 5 draws 10 blocks" preview_is 1 10
+check "the click's panel counts the mirror's copy: 10 oak planks, 5 held, 5 missing" eval \
+	'[[ $(val 1 clickpanel) == "$panel_head | minecraft:oak_planks 10 5 5 red" ]]'
 place_click 1
-check "with oak planks for only one of them, the notice names 5 oak planks short" client_said 1 \
-	"Nothing was placed (missing 5 oak planks)"
+check "with oak planks for only one of them, the click gets the notice" client_said 1 \
+	"Nothing was placed (not enough blocks)"
 check "and nothing went in" lands minecraft:oak_planks oak_planks 40 -60 60 59 -60 60 0
 check "the inventory still has its 5" eval '[[ $(items minecraft:oak_planks) == 5 ]]'
 
@@ -735,9 +847,9 @@ stock minecraft:oak_planks 8
 draw 1 40 -60 70 49 -60 70
 echo "  the Line through the stone and the cow draws $(drawn 1) blocks" >> /out/checks.log
 check "the preview draws the stone's and the cow's blocks red" eval '[[ $(red 1) == "43,-60,70 46,-60,70" ]]'
-check "and the icons beside the crosshair count the 8 oak planks the others use" eval \
-	'[[ $(icons) == "minecraft:oak_planks 8" ]]'
-shots 1 real-line-red-icons
+check "and the click's panel counts the 8 oak planks the others use" eval \
+	'[[ $(val 1 clickpanel) == "$panel_head | minecraft:oak_planks 8 8 0 green" ]]'
+shots 1 real-line-red-counted
 place_click 1
 check "on the server, the other 8 are oak planks, the stone stays and the cow's space is empty, as both clients show" \
 	eval 'arrive 49 -60 70 minecraft:oak_planks && arrive 45 -60 70 minecraft:oak_planks &&
@@ -745,6 +857,24 @@ check "on the server, the other 8 are oak planks, the stone stays and the cow's 
 	server_has 46 -60 70 minecraft:air && [[ $(clients_count 40 -60 70 49 -60 70 oak_planks) == "9 8" ]]'
 check "the inventory has no oak planks left" eval '[[ $(items minecraft:oak_planks) == 0 ]]'
 drv 1 "cmd kill @e[type=minecraft:cow]" > /dev/null
+
+# The click's panel's cost on a shape of 2,000 blocks: a Wall of 20 by 10 from 240 -60 120 to 259 -51 120 with the
+# array's 9 copies north of it, a block apart, in survival with 64 oak planks.
+drv 1 "ebmode WALL" "ebarray 9 0 0 -1" "cmd tp @s 249.5 -60 126.5 180 30" "cmd tp Planner2 252.5 -60 128.5 180 30" \
+	"wait 40" "cmd kill @e[type=!minecraft:player]" "wait 10" > /dev/null
+stock minecraft:oak_planks 64
+aim 1 240 -60 120
+use_click 1
+drv 1 "lookat 259.5 -50.5 120" "wait 10" > /dev/null
+check "a Wall of 20 by 10 with the array's 9 copies draws 2,000 blocks" preview_is 1 2000
+check "the click's panel counts the 2,000 oak planks it uses, 64 held and 1,936 missing" eval \
+	'[[ $(val 1 clickpanel) == "$panel_head | minecraft:oak_planks 2000 64 1936 red" ]]'
+cost=$(val 1 "clickpanelcost 200")
+echo "  the click's panel on 2,000 blocks, in microseconds: $cost" | tee -a /out/checks.log
+check "its cost is timed over the 2,000 blocks" eval '[[ $cost == "blocks 2000 count "* ]]'
+attack_click 1
+drv 1 "ebarray 0" "ebmode LINE" "wait 10" > /dev/null
+check "a left click cancels the Wall, and the panel goes with it" eval '[[ $(val 1 clickpanel) == hidden ]]'
 
 # The reach, in creative: Planner1's eyes at 100 -58.38 105.5, a Single block at 97 -60 105 with the array's 2 copies 66
 # apart, at 163 (63 blocks from the eyes) and 229 (129), whose chunk the server keeps loaded for the check.
@@ -838,8 +968,16 @@ check "with every item the paste uses, the copy is yellow, for the water no item
 	drv 1 "await copycolour YELLOW"
 check "and the controls line reads \"[Right-click: paste]\", as with the setting off (1411 [c2])" eval \
 	'[[ $(val 1 modehud) == "[Right-click: paste]$copy_end" ]]'
+hut_rows="minecraft:candle 3 3 0 green | minecraft:stone_slab 2 2 0 green | minecraft:lantern 1 1 0 green | minecraft:oak_door 1 1 0 green | minecraft:torch 1 1 0 green"
+drv 1 "window 1920 1080 2" "wait 20" > /dev/null
+check "at 1920 by 1080, the click's panel shows each item the paste uses: a double slab as 2 slabs, and the door and its candles as one item each" \
+	eval '[[ $(val 1 clickpanel) == "$panel_head | minecraft:cobblestone 79 79 0 green | $hut_rows" ]]'
 shots 1 real-copy-yellow
 hut_stock 78
+drv 1 "window 1920 1080 2" "wait 20" > /dev/null
+check "with 1 cobblestone short, at 1920 by 1080, the panel shows it missing, in red" eval \
+	'drv 1 "wait 5" > /dev/null && [[ $(val 1 clickpanel) == "$panel_head | minecraft:cobblestone 79 78 1 red | $hut_rows" ]]'
+drv 1 "window 854 480 2" "wait 20" > /dev/null
 short_line="[Can't paste: not enough blocks]$copy_end"
 check "with 1 cobblestone short, the copy is red" drv 1 "await copycolour RED NOT_ENOUGH_BLOCKS"
 check "and the controls line reads \"[Can't paste: not enough blocks]\"" eval '[[ $(val 1 modehud) == "$short_line" ]]'
@@ -912,6 +1050,8 @@ check "a Floor of 25 copies" drv 1 "await set 25 copies"
 too_many="[Can't paste: too many blocks][Scroll: turn][Middle-click: mirror][H: Lock (Off)][R: Mode (Floor)][Esc/Left-click: cancel]"
 check "over 2,000 blocks, it's red" drv 1 "await copycolour RED TOO_MANY_BLOCKS"
 check "and the controls line reads \"[Can't paste: too many blocks]\"" eval '[[ $(val 1 modehud) == "$too_many" ]]'
+check "and the click's panel doesn't show, since the server refuses so many before it counts any item" eval \
+	'[[ $(val 1 clickpanel) == hidden ]]'
 place_click 1
 check "its second click sends nothing, and nothing goes in" eval \
 	'[[ $(val 1 placesent) == none && $(val 1 holdlog) == *" edits=0 "* ]] && server_has 150 -60 60 minecraft:air &&
@@ -932,9 +1072,13 @@ press 1 r
 check "R sets Line" eval '[[ $(val 1 copymode) == LINE ]]'
 drv 1 "lookat 151.5 -60 60.5" "wait 5" > /dev/null
 check "the copy rests from 150 -60 60 to 153 -60 60" drv 1 "await copy at 150,-60,60..153,-60,60"
+check "before the Line's first click, the click's panel counts one copy: 4 oak planks" eval \
+	'[[ $(val 1 clickpanel) == "$panel_head | minecraft:oak_planks 4 12 0 green" ]]'
 use_click 1
 drv 1 "lookat 159.5 -60 60.5" "wait 5" > /dev/null
 check "a Line of 3 copies" drv 1 "await set 3 copies"
+check "after it, the whole Line: 12" eval \
+	'[[ $(val 1 clickpanel) == "$panel_head | minecraft:oak_planks 12 12 0 green" ]]'
 check "blue, with the controls line reading \"[Right-click: paste 3 copies]\"" eval \
 	'drv 1 "await copycolour BLUE" > /dev/null &&
 	[[ $(val 1 modehud) == "[Right-click: paste 3 copies][Scroll: turn][Middle-click: mirror][H: Lock (Off)][R: Mode (Line)][Esc/Left-click: cancel]" ]]'
@@ -984,13 +1128,53 @@ check "using the one door" eval '[[ $(items minecraft:oak_door) == 0 ]]'
 attack_click 1
 check "a left click puts the copy away" eval 'drv 1 "wait 5" > /dev/null && [[ $(val 1 copy) == away* ]]'
 
+# The shots of the click's panel's rows for 1411 revision 3: a copy of two rows of 14 blocks from 200 -60 80 to 213 -60
+# 81, 28 blocks of 14 kinds, pasted east of them with 3 of the kinds short, the ones the paste uses fewest of.
+kinds=(stone stone stone stone stone stone cobblestone cobblestone cobblestone cobblestone oak_planks oak_planks
+	oak_planks spruce_planks spruce_planks birch_planks birch_planks bricks bricks mossy_cobblestone mossy_cobblestone
+	sandstone andesite diorite granite glass white_wool deepslate_bricks)
+commands=()
+for i in "${!kinds[@]}"; do
+	commands+=("cmd setblock $((200 + i / 2)) -60 $((80 + i % 2)) minecraft:${kinds[$i]}")
+done
+drv 1 "${commands[@]}" "cmd tp @s 206.5 -60 85.5 180 30" "cmd tp Planner2 226.5 -60 88.5 180 30" "wait 40" > /dev/null
+copy_button
+box 200.5 -59 81.5 -59 213 80 -60
+check "a box around the two rows copies their 28 blocks" client_said 1 "Copied 28 blocks."
+stock minecraft:stone 64 minecraft:cobblestone 4 minecraft:oak_planks 3 minecraft:spruce_planks 2 \
+	minecraft:birch_planks 2 minecraft:bricks 2 minecraft:mossy_cobblestone 2 minecraft:sandstone 1 \
+	minecraft:andesite 1 minecraft:diorite 1 minecraft:deepslate_bricks 1
+drv 1 "cmd tp @s 226.5 -60 86.5 180 30" "wait 20" "lookat 226.5 -60 80.5" "wait 10" > /dev/null
+echo "  the copy of 14 kinds: $(val 1 copy)" >> /out/checks.log
+kinds_short="minecraft:glass 1 0 1 red | minecraft:granite 1 0 1 red | minecraft:white_wool 1 0 1 red"
+drv 1 "window 1920 1080 2" "wait 20" > /dev/null
+check "at 1920 by 1080, the click's panel shows the 3 kinds short first, then the 7 most used, and counts the other 4" \
+	eval '[[ $(val 1 clickpanel) == "$panel_head | $kinds_short | minecraft:stone 6 64 0 green | "*" | +4 more" ]]'
+echo "  Litematica's lines about the ghost block at the crosshair: $(val 1 linesbox); the panel: $(val 1 clickpanelbox)" \
+	>> /out/checks.log
+check "the panel keeps clear of Litematica's lines about the ghost block at the crosshair, at the top right" eval \
+	'[[ $(val 1 linesbox) != none ]] && apart "$(val 1 clickpanelbox)" "$(val 1 linesbox)"'
+drv 1 "window 854 480 2" "wait 210" > /dev/null
+for rows in "short_first 10" "most_first 10" "short_first all"; do
+	drv 1 "clickpanellayout top_right $rows false" > /dev/null
+	echo "  rows $rows: $(val 1 clickpanel)" >> /out/checks.log
+	panel_shots "real-panel-rows-${rows// /-}"
+done
+drv 1 "clickpanellayout" > /dev/null
+attack_click 1
+check "a left click puts the copy away, and the panel goes with it" eval \
+	'drv 1 "wait 5" > /dev/null && [[ $(val 1 copy) == away* && $(val 1 clickpanel) == hidden ]]'
+
 # In adventure mode, 5 blocks from 68 -60 52 to 72 -60 52.
 drv 1 "cmd gamemode adventure Planner2" "cmd tp Planner2 70.5 -60 47.5 180 30" "cmd tp @s 69.5 -60 47.5 180 30" \
 	"wait 40" > /dev/null
 check "in adventure mode, Planner2's place of 5 blocks is sent" eval \
 	'[[ $(sent 2 "sendplace up 68.5 -60 52.5 shape 68 -60 52 72 -60 52 minecraft:oak_planks") == "5 blocks" ]]'
-check "Planner2 gets the notice" client_said 2 "5 blocks weren't placed: the server doesn't allow them there."
+check "Planner2 gets the notice" client_said 2 "5 blocks weren't placed (not allowed there)"
 check "and nothing went in" lands minecraft:oak_planks oak_planks 68 -60 52 72 -60 52 0
+check "a place of 1 block there is sent" eval \
+	'[[ $(sent 2 "sendplace up 70.5 -60 53.5 shape 70 -60 53 70 -60 53 minecraft:oak_planks") == "1 blocks" ]]'
+check "and gets the notice for one block" client_said 2 "1 block wasn't placed (not allowed there)"
 drv 1 "cmd gamemode creative Planner2" > /dev/null
 
 # The cap, in creative: 2,001 blocks from 40 -60 100 to 59 -60 199 and at 40 -60 200, then the 2,000 alone and right
@@ -1003,7 +1187,7 @@ stock minecraft:oak_planks 1
 drv 1 "wait 210" > /dev/null
 check "a place of 2,001 blocks is sent" eval '[[ $(sent 1 "sendplace up 40.5 -60 100.5 shape 40 -60 100 59 -60 199 minecraft:oak_planks 40 -60 200 40 -60 200 minecraft:oak_planks") == "2001 blocks" ]]'
 check "it gets the cap's notice" client_said 1 \
-	"That's 2,001 blocks, more than the 2,000 real blocks you can place at once, so nothing was placed."
+	"Nothing was placed (2,001 blocks, over the limit of 2,000 at once)"
 chat_shots 1 real-cap-notice
 check "and nothing went in" eval '[[ $(clients_count 40 -60 100 59 -60 200 oak_planks) == "0 0" ]] &&
 	server_has 40 -60 100 minecraft:air && server_has 59 -60 199 minecraft:air && server_has 40 -60 200 minecraft:air'
@@ -1013,7 +1197,7 @@ drv 1 "wait 210" > /dev/null
 check "a place of 2,000 blocks and, right after it, one of 1 more are sent" eval \
 	'[[ $(drv 1 "sendplace up 40.5 -60 100.5 shape 40 -60 100 59 -60 199 minecraft:oak_planks" "sendplace up 40.5 -60 200.5 shape 40 -60 200 40 -60 200 minecraft:oak_planks" | sed "s/^.* => //" | tr "\n" " ") == "2000 blocks 1 blocks " ]]'
 check "the second gets the notice of the cap a second" client_said 1 \
-	"That would place more than 2,000 real blocks in a second, so nothing was placed."
+	"Nothing was placed (over the limit of 2,000 blocks a second)"
 chat_shots 1 real-rate-notice
 # The server's 2,000 blocks match a box of oak planks /fill makes at y -40 for the check.
 cap_tag=$(new_tag)
@@ -1023,6 +1207,8 @@ check "on the server, all 2,000 are real oak planks and the 1 more isn't placed,
 		"cmd execute if blocks 40 -60 100 59 -60 199 40 -40 100 all run say $cap_tag-hit" \
 		"cmd fill 40 -40 100 59 -40 199 minecraft:air") == 1 ]] &&
 	server_has 40 -60 200 minecraft:air && [[ $(clients_count 40 -60 100 59 -60 200 oak_planks) == "2000 2000" ]]'
+echo "  on the server, $(server_count minecraft:oak_planks 40 -60 100 59 -60 200) oak planks from 40 -60 100 to 59 -60 200" \
+	>> /out/checks.log
 check "and they used no item" eval '[[ $(items minecraft:oak_planks) == 1 ]]'
 
 check "neither client's log has a self-check warning" eval \
@@ -1034,6 +1220,7 @@ stop_client 1
 stop_client 2
 stop_server
 # The server writes its debug log out in full as it stops, and moves it aside as it starts again.
+tail -n +$((before + 1)) "$debug_log" | grep -F "Building Planner placed" | sed 's/^/  server: /' >> /out/checks.log || true
 took=$(tail -n +$((before + 1)) "$debug_log" | grep -E "Building Planner placed [0-9]+ of .*'s 2000 real blocks" | head -1 |
 	sed -nE 's/.* in ([0-9]+) ms.*/\1/p' || true)
 echo "  the server placed the 2,000 blocks in ${took:-?} ms" | tee -a /out/checks.log
@@ -1058,7 +1245,7 @@ draw 2 2 -60 4 8 -60 4
 check "Planner2's Line within the spawn protection draws 7 blocks" preview_is 2 7
 drv 2 "wait 210" > /dev/null
 place_click 2
-check "Planner2's click gets the notice" client_said 2 "7 blocks weren't placed: the server doesn't allow them there."
+check "Planner2's click gets the notice" client_said 2 "7 blocks weren't placed (not allowed there)"
 chat_shots 2 real-left-out-notice
 check "and nothing went in" lands minecraft:oak_planks oak_planks 2 -60 4 8 -60 4 0
 
@@ -1074,6 +1261,7 @@ aim 1 100 -60 46
 check "Line's controls line reads \"[Right-click: start placing]\", as with the setting on" eval \
 	'[[ $(val 1 modehud) == "[Right-click: start placing][Left-click: start erasing][H: Lock (Off)][Esc: exit mode]" ]]'
 draw 1 100 -60 46 104 -60 46
+check "with the setting off, the click's panel doesn't show during the Line" eval '[[ $(val 1 clickpanel) == hidden ]]'
 place_click 1
 check "the Line draws ghost oak planks on both clients" eval \
 	'drv 1 "await block 104 -60 46 minecraft:oak_planks" > /dev/null &&
@@ -1089,6 +1277,7 @@ drv 1 "lookat 102.5 -60 48.5" "wait 5" > /dev/null
 check "the copy rests from 100 -60 48 to 104 -60 48" drv 1 "await copy at 100,-60,48..104,-60,48"
 check "with its controls line reading \"[Right-click: paste]\", as with the setting on" eval \
 	'[[ $(val 1 modehud) == "[Right-click: paste][Scroll: turn][Middle-click: mirror][H: Lock (Off)][R: Mode (Off)][Esc/Left-click: close]" ]]'
+check "and no click's panel" eval '[[ $(val 1 clickpanel) == hidden ]]'
 place_click 1
 check "the paste writes ghost oak planks on both clients, sending an edit and no place" eval \
 	'drv 1 "await block 104 -60 48 minecraft:oak_planks" > /dev/null &&

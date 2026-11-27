@@ -2,6 +2,7 @@ package dev.buildingplanner.input;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.buildingplanner.input.CopyColour.Refusal;
@@ -300,6 +301,24 @@ class CopyColourTest {
 		// A block that doesn't go in needs no item.
 		assertEquals(Shown.YELLOW, CopyColour.ofReal(at(0, 0, 0), blocks,
 			real(Map.of(new BlockPos(1, 1, 1), dirt), Set.of()), EYES, holding(Map.of(Items.STONE, 1))));
+	}
+
+	@Test
+	void withRealBlocksTheClicksPanelCountsWhatTheServerCounts() {
+		// Two copies use 2 of each item, though the inventory holds less; the server counts them before it places any.
+		List<Spot> two = List.of(new Spot(BlockPos.ZERO, SIZE), new Spot(new BlockPos(2, 0, 0), SIZE));
+		CopyColour.Counted short1 = CopyColour.counted(two, blocks, real(Map.of(), Set.of()), EYES,
+			holding(Map.of(Items.STONE, 1)));
+		assertEquals(Shown.red(Refusal.NOT_ENOUGH_BLOCKS), short1.shown());
+		assertEquals(Map.of(Items.STONE, 2, Items.GLASS, 2), short1.needs());
+		// A block that doesn't go in uses no item, and the count says so when the inventory covers the rest.
+		CopyColour.Counted partly = CopyColour.counted(at(0, 0, 0), blocks,
+			real(Map.of(new BlockPos(1, 1, 1), dirt), Set.of()), EYES, holding(Map.of(Items.STONE, 1)));
+		assertEquals(Shown.YELLOW, partly.shown());
+		assertEquals(Map.of(Items.STONE, 1), partly.needs());
+		// Past the cap the server refuses the paste before it counts, and so does the panel.
+		List<Spot> over = Collections.nCopies(1001, new Spot(BlockPos.ZERO, SIZE));
+		assertNull(CopyColour.counted(over, blocks, real(Map.of(), Set.of()), EYES, holding(Map.of())).needs());
 	}
 
 	@Test

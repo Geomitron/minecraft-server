@@ -137,9 +137,8 @@ public final class RealPlacer {
 		Vec3 eyes = player.getEyePosition();
 		boolean mayPlace = level == player.level() && player.mayBuild();
 		List<Entry> going = RealPlace.goingIn(blocks, world(level, player, mayPlace), eyes);
-		Map<Item, Integer> lacking = RealPlace.Inventory.of(player).shortOf(RealPlace.needs(going));
-		if (!lacking.isEmpty()) {
-			notice(player, PlayerMessage.placeShort(names(lacking)));
+		if (!RealPlace.Inventory.of(player).covers(RealPlace.needs(going))) {
+			notice(player, PlayerMessage.placeShort());
 			return;
 		}
 		long start = Util.getMillis();
@@ -234,13 +233,6 @@ public final class RealPlacer {
 		}
 		List<RealPlace.Take> takes = RealPlace.Inventory.of(player).takes(item, 1);
 		return takes.isEmpty() ? null : player.getInventory().getItem(takes.getFirst().slot());
-	}
-
-	/** Each item short and how many, by its English name as the server gives it, as "1 oak planks, 4 mossy cobblestone". */
-	private static String names(Map<Item, Integer> lacking) {
-		return PlayerMessage.missing(lacking.entrySet().stream()
-			.map(lack -> Map.entry(lack.getKey().getName(new ItemStack(lack.getKey())).getString(), lack.getValue()))
-			.toList());
 	}
 
 	/**

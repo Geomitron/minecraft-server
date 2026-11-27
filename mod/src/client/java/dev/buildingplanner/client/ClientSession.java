@@ -44,6 +44,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
@@ -77,10 +78,11 @@ final class ClientSession {
 	private Layer ghostsLayer;
 	private long ghostsVersion;
 	/**
-	 * The copy's colour for real blocks ({@link CopyColour#ofReal}), worked out for these set boxes and these blocks at
-	 * this client tick, since the world, the player's eyes and the inventory it reads change from tick to tick.
+	 * The copy's colour for real blocks and the items its paste needs ({@link CopyColour#counted}), worked out for these
+	 * set boxes and these blocks at this client tick, since the world, the player's eyes and the inventory it reads
+	 * change from tick to tick.
 	 */
-	private CopyColour.Shown realShown;
+	private CopyColour.Counted realCounted;
 	private List<CopyPlacement.Spot> realSet;
 	private Map<BlockPos, BlockState> realBlocks;
 	private long realTick;
@@ -691,7 +693,7 @@ final class ClientSession {
 		List<CopyPlacement.Spot> set = clipboard.setSpots();
 		Map<BlockPos, BlockState> blocks = clipboard.blocksFromCorner();
 		if (BuildingPlannerClient.realActs()) {
-			return realShown(level, player, set, blocks);
+			return realCounted(level, player, set, blocks).shown();
 		}
 		Layer layer = replica.layer();
 		return CopyColour.of(set, blocks.size(), world(level), maxEditBlocks, () -> {
@@ -733,21 +735,36 @@ final class ClientSession {
 	}
 
 	/**
-	 * The copy's colour for real blocks ({@link CopyColour#ofReal}), against the real world as the player's game has it,
-	 * the reach from the player's eyes (not Freecam's camera) and the player's inventory, worked out once a client tick
-	 * for the set's boxes and the copy's blocks, as the shape's preview is.
+	 * The copy's colour for real blocks and the items its paste needs ({@link CopyColour#counted}), against the real
+	 * world as the player's game has it, the reach from the player's eyes (not Freecam's camera) and the player's
+	 * inventory, worked out once a client tick for the set's boxes and the copy's blocks, as the shape's preview is.
 	 */
-	private CopyColour.Shown realShown(ClientLevel level, Player player, List<CopyPlacement.Spot> set,
+	private CopyColour.Counted realCounted(ClientLevel level, Player player, List<CopyPlacement.Spot> set,
 		Map<BlockPos, BlockState> blocks) {
 		long tick = level.getGameTime();
-		if (realShown == null || tick != realTick || blocks != realBlocks || !set.equals(realSet)) {
-			realShown = CopyColour.ofReal(set, blocks, realWorld(level, player), player.getEyePosition(),
+		if (realCounted == null || tick != realTick || blocks != realBlocks || !set.equals(realSet)) {
+			realCounted = CopyColour.counted(set, blocks, realWorld(level, player), player.getEyePosition(),
 				RealPlace.Inventory.of(player));
 			realTick = tick;
 			realBlocks = blocks;
 			realSet = set;
 		}
-		return realShown;
+		return realCounted;
+	}
+
+	/**
+	 * The items a paste of the copy at the aim and its set uses while "Place real blocks" acts, for the click's panel:
+	 * the server's all-or-nothing count ({@link CopyColour#counted}), the set of a Line, Wall or Floor of copies once its
+	 * first click has fixed it and the one copy before; null while the copy isn't at the aim, the setting doesn't act,
+	 * or the paste is past the cap, which the server refuses before it counts the inventory.
+	 */
+	Map<Item, Integer> copyNeeds() {
+		ClientLevel level = Minecraft.getInstance().level;
+		Player player = Minecraft.getInstance().player;
+		if (!clipboard.atAim() || level == null || player == null || !BuildingPlannerClient.realActs()) {
+			return null;
+		}
+		return realCounted(level, player, clipboard.setSpots(), clipboard.blocksFromCorner()).needs();
 	}
 
 	/**

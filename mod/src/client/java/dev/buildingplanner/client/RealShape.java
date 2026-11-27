@@ -54,10 +54,12 @@ public final class RealShape {
 	 * second half of a two-part block), the blocks among them that go in by the checks the player's game makes
 	 * ({@code goingIn}), those of them that stay where the server places them ({@code stay}), and the states "Match
 	 * ghost blocks" gave
-	 * ({@code matched}). {@code positions} and {@code tick} say which preview it was checked for.
+	 * ({@code matched}), and the items the blocks that go in need ({@code needs}, {@link RealPlace#needs}), which the
+	 * server's all-or-nothing count of the inventory counts. {@code positions} and {@code tick} say which preview it
+	 * was checked for.
 	 */
 	private record Checked(List<BlockPos> positions, long tick, Direction face, Vec3 hit, List<RealPlace.Entry> blocks,
-		List<RealPlace.Entry> goingIn, Set<BlockPos> stay, Map<BlockPos, BlockState> matched) {
+		List<RealPlace.Entry> goingIn, Set<BlockPos> stay, Map<BlockPos, BlockState> matched, Map<Item, Integer> needs) {
 	}
 
 	/**
@@ -127,8 +129,33 @@ public final class RealShape {
 	 */
 	public static boolean covered(BlockSet blocks) {
 		Player player = Minecraft.getInstance().player;
-		return player != null && RealPlace.Inventory.of(player).covers(RealPlace.needs(check(blocks,
-			BuildPipelineClient.getFirstClickHit()).goingIn()));
+		return player != null && RealPlace.Inventory.of(player).covers(check(blocks,
+			BuildPipelineClient.getFirstClickHit()).needs());
+	}
+
+	/**
+	 * The items the place click of the preview's shape uses, for the click's panel: the server's all-or-nothing count
+	 * over the blocks that go in, by item in the order first needed, from the preview's last check; null when that check
+	 * is of another shape: neither from this client tick or the one before nor from the shape's first click. The HUD
+	 * reads it before the frame's preview checks the shape again, and at a low frame rate more than one tick passes
+	 * between frames, so the first click keeps the count of a shape under way.
+	 */
+	public static Map<Item, Integer> needs() {
+		Checked checked = shown;
+		ClientLevel level = Minecraft.getInstance().level;
+		if (checked == null || level == null) {
+			return null;
+		}
+		BlockHitResult first = EffortlessShapes.clickHit();
+		boolean sameShape = first != null && first.getDirection() == checked.face()
+			&& first.getLocation().equals(checked.hit());
+		return sameShape || level.getGameTime() - checked.tick() <= 1 ? checked.needs() : null;
+	}
+
+	/** The blocks of the preview's last check that go in, or none; for the in-game checks' timing. */
+	static List<RealPlace.Entry> shownGoingIn() {
+		Checked checked = shown;
+		return checked == null ? List.of() : checked.goingIn();
 	}
 
 	/** The preview's blocks checked: the last check while the positions and the client tick are the same. */
@@ -194,7 +221,8 @@ public final class RealShape {
 		Set<BlockPos> stay = !RealPlace.needsOrder(goingIn, stayNow) ? stayNow
 			: ShapeOverlay.with(level, standing, () -> RealPlace.inOrder(goingIn, standing,
 				block -> tried(player, block, face, hit)));
-		return new Checked(blocks.validPositions(), level.getGameTime(), face, hit, sent, goingIn, stay, matched);
+		return new Checked(blocks.validPositions(), level.getGameTime(), face, hit, sent, goingIn, stay, matched,
+			RealPlace.needs(goingIn));
 	}
 
 	/**

@@ -20,6 +20,7 @@ import dev.buildingplanner.layer.Layer;
 import dev.buildingplanner.layer.ThroughWalls;
 import dev.buildingplanner.look.ControlsLine;
 import dev.buildingplanner.look.GhostsShown;
+import dev.buildingplanner.look.PanelRoom;
 import dev.buildingplanner.server.PlaceTurns;
 import dev.buildingplanner.sync.EditKind;
 import dev.buildingplanner.sync.Payloads;
@@ -106,6 +107,8 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	private static ModeHud modeHud;
 	/** The copy's own keys; null while Building Planner is off for want of Litematica or MaLiLib. */
 	private static CopyKeys copyKeys;
+	/** The click's panel; null while Building Planner is off for want of Litematica or MaLiLib. */
+	private static ClickPanel clickPanel;
 	/** Whether Effortless Building is loaded, whose shape under way a box drops. */
 	private static boolean effortless;
 	/**
@@ -164,6 +167,9 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 			modeHud);
 		HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(BuildingPlanner.MOD_ID, "material_panel"),
 			new MaterialPanel());
+		clickPanel = new ClickPanel(() -> effortless ? EffortlessShapes.clickNeeds() : null,
+			() -> mixPanel == null ? null : mixPanel.guiBox(), modeHud::controlsTop);
+		HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(BuildingPlanner.MOD_ID, "click_panel"), clickPanel);
 		ClientPlayNetworking.registerGlobalReceiver(Payloads.Hello.TYPE, (hello, context) -> hello(hello));
 		// A singleplayer or LAN host's own world runs no server side.
 		ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
@@ -846,6 +852,24 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	 */
 	public static int itemNameTop(int drawnAt) {
 		return modeHud == null ? drawnAt : modeHud.itemNameTop(drawnAt);
+	}
+
+	/**
+	 * Hook E44: whether Effortless Building's icons beside the crosshair show, which they don't while the click's panel
+	 * shows the same counts, unless its layout keeps them ({@link ClickPanel}).
+	 */
+	public static boolean stacksShow() {
+		return clickPanel == null || !clickPanel.hidesIcons();
+	}
+
+	/** The mix panel's box in GUI pixels while it shows, or null; for the in-game checks. */
+	static PanelRoom.Box mixPanelBox() {
+		return mixPanel == null ? null : mixPanel.guiBox();
+	}
+
+	/** The click's panel, for the in-game checks; null while Building Planner is off. */
+	static ClickPanel clickPanel() {
+		return clickPanel;
 	}
 
 	/** Whether Building Planner is on for this server, so Effortless Building's hooks draw ghost blocks. */

@@ -1,5 +1,6 @@
 package dev.buildingplanner.client;
 
+import dev.buildingplanner.look.PanelRoom;
 import dev.buildingplanner.look.SmallText;
 import java.util.ArrayList;
 import java.util.List;
@@ -69,6 +70,32 @@ final class MixPanel implements HudElement {
 		return String.join(" | ", lines);
 	}
 
+	/** The panel's width and height in its own units (GUI pixels before {@link SmallText}'s scale), padding included. */
+	private int[] size(Font font) {
+		int total = mix.total();
+		int percentWidth = 0;
+		for (BlockMix.Part part : mix.parts()) {
+			percentWidth = Math.max(percentWidth, font.width(BlockMix.percent(part.weight(), total)));
+		}
+		int width = Math.max(Math.max(font.width(title()), font.width(editLine())), ROW + percentWidth);
+		int height = font.lineHeight + 2 + mix.parts().size() * ROW + 2 + font.lineHeight;
+		return new int[] {width + 2 * PAD, height + 2 * PAD, percentWidth};
+	}
+
+	/** The panel's box in GUI pixels while it shows, or null; the click's panel keeps out of it. */
+	PanelRoom.Box guiBox() {
+		if (!shows()) {
+			return null;
+		}
+		Minecraft mc = Minecraft.getInstance();
+		int[] size = size(mc.font);
+		float scale = SmallText.scale(mc.getWindow().getGuiScale());
+		int right = mc.getWindow().getGuiScaledWidth() - MARGIN;
+		float middle = mc.getWindow().getGuiScaledHeight() / 2f;
+		return new PanelRoom.Box((int) Math.floor(right - size[0] * scale), (int) Math.floor(middle - size[1] / 2 * scale),
+			right, (int) Math.ceil(middle + (size[1] - size[1] / 2) * scale));
+	}
+
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor graphics, DeltaTracker delta) {
 		if (!shows()) {
@@ -79,21 +106,17 @@ final class MixPanel implements HudElement {
 		int total = mix.total();
 		Component title = title();
 		Component edit = editLine();
-		int percentWidth = 0;
-		for (BlockMix.Part part : parts) {
-			percentWidth = Math.max(percentWidth, font.width(BlockMix.percent(part.weight(), total)));
-		}
-		int width = Math.max(Math.max(font.width(title), font.width(edit)), ROW + percentWidth);
-		int height = font.lineHeight + 2 + parts.size() * ROW + 2 + font.lineHeight;
+		int[] size = size(font);
+		int percentWidth = size[2];
 
 		// Drawn from the panel's right edge, halfway down the screen, at the panel's scale.
 		graphics.pose().pushMatrix();
 		graphics.pose().translate(graphics.guiWidth() - MARGIN, graphics.guiHeight() / 2f);
 		graphics.pose().scale(SmallText.scale(Minecraft.getInstance().getWindow().getGuiScale()));
 		int right = 0;
-		int left = right - width - 2 * PAD;
-		int top = -(height + 2 * PAD) / 2;
-		graphics.fill(left, top, right, top + height + 2 * PAD, BACKGROUND);
+		int left = right - size[0];
+		int top = -size[1] / 2;
+		graphics.fill(left, top, right, top + size[1], BACKGROUND);
 
 		int x = left + PAD;
 		int y = top + PAD;

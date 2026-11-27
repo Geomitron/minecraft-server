@@ -1971,12 +1971,10 @@ server runs none.
   eggs, pink petals and leaf litter. Nothing goes in unless the inventory contains every item the blocks that pass the
   checks above need: the blocks those checks leave out need none, every block of the mirror's and the array's copies
   counts, and with the block mix each block counts as its own item (a Line of 16 cobblestone and 4 mossy cobblestone
-  needs 16 and 4). When the inventory lacks any of them, the server places nothing and its `notice` names each item
-  short and how many, in Geo's wording (1411), "Nothing was placed (missing 1 oak planks)": each item as its count and
-  its English name as the server gives it (`Item.getName`) in lower case, joined by ", " in the order the blocks first
-  need them, such as "Nothing was placed (missing 6 cobblestone, 3 stone bricks, 3 mossy cobblestone)"
-  (`PlayerMessage.missing`). A stack with components (a named block, a filled shulker box) places as by hand, its
-  components going to the block entity.
+  needs 16 and 4). When the inventory lacks any of them, the server places nothing and its `notice` says only that
+  something is missing, for one item or several, "Nothing was placed (not enough blocks)" (`PlayerMessage.placeShort`;
+  1411 revision 2, Q3 B); the click's panel (see "The click's panel" below) shows which items and how many. A stack
+  with components (a named block, a filled shulker box) places as by hand, its components going to the block entity.
 - **Real blocks in the way** (1372 Q3 A). A block goes only into a space a right click could place it into
   (`BlockPlaceContext.canPlace`), so a shape or a paste never replaces a real block, nor adds to one:
   `RealPlace.spaceTakes` lets a block into a space Minecraft lets any block replace (air, water, lava, grass, fire, a
@@ -1991,7 +1989,10 @@ server runs none.
   sends.
 - **The cap.** The server refuses a `place` of more than 2,000 blocks (`RealPlace.MAX_BLOCKS`: Effortless Building's
   own cap on a survival player's shape, `ServerConfig.survivalMaxBlocksPlaced`, which such a shape never passes), and
-  one that would take a player past that many real blocks in a second, with a `notice`, and places none of it. The cap
+  one that would take a player past that many real blocks in a second, and places none of it. Its `notice` reads
+  "Nothing was placed (2,001 blocks, over the limit of 2,000 at once)" or "Nothing was placed (over the limit of 2,000
+  blocks a second)", each number grouped by thousands with commas (`PlayerMessage.placeTooMany`, `placeTooFast`;
+  1411 revision 2). The cap
   on a `place` counts every block it carries, before any other check. The cap a second (`PlaceRate`) counts the blocks
   that pass the checks and the inventory: with the blocks the player's places put in during the last 1,000 ms before
   this one arrives, they must be at most 2,000. A place's blocks count from the moment it ends, and the server forgets
@@ -2001,8 +2002,9 @@ server runs none.
   a shape's from their own game, which plays it at the shape's first block as the click sends
   (`BuildPipelineClient.handleClick`), unless the inventory doesn't cover the shape (hook E41); a paste's first block
   plays its sound to the player too, since the game plays none for a paste.
-- **The notice.** When the server leaves out blocks the player's preview showed going in, a `notice` says how many,
-  in the wording Geo approves in build step 5. It counts the blocks the server's own checks keep out and the player's
+- **The notice.** When the server leaves out blocks the player's preview showed going in, a `notice` says how many:
+  "1 block wasn't placed (not allowed there)" or "7 blocks weren't placed (not allowed there)"
+  (`PlayerMessage.placeLeftOut`; 1411 revision 2). It counts the blocks the server's own checks keep out and the player's
   game can't check (another dimension, a game mode that can't build, a chunk the server hasn't loaded, spawn
   protection): the blocks that pass the checks the game makes too (`RealPlace.goingIn` over the world as the server
   has it, with a chunk it hasn't loaded taken as empty), less those that pass all of them. It adds the blocks
@@ -2015,7 +2017,8 @@ server runs none.
 servers, over the blocks that would go in: hook E8 lets `ItemUsageTracker.compute` run on the blocks `RealPlace`
 lets in, in the form that counts each block's own item (`compute(Player, BlockSet, boolean)`), so the icons beside
 the crosshair show how many of each block the inventory gives the click, with the count it lacks in red beside it
-(`RenderHandler.drawPlacingStacks`): 19 and a red 1 for a Line of 20 oak planks with 19 in the inventory. Hook E40
+(`RenderHandler.drawPlacingStacks`): 19 and a red 1 for a Line of 20 oak planks with 19 in the inventory. While the
+click's panel shows the same counts (below), hook E44 leaves those icons out. Hook E40
 then sets the blocks the preview draws red (`ItemUsageTracker.missingPositions`, which `BlockPreviewRenderer.render`
 reads): the whole shape when the inventory lacks any item (`ItemUsageTracker.hasMissing`), since then nothing goes in,
 and otherwise each block the server would leave out by the rule the player's computer can check: a space that doesn't
@@ -2092,6 +2095,38 @@ of ghost blocks. Otherwise the copy's lines read as without the setting (1411 [c
 "[Right-click: paste 4 copies]" and "[Right-click: paste 1 copy]", and before a Line, Wall or Floor's first click
 "[Right-click: set the start]", after the reason while the copy is red.
 
+**The click's panel** (Geo's comment [c1] on 1411 revision 1; revision 2, Q1 A and Q2 A). In survival, while the
+setting acts, a panel lists the items the place click uses: from a shape's first click until it is placed or
+cancelled, in every build mode but Single and Disable, and while the copy is at the aim. It is drawn as the material
+list panel is (`CountPanel`, which `MaterialPanel` draws with too): the title "This click", then a row for each item
+with its icon, how many the click uses ("Uses"), how many the inventory holds, every slot together ("Hold",
+`RealPlace.Inventory.holds`), and how many are missing ("Need"), red where some are and green where none are
+(`ClickPanel`). It counts what the server's all-or-nothing check counts (`RealPlace.needs`): for a shape, the blocks
+the preview shows going in, with the mirror's and the array's copies, each block of the mix as its own item, and a
+double slab as two slabs (`RealShape.needs`, worked out with the preview once a client tick); for a paste, the copy's
+blocks that would go in (`CopyColour.counted`, with the copy's colour), one copy before a Line, Wall or Floor of copies
+has its first click and the whole set after. Blocks the preview or the copy leaves out, for a real block in the space,
+the reach or anything else, count for nothing. The panel doesn't show before a shape's first click, in Single, in
+creative or spectator (`Player.hasInfiniteMaterials`), while the setting doesn't act, while a screen is open or the HUD
+is hidden (F1), and for a paste or a set of more than 2,000 blocks, which the server refuses before it counts.
+
+Where the panel goes, which rows it shows and whether Effortless Building's icons still show are open choices in 1411
+revision 3. The build has each recommendation in `ClickItems.Layout.RECOMMENDED`, which the in-game checks switch: at
+the top right (`Spot.TOP_RIGHT`; the others are `TOP_MIDDLE` and `TOP_LEFT`, under the material list panel); at most
+10 rows, the items short first and then the rest, each most used first (`Order.SHORT_FIRST`; `MOST_FIRST` orders by
+use alone), with the rows past them counted in "+N more" as the material list panel counts its
+own; and Effortless Building's icons beside the crosshair hidden while the panel shows (hook E44). The panel starts 4
+GUI pixels below the screen's top edge and goes down as far as it has room (`PanelRoom.below`), 4 pixels clear of the
+material list panel, the mix panel, the effect icons, Litematica's lines about the ghost block at the crosshair (its
+`blockInfoLinesEnabled`, on by default at the top right in half-size text; hook L13), the crosshair and Effortless
+Building's icons beside it while they show, chat's area (its width and unfocused height from the chat settings, whether
+or not a message shows), and the controls lines and the hotbar (`ModeHud.controlsTop`). Once Litematica's lines have
+shown, the panel stays clear of where they showed until it hides, so it doesn't jump as the crosshair crosses ghost
+blocks. Rows that don't fit go to "+N more": at 854 by 480 and GUI scale 2, chat's area reaches under the top-right
+corner's column, so a panel there has room for 2 or 3 rows. For a Wall of 2,000 blocks (20 by 10 with 9 array
+copies), the shape's count takes 30 to 60 microseconds a tick and the panel's work 18 to 20 microseconds a frame over
+three runs in the test harness's container (`real.sh`).
+
 **Undo** (1372 Q5 B). Ctrl+Z and Ctrl+Y undo and redo only changes to ghost blocks: a shape or a paste of real blocks
 makes no step on the player's undo list and leaves the redo list as it is (see "Undo"). So Ctrl+Z right after a shape
 of real blocks undoes the player's newest change to ghost blocks, made before that shape, and the real blocks come out
@@ -2108,6 +2143,8 @@ a 0.9.0 server work together, and so do a 0.9.0 game and a 0.8.0 server, with gh
 | E40 | `buildpipeline/BuildPipelineClient.java`, private static `updateDisplayTrackers(Player, BlockSet)` | `@Inject` at tail | While the setting acts, set `ITEM_USAGE.missingPositions` to every block of the shape when `ITEM_USAGE.hasMissing()`, and otherwise to the blocks `RealPlace` refuses, as hook E29 marks Disable's one block. |
 | E41 | `buildpipeline/BuildPipelineClient.java`, private static `handleClick(Minecraft, BuildPipeline.BuildState)` | `@WrapWithCondition` on `ClientLevel.playLocalSound(BlockPos, SoundEvent, SoundSource, float, float, boolean)` | While the setting acts, play the place sound only when `RealPlace` finds that the inventory covers the click's blocks (the local `BlockSet blocks`), since otherwise nothing goes in. |
 | E43 | `render/BlockPreviewRenderer.java`, `render` | `@WrapOperation` on `BlockEntry.applyTransforms(BlockState)` | While the setting acts, outside the break click's shape, each block drawn in the state the click sends where that differs, which is the turn of a ghost block it fills (`RealShape.drawn`). |
+| E44 | `render/RenderHandler.java`, `drawStacks` | `@WrapWithCondition` on `drawPlacingStacks(GuiGraphicsExtractor, Minecraft, int, int)`, `require = 0` | During a session, leave out the icons beside the crosshair while the click's panel shows, unless its layout keeps them (`BuildingPlannerClient.stacksShow`). |
+| L13 | `render/OverlayRenderer.java`, private fields `blockInfoLines` and `infoUpdateTime` | `@Accessor` on each | The lines Litematica shows about the ghost block at the crosshair, and when it last wrote them (every 50 ms while it draws them), so the click's panel keeps clear of them. |
 | M2 | `Minecraft.java`, `startUseItem()` | the same hook | While the setting acts, a paste, or a set of copies at its second click, goes to the server as one `place` instead of as an edit (`ClientSession.sendPaste`), and a red copy's click sends nothing. |
 | M9 | `net/minecraft/world/level/Level.java`, `getBlockState(BlockPos)` and `getFluidState(BlockPos)` | `@ModifyReturnValue`, in the mixin config's client section | While the preview works a shape out in the server's order, on the game's thread, in the player's level, the shape's blocks placed so far, and the other halves Minecraft places with them, in place of the world's (`ShapeOverlay`); otherwise the world's, after one check of a field. |
 | S2 | `BlockItem.place`, `getPlacementState` | the same hook | While the server places a shape or a paste, the shape's orientation and count for that block in place of the player's turn, the shape's form where Minecraft gives the other form of the same item (`StandingAndWallBlockItem`), for a paste the copy's hinge of a door, and null when Minecraft's state is any other block. |
@@ -3249,16 +3286,21 @@ driver's `realstates`):
   undo, Ctrl+Z says "Nothing to undo." and the real blocks stay.
 - With the setting on, the break click's shape over the real Line breaks none of it, and over ghost stone bricks erases
   them on both clients.
+- With the setting off, the click's panel doesn't show during a Line (the driver's `clickpanel`, the panel's lines as
+  the player reads them); with it on, it doesn't show before a Line's first click, nor in Single.
 - With 10 oak planks in hand and 10 elsewhere in the inventory (the driver's `itemcount`), the preview of a 20-block
-  Line draws none red and the icons beside the crosshair show 20 oak planks (the driver's `stacks`, the stacks
-  Effortless Building's `RenderHandler` draws in a frame). The click places all 20 as real oak planks on the server, no
+  Line draws none red, and the click's panel shows oak planks, 20 used, 20 held and none missing, in green. Effortless
+  Building's icons beside the crosshair don't show while it does (the driver's `stacks`, the stacks Effortless
+  Building's `RenderHandler` draws in a frame), and with the layout that keeps them, they count 20 oak planks. In
+  creative the panel doesn't show, and in survival again it does. The click places all 20 as real oak planks on the server, no
   ghost block appears, and the inventory holds no oak planks. The server sends Planner2's game one place sound for the
   20 blocks and Planner1's game none (the driver's `serversounds`, a count of the sounds the server sent each game
   since `soundreset`), and Planner1's own game plays the click's place sound once (the driver's `sounds`, a count of
   every sound the game plays, its own included).
-- With 19 oak planks, the preview of the same Line draws all 20 red and the icons show 19 oak planks and a red 1; the
-  click places nothing, the notice names 1 oak plank short, the inventory still has its 19, and Planner1's game plays
-  no place sound.
+- With 19 oak planks, the preview of the same Line draws all 20 red, the panel shows 20 used, 19 held and a red 1
+  missing, and with the layout that keeps the icons, they show 19 oak planks and a red 1. The click places nothing,
+  the notice reads "Nothing was placed (not enough blocks)", the panel goes with the shape, the inventory still has
+  its 19, and Planner1's game plays no place sound.
 - A Line of 8 torches along a real stone wall, aimed at the wall's side, draws all 8 red, as standing torches that
   can't stay there, and its click places nothing on the server or either client: Planner1 keeps all 8 torches, and
   no notice comes (a say Planner1 sends after the click is the only new line in its chat; 1408 Q1 C). A Line of 8
@@ -3272,16 +3314,24 @@ driver's `realstates`):
   scaffolding. A Line of 4 white carpets up from the ground draws none red too, and its click places all 4 and uses
   the 4 carpets.
 - With the mix of 80 cobblestone and 20 mossy cobblestone, each block of a 20-block Line on the server is the block the
-  preview showed there when the inventory contains as many of each block as the preview uses, and none is left. With
-  one mossy cobblestone fewer than a second Line uses, nothing goes in and the notice names 1 mossy cobblestone short.
-  With the mirror on, a Line of 5 and its mirrored copy count together: 5 oak planks, enough for only one of them,
-  place nothing, and the notice names 5 oak planks short.
+  preview showed there when the inventory contains as many of each block as the preview uses, and none is left. The
+  first Line's material list, opened with a box and pinned with its Info HUD, shows the material list panel. With 2
+  cobblestone and 1 mossy cobblestone fewer than a second Line uses, the click's panel shows both items' counts, the
+  one the Line uses more of first, both missing in red, and overlaps neither the material list panel nor the mix panel
+  at both window sizes, at each of its three spots (the driver's `clickpanelbox`, `matpanelbox` and `mixpanelbox`);
+  it shows at each of 20 reads a tick apart at 1920 by 1080, where frames come slowest, and with the layout that
+  keeps Effortless Building's icons, they show too. The click places nothing and gets the same
+  notice. With the mirror on, a Line of 5 and its mirrored copy count together: the panel shows 10 oak planks used, 5
+  held and 5 missing, and the click places nothing and gets the same notice.
 - Oak stairs in a Wall of 4 by 2, turned with the wheel and mirrored, face on the server as the preview showed them.
   Behind one end of each wall's bottom row stands a real stair at a right angle, and the stair there joins it as by
   hand (`inner_left`).
 - A Line of 10 through a real stone block and a cow, with 8 oak planks: the preview draws those two blocks red and the
-  icons count the 8 oak planks the others use, and the click leaves the stone and the cow's space as they were and
-  places the other 8.
+  click's panel counts the 8 oak planks the others use, and the click leaves the stone and the cow's space as they
+  were and places the other 8.
+- A Wall of 20 by 10 with the array's 9 copies draws 2,000 blocks, and with 64 oak planks the click's panel shows 2,000
+  used, 64 held and 1,936 missing. The time the shape's count and the panel's work take, each run 200 times (the
+  driver's `clickpanelcost`), goes to the checks' log. A left click cancels the Wall, and the panel goes with it.
 - In creative, a Single block and the array's 2 copies 66 blocks apart: the preview draws the copy 129 blocks from
   Planner1's eyes red, and the click places the block and the copy 63 blocks away and not the one at 129. Of two blocks
   level with the eyes sent as a box, the one whose nearest face is 64 blocks from them is placed and the one at 65
@@ -3293,50 +3343,61 @@ driver's `realstates`):
   hanging from the roof, a double stone slab, 3 candles and a water source in the floor: 86 blocks), copied with the
   radial menu's Copy button and a box of three left clicks, as `step9.sh` copies its house. On the ground beside it,
   with exactly the items its paste uses, the copy shows yellow (for the water) with "[Right-click: paste]", as with
-  the setting off; with one cobblestone fewer it's red with "[Can't paste: not enough blocks]", and a right click sends
-  nothing and places nothing. With the items again, the right click sends one `place` of the copy's 86 blocks and no
+  the setting off, and at 1920 by 1080 the click's panel shows each item the paste uses, 79 cobblestone, a double slab
+  as 2 slabs, the door and the 3 candles as one item each, all green. With one cobblestone fewer, the panel shows it
+  missing in red, the copy is red with "[Can't paste: not enough blocks]", and a right click sends nothing and places
+  nothing. With the items again, the right click sends one `place` of the copy's 86 blocks and no
   edit: on the server each block is the hut's, as `/execute if blocks` compares them once the hut's water is taken
   out, with the door's two halves, the torch on its wall, the lantern hanging, the double slab and the 3 candles, and
   no water; the inventory has none of those items left, the server sends Planner1's game and Planner2's each one place
   sound, and no notice comes. The pasted door's state goes to the checks' log.
 - Pasted again over a real stone block in its wall, the copy shows yellow, its line has "[Hold Left Control: line up]"
   after the first paste, and the paste leaves the stone and places the rest, using 78 cobblestone.
-- A Floor of 5 by 5 copies of the hut, 2,150 blocks, draws red with "[Can't paste: too many blocks]", and its second
-  click sends nothing and places nothing.
-- A Line of 3 copies of a row of 4 real oak planks shows blue with "[Right-click: paste 3 copies]" and
-  sends one `place` of all 12 blocks at its second click; all 12 are real oak planks on the server, using the 12 in the
-  inventory.
+- A Floor of 5 by 5 copies of the hut, 2,150 blocks, draws red with "[Can't paste: too many blocks]" and no click's
+  panel, and its second click sends nothing and places nothing.
+- A Line of 3 copies of a row of 4 real oak planks: before its first click the panel counts one copy, 4 oak planks,
+  and after it the whole Line, 12. It shows blue with "[Right-click: paste 3 copies]" and sends one `place` of all 12
+  blocks at its second click; all 12 are real oak planks on the server, using the 12 in the inventory.
 - Beside a stone column east of it, Planner1's own right click in Disable, facing north, places a door hinged on the
   right, against the stone. A copy of a door hinged on the left, pasted at a spot with the same stone column beside it,
   shows blue and places the door hinged on the left, both halves, on the server and both clients, using the one door.
+- A copy of 28 blocks of 14 kinds, pasted with 3 of the kinds short: at 1920 by 1080 the click's panel shows the 3
+  short first, then the 7 the paste uses most, and "+4 more", clear of Litematica's lines about the ghost block at the
+  crosshair (the driver's `linesbox`). A left click puts the copy away, and the panel goes with it.
 - In adventure mode, Planner2's place of 5 blocks places nothing, and Planner2 gets the notice "5 blocks weren't
-  placed: the server doesn't allow them there."
-- In creative, a place of 2,001 blocks places nothing and gets the cap's notice; one of 2,000 places all of them and
-  uses no item, and a place of 1 more block right after it places nothing and gets the notice of the cap a second. The
+  placed (not allowed there)"; a place of 1 block gets "1 block wasn't placed (not allowed there)".
+- In creative, a place of 2,001 blocks places nothing and gets the notice "Nothing was placed (2,001 blocks, over the
+  limit of 2,000 at once)"; one of 2,000 places all of them and uses no item, and a place of 1 more block right after
+  it places nothing and gets "Nothing was placed (over the limit of 2,000 blocks a second)". The
   time the server took to place the 2,000, which `RealPlacer` logs at debug level (the dev server's `logs/debug.log`),
   goes to the checks' log and "Unverified".
 - The dev server starts with no spawn protection (`build.gradle`'s `prepareDevServer`), and Minecraft reads it only as
   the server starts, so the script starts the server again with Minecraft's usual 16 blocks and both games join it
   again. Planner2, who isn't an operator, draws and places a Line of 7 within those 16 blocks with its own clicks:
-  nothing goes in, and Planner2 gets the notice.
+  nothing goes in, and Planner2 gets the notice "7 blocks weren't placed (not allowed there)".
 - Turned off with the switch and "Save", the setting saves `place-real-blocks=false`, Line's controls line reads
-  "[Right-click: start placing]" as with it on, and a Line draws ghost blocks on both clients, places no real block
-  and uses no item. A copy's line reads "[Right-click: paste]" as with it on, and its paste writes ghost blocks on
-  both clients, sending an edit and no `place`, places no real block and uses no item.
+  "[Right-click: start placing]" as with it on, and a Line draws ghost blocks on both clients with no click's panel,
+  places no real block and uses no item. A copy's line reads "[Right-click: paste]" as with it on, no click's panel
+  shows, and its paste writes ghost blocks on both clients, sending an edit and no `place`, places no real block and
+  uses no item.
 - Neither client's log has a self-check warning, before the server starts again or after.
 - Shots, at 854 by 480 and 1920 by 1080, GUI scale 2: "Settings" with the row on and with its tooltip, the controls
-  line in Line and in Single, the whole Line red for 1 oak plank short with its icons, the Line through the stone and
-  the cow with its red blocks and icons, the Lines of torches and of scaffolding along the wall red, the Line of heads
-  there, the Line of scaffolding up from the ground, Planner2's view of the placed Wall, the copy of the hut yellow and red with its lines, Planner2's view
-  of the pasted hut, and the Line of 3 copies with its line; and, while the chat shows each, the notices for 1 oak
-  plank short, the cap, the cap a second, and Planner2's Line within the spawn protection.
+  line in Line and in Single, the whole Line red for 1 oak plank short with its panel, the Line through the stone and
+  the cow with its red blocks and panel, the Lines of torches and of scaffolding along the wall red, the Line of heads
+  there, the Line of scaffolding up from the ground, Planner2's view of the placed Wall, the copy of the hut yellow and
+  red with its lines, Planner2's view of the pasted hut, and the Line of 3 copies with its line; for the layout choices
+  in 1411 revision 3, the mix's Line short of two items with the click's panel at each of its spots and with
+  Effortless Building's icons kept, and the copy of 14 kinds with each choice of rows, with each panel's box in the
+  checks' log; and, while the chat shows each, the notices for 1 oak plank short, the cap, the cap a second, and
+  Planner2's Line within the spawn protection.
 
 `RealPlaceTest` covers the rule for each block: the order (the lowest level first, in the shape's order within a
 level, and a block that can't stay tried again after the rest, from the highest level down, with a wall torch, a
 hanging lantern and two pointed dripstones hanging one under the other), the inventory (the main hand's stack first
 and then the slots in order, across stacks, each mix block as its own item, every block of the mirror's and the
 array's copies counted, none for a block the checks leave out, 2 slabs for a double slab and as many items as a block
-is made of, nothing going in when one item is short, and nothing used in creative), the reach (63, 64 and 65 blocks
+is made of, nothing going in when one item is short, nothing used in creative, and how many of an item the slots hold
+together), the reach (63, 64 and 65 blocks
 from the eyes to the block's nearest face along each axis both ways, and 63, just under and just over 64, and 65 to
 its nearest corner along a diagonal), a space that takes a block (air, water, lava, grass, fire, a vine and a single
 snow layer) and one that doesn't (a real block, a slab, candles or a snow layer of 2, and the block's own item), the
@@ -3365,10 +3426,15 @@ empty space or water in a block's space; yellow for a real block in a block's sp
 just over 64 blocks from the eyes, and every block past it), part of the copy outside the build height (above and
 below) or the border, water, and an entity in a block's way; red past 2,000 blocks (1,001 copies of 2, checked first,
 before an empty inventory and blocks past the reach; 1,000 copies are blue), and in survival for an inventory one item
-short, for one copy and for a set of two, while a block that doesn't go in needs no item; and a door's upper half
-needing no item of its own. `PayloadsTest` covers `place`: a shape's and a
-paste's round trip, a `place` of as many blocks as an `edit` carries fitting the room it's registered with, a hit that
-isn't a position ending the connection, and the cap's notices grouping their digits ("2,001"). `ControlsLineTest`
+short, for one copy and for a set of two, while a block that doesn't go in needs no item; a door's upper half
+needing no item of its own; and the click's panel's count of a paste, the items of the blocks that go in, none past
+2,000 blocks. `ClickItemsTest` covers the click's panel's rows (uses, holds, and missing in red unless none are), both
+orders, and the rows past the most going to "+N more"; `PanelRoomTest` its room: all of it with nothing in the
+column, below what reaches its top and above what's under it, past overlapping boxes, and none left above the
+controls lines. `PayloadsTest` covers `place`: a shape's and a
+paste's round trip, a `place` of as many blocks as an `edit` carries fitting the room it's registered with, and a hit
+that isn't a position ending the connection; and each notice after a place of real blocks exactly as Geo approved it
+(1411 revision 2), with their numbers grouped ("2,001", "1,200"). `ControlsLineTest`
 covers the lines of a shape and a copy of real blocks reading as those of ghost blocks: the shape's right click's
 control in Single and before a shape's first click, and a shape under way; the copy's "[Right-click: paste]"
 following the aim and locked, and "[Right-click: paste 3 copies]" and "[Right-click: paste 1 copy]" after a set's

@@ -3,8 +3,6 @@ package dev.buildingplanner.sync;
 import dev.buildingplanner.input.RealPlace;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * A message players see: a translation key in {@code assets/buildingplanner/lang/en_us.json} and its arguments. Every
@@ -109,21 +107,11 @@ public record PlayerMessage(String key, List<String> args) {
 	}
 
 	/**
-	 * The player's inventory lacks items a shape or a paste of real blocks needs, so nothing went in; {@code missing}
-	 * names each item short and how many ({@link #missing}: "1 oak planks, 4 mossy cobblestone").
+	 * The player's inventory lacks items a shape or a paste of real blocks needs, so nothing went in; the same for one
+	 * item or several, since the click's panel showed which (1411 revision 2, Q3 B).
 	 */
-	public static PlayerMessage placeShort(String missing) {
-		return new PlayerMessage(PREFIX + "place.short", List.of(missing));
-	}
-
-	/**
-	 * Each item short, in the order given, as its count and its English name in lower case, joined by ", " (Geo's
-	 * wording, 1411): "6 cobblestone, 3 stone bricks, 3 mossy cobblestone" for {@code lacking} of the names "Cobblestone",
-	 * "Stone Bricks" and "Mossy Cobblestone".
-	 */
-	public static String missing(List<Map.Entry<String, Integer>> lacking) {
-		return lacking.stream().map(lack -> lack.getValue() + " " + lack.getKey().toLowerCase(Locale.ROOT))
-			.collect(Collectors.joining(", "));
+	public static PlayerMessage placeShort() {
+		return new PlayerMessage(PREFIX + "place.short", List.of());
 	}
 
 	/** A shape or a paste of {@code blocks} real blocks, past the cap ({@link RealPlace#MAX_BLOCKS}): nothing went in. */

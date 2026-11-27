@@ -730,6 +730,9 @@ class RealPlaceTest {
 			new Slot(Items.COBBLESTONE, 6), 7, new Slot(Items.MOSSY_COBBLESTONE, 3)));
 		assertFalse(oneShort.covers(needs));
 		assertEquals(Map.of(Items.MOSSY_COBBLESTONE, 1), oneShort.shortOf(needs));
+		// The click's panel shows what all the slots hold together.
+		assertEquals(16, oneShort.holds(Items.COBBLESTONE));
+		assertEquals(0, oneShort.holds(Items.OAK_PLANKS));
 		assertEquals(Map.of(Items.COBBLESTONE, 16, Items.MOSSY_COBBLESTONE, 4),
 			inventory(0, Map.of()).shortOf(needs));
 	}

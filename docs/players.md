@@ -190,11 +190,15 @@ With "Place real blocks" on, shapes and pastes place real blocks from your inven
 
 With it on, each right-click shape in a build mode other than "Disable" places real blocks, along with its mirror and array copies, using the block mix if it's on. Each block faces the way the preview shows it. Left-click shapes still erase ghost blocks.
 
+Each block uses its item from your inventory, as when you place it by hand: a double slab uses two slabs. If your inventory doesn't have every item the whole shape needs, with its mirror and array copies, nothing is placed. In creative mode, shapes use no items.
+
 A block goes in only within 64 blocks of you, and only into a space a right-click could place it in, such as air, water, or grass, never in place of a real block or where a mob or player stands. You can place up to 2,000 real blocks at once, and up to 2,000 a second. If the server keeps any blocks out, chat says how many weren't placed.
 
 Before you click, each block that won't go in shows red in the preview, such as one too far away, one where a real block or a mob is, or a torch with nothing to stand on. If you're short of any item, the whole shape shows red.
 
 In a shape, torches, signs, banners, and coral fans stand upright even where you aim at the side of a wall, so beside a wall they go in only where a block under them holds them up. To put one on a wall, place it by hand in "Disable".
+
+A paste follows the same rules, and each block faces the way the copy shows it. The copy's box shows blue when all of it will go in, yellow when part of it won't, and red when nothing will. A pasted chest is empty, and a pasted sign is blank.
 
 Ctrl+Z doesn't take real blocks back: it undoes your newest change to ghost blocks. Real blocks come out only when you break them.
 

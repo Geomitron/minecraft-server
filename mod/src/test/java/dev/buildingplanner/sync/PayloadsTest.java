@@ -20,7 +20,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.Set;
@@ -324,14 +323,16 @@ class PayloadsTest {
 		assertEquals(Set.of(), others, "en_us.json holds only messages the add-on sends, key bindings and screens");
 	}
 
-	/** The notice for an inventory short of items reads in Geo's wording (1411): each item in lower case, in order. */
+	/** The notices after a place of real blocks read as Geo approved them (1411 revision 2, Q3 B and PR4). */
 	@Test
-	void theShortNoticeReadsInGeosWording() throws Exception {
-		assertEquals("Nothing was placed (missing 1 oak planks)",
-			text(PlayerMessage.placeShort(PlayerMessage.missing(List.of(Map.entry("Oak Planks", 1))))));
-		assertEquals("Nothing was placed (missing 6 cobblestone, 3 stone bricks, 3 mossy cobblestone)",
-			text(PlayerMessage.placeShort(PlayerMessage.missing(List.of(Map.entry("Cobblestone", 6),
-				Map.entry("Stone Bricks", 3), Map.entry("Mossy Cobblestone", 3))))));
+	void thePlaceNoticesReadAsGeoApprovedThem() throws Exception {
+		assertEquals("Nothing was placed (not enough blocks)", text(PlayerMessage.placeShort()));
+		assertEquals("Nothing was placed (2,001 blocks, over the limit of 2,000 at once)",
+			text(PlayerMessage.placeTooMany(2_001)));
+		assertEquals("Nothing was placed (over the limit of 2,000 blocks a second)", text(PlayerMessage.placeTooFast()));
+		assertEquals("1 block wasn't placed (not allowed there)", text(PlayerMessage.placeLeftOut(1)));
+		assertEquals("7 blocks weren't placed (not allowed there)", text(PlayerMessage.placeLeftOut(7)));
+		assertEquals("1,200 blocks weren't placed (not allowed there)", text(PlayerMessage.placeLeftOut(1_200)));
 	}
 
 	private static JsonObject lang() throws Exception {

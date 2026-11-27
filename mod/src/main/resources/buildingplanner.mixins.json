@@ -33,6 +33,7 @@
 		"effortless.TwoClicksBuildModeMixin",
 		"litematica.ChunkRendererSchematicVboMixin",
 		"litematica.GuiMaterialListMixin",
+		"litematica.OverlayRendererAccessor",
 		"litematica.OverlayRendererMixin",
 		"litematica.PlacementManagerDaemonHandlerMixin",
 		"litematica.PlacementManagerTaskMixin",

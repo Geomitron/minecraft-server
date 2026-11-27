@@ -337,17 +337,23 @@ public final class RealPlace {
 				return lacking;
 			}
 			needs.forEach((item, needed) -> {
-				int has = 0;
-				for (Slot slot : slots) {
-					if (slot.item() == item) {
-						has += slot.count();
-					}
-				}
+				int has = holds(item);
 				if (has < needed) {
 					lacking.put(item, needed - has);
 				}
 			});
 			return lacking;
+		}
+
+		/** How many of {@code item} the slots hold, all together, which the click's panel shows. */
+		public int holds(Item item) {
+			int has = 0;
+			for (Slot slot : slots) {
+				if (slot.item() == item) {
+					has += slot.count();
+				}
+			}
+			return has;
 		}
 
 		/** Whether the inventory has every item {@code needs} counts. */

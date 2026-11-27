@@ -249,6 +249,18 @@ final class ModeHud implements HudElement {
 		}
 	}
 
+	/**
+	 * The top of what shows at the bottom middle of the screen now, in GUI pixels: the lines' highest row while they
+	 * show, and during a shape the action bar's block count, with Effortless Building's own line under it; the screen's
+	 * height when none of them shows. The click's panel keeps above it.
+	 */
+	int controlsTop() {
+		int height = Minecraft.getInstance().getWindow().getGuiScaledHeight();
+		int top = shape.get() ? height - ABOVE_ACTION_BAR : height;
+		List<List<Placed>> rows = placedNow();
+		return rows.isEmpty() ? top : Math.min(top, rows.getFirst().getFirst().top());
+	}
+
 	/** The rectangles as they're drawn now, row by row, top first. */
 	private List<List<Placed>> placedNow() {
 		Minecraft mc = Minecraft.getInstance();
