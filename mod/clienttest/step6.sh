@@ -87,9 +87,10 @@ check "client 2 rejoins with a session" drv 2 "await session" "await noscreen"
 check "with the edits made while it was away" drv 2 "await block 3 -58 3 minecraft:oak_planks" \
 	"await block 5 -60 5 minecraft:stone_bricks" "await block 10 -60 5 minecraft:air"
 
-# A shape in the Nether doesn't show in the overworld, and the overworld's ghost blocks come back on return.
-drv 1 "cmd execute in minecraft:the_nether run tp @s 5 70 -3" "wait 100" "edit 5 70 5 7 70 5 minecraft:gold_block" \
-	> /dev/null
+# A shape in the Nether doesn't show in the overworld, and the overworld's ghost blocks come back on return. The shape
+# goes once Planner1's game has the Nether's chunk where it lies, as a player draws only where they see.
+drv 1 "cmd execute in minecraft:the_nether run tp @s 5 70 -3" "await loaded minecraft:the_nether 5 5" "wait 20" \
+	"edit 5 70 5 7 70 5 minecraft:gold_block" > /dev/null
 check "Planner1 draws in the Nether" drv 1 "await block 5 70 5 minecraft:gold_block" "await block 7 70 5 minecraft:gold_block"
 check "which doesn't show in the overworld" \
 	eval 'drv 2 "wait 40" "await block 5 70 5 minecraft:air" > /dev/null && [[ $(val 2 "layer 5 70 5") == minecraft:air ]]'

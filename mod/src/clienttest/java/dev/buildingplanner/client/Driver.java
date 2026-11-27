@@ -64,6 +64,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.permissions.Permissions;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.status.ChunkStatus;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -1514,6 +1515,11 @@ public final class Driver implements ClientModInitializer {
 			case "inlayer" -> BuiltInRegistries.BLOCK.getKey(session().replica().layer().get(pos(a, 1)).getBlock())
 				.toString().equals(a[4]);
 			case "ingame" -> inGameTicks >= Integer.parseInt(a[1]);
+			// loaded <dimension> <x> <z>: this game is in that dimension and has loaded the chunk holding that column, so
+			// an edit there goes to the server after the column's watch.
+			case "loaded" -> mc.level != null && mc.level.dimension().identifier().toString().equals(a[1])
+				&& mc.level.getChunkSource().getChunk(Integer.parseInt(a[2]) >> 4, Integer.parseInt(a[3]) >> 4,
+					ChunkStatus.FULL, false) != null;
 			case "layer" -> LayerProbe.matches(mc.gameDirectory.toPath().resolve(a[1]));
 			case "listfile" -> ListProbe.fileHasCurrent(mc.gameDirectory.toPath().resolve(a[1]));
 			default -> throw new IllegalArgumentException(what);
