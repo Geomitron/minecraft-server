@@ -15,6 +15,10 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.CactusBlock;
+import net.minecraft.world.level.block.ChorusFlowerBlock;
+import net.minecraft.world.level.block.ChorusPlantBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BedPart;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
@@ -432,14 +436,30 @@ public final class RealPlace {
 	}
 
 	/**
-	 * Whether the preview works out which of a shape's blocks stay in the server's order ({@link #inOrder}), rather
-	 * than against the world as it is: only when a block of {@code goingIn} can't stay in the world as it is (it's not
-	 * among {@code stayNow}) and another block of the shape, or the other half Minecraft places with one
-	 * ({@link #otherHalf}), is beside it, above it or under it, where it may hold the block up. So the extra work runs
-	 * only for a shape of blocks that need a block to stand on, hang from or lean on, such as scaffolding, sugar cane,
-	 * carpets or torches, where the shape itself may give it.
+	 * Whether a block in {@code state} that can stay in the world as it is may not stay once a block beside it, above
+	 * it or under it is placed, by Minecraft's rules for whether a block can stay ({@code canSurvive}, read in the 26.3
+	 * jar): a cactus beside a solid block ({@code BlockState.isSolid}: another cactus too) or lava; a chorus flower over
+	 * air beside a block other than air and chorus plants, or beside two chorus plants; and a chorus plant beside
+	 * another, with blocks both above and under it. Every other block whose rule fails beside or on a block the same
+	 * {@code place} puts in either can't stay in the world as it is either, since the space under it takes a block (kelp
+	 * on magma, a snow layer on ice), or goes in before that block, from the lowest level up (a path or farmland under a
+	 * solid block, which Minecraft turns back to dirt on its next tick).
 	 */
-	public static boolean mayHoldUp(List<Entry> goingIn, Set<BlockPos> stayNow) {
+	public static boolean keptOutByNeighbours(BlockState state) {
+		Block block = state.getBlock();
+		return block instanceof CactusBlock || block instanceof ChorusFlowerBlock || block instanceof ChorusPlantBlock;
+	}
+
+	/**
+	 * Whether the preview works out which of a shape's blocks stay in the server's order ({@link #inOrder}), rather
+	 * than against the world as it is: only when another block of the shape, or the other half Minecraft places with
+	 * one ({@link #otherHalf}), is beside, above or under a block of {@code goingIn} that it may hold up, since the
+	 * block can't stay in the world as it is (it's not among {@code stayNow}), or keep out
+	 * ({@link #keptOutByNeighbours}). So the extra work runs only for a shape of blocks that need a block to stand on,
+	 * hang from or lean on, such as scaffolding, sugar cane, carpets or torches, where the shape itself may give it, and
+	 * for cactus and chorus blocks beside another block of the shape.
+	 */
+	public static boolean needsOrder(List<Entry> goingIn, Set<BlockPos> stayNow) {
 		Set<BlockPos> shape = new HashSet<>();
 		for (Entry block : goingIn) {
 			shape.add(block.pos());
@@ -449,7 +469,7 @@ public final class RealPlace {
 			}
 		}
 		for (Entry block : goingIn) {
-			if (!stayNow.contains(block.pos())) {
+			if (!stayNow.contains(block.pos()) || keptOutByNeighbours(block.state())) {
 				for (Direction side : Direction.values()) {
 					if (shape.contains(block.pos().relative(side))) {
 						return true;
@@ -465,7 +485,8 @@ public final class RealPlace {
 	 * out: each tried by {@code tryIn} with the blocks placed before it, and the other halves Minecraft places with them
 	 * ({@link #otherHalf}), standing in {@code standing}, where the caller's world reads them. So a block that another
 	 * block of the same shape holds up shows as going in, as scaffolding does in a Line up from the ground, and one
-	 * whose space an earlier block's other half fills, or that nothing holds up, as not.
+	 * whose space an earlier block's other half fills, that nothing holds up, or that an earlier block keeps out, as a
+	 * cactus beside another, as not.
 	 */
 	public static Set<BlockPos> inOrder(List<Entry> goingIn, Map<BlockPos, BlockState> standing,
 		Function<Entry, Try> tryIn) {

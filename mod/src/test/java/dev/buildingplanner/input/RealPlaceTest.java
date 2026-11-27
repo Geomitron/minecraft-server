@@ -12,8 +12,10 @@ import dev.buildingplanner.input.RealPlace.Take;
 import dev.buildingplanner.input.RealPlace.Tried;
 import dev.buildingplanner.input.RealPlace.Try;
 import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -24,6 +26,9 @@ import java.util.function.Predicate;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.Holder;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.Bootstrap;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.Item;
@@ -52,10 +57,22 @@ class RealPlaceTest {
 	private static final int SLOTS = 41;
 	private static final Vec3 EYES = new Vec3(0.5, 1.62, 0.5);
 
+	/**
+	 * Minecraft without a server, each block and fluid given no tags, as no data pack loads any, so the rules for whether
+	 * a block can stay read every tag as missing (a cactus stands here on a cactus, not on sand) rather than fail on tags
+	 * not yet bound.
+	 */
 	@BeforeAll
-	static void bootstrap() {
+	static void bootstrap() throws ReflectiveOperationException {
 		SharedConstants.tryDetectVersion();
 		Bootstrap.bootStrap();
+		Method bindTags = Holder.Reference.class.getDeclaredMethod("bindTags", Collection.class);
+		bindTags.setAccessible(true);
+		for (Registry<?> registry : List.of(BuiltInRegistries.BLOCK, BuiltInRegistries.FLUID)) {
+			for (Holder.Reference<?> holder : registry.listElements().toList()) {
+				bindTags.invoke(holder, Set.of());
+			}
+		}
 	}
 
 	/** A world of air with the given real blocks, letting a block in anywhere {@code allows} does. */
@@ -289,7 +306,7 @@ class RealPlaceTest {
 		List<Entry> line = upward(BlockPos.ZERO.above(), 4, Blocks.SCAFFOLDING.defaultBlockState());
 		Set<BlockPos> now = stayNow(line, GROUND);
 		assertEquals(Set.of(new BlockPos(0, 1, 0)), now);
-		assertTrue(RealPlace.mayHoldUp(line, now));
+		assertTrue(RealPlace.needsOrder(line, now));
 		Set<BlockPos> all = Set.of(new BlockPos(0, 1, 0), new BlockPos(0, 2, 0), new BlockPos(0, 3, 0),
 			new BlockPos(0, 4, 0));
 		assertEquals(all, worked(line, GROUND));
@@ -310,7 +327,7 @@ class RealPlaceTest {
 		List<Entry> line = upward(BlockPos.ZERO.above(), 4, Blocks.CARPET.pick(DyeColor.WHITE).defaultBlockState());
 		Set<BlockPos> now = stayNow(line, GROUND);
 		assertEquals(Set.of(new BlockPos(0, 1, 0)), now);
-		assertTrue(RealPlace.mayHoldUp(line, now));
+		assertTrue(RealPlace.needsOrder(line, now));
 		assertEquals(4, worked(line, GROUND).size());
 	}
 
@@ -320,7 +337,7 @@ class RealPlaceTest {
 			new Entry(new BlockPos(0, 1, 0), Blocks.COBBLESTONE.defaultBlockState()));
 		Set<BlockPos> now = stayNow(blocks, Map.of());
 		assertEquals(Set.of(new BlockPos(0, 1, 0)), now);
-		assertTrue(RealPlace.mayHoldUp(blocks, now));
+		assertTrue(RealPlace.needsOrder(blocks, now));
 		assertEquals(Set.of(new BlockPos(0, 1, 0), new BlockPos(0, 2, 0)), worked(blocks, Map.of()));
 	}
 
@@ -330,7 +347,7 @@ class RealPlaceTest {
 		List<Entry> line = upward(new BlockPos(0, 3, 0), 4, Blocks.SCAFFOLDING.defaultBlockState());
 		Set<BlockPos> now = stayNow(line, GROUND);
 		assertEquals(Set.of(), now);
-		assertTrue(RealPlace.mayHoldUp(line, now));
+		assertTrue(RealPlace.needsOrder(line, now));
 		assertEquals(Set.of(), worked(line, GROUND));
 		// Standing torches side by side in the air, as a Line aimed at a wall's side gives them: none holds another up.
 		List<Entry> torches = line(new BlockPos(0, 5, 0), 3, Blocks.TORCH.defaultBlockState());
@@ -340,15 +357,82 @@ class RealPlaceTest {
 	@Test
 	void theWorkGoesOnlyToAShapeWithABlockThatCantStayNowBesideAnotherOfTheShape() {
 		List<Entry> planks = line(new BlockPos(0, 1, 0), 3, planks());
-		assertFalse(RealPlace.mayHoldUp(planks, Set.of(new BlockPos(0, 1, 0), new BlockPos(1, 1, 0),
+		assertFalse(RealPlace.needsOrder(planks, Set.of(new BlockPos(0, 1, 0), new BlockPos(1, 1, 0),
 			new BlockPos(2, 1, 0))));
 		// A torch in the air on its own, as Single places it: no block of the shape is beside it.
 		List<Entry> single = List.of(new Entry(new BlockPos(0, 5, 0), Blocks.TORCH.defaultBlockState()));
-		assertFalse(RealPlace.mayHoldUp(single, Set.of()));
+		assertFalse(RealPlace.needsOrder(single, Set.of()));
 		// Two torches in the air, apart.
 		List<Entry> apart = List.of(new Entry(new BlockPos(0, 5, 0), Blocks.TORCH.defaultBlockState()),
 			new Entry(new BlockPos(2, 5, 0), Blocks.TORCH.defaultBlockState()));
-		assertFalse(RealPlace.mayHoldUp(apart, Set.of()));
+		assertFalse(RealPlace.needsOrder(apart, Set.of()));
+	}
+
+	/**
+	 * Real blocks of {@code state} in a row east from the origin, under a Line one level up: with no tags, a cactus stands
+	 * here on a cactus and a chorus plant on a chorus plant, not on sand or end stone.
+	 */
+	private static Map<BlockPos, BlockState> row(int length, BlockState state) {
+		Map<BlockPos, BlockState> row = new HashMap<>();
+		for (int i = 0; i < length; i++) {
+			row.put(BlockPos.ZERO.east(i), state);
+		}
+		return row;
+	}
+
+	@Test
+	void aCactusBesideOneTheShapePlacesFirstDoesntStay() {
+		BlockState cactus = Blocks.CACTUS.defaultBlockState();
+		List<Entry> line = line(new BlockPos(0, 1, 0), 4, cactus);
+		Map<BlockPos, BlockState> under = row(4, cactus);
+		Set<BlockPos> now = stayNow(line, under);
+		assertEquals(4, now.size());
+		assertTrue(RealPlace.needsOrder(line, now));
+		assertEquals(Set.of(new BlockPos(0, 1, 0), new BlockPos(2, 1, 0)), worked(line, under));
+	}
+
+	@Test
+	void aChorusFlowerBesideABlockTheShapePlacesFirstDoesntStay() {
+		// In the air beside a real chorus plant, which holds it up, with a block of the mix beside it on the other side.
+		Map<BlockPos, BlockState> real = Map.of(new BlockPos(0, 5, 0), Blocks.CHORUS_PLANT.defaultBlockState());
+		Entry block = new Entry(new BlockPos(1, 5, 1), Blocks.COBBLESTONE.defaultBlockState());
+		Entry flower = new Entry(new BlockPos(1, 5, 0), Blocks.CHORUS_FLOWER.defaultBlockState());
+		List<Entry> blocks = List.of(block, flower);
+		Set<BlockPos> now = stayNow(blocks, real);
+		assertEquals(Set.of(block.pos(), flower.pos()), now);
+		assertTrue(RealPlace.needsOrder(blocks, now));
+		assertEquals(Set.of(block.pos()), worked(blocks, real));
+	}
+
+	@Test
+	void aChorusPlantBesideOneTheShapePlacesFirstWithBlocksAboveAndUnderItDoesntStay() {
+		BlockState plant = Blocks.CHORUS_PLANT.defaultBlockState();
+		Map<BlockPos, BlockState> real = new HashMap<>(row(2, plant));
+		real.put(new BlockPos(0, 2, 0), Blocks.STONE.defaultBlockState());
+		real.put(new BlockPos(1, 2, 0), Blocks.STONE.defaultBlockState());
+		List<Entry> line = line(new BlockPos(0, 1, 0), 2, plant);
+		Set<BlockPos> now = stayNow(line, real);
+		assertEquals(2, now.size());
+		assertTrue(RealPlace.needsOrder(line, now));
+		assertEquals(Set.of(new BlockPos(0, 1, 0)), worked(line, real));
+	}
+
+	@Test
+	void theWorkGoesToABlockANeighbourMayKeepOutOnlyBesideAnotherBlockOfTheShape() {
+		BlockState cactus = Blocks.CACTUS.defaultBlockState();
+		assertTrue(RealPlace.keptOutByNeighbours(cactus));
+		assertTrue(RealPlace.keptOutByNeighbours(Blocks.CHORUS_FLOWER.defaultBlockState()));
+		assertTrue(RealPlace.keptOutByNeighbours(Blocks.CHORUS_PLANT.defaultBlockState()));
+		assertFalse(RealPlace.keptOutByNeighbours(Blocks.SCAFFOLDING.defaultBlockState()));
+		assertFalse(RealPlace.keptOutByNeighbours(Blocks.TORCH.defaultBlockState()));
+		assertFalse(RealPlace.keptOutByNeighbours(planks()));
+		// Cactus apart, each able to stay in the world as it is.
+		List<Entry> apart = List.of(new Entry(new BlockPos(0, 1, 0), cactus), new Entry(new BlockPos(2, 1, 0), cactus));
+		assertFalse(RealPlace.needsOrder(apart, Set.of(new BlockPos(0, 1, 0), new BlockPos(2, 1, 0))));
+		// A cactus beside a block of the mix, both able to stay in the world as it is.
+		List<Entry> beside = List.of(new Entry(new BlockPos(0, 1, 0), Blocks.COBBLESTONE.defaultBlockState()),
+			new Entry(new BlockPos(1, 1, 0), cactus));
+		assertTrue(RealPlace.needsOrder(beside, Set.of(new BlockPos(0, 1, 0), new BlockPos(1, 1, 0))));
 	}
 
 	@Test
@@ -358,7 +442,7 @@ class RealPlaceTest {
 			Direction.NORTH);
 		List<Entry> blocks = List.of(new Entry(new BlockPos(0, 1, 0), foot),
 			new Entry(new BlockPos(0, 2, -1), Blocks.CARPET.pick(DyeColor.WHITE).defaultBlockState()));
-		assertTrue(RealPlace.mayHoldUp(blocks, Set.of(new BlockPos(0, 1, 0))));
+		assertTrue(RealPlace.needsOrder(blocks, Set.of(new BlockPos(0, 1, 0))));
 		assertEquals(Set.of(new BlockPos(0, 1, 0), new BlockPos(0, 2, -1)), worked(blocks, GROUND));
 	}
 

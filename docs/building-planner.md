@@ -2022,25 +2022,33 @@ and otherwise each block the server would leave out by the rule the player's com
 take a block, a block past the reach, and a turned block that can't stay or has an entity in its way (`RealPlace`, the
 pure rule the server's placing uses too; spawn protection and later changes are the server's alone).
 
-Whether each block can stay is checked as the server's try at placing it would go (`RealShape`): against the world as
-it is, and, where the shape's own blocks may hold one up, in the server's order (1411 Q2 B, with Geo's comment: "Can't
-you do this, but only narrow that check if the placement involves scaffolding and any of the other rare blocks that
-this might apply to?"). The order runs only when a block that goes in can't stay in the world as it is and another
-block of the shape, or the other half Minecraft places with one (a door's upper half, a bed's head), is beside, above
-or under it (`RealPlace.mayHoldUp`), so a shape whose blocks all stay, or a block alone, costs nothing more. By
-Minecraft's rules for whether a block can stay (`canSurvive`, and scaffolding's item, which gives no place to
-scaffolding with nothing to hold it up, read in the 26.3 jar), a block can hold up another of its own kind for
-scaffolding (under it or beside it), sugar cane, cactus, bamboo, carpets, pale moss carpets, pointed dripstone,
-twisting, weeping and cave vines, kelp, vines, pale hanging moss, big dripleaf and chorus plants. With the block mix,
-any block that needs a block to stand on, hang from or lean on, such as a torch, a sign, a lantern, a rail or a
-flower, can stand on another block of the mix. Chains and heads need no support, and a snow layer holds up another
-only when it's full. The preview then tries each block that goes in from the lowest level up, and once more from the
-highest level down for each that couldn't stay, as the server's `RealPlace.order` does, with the blocks placed so far,
-and the other halves Minecraft places with them, standing in the player's level for Minecraft's own checks (hook M9,
-`ShapeOverlay`; `RealPlace.inOrder`). So a Line of scaffolding or carpets up from the ground, or a torch on a block of
-the mix under it, shows as going in, and scaffolding in the air, which nothing of the shape holds up, shows red. A
-horizontal Line of cactus on sand shows whole, since each cactus can stay in the world as it is, though the server
-leaves out every other one: a cactus beside it keeps it out (`CactusBlock.canSurvive`).
+Whether each block can stay is checked as the server's try at placing it would go (`RealShape`): against the world as it
+is, and, where the shape's own blocks may hold one up or keep one out, in the server's order (1411 Q2 B, with Geo's
+comment: "Can't you do this, but only narrow that check if the placement involves scaffolding and any of the other rare
+blocks that this might apply to?"). The order runs only when another block of the shape, or the other half Minecraft
+places with one (a door's upper half, a bed's head), is beside, above or under a block that goes in and either can't
+stay in the world as it is or is a cactus, a chorus flower or a chorus plant (`RealPlace.needsOrder`,
+`RealPlace.keptOutByNeighbours`), so a shape whose blocks all stay, or a block alone, costs nothing more. By Minecraft's
+rules for whether a block can stay (`canSurvive`, and scaffolding's item, which gives no place to scaffolding with
+nothing to hold it up, read in the 26.3 jar), a block can hold up another of its own kind for scaffolding (under it or
+beside it), sugar cane, cactus, bamboo, carpets, pale moss carpets, pointed dripstone, twisting, weeping and cave vines,
+kelp, vines, pale hanging moss, big dripleaf and chorus plants. With the block mix, any block that needs a block to
+stand on, hang from or lean on, such as a torch, a sign, a lantern, a rail or a flower, can stand on another block of
+the mix. Chains and heads need no support, and a snow layer holds up another only when it's full. By the same rules, a
+block of the shape placed first can keep out a block that could stay in the world as it is only for three blocks: a
+cactus beside a solid block, another cactus too; a chorus flower over air beside a block other than air and chorus
+plants, or beside two chorus plants; and a chorus plant beside another, with blocks above and under it. Every other
+block whose rule fails beside or on a block of the shape can't stay in the world as it is, since the space under it
+takes a block (kelp on magma, a snow layer on ice), or goes in before that block, from the lowest level up. The preview
+then tries each block that goes in from the lowest level up, and once more from the highest level down for each that
+couldn't stay, as the server's `RealPlace.order` does, with the blocks placed so far, and the other halves Minecraft
+places with them, standing in the player's level for Minecraft's own checks (hook M9, `ShapeOverlay`;
+`RealPlace.inOrder`). So a Line of scaffolding or carpets up from the ground, or a torch on a block of the mix under it,
+shows as going in, and scaffolding in the air, which nothing of the shape holds up, shows red. In a horizontal Line of
+cactus on sand, the server places the first cactus and every other one after it, and the cactus between them show red,
+since the cactus placed before each keeps it out (`CactusBlock.canSurvive`). A block that a block of the shape placed
+after it stops from staying shows as going in and goes in, and Minecraft takes it out on its next tick: a cactus breaks
+when a solid block of the mix goes in beside it, and a path or farmland under a solid block turns back to dirt.
 
 Hook E43 draws each block in the state the click sends (`RealShape`), so a block that fills a ghost block shows the
 ghost block's turn while "Match ghost blocks" acts. The game works the shape out once a client tick for each set of

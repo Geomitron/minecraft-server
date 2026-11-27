@@ -5,7 +5,8 @@
 # and a Line of real blocks, the break click erasing ghost blocks only, a whole Line from the main hand and the
 # inventory and its one place sound, nothing, the whole Line red and no sound for a Line 1 oak plank short, nothing
 # for a Line of torches along a wall's side nor for one of scaffolding there, red, a Line of heads there standing in
-# the air, Lines of scaffolding and of carpets up from the ground, none red and placed whole, a door, a bed, the mix,
+# the air, Lines of scaffolding and of carpets up from the ground, none red and placed whole, a Line of cactus on sand,
+# the cactus the server leaves out red, a door, a bed, the mix,
 # the mirror's copies counted, stairs in a Wall turned with the wheel and mirrored, a real block and a cow in the way and
 # red, ghost blocks filled and left red, a copy of a hut with a door, a wall torch, a hanging lantern, a double slab,
 # candles and water, yellow, red 1 cobblestone short, pasted with one place sound for each player and around a real
@@ -222,6 +223,19 @@ lands() {
 # arrive <x y z> <block>: both clients show that real block there.
 arrive() {
 	drv 1 "await real $1 $2 $3 $4" > /dev/null && drv 2 "await real $1 $2 $3 $4" > /dev/null
+}
+
+# red_left_out <reds> <x1> <x2> <y> <z> <block>: in the row from x1 to x2 at y z, the server's world has the block in
+# each space but those among the reds (red's x,y,z joined with spaces), and not in those.
+red_left_out() {
+	local x
+	for ((x = $2; x <= $3; x++)); do
+		if server_has "$x" "$4" "$5" "$6"; then
+			[[ " $1 " != *" $x,$4,$5 "* ]] || return 1
+		else
+			[[ " $1 " == *" $x,$4,$5 "* ]] || return 1
+		fi
+	done
 }
 
 # ghosts_are <client> <x1> <x2> <y> <z> <block> <count>: that client's copy of the layer holds that many ghost blocks
@@ -505,6 +519,25 @@ place_click 1
 check "the click places all 4 on the server, as both clients show" eval \
 	'arrive 92 -57 32 minecraft:white_carpet && lands minecraft:white_carpet white_carpet 92 -60 32 92 -57 32 4'
 check "using the 4 carpets" eval '[[ $(items minecraft:white_carpet) == 0 ]]'
+
+# A horizontal Line of 8 cactus on a row of sand from 96 -60 32 to 103 -60 32: a cactus can't stay beside a solid
+# block, another cactus too (CactusBlock.canSurvive), so the server places the Line's first cactus and every other one
+# after it, and the preview draws the 4 it leaves out red, as the server's order works them out.
+drv 1 "cmd fill 96 -61 32 103 -61 32 minecraft:sand" "cmd tp @s 99.5 -60 36.5 180 30" \
+	"cmd tp Planner2 100.5 -60 37.5 180 30" "wait 20" > /dev/null
+stock minecraft:cactus 8
+draw 1 96 -60 32 103 -60 32
+check "a Line of cactus on sand draws 8 blocks" preview_is 1 8
+reds=$(red 1)
+check "4 of them red, every other one" eval '[[ $(wc -w <<< "$reds") == 4 ]]'
+shots 1 real-cactus
+lines=$(chat_lines)
+place_click 1
+check "no notice comes for the click" no_notice_since "$lines"
+check "the click places the other 4 on the server, as both clients show" eval \
+	'arrive 102 -60 32 minecraft:cactus && lands minecraft:cactus cactus 96 -60 32 103 -60 32 4'
+check "the server leaves out exactly the cactus the preview drew red" red_left_out "$reds" 96 103 -60 32 minecraft:cactus
+check "and Planner1 keeps the 4 cactus left out" eval '[[ $(items minecraft:cactus) == 4 ]]'
 
 # In Single, a door at 62 -60 32 and a bed at 65 -60 32, Planner1 facing north, each placed with one click.
 drv 1 "ebmode SINGLE" "cmd tp @s 63.5 -60 35.5 180 30" "cmd tp Planner2 64.5 -60 36.5 180 30" "wait 20" > /dev/null

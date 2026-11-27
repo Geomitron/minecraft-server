@@ -39,8 +39,8 @@ import nl.requios.effortlessbuilding.utilities.ItemUsageTracker;
  * click's shape goes to the server as one {@code place} (hook E1), the preview counts the inventory over the blocks
  * that go in (E8), draws red the blocks that wouldn't go in (E40) and in a ghost block's turn the blocks "Match ghost
  * blocks" turns (E43), and the click plays its place sound only when the inventory covers it (E41). Where the shape's
- * own blocks may hold up a block of it, the preview works the shape out in the server's order, with the blocks placed
- * so far standing in the level (M9). Only the hooks into Effortless Building load this class.
+ * own blocks may hold up or keep out a block of it, the preview works the shape out in the server's order, with the
+ * blocks placed so far standing in the level (M9). Only the hooks into Effortless Building load this class.
  */
 public final class RealShape {
 	/** The preview's blocks, checked once a client tick and again when its positions change. */
@@ -160,9 +160,9 @@ public final class RealShape {
 	 * shape's first position): each in the state the place click gives it ({@link EffortlessShapes#states}), or the
 	 * ghost block's turn where "Match ghost blocks" gives it ({@link #ghostTurned}), then as the server checks them
 	 * before placing ({@link RealPlace#goingIn}), from the player's eyes and not Freecam's camera, and whether each
-	 * would stay ({@link #stays}): against the world as it is, or, where the shape's own blocks may hold one up
-	 * ({@link RealPlace#mayHoldUp}), in the server's order with the blocks placed before it standing in the level
-	 * (hook M9, {@link RealPlace#inOrder}).
+	 * would stay ({@link #stays}): against the world as it is, or, where the shape's own blocks may hold one up or keep
+	 * one out ({@link RealPlace#needsOrder}), in the server's order with the blocks placed before it standing in the
+	 * level (hook M9, {@link RealPlace#inOrder}).
 	 */
 	private static Checked check(BlockSet blocks, BlockHitResult first) {
 		Minecraft mc = Minecraft.getInstance();
@@ -191,7 +191,7 @@ public final class RealShape {
 			}
 		}
 		Map<BlockPos, BlockState> standing = new HashMap<>();
-		Set<BlockPos> stay = !RealPlace.mayHoldUp(goingIn, stayNow) ? stayNow
+		Set<BlockPos> stay = !RealPlace.needsOrder(goingIn, stayNow) ? stayNow
 			: ShapeOverlay.with(level, standing, () -> RealPlace.inOrder(goingIn, standing,
 				block -> tried(player, block, face, hit)));
 		return new Checked(blocks.validPositions(), level.getGameTime(), face, hit, sent, goingIn, stay, matched);
