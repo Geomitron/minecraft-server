@@ -1941,7 +1941,8 @@ the side the copy shows (`RealPlace.formed`; 1372 Q6 B). A shape's door keeps th
 it. S2 then checks the turned state as it checks
 Disable's (`PlaceTurns.checked`: shaped by its neighbours, and placed only where it can stay). A block that doesn't go
 in uses no item. `RealPlacer` sorts each block Minecraft refuses: one that can't stay (Minecraft or S2 gave no state
-because it can't stay there, or an entity is in its way), which the order tries again; or one refused for another
+because it can't stay there, or an entity is in its way, or its item gives it no place, as scaffolding's does with
+nothing to hold it up, `ScaffoldingBlockItem.updatePlacementContext`), which the order tries again; or one refused for another
 reason (S2's other block, an operator's block for a player who isn't one, a space an earlier block of the same `place`
 filled, such as a bed's head), which counts toward the notice.
 
@@ -2015,13 +2016,33 @@ then sets the blocks the preview draws red (`ItemUsageTracker.missingPositions`,
 reads): the whole shape when the inventory lacks any item (`ItemUsageTracker.hasMissing`), since then nothing goes in,
 and otherwise each block the server would leave out by the rule the player's computer can check: a space that doesn't
 take a block, a block past the reach, and a turned block that can't stay or has an entity in its way (`RealPlace`, the
-pure rule the server's placing uses too; spawn protection and later changes are the server's alone). Whether a block
-can stay is checked against the world as it is, so a block held up only by another block of the same shape, such as a
-torch standing on a block the shape also builds under it, draws red though the server's order places it. Hook E43
-draws each block in the state the click sends (`RealShape`), so a block that fills a ghost block shows the ghost
-block's turn while "Match ghost blocks" acts. The game works the shape out once a client tick for each set of positions the preview shows, and
-the place sound (hook E41) plays when `RealPlace`'s count of the inventory covers the blocks going in. The controls
-lines read as without the setting (1411 [c3]), in Single, before a shape's first click and after it.
+pure rule the server's placing uses too; spawn protection and later changes are the server's alone).
+
+Whether each block can stay is checked as the server's try at placing it would go (`RealShape`): against the world as
+it is, and, where the shape's own blocks may hold one up, in the server's order (1411 Q2 B, with Geo's comment: "Can't
+you do this, but only narrow that check if the placement involves scaffolding and any of the other rare blocks that
+this might apply to?"). The order runs only when a block that goes in can't stay in the world as it is and another
+block of the shape, or the other half Minecraft places with one (a door's upper half, a bed's head), is beside, above
+or under it (`RealPlace.mayHoldUp`), so a shape whose blocks all stay, or a block alone, costs nothing more. By
+Minecraft's rules for whether a block can stay (`canSurvive`, and scaffolding's item, which gives no place to
+scaffolding with nothing to hold it up, read in the 26.3 jar), a block can hold up another of its own kind for
+scaffolding (under it or beside it), sugar cane, cactus, bamboo, carpets, pale moss carpets, pointed dripstone,
+twisting, weeping and cave vines, kelp, vines, pale hanging moss, big dripleaf and chorus plants. With the block mix,
+any block that needs a block to stand on, hang from or lean on, such as a torch, a sign, a lantern, a rail or a
+flower, can stand on another block of the mix. Chains and heads need no support, and a snow layer holds up another
+only when it's full. The preview then tries each block that goes in from the lowest level up, and once more from the
+highest level down for each that couldn't stay, as the server's `RealPlace.order` does, with the blocks placed so far,
+and the other halves Minecraft places with them, standing in the player's level for Minecraft's own checks (hook M9,
+`ShapeOverlay`; `RealPlace.inOrder`). So a Line of scaffolding or carpets up from the ground, or a torch on a block of
+the mix under it, shows as going in, and scaffolding in the air, which nothing of the shape holds up, shows red. A
+horizontal Line of cactus on sand shows whole, since each cactus can stay in the world as it is, though the server
+leaves out every other one: a cactus beside it keeps it out (`CactusBlock.canSurvive`).
+
+Hook E43 draws each block in the state the click sends (`RealShape`), so a block that fills a ghost block shows the
+ghost block's turn while "Match ghost blocks" acts. The game works the shape out once a client tick for each set of
+positions the preview shows, and the place sound (hook E41) plays when `RealPlace`'s count of the inventory covers the
+blocks going in. The controls lines read as without the setting (1411 [c3]), in Single, before a shape's first click
+and after it.
 
 **A paste** (1372 Q6 B). While the setting acts, the copy's right click (hook M2; see "Copy and paste") places the
 copy's blocks as real blocks instead of writing ghost blocks, by the rules for a shape above: within 64 blocks of the
@@ -2076,6 +2097,7 @@ a 0.9.0 server work together, and so do a 0.9.0 game and a 0.8.0 server, with gh
 | E41 | `buildpipeline/BuildPipelineClient.java`, private static `handleClick(Minecraft, BuildPipeline.BuildState)` | `@WrapWithCondition` on `ClientLevel.playLocalSound(BlockPos, SoundEvent, SoundSource, float, float, boolean)` | While the setting acts, play the place sound only when `RealPlace` finds that the inventory covers the click's blocks (the local `BlockSet blocks`), since otherwise nothing goes in. |
 | E43 | `render/BlockPreviewRenderer.java`, `render` | `@WrapOperation` on `BlockEntry.applyTransforms(BlockState)` | While the setting acts, outside the break click's shape, each block drawn in the state the click sends where that differs, which is the turn of a ghost block it fills (`RealShape.drawn`). |
 | M2 | `Minecraft.java`, `startUseItem()` | the same hook | While the setting acts, a paste, or a set of copies at its second click, goes to the server as one `place` instead of as an edit (`ClientSession.sendPaste`), and a red copy's click sends nothing. |
+| M9 | `net/minecraft/world/level/Level.java`, `getBlockState(BlockPos)` and `getFluidState(BlockPos)` | `@ModifyReturnValue`, in the mixin config's client section | While the preview works a shape out in the server's order, on the game's thread, in the player's level, the shape's blocks placed so far, and the other halves Minecraft places with them, in place of the world's (`ShapeOverlay`); otherwise the world's, after one check of a field. |
 | S2 | `BlockItem.place`, `getPlacementState` | the same hook | While the server places a shape or a paste, the shape's orientation and count for that block in place of the player's turn, the shape's form where Minecraft gives the other form of the same item (`StandingAndWallBlockItem`), for a paste the copy's hinge of a door, and null when Minecraft's state is any other block. |
 | S3 | `net/minecraft/world/item/BlockItem.java`, `place(BlockPlaceContext)` | `@WrapWithCondition` on `Level.playSound(Entity, BlockPos, SoundEvent, SoundSource, float, float)` | While the server places a shape or a paste, only its first block plays the place sound; a paste's first block plays it to the player too (`Level.playSound(null, …)`). |
 
@@ -3227,12 +3249,14 @@ driver's `realstates`):
   no place sound.
 - A Line of 8 torches along a real stone wall, aimed at the wall's side, draws all 8 red, as standing torches that
   can't stay there, and its click places nothing on the server or either client: Planner1 keeps all 8 torches, and
-  no notice comes (a say Planner1 sends after the click is the only new line in its chat; 1408 Q1 C). In Single, a
-  door has both halves and a bed both parts, its head on the far side, each placed with one click and using its one
-  item.
-- A Line of 4 scaffolding up from the ground draws the 3 above the first red, since the preview checks each block
-  against the world as it is, where nothing stands under them yet; its click places all 4 on the server, each on the
-  one under it, and uses the 4 scaffolding.
+  no notice comes (a say Planner1 sends after the click is the only new line in its chat; 1408 Q1 C). A Line of 8
+  scaffolding in the same spaces, which nothing of the shape holds up, draws all 8 red, and its click places nothing
+  and brings no notice: Planner1 keeps all 8. In Single, a door has both halves and a bed both parts, its head on the
+  far side, each placed with one click and using its one item.
+- A Line of 4 scaffolding up from the ground draws none red, since the preview checks each block in the server's
+  order, where each stands on the one under it (1411 Q2 B); its click places all 4 on the server and uses the 4
+  scaffolding. A Line of 4 white carpets up from the ground draws none red too, and its click places all 4 and uses
+  the 4 carpets.
 - With the mix of 80 cobblestone and 20 mossy cobblestone, each block of a 20-block Line on the server is the block the
   preview showed there when the inventory contains as many of each block as the preview uses, and none is left. With
   one mossy cobblestone fewer than a second Line uses, nothing goes in and the notice names 1 mossy cobblestone short.
@@ -3288,8 +3312,8 @@ driver's `realstates`):
 - Neither client's log has a self-check warning, before the server starts again or after.
 - Shots, at 854 by 480 and 1920 by 1080, GUI scale 2: "Settings" with the row on and with its tooltip, the controls
   line in Line and in Single, the whole Line red for 1 oak plank short with its icons, the Line through the stone and
-  the cow with its red blocks and icons, the Line of torches along the wall red, the Line of scaffolding red above its
-  first block, Planner2's view of the placed Wall, the copy of the hut yellow and red with its lines, Planner2's view
+  the cow with its red blocks and icons, the Lines of torches and of scaffolding along the wall red, the Line of
+  scaffolding up from the ground, Planner2's view of the placed Wall, the copy of the hut yellow and red with its lines, Planner2's view
   of the pasted hut, and the Line of 3 copies with its line; and, while the chat shows each, the notices for 1 oak
   plank short, the cap, the cap a second, and Planner2's Line within the spawn protection.
 
@@ -3309,8 +3333,15 @@ other values, the shape's form of the same item for a torch and a sign, nothing 
 none, the shape's count of 3 candles and of a double slab, and a door's hinge from the copy for a paste and from
 Minecraft for a shape), the cap of 2,000, the setting acting only during a
 session whose server takes `place`, in every mode but Disable, with an item that places a block, the setting saved as
-`true` or `false` and read as off when missing or any other value, and the blocks the preview draws red (each block
-that doesn't go in, or the whole shape when an item is short). `PlaceRateTest`
+`true` or `false` and read as off when missing or any other value, the blocks the preview draws red (each block
+that doesn't go in, or the whole shape when an item is short), and the blocks a shape holds up: a Line of 4
+scaffolding up from the ground, of which the world as it is holds up only the first, staying whole in the server's
+order, with the shape's own order reversed too; scaffolding reaching sideways from the shape's own up to 6 blocks out;
+a Line of carpets up; a torch on a block of the mix under it; scaffolding in the air and standing torches side by side
+staying out; the order running only for a shape with a block that can't stay now beside another of the shape, not for
+one whose blocks all stay, a block alone or two blocks apart; a bed's head counting as the shape's, under a carpet;
+the other half of a door and of a bed, and none for a block of one part; and a block whose space an earlier block's
+other half fills left out. `PlaceRateTest`
 covers the cap a second: a place goes in while it and the blocks placed in the second before stay within 2,000,
 several places in a second add up, blocks placed a second ago no longer count, and each player has their own count
 until they leave.

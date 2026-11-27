@@ -25,6 +25,7 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
@@ -37,8 +38,9 @@ import nl.requios.effortlessbuilding.utilities.ItemUsageTracker;
  * "Place real blocks" for Effortless Building's shapes (see "Place real blocks"): while the setting acts, the place
  * click's shape goes to the server as one {@code place} (hook E1), the preview counts the inventory over the blocks
  * that go in (E8), draws red the blocks that wouldn't go in (E40) and in a ghost block's turn the blocks "Match ghost
- * blocks" turns (E43), and the click plays its place sound only when the inventory covers it (E41). Only the hooks
- * into Effortless Building load this class.
+ * blocks" turns (E43), and the click plays its place sound only when the inventory covers it (E41). Where the shape's
+ * own blocks may hold up a block of it, the preview works the shape out in the server's order, with the blocks placed
+ * so far standing in the level (M9). Only the hooks into Effortless Building load this class.
  */
 public final class RealShape {
 	/** The preview's blocks, checked once a client tick and again when its positions change. */
@@ -50,7 +52,8 @@ public final class RealShape {
 	/**
 	 * A shape's blocks as the place click sends them ({@code blocks}: each in the state the preview shows, without the
 	 * second half of a two-part block), the blocks among them that go in by the checks the player's game makes
-	 * ({@code goingIn}), those of them that can stay ({@code stay}), and the states "Match ghost blocks" gave
+	 * ({@code goingIn}), those of them that stay where the server places them ({@code stay}), and the states "Match
+	 * ghost blocks" gave
 	 * ({@code matched}). {@code positions} and {@code tick} say which preview it was checked for.
 	 */
 	private record Checked(List<BlockPos> positions, long tick, Direction face, Vec3 hit, List<RealPlace.Entry> blocks,
@@ -157,7 +160,9 @@ public final class RealShape {
 	 * shape's first position): each in the state the place click gives it ({@link EffortlessShapes#states}), or the
 	 * ghost block's turn where "Match ghost blocks" gives it ({@link #ghostTurned}), then as the server checks them
 	 * before placing ({@link RealPlace#goingIn}), from the player's eyes and not Freecam's camera, and whether each
-	 * would stay ({@link #stays}).
+	 * would stay ({@link #stays}): against the world as it is, or, where the shape's own blocks may hold one up
+	 * ({@link RealPlace#mayHoldUp}), in the server's order with the blocks placed before it standing in the level
+	 * (hook M9, {@link RealPlace#inOrder}).
 	 */
 	private static Checked check(BlockSet blocks, BlockHitResult first) {
 		Minecraft mc = Minecraft.getInstance();
@@ -179,12 +184,16 @@ public final class RealShape {
 		}
 		List<RealPlace.Entry> goingIn = RealPlace.goingIn(sent, ClientSession.realWorld(level, player),
 			player.getEyePosition());
-		Set<BlockPos> stay = new HashSet<>();
+		Set<BlockPos> stayNow = new HashSet<>();
 		for (RealPlace.Entry block : goingIn) {
 			if (stays(player, block, face, hit)) {
-				stay.add(block.pos());
+				stayNow.add(block.pos());
 			}
 		}
+		Map<BlockPos, BlockState> standing = new HashMap<>();
+		Set<BlockPos> stay = !RealPlace.mayHoldUp(goingIn, stayNow) ? stayNow
+			: ShapeOverlay.with(level, standing, () -> RealPlace.inOrder(goingIn, standing,
+				block -> tried(player, block, face, hit)));
 		return new Checked(blocks.validPositions(), level.getGameTime(), face, hit, sent, goingIn, stay, matched);
 	}
 
@@ -209,32 +218,47 @@ public final class RealShape {
 			? turned : null;
 	}
 
-	/**
-	 * Whether the block would stay where the server places it, as hook S2 checks it there: Minecraft's state for a
-	 * right click with the shape's face and the hit at the block's own height ({@code BlockItem.place}'s steps), in the
-	 * shape's form, orientation and count ({@link RealPlace#formed}), shaped by its neighbours and able to stay
-	 * ({@link PlaceTurns#checked}). The world is as it is now, so a block that only another block of the same shape
-	 * holds up shows as one that can't stay.
-	 */
+	/** Whether the block would stay where the server places it, in the level as it reads now ({@link #tried}). */
 	private static boolean stays(Player player, RealPlace.Entry block, Direction face, Vec3 hit) {
+		return tried(player, block, face, hit).tried() == RealPlace.Tried.PLACED;
+	}
+
+	/**
+	 * How the server's try at placing the block would go, as {@code RealPlacer} sorts it, in the player's level as it
+	 * reads now: left out where its space doesn't take it or a right click there wouldn't place at its position;
+	 * otherwise Minecraft's state for a right click with the shape's face and the hit at the block's own height
+	 * ({@code BlockItem.place}'s steps), in the shape's form, orientation and count ({@link RealPlace#formed}), shaped
+	 * by its neighbours and able to stay ({@link PlaceTurns#checked}), placed in that state; one that can't stay where
+	 * the item gives it no place (scaffolding with nothing to hold it up) or Minecraft no state, or where the formed
+	 * block can't stay; and left out where Minecraft gives another block.
+	 */
+	private static RealPlace.Try tried(Player player, RealPlace.Entry block, Direction face, Vec3 hit) {
 		if (!(RealPlace.item(block.state()) instanceof BlockItem item)) {
-			return false;
+			return RealPlace.Try.LEFT_OUT;
 		}
 		BlockPos pos = block.pos();
+		Level level = player.level();
+		if (!RealPlace.spaceTakes(level.getBlockState(pos), block.state())) {
+			return RealPlace.Try.LEFT_OUT;
+		}
 		double yFraction = hit.y - Math.floor(hit.y);
 		BlockPlaceContext context = new BlockPlaceContext(player, InteractionHand.MAIN_HAND, new ItemStack(item),
 			new BlockHitResult(new Vec3(hit.x, pos.getY() + yFraction, hit.z), face, pos, false));
 		if (!context.getClickedPos().equals(pos) || !context.canPlace()) {
-			return false;
+			return RealPlace.Try.LEFT_OUT;
 		}
 		BlockPlaceContext updated = item.updatePlacementContext(context);
 		if (updated == null) {
-			return false;
+			return RealPlace.Try.CANT_STAY;
 		}
 		BlockItemInvoker invoker = (BlockItemInvoker) item;
 		BlockState placed = invoker.buildingplanner$placementState(updated);
 		BlockState formed = RealPlace.formed(placed, block.state(), false);
-		return formed != null && PlaceTurns.checked(updated, placed, formed,
-			state -> invoker.buildingplanner$canPlace(updated, state)).stays();
+		if (formed == null) {
+			return placed == null ? RealPlace.Try.CANT_STAY : RealPlace.Try.LEFT_OUT;
+		}
+		PlaceTurns.Placed checked = PlaceTurns.checked(updated, placed, formed,
+			state -> invoker.buildingplanner$canPlace(updated, state));
+		return checked.stays() ? new RealPlace.Try(RealPlace.Tried.PLACED, checked.state()) : RealPlace.Try.CANT_STAY;
 	}
 }

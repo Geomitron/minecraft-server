@@ -4,8 +4,8 @@
 # set with /clear and /item: the controls lines reading as with the setting off, Ctrl+Z and Ctrl+Y after a ghost shape
 # and a Line of real blocks, the break click erasing ghost blocks only, a whole Line from the main hand and the
 # inventory and its one place sound, nothing, the whole Line red and no sound for a Line 1 oak plank short, nothing
-# for a Line of torches along a wall's side, a Line of scaffolding up from the ground red above its first block and
-# placed whole, a door, a bed, the mix,
+# for a Line of torches along a wall's side nor for one of scaffolding there, red, Lines of scaffolding and of
+# carpets up from the ground, none red and placed whole, a door, a bed, the mix,
 # the mirror's copies counted, stairs in a Wall turned with the wheel and mirrored, a real block and a cow in the way and
 # red, ghost blocks filled and left red, a copy of a hut with a door, a wall torch, a hanging lantern, a double slab,
 # candles and water, yellow, red 1 cobblestone short, pasted with one place sound for each player and around a real
@@ -449,20 +449,45 @@ check "it places no torch on the server or either client" eval \
 	[[ $(server_count minecraft:wall_torch 70 -59 31 77 -59 31) == 0 ]]'
 check "and Planner1 keeps all 8 torches" eval '[[ $(items minecraft:torch) == 8 ]]'
 
-# A Line of 4 scaffolding up from the ground at 88 -60 32 to 88 -57 32. The preview checks each block against the world
-# as it is, where the 3 above the first have nothing under them yet, so it draws them red; the server places from the
-# lowest level up, each on the one under it, so all 4 go in.
+# A Line of 8 scaffolding in the same spaces along the wall, in the air: nothing holds up the scaffolding there, since
+# the wall is no scaffolding and no block of the shape stands under another, so all 8 are red and none goes in.
+stock minecraft:scaffolding 8
+drv 1 "lookat 70.5 -58.5 31" "wait 5" > /dev/null
+use_click 1
+drv 1 "lookat 77.5 -58.5 31" "wait 5" > /dev/null
+check "a Line of scaffolding along the wall's side draws 8 blocks" preview_is 1 8
+check "all 8 red, with nothing of the shape to hold them up" eval '[[ $(red 1 | wc -w) == 8 ]]'
+shots 1 real-scaffolding-red
+lines=$(chat_lines)
+place_click 1
+check "no notice comes for the click" no_notice_since "$lines"
+check "it places no scaffolding on the server or either client" lands minecraft:scaffolding scaffolding \
+	70 -59 31 77 -59 31 0
+check "and Planner1 keeps all 8 scaffolding" eval '[[ $(items minecraft:scaffolding) == 8 ]]'
+
+# A Line of 4 scaffolding up from the ground at 88 -60 32 to 88 -57 32: the server places from the lowest level up, each
+# on the one under it, and the preview checks each block in that order, so none is red (1411 Q2 B).
 drv 1 "cmd tp @s 88.5 -60 36.5 180 30" "cmd tp Planner2 89.5 -60 37.5 180 30" "wait 20" > /dev/null
 stock minecraft:scaffolding 4
 draw 1 88 -60 32 88 -57 32
 check "a Line of scaffolding up from the ground draws 4 blocks" preview_is 1 4
-check "the 3 above the first red, with nothing under them yet" eval \
-	'[[ $(red 1) == "88,-57,32 88,-58,32 88,-59,32" ]]'
-shots 1 real-scaffolding-red
+check "none of them red, each held up by the one under it" eval '[[ $(red 1) == none ]]'
+shots 1 real-scaffolding
 place_click 1
 check "the click places all 4 on the server, as both clients show" eval \
 	'arrive 88 -57 32 minecraft:scaffolding && lands minecraft:scaffolding scaffolding 88 -60 32 88 -57 32 4'
 check "using the 4 scaffolding" eval '[[ $(items minecraft:scaffolding) == 0 ]]'
+
+# A Line of 4 white carpets up from the ground at 92 -60 32 to 92 -57 32, each standing on the one under it.
+drv 1 "cmd tp @s 92.5 -60 36.5 180 30" "cmd tp Planner2 93.5 -60 37.5 180 30" "wait 20" > /dev/null
+stock minecraft:white_carpet 4
+draw 1 92 -60 32 92 -57 32
+check "a Line of carpets up from the ground draws 4 blocks" preview_is 1 4
+check "none of them red" eval '[[ $(red 1) == none ]]'
+place_click 1
+check "the click places all 4 on the server, as both clients show" eval \
+	'arrive 92 -57 32 minecraft:white_carpet && lands minecraft:white_carpet white_carpet 92 -60 32 92 -57 32 4'
+check "using the 4 carpets" eval '[[ $(items minecraft:white_carpet) == 0 ]]'
 
 # In Single, a door at 62 -60 32 and a bed at 65 -60 32, Planner1 facing north, each placed with one click.
 drv 1 "ebmode SINGLE" "cmd tp @s 63.5 -60 35.5 180 30" "cmd tp Planner2 64.5 -60 36.5 180 30" "wait 20" > /dev/null

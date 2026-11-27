@@ -44,6 +44,7 @@
 		"minecraft.BlockItemInvoker",
 		"minecraft.HudMixin",
 		"minecraft.KeyboardHandlerMixin",
+		"minecraft.LevelMixin",
 		"minecraft.MinecraftMouseModeMixin",
 		"minecraft.MinecraftUseItemMixin",
 		"minecraft.MouseHandlerMixin",

@@ -10,6 +10,9 @@ import dev.buildingplanner.input.RealPlace.Inventory;
 import dev.buildingplanner.input.RealPlace.Slot;
 import dev.buildingplanner.input.RealPlace.Take;
 import dev.buildingplanner.input.RealPlace.Tried;
+import dev.buildingplanner.input.RealPlace.Try;
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -25,7 +28,9 @@ import net.minecraft.server.Bootstrap;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.ScaffoldingBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BedPart;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
@@ -211,6 +216,177 @@ class RealPlaceTest {
 		});
 		assertEquals(List.of(stays), placed);
 		assertEquals(Map.of(leftOut, 1, neverStays, 2, stays, 1), tries);
+	}
+
+	/**
+	 * The world as Minecraft's own rule for whether a block can stay reads it ({@code BlockState.canSurvive}): air but
+	 * for {@code real}, with the blocks {@code standing} over it, as hook M9 makes the player's level read while the
+	 * preview works a shape out.
+	 */
+	private static LevelReader reader(Map<BlockPos, BlockState> real, Map<BlockPos, BlockState> standing) {
+		InvocationHandler handler = (proxy, method, args) -> switch (method.getName()) {
+			case "getBlockState" -> standing.getOrDefault((BlockPos) args[0],
+				real.getOrDefault((BlockPos) args[0], Blocks.AIR.defaultBlockState()));
+			case "getFluidState" -> ((LevelReader) proxy).getBlockState((BlockPos) args[0]).getFluidState();
+			case "getMinY" -> -64;
+			case "getHeight" -> 384;
+			default -> {
+				if (method.isDefault()) {
+					yield InvocationHandler.invokeDefault(proxy, method, args);
+				}
+				throw new UnsupportedOperationException(method.getName());
+			}
+		};
+		return (LevelReader) Proxy.newProxyInstance(LevelReader.class.getClassLoader(),
+			new Class<?>[] {LevelReader.class}, handler);
+	}
+
+	/**
+	 * A try at placing {@code block} by Minecraft's own rule for whether it can stay, in {@code world}: placed in its
+	 * state, scaffolding at the distance Minecraft gives it from the blocks around it
+	 * ({@code ScaffoldingBlock.getStateForPlacement}), or one that can't stay.
+	 */
+	private static Try survives(Entry block, LevelReader world) {
+		BlockState state = block.state();
+		if (state.is(Blocks.SCAFFOLDING)) {
+			state = state.setValue(ScaffoldingBlock.DISTANCE, ScaffoldingBlock.getDistance(world, block.pos()));
+		}
+		return state.canSurvive(world, block.pos()) ? new Try(Tried.PLACED, state) : Try.CANT_STAY;
+	}
+
+	/** The positions of {@code blocks} that can stay in the world {@code real} as it is, without the shape's blocks. */
+	private static Set<BlockPos> stayNow(List<Entry> blocks, Map<BlockPos, BlockState> real) {
+		Set<BlockPos> stay = new HashSet<>();
+		for (Entry block : blocks) {
+			if (survives(block, reader(real, Map.of())).tried() == Tried.PLACED) {
+				stay.add(block.pos());
+			}
+		}
+		return stay;
+	}
+
+	/** The positions of {@code blocks} that stay as the preview works the shape out over {@code real}. */
+	private static Set<BlockPos> worked(List<Entry> blocks, Map<BlockPos, BlockState> real) {
+		Map<BlockPos, BlockState> standing = new HashMap<>();
+		LevelReader world = reader(real, standing);
+		return RealPlace.inOrder(blocks, standing, block -> survives(block, world));
+	}
+
+	/** A Line of {@code length} blocks of {@code state} up from {@code start}. */
+	private static List<Entry> upward(BlockPos start, int length, BlockState state) {
+		List<Entry> line = new ArrayList<>();
+		for (int i = 0; i < length; i++) {
+			line.add(new Entry(start.above(i), state));
+		}
+		return line;
+	}
+
+	/** Stone at the origin, under the shapes that stand on the ground. */
+	private static final Map<BlockPos, BlockState> GROUND = Map.of(BlockPos.ZERO, Blocks.STONE.defaultBlockState());
+
+	@Test
+	void scaffoldingInALineUpFromTheGroundStaysInTheServersOrderThoughTheWorldAsItIsHoldsOnlyTheFirst() {
+		List<Entry> line = upward(BlockPos.ZERO.above(), 4, Blocks.SCAFFOLDING.defaultBlockState());
+		Set<BlockPos> now = stayNow(line, GROUND);
+		assertEquals(Set.of(new BlockPos(0, 1, 0)), now);
+		assertTrue(RealPlace.mayHoldUp(line, now));
+		Set<BlockPos> all = Set.of(new BlockPos(0, 1, 0), new BlockPos(0, 2, 0), new BlockPos(0, 3, 0),
+			new BlockPos(0, 4, 0));
+		assertEquals(all, worked(line, GROUND));
+		// The server places the lowest level first, whatever the shape's own order.
+		assertEquals(all, worked(line.reversed(), GROUND));
+	}
+
+	@Test
+	void scaffoldingReachesSidewaysFromScaffoldingTheShapePlacesUpToSixBlocksOut() {
+		List<Entry> blocks = line(new BlockPos(0, 1, 0), 8, Blocks.SCAFFOLDING.defaultBlockState());
+		Set<BlockPos> stay = worked(blocks, GROUND);
+		assertEquals(7, stay.size());
+		assertFalse(stay.contains(new BlockPos(7, 1, 0)));
+	}
+
+	@Test
+	void carpetsInALineUpStandOnOneAnother() {
+		List<Entry> line = upward(BlockPos.ZERO.above(), 4, Blocks.CARPET.pick(DyeColor.WHITE).defaultBlockState());
+		Set<BlockPos> now = stayNow(line, GROUND);
+		assertEquals(Set.of(new BlockPos(0, 1, 0)), now);
+		assertTrue(RealPlace.mayHoldUp(line, now));
+		assertEquals(4, worked(line, GROUND).size());
+	}
+
+	@Test
+	void aTorchOnABlockOfTheMixUnderItStays() {
+		List<Entry> blocks = List.of(new Entry(new BlockPos(0, 2, 0), Blocks.TORCH.defaultBlockState()),
+			new Entry(new BlockPos(0, 1, 0), Blocks.COBBLESTONE.defaultBlockState()));
+		Set<BlockPos> now = stayNow(blocks, Map.of());
+		assertEquals(Set.of(new BlockPos(0, 1, 0)), now);
+		assertTrue(RealPlace.mayHoldUp(blocks, now));
+		assertEquals(Set.of(new BlockPos(0, 1, 0), new BlockPos(0, 2, 0)), worked(blocks, Map.of()));
+	}
+
+	@Test
+	void aBlockNothingOfTheShapeHoldsUpStillCantStay() {
+		// A Line up of scaffolding in the air, nothing under it.
+		List<Entry> line = upward(new BlockPos(0, 3, 0), 4, Blocks.SCAFFOLDING.defaultBlockState());
+		Set<BlockPos> now = stayNow(line, GROUND);
+		assertEquals(Set.of(), now);
+		assertTrue(RealPlace.mayHoldUp(line, now));
+		assertEquals(Set.of(), worked(line, GROUND));
+		// Standing torches side by side in the air, as a Line aimed at a wall's side gives them: none holds another up.
+		List<Entry> torches = line(new BlockPos(0, 5, 0), 3, Blocks.TORCH.defaultBlockState());
+		assertEquals(Set.of(), worked(torches, Map.of()));
+	}
+
+	@Test
+	void theWorkGoesOnlyToAShapeWithABlockThatCantStayNowBesideAnotherOfTheShape() {
+		List<Entry> planks = line(new BlockPos(0, 1, 0), 3, planks());
+		assertFalse(RealPlace.mayHoldUp(planks, Set.of(new BlockPos(0, 1, 0), new BlockPos(1, 1, 0),
+			new BlockPos(2, 1, 0))));
+		// A torch in the air on its own, as Single places it: no block of the shape is beside it.
+		List<Entry> single = List.of(new Entry(new BlockPos(0, 5, 0), Blocks.TORCH.defaultBlockState()));
+		assertFalse(RealPlace.mayHoldUp(single, Set.of()));
+		// Two torches in the air, apart.
+		List<Entry> apart = List.of(new Entry(new BlockPos(0, 5, 0), Blocks.TORCH.defaultBlockState()),
+			new Entry(new BlockPos(2, 5, 0), Blocks.TORCH.defaultBlockState()));
+		assertFalse(RealPlace.mayHoldUp(apart, Set.of()));
+	}
+
+	@Test
+	void theOtherHalfMinecraftPlacesWithAFirstHalfCountsAsTheShapes() {
+		// A carpet over a bed's head: the head is the shape's too, since Minecraft places it with the foot.
+		BlockState foot = Blocks.STRAW_BED.defaultBlockState().setValue(BlockStateProperties.HORIZONTAL_FACING,
+			Direction.NORTH);
+		List<Entry> blocks = List.of(new Entry(new BlockPos(0, 1, 0), foot),
+			new Entry(new BlockPos(0, 2, -1), Blocks.CARPET.pick(DyeColor.WHITE).defaultBlockState()));
+		assertTrue(RealPlace.mayHoldUp(blocks, Set.of(new BlockPos(0, 1, 0))));
+		assertEquals(Set.of(new BlockPos(0, 1, 0), new BlockPos(0, 2, -1)), worked(blocks, GROUND));
+	}
+
+	@Test
+	void theOtherHalfOfATwoPartBlockGoesAboveItOrTheWayItFaces() {
+		BlockState door = Blocks.OAK_DOOR.defaultBlockState();
+		assertEquals(new Entry(new BlockPos(0, 2, 0),
+			door.setValue(BlockStateProperties.DOUBLE_BLOCK_HALF, DoubleBlockHalf.UPPER)),
+			RealPlace.otherHalf(new Entry(new BlockPos(0, 1, 0), door)));
+		BlockState bed = Blocks.STRAW_BED.defaultBlockState().setValue(BlockStateProperties.HORIZONTAL_FACING,
+			Direction.EAST);
+		assertEquals(new Entry(new BlockPos(1, 1, 0), bed.setValue(BlockStateProperties.BED_PART, BedPart.HEAD)),
+			RealPlace.otherHalf(new Entry(new BlockPos(0, 1, 0), bed)));
+		assertNull(RealPlace.otherHalf(new Entry(new BlockPos(0, 2, 0),
+			door.setValue(BlockStateProperties.DOUBLE_BLOCK_HALF, DoubleBlockHalf.UPPER))));
+		assertNull(RealPlace.otherHalf(new Entry(new BlockPos(0, 1, 0), planks())));
+	}
+
+	@Test
+	void aBlockWhoseSpaceAnEarlierBlocksOtherHalfFillsDoesntGoIn() {
+		Entry door = new Entry(new BlockPos(0, 1, 0), Blocks.OAK_DOOR.defaultBlockState());
+		Entry above = new Entry(new BlockPos(0, 2, 0), planks());
+		Map<BlockPos, BlockState> standing = new HashMap<>();
+		Set<BlockPos> stay = RealPlace.inOrder(List.of(door, above), standing,
+			block -> standing.containsKey(block.pos()) ? Try.LEFT_OUT : new Try(Tried.PLACED, block.state()));
+		assertEquals(Set.of(door.pos()), stay);
+		assertEquals(DoubleBlockHalf.UPPER,
+			standing.get(above.pos()).getValue(BlockStateProperties.DOUBLE_BLOCK_HALF));
 	}
 
 	@Test

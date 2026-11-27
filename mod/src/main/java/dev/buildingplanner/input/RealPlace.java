@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
@@ -167,6 +168,25 @@ public final class RealPlace {
 			&& state.getValue(BlockStateProperties.DOUBLE_BLOCK_HALF) == DoubleBlockHalf.UPPER
 			|| state.hasProperty(BlockStateProperties.BED_PART)
 			&& state.getValue(BlockStateProperties.BED_PART) == BedPart.HEAD;
+	}
+
+	/**
+	 * The other half Minecraft places with the first half of a two-part block ({@code Block.setPlacedBy}): a door's or a
+	 * tall plant's upper half above it, or a bed's head the way it faces; null for any other block.
+	 */
+	public static Entry otherHalf(Entry first) {
+		BlockState state = first.state();
+		if (state.hasProperty(BlockStateProperties.DOUBLE_BLOCK_HALF)
+			&& state.getValue(BlockStateProperties.DOUBLE_BLOCK_HALF) == DoubleBlockHalf.LOWER) {
+			return new Entry(first.pos().above(), state.setValue(BlockStateProperties.DOUBLE_BLOCK_HALF,
+				DoubleBlockHalf.UPPER));
+		}
+		if (state.hasProperty(BlockStateProperties.BED_PART)
+			&& state.getValue(BlockStateProperties.BED_PART) == BedPart.FOOT) {
+			return new Entry(first.pos().relative(state.getValue(BlockStateProperties.HORIZONTAL_FACING)),
+				state.setValue(BlockStateProperties.BED_PART, BedPart.HEAD));
+		}
+		return null;
 	}
 
 	/**
@@ -376,6 +396,12 @@ public final class RealPlace {
 		LEFT_OUT
 	}
 
+	/** One try at placing a block in the preview's working out ({@link #inOrder}): how it went, and the state placed. */
+	public record Try(Tried tried, BlockState state) {
+		public static final Try CANT_STAY = new Try(Tried.CANT_STAY, null);
+		public static final Try LEFT_OUT = new Try(Tried.LEFT_OUT, null);
+	}
+
 	/**
 	 * Places {@code blocks} in the server's order, trying each with {@code place}: from the lowest level up, in their own
 	 * order within a level, so a block goes in after the blocks under it; then each block that couldn't stay once more,
@@ -403,5 +429,59 @@ public final class RealPlace {
 			}
 		}
 		return placed;
+	}
+
+	/**
+	 * Whether the preview works out which of a shape's blocks stay in the server's order ({@link #inOrder}), rather
+	 * than against the world as it is: only when a block of {@code goingIn} can't stay in the world as it is (it's not
+	 * among {@code stayNow}) and another block of the shape, or the other half Minecraft places with one
+	 * ({@link #otherHalf}), is beside it, above it or under it, where it may hold the block up. So the extra work runs
+	 * only for a shape of blocks that need a block to stand on, hang from or lean on, such as scaffolding, sugar cane,
+	 * carpets or torches, where the shape itself may give it.
+	 */
+	public static boolean mayHoldUp(List<Entry> goingIn, Set<BlockPos> stayNow) {
+		Set<BlockPos> shape = new HashSet<>();
+		for (Entry block : goingIn) {
+			shape.add(block.pos());
+			Entry other = otherHalf(block);
+			if (other != null) {
+				shape.add(other.pos());
+			}
+		}
+		for (Entry block : goingIn) {
+			if (!stayNow.contains(block.pos())) {
+				for (Direction side : Direction.values()) {
+					if (shape.contains(block.pos().relative(side))) {
+						return true;
+					}
+				}
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * The positions of the blocks of {@code goingIn} that the server's {@link #order} places, as the preview works them
+	 * out: each tried by {@code tryIn} with the blocks placed before it, and the other halves Minecraft places with them
+	 * ({@link #otherHalf}), standing in {@code standing}, where the caller's world reads them. So a block that another
+	 * block of the same shape holds up shows as going in, as scaffolding does in a Line up from the ground, and one
+	 * whose space an earlier block's other half fills, or that nothing holds up, as not.
+	 */
+	public static Set<BlockPos> inOrder(List<Entry> goingIn, Map<BlockPos, BlockState> standing,
+		Function<Entry, Try> tryIn) {
+		Set<BlockPos> stay = new HashSet<>();
+		order(goingIn, block -> {
+			Try tried = tryIn.apply(block);
+			if (tried.tried() == Tried.PLACED) {
+				standing.put(block.pos(), tried.state());
+				Entry other = otherHalf(new Entry(block.pos(), tried.state()));
+				if (other != null) {
+					standing.put(other.pos(), other.state());
+				}
+				stay.add(block.pos());
+			}
+			return tried.tried();
+		});
+		return stay;
 	}
 }

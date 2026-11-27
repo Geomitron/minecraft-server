@@ -203,6 +203,10 @@ public final class RealPlacer {
 		if (!context.getClickedPos().equals(pos)) {
 			return Tried.LEFT_OUT;
 		}
+		// Scaffolding with nothing to hold it up gets no place from its item (ScaffoldingBlockItem), before hook S2.
+		if (context.canPlace() && ((BlockItem) item).updatePlacementContext(context) == null) {
+			return Tried.CANT_STAY;
+		}
 		now.block = block;
 		now.cantStay = false;
 		InteractionResult result;
