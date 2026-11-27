@@ -11,7 +11,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
@@ -237,11 +236,11 @@ public final class RealPlacer {
 		return takes.isEmpty() ? null : player.getInventory().getItem(takes.getFirst().slot());
 	}
 
-	/** Each item short and how many, in English, as "1 Oak Planks, 4 Mossy Cobblestone". */
+	/** Each item short and how many, by its English name as the server gives it, as "1 oak planks, 4 mossy cobblestone". */
 	private static String names(Map<Item, Integer> lacking) {
-		return lacking.entrySet().stream()
-			.map(lack -> lack.getValue() + " " + lack.getKey().getName(new ItemStack(lack.getKey())).getString())
-			.collect(Collectors.joining(", "));
+		return PlayerMessage.missing(lacking.entrySet().stream()
+			.map(lack -> Map.entry(lack.getKey().getName(new ItemStack(lack.getKey())).getString(), lack.getValue()))
+			.toList());
 	}
 
 	/**

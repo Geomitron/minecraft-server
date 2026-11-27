@@ -1972,9 +1972,11 @@ server runs none.
   checks above need: the blocks those checks leave out need none, every block of the mirror's and the array's copies
   counts, and with the block mix each block counts as its own item (a Line of 16 cobblestone and 4 mossy cobblestone
   needs 16 and 4). When the inventory lacks any of them, the server places nothing and its `notice` names each item
-  short and how many, in the wording Geo approves in build step 5: each as its count and the item's English name, as
-  the server gives it (`Item.getName`), joined with commas, such as "1 Oak Planks, 4 Mossy Cobblestone". A stack with components (a named block, a filled
-  shulker box) places as by hand, its components going to the block entity.
+  short and how many, in Geo's wording (1411), "Nothing was placed (missing 1 oak planks)": each item as its count and
+  its English name as the server gives it (`Item.getName`) in lower case, joined by ", " in the order the blocks first
+  need them, such as "Nothing was placed (missing 6 cobblestone, 3 stone bricks, 3 mossy cobblestone)"
+  (`PlayerMessage.missing`). A stack with components (a named block, a filled shulker box) places as by hand, its
+  components going to the block entity.
 - **Real blocks in the way** (1372 Q3 A). A block goes only into a space a right click could place it into
   (`BlockPlaceContext.canPlace`), so a shape or a paste never replaces a real block, nor adds to one:
   `RealPlace.spaceTakes` lets a block into a space Minecraft lets any block replace (air, water, lava, grass, fire, a

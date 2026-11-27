@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.Set;
@@ -300,11 +301,7 @@ class PayloadsTest {
 	 */
 	@Test
 	void everyPlayerMessageHasItsText() throws Exception {
-		JsonObject lang;
-		try (var reader = new InputStreamReader(
-			PayloadsTest.class.getResourceAsStream("/assets/buildingplanner/lang/en_us.json"), StandardCharsets.UTF_8)) {
-			lang = JsonParser.parseReader(reader).getAsJsonObject();
-		}
+		JsonObject lang = lang();
 		Set<String> used = new HashSet<>();
 		for (Method factory : PlayerMessage.class.getDeclaredMethods()) {
 			if (!Modifier.isStatic(factory.getModifiers()) || factory.getReturnType() != PlayerMessage.class) {
@@ -325,5 +322,31 @@ class PayloadsTest {
 		others.removeIf(key -> key.startsWith("key.") || key.startsWith("buildingplanner.ui.")
 			|| key.startsWith("buildingplanner.info."));
 		assertEquals(Set.of(), others, "en_us.json holds only messages the add-on sends, key bindings and screens");
+	}
+
+	/** The notice for an inventory short of items reads in Geo's wording (1411): each item in lower case, in order. */
+	@Test
+	void theShortNoticeReadsInGeosWording() throws Exception {
+		assertEquals("Nothing was placed (missing 1 oak planks)",
+			text(PlayerMessage.placeShort(PlayerMessage.missing(List.of(Map.entry("Oak Planks", 1))))));
+		assertEquals("Nothing was placed (missing 6 cobblestone, 3 stone bricks, 3 mossy cobblestone)",
+			text(PlayerMessage.placeShort(PlayerMessage.missing(List.of(Map.entry("Cobblestone", 6),
+				Map.entry("Stone Bricks", 3), Map.entry("Mossy Cobblestone", 3))))));
+	}
+
+	private static JsonObject lang() throws Exception {
+		try (var reader = new InputStreamReader(
+			PayloadsTest.class.getResourceAsStream("/assets/buildingplanner/lang/en_us.json"), StandardCharsets.UTF_8)) {
+			return JsonParser.parseReader(reader).getAsJsonObject();
+		}
+	}
+
+	/** {@code message}'s text in en_us.json with its arguments in place of its %s, as the game shows it. */
+	private static String text(PlayerMessage message) throws Exception {
+		String text = lang().get(message.key()).getAsString();
+		for (String arg : message.args()) {
+			text = text.replaceFirst("%s", Matcher.quoteReplacement(arg));
+		}
+		return text;
 	}
 }

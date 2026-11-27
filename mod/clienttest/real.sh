@@ -422,7 +422,7 @@ shots 1 real-line-short
 drv 1 "soundreset" > /dev/null
 place_click 1
 check "the click gets the notice naming 1 oak plank short" client_said 1 \
-	"Not enough items, so nothing was placed. You're short of 1 Oak Planks."
+	"Nothing was placed (missing 1 oak planks)"
 chat_shots 1 real-short-notice
 check "nothing went in on the server or either client" lands minecraft:oak_planks oak_planks 40 -60 45 59 -60 45 0
 check "the inventory still has its 19" eval '[[ $(items minecraft:oak_planks) == 19 ]]'
@@ -592,7 +592,7 @@ fi
 check "the second Line uses some mossy cobblestone" eval '((mossy > 0))'
 place_click 1
 check "with one mossy cobblestone fewer than it uses, the notice names 1 mossy cobblestone short" client_said 1 \
-	"Not enough items, so nothing was placed. You're short of 1 Mossy Cobblestone."
+	"Nothing was placed (missing 1 mossy cobblestone)"
 check "and nothing went in" eval '[[ $(server_count minecraft:cobblestone 40 -60 55 59 -60 55) == 0 &&
 	$(server_count minecraft:mossy_cobblestone 40 -60 55 59 -60 55) == 0 &&
 	$(clients_count 40 -60 55 59 -60 55 cobblestone) == "0 0" ]]'
@@ -605,7 +605,7 @@ draw 1 40 -60 60 44 -60 60
 check "with the mirror on, a Line of 5 draws 10 blocks" preview_is 1 10
 place_click 1
 check "with oak planks for only one of them, the notice names 5 oak planks short" client_said 1 \
-	"Not enough items, so nothing was placed. You're short of 5 Oak Planks."
+	"Nothing was placed (missing 5 oak planks)"
 check "and nothing went in" lands minecraft:oak_planks oak_planks 40 -60 60 59 -60 60 0
 check "the inventory still has its 5" eval '[[ $(items minecraft:oak_planks) == 5 ]]'
 
