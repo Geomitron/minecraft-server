@@ -672,8 +672,7 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
 
 **Building Planner 0.8.0** (the bullet "Building Planner 0.8.0" in "Decisions" above: Geo's comments c1 to c7 on
 1359). [building-planner.md](building-planner.md) is the design; each choice still Geo's carries an `OPEN:` mark
-naming the request that asks it. Steps 1 and 4 wait on Geo's answers, as each says; the others can start now. 0.8.0
-keeps protocol version 5 and changes nothing on the server.
+naming the request that asks it. 0.8.0 keeps protocol version 5 and changes nothing on the server.
 
 The steps come in this order, each small enough for one child. Step 2 may run beside any step but 6; the others change
 `step9.sh`, `step10.sh`, `filled.sh` or the language file, so they run one at a time. A step that changes what players
