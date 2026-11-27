@@ -800,8 +800,8 @@ final class ClientSession {
 
 	/**
 	 * The copy at the aim as its controls line tells it ({@link ControlsLine#copy}): its mode, whether it's locked, the
-	 * copies in a fixed set, whether the player has pasted in this dimension, why its paste would be refused, and
-	 * whether it pastes real blocks. Null while the copy isn't at the aim.
+	 * copies in a fixed set, whether the player has pasted in this dimension, and why its paste would be refused. Null
+	 * while the copy isn't at the aim.
 	 */
 	ControlsLine.CopyState copyState() {
 		CopyColour.Shown shown = copyShown();
@@ -809,8 +809,7 @@ final class ClientSession {
 			return null;
 		}
 		return new ControlsLine.CopyState(copyMode, clipboard.locked(),
-			clipboard.setFixed() ? clipboard.setSpots().size() : 0, pastes.latest() != null, shown.refusal(),
-			BuildingPlannerClient.realActs());
+			clipboard.setFixed() ? clipboard.setSpots().size() : 0, pastes.latest() != null, shown.refusal());
 	}
 
 	/**

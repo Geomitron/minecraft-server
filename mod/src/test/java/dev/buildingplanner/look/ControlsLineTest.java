@@ -429,58 +429,39 @@ class ControlsLineTest {
 	}
 
 	@Test
-	void withPlaceRealBlocksTheRightClickPlacesRealBlocksAndOffItPlacesGhostBlocks() {
-		assertEquals("[Right-click: place real blocks][Left-click: erase]" + HOLD + "[H: Lock (Off)]" + ESC,
-			shape(new ShapeState(true, false, false, Underway.NONE, STAIRS, true), DEFAULT));
-		assertEquals("[Right-click: start placing real blocks][Left-click: start erasing]" + HOLD + "[H: Lock (Off)]"
-			+ ESC, shape(new ShapeState(false, false, false, Underway.NONE, STAIRS, true), DEFAULT));
-		assertEquals("[Right-click: place real blocks]" + NUDGES + "[Left-click: erase]" + HOLD + "[H: Lock (On)]" + ESC,
-			shape(new ShapeState(true, true, false, Underway.NONE, STAIRS, true), DEFAULT));
+	void aShapeOfRealBlocksReadsAsAShapeOfGhostBlocks() {
+		// ControlsLine takes no "Place real blocks" setting: the lines read the same with it on (1411 [c2], [c3]).
 		assertEquals("[Right-click: place][Left-click: erase]" + HOLD + "[H: Lock (Off)]" + ESC,
-			shape(new ShapeState(true, false, false, Underway.NONE, STAIRS, false), DEFAULT));
+			shape(new ShapeState(true, false, false, Underway.NONE, STAIRS), DEFAULT));
 		assertEquals("[Right-click: start placing][Left-click: start erasing]" + HOLD + "[H: Lock (Off)]" + ESC,
-			shape(new ShapeState(false, false, false, Underway.NONE, STAIRS, false), DEFAULT));
+			shape(new ShapeState(false, false, false, Underway.NONE, STAIRS), DEFAULT));
+		assertEquals("[Hold Left Control: turn or flip][H: Lock (Off)]",
+			shape(new ShapeState(false, false, false, Underway.PLACING, STAIRS), DEFAULT));
 	}
 
 	@Test
-	void withPlaceRealBlocksTheCopysRightClickPastesRealBlocks() {
-		assertEquals("[Right-click: paste real blocks]" + COPY_END,
-			copy(new CopyState(CopyMode.OFF, false, 0, false, null, true), DEFAULT));
-		assertEquals("[Right-click: paste real blocks]" + NUDGES + LOCKED_END,
-			copy(new CopyState(CopyMode.OFF, true, 0, false, null, true), DEFAULT));
-		assertEquals("[Right-click: paste 4 copies as real blocks]" + TURN_MIRROR
-			+ "[H: Lock (Off)][R: Mode (Line)][Esc/Left-click: cancel]",
-			copy(new CopyState(CopyMode.LINE, false, 4, true, null, true), DEFAULT));
-		assertEquals("[Right-click: paste 1 copy as real blocks]" + TURN_MIRROR
-			+ "[H: Lock (Off)][R: Mode (Wall)][Esc/Left-click: cancel]",
-			copy(new CopyState(CopyMode.WALL, false, 1, false, null, true), DEFAULT));
-		// A set's first click pastes nothing, so it reads as without the setting.
-		assertEquals("[Right-click: set the start]" + TURN_MIRROR
-			+ "[H: Lock (Off)][R: Mode (Floor)][Esc/Left-click: close]",
-			copy(new CopyState(CopyMode.FLOOR, false, 0, false, null, true), DEFAULT));
+	void aPasteOfRealBlocksReadsAsAPasteOfGhostBlocks() {
+		assertEquals("[Right-click: paste]" + COPY_END, copy(new CopyState(CopyMode.OFF, false, 0, false, null), DEFAULT));
+		assertEquals("[Right-click: paste]" + NUDGES + LOCKED_END,
+			copy(new CopyState(CopyMode.OFF, true, 0, false, null), DEFAULT));
+		assertEquals("[Right-click: paste 3 copies]" + TURN_MIRROR + "[H: Lock (Off)][R: Mode (Line)][Esc/Left-click: cancel]",
+			copy(new CopyState(CopyMode.LINE, false, 3, true, null), DEFAULT));
+		assertEquals("[Right-click: paste 1 copy]" + TURN_MIRROR + "[H: Lock (Off)][R: Mode (Wall)][Esc/Left-click: cancel]",
+			copy(new CopyState(CopyMode.WALL, false, 1, false, null), DEFAULT));
 	}
 
 	@Test
-	void withPlaceRealBlocksARedCopySaysWhy() {
+	void aCopyTheInventoryDoesntCoverSaysWhyInTheRightClicksPlace() {
 		assertEquals("[Can't paste: not enough blocks]" + COPY_END,
-			copy(new CopyState(CopyMode.OFF, false, 0, false, Refusal.NOT_ENOUGH_BLOCKS, true), DEFAULT));
-		assertEquals("[Can't paste: too many blocks]" + TURN_MIRROR
+			copy(new CopyState(CopyMode.OFF, false, 0, false, Refusal.NOT_ENOUGH_BLOCKS), DEFAULT));
+		assertEquals("[Can't paste: not enough blocks]" + TURN_MIRROR
 			+ "[H: Lock (Off)][R: Mode (Floor)][Esc/Left-click: cancel]",
-			copy(new CopyState(CopyMode.FLOOR, false, 25, false, Refusal.TOO_MANY_BLOCKS, true), DEFAULT));
+			copy(new CopyState(CopyMode.FLOOR, false, 25, false, Refusal.NOT_ENOUGH_BLOCKS), DEFAULT));
 		assertEquals("[Can't paste: not enough blocks][Right-click: set the start]" + TURN_MIRROR
 			+ "[H: Lock (Off)][R: Mode (Line)][Esc/Left-click: close]",
-			copy(new CopyState(CopyMode.LINE, false, 0, false, Refusal.NOT_ENOUGH_BLOCKS, true), DEFAULT));
+			copy(new CopyState(CopyMode.LINE, false, 0, false, Refusal.NOT_ENOUGH_BLOCKS), DEFAULT));
 		assertEquals(List.of("Can't paste: not enough blocks"), collect(ControlsLine.copy(
-			new CopyState(CopyMode.OFF, false, 0, false, Refusal.NOT_ENOUGH_BLOCKS, true), DEFAULT), Look.WARNING));
-	}
-
-	@Test
-	void withPlaceRealBlocksAShapeUnderWayAndARedLockedPositionReadAsWithout() {
-		assertEquals("[Hold Left Control: turn or flip][H: Lock (Off)]",
-			shape(new ShapeState(false, false, false, Underway.PLACING, STAIRS, true), DEFAULT));
-		assertEquals("[H: Lock (Off)]", shape(new ShapeState(false, false, false, Underway.BREAKING, STAIRS, true), DEFAULT));
-		assertEquals("[Can't place: outside the world]" + NUDGES + "[Left-click: erase]" + HOLD + "[H: Lock (On)]"
-			+ ESC, shape(new ShapeState(true, true, true, Underway.NONE, STAIRS, true), DEFAULT));
+			new CopyState(CopyMode.OFF, false, 0, false, Refusal.NOT_ENOUGH_BLOCKS), DEFAULT), Look.WARNING));
 	}
 
 	@Test

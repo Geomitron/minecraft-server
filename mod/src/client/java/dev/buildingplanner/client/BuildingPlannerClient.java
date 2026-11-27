@@ -671,7 +671,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 			boolean red = boxed != null && boxed.colour().red();
 			return ControlsLine.shape(new ControlsLine.ShapeState(EffortlessShapes.singleMode(),
 				session.lock().on(EffortlessShapes.step()), red,
-				EffortlessShapes.underway(), turn, RealShape.places()), keys);
+				EffortlessShapes.underway(), turn), keys);
 		}
 		String sprintKey = keys.sprint();
 		EffortlessShapes.DisableShown shown = sprint ? EffortlessShapes.disableShown() : null;

@@ -1,10 +1,11 @@
 # "Place real blocks" (proposed for 0.9.0): the setting's row in "Settings", saved by its "Save" button, and what lands
 # on the server. Each shape is drawn and placed, and each copy pasted, with Planner1's own clicks while the setting
 # acts; a few checks send boxes of blocks with the driver's sendplace instead. With Planner1 in survival, its inventory
-# set with /clear and /item: the controls lines, Ctrl+Z and Ctrl+Y after a ghost shape and a Line of real blocks, the
-# break click erasing ghost blocks only, a whole Line from the main hand and the inventory and its one place sound,
-# nothing, the whole Line red and no sound for a Line 1 oak plank short, nothing for a Line of torches along a wall's
-# side, a Line of scaffolding up from the ground red above its first block and placed whole, a door, a bed, the mix,
+# set with /clear and /item: the controls lines reading as with the setting off, Ctrl+Z and Ctrl+Y after a ghost shape
+# and a Line of real blocks, the break click erasing ghost blocks only, a whole Line from the main hand and the
+# inventory and its one place sound, nothing, the whole Line red and no sound for a Line 1 oak plank short, nothing
+# for a Line of torches along a wall's side, a Line of scaffolding up from the ground red above its first block and
+# placed whole, a door, a bed, the mix,
 # the mirror's copies counted, stairs in a Wall turned with the wheel and mirrored, a real block and a cow in the way and
 # red, ghost blocks filled and left red, a copy of a hut with a door, a wall torch, a hanging lantern, a double slab,
 # candles and water, yellow, red 1 cobblestone short, pasted with one place sound for each player and around a real
@@ -341,20 +342,23 @@ real_switch 2
 save_settings 2
 check "Planner2 turns it on too" setting_saved 2 true
 
-# The controls lines with the setting on, oak planks in hand: Line's before its first click, and Single's.
+# The controls lines with the setting on, oak planks in hand, read as with it off (1411 [c3]): Line's before its first
+# click, and Single's; Line's after its first click with the Line below.
 stock minecraft:oak_planks 5
 aim 1 100 -60 40
-check "Line's controls line reads \"[Right-click: start placing real blocks]\"" eval \
-	'[[ $(val 1 modehud) == "[Right-click: start placing real blocks][Left-click: start erasing][H: Lock (Off)][Esc: exit mode]" ]]'
+check "Line's controls line reads \"[Right-click: start placing]\", as with the setting off" eval \
+	'[[ $(val 1 modehud) == "[Right-click: start placing][Left-click: start erasing][H: Lock (Off)][Esc: exit mode]" ]]'
 shots 1 real-line-controls
 drv 1 "ebmode SINGLE" "wait 5" > /dev/null
-check "Single's reads \"[Right-click: place real blocks]\"" eval \
-	'[[ $(val 1 modehud) == "[Right-click: place real blocks][Left-click: erase][H: Lock (Off)][Esc: exit mode]" ]]'
+check "Single's reads \"[Right-click: place]\"" eval \
+	'[[ $(val 1 modehud) == "[Right-click: place][Left-click: erase][H: Lock (Off)][Esc: exit mode]" ]]'
 shots 1 real-single-controls
 drv 1 "ebmode LINE" "wait 5" > /dev/null
 
 # Undo: a Line of 5 real oak planks from 100 -60 40 to 104 -60 40, after the ghost Line, makes no step of its own.
 draw 1 100 -60 40 104 -60 40
+check "after the Line's first click, its controls line reads \"[H: Lock (Off)]\", as with the setting off" eval \
+	'[[ $(val 1 modehud) == "[H: Lock (Off)]" ]]'
 place_click 1
 check "a Line of real blocks places 5 real oak planks, as both clients show" eval \
 	'arrive 104 -60 40 minecraft:oak_planks && lands minecraft:oak_planks oak_planks 100 -60 40 104 -60 40 5'
@@ -757,8 +761,8 @@ check "the copy rests on the ground east of the hut, from 120 -60 60 to 124 -57 
 copy_end="[Scroll: turn][Middle-click: mirror][H: Lock (Off)][R: Mode (Off)][Esc/Left-click: close]"
 check "with every item the paste uses, the copy is yellow, for the water no item places" \
 	drv 1 "await copycolour YELLOW"
-check "and the controls line reads \"[Right-click: paste real blocks]\"" eval \
-	'[[ $(val 1 modehud) == "[Right-click: paste real blocks]$copy_end" ]]'
+check "and the controls line reads \"[Right-click: paste]\", as with the setting off (1411 [c2])" eval \
+	'[[ $(val 1 modehud) == "[Right-click: paste]$copy_end" ]]'
 shots 1 real-copy-yellow
 hut_stock 78
 short_line="[Can't paste: not enough blocks]$copy_end"
@@ -808,7 +812,7 @@ hut_stock 78
 check "the copy rests from 130 -60 60 to 134 -57 64" drv 1 "await copy at 130,-60,60..134,-57,64"
 check "yellow, for the water and the stone in its way" drv 1 "await copycolour YELLOW"
 check "and after a paste, its controls line has \"[Hold Left Control: line up]\"" eval \
-	'[[ $(val 1 modehud) == "[Right-click: paste real blocks][Scroll: turn][Middle-click: mirror][Hold Left Control: line up][H: Lock (Off)][R: Mode (Off)][Esc/Left-click: close]" ]]'
+	'[[ $(val 1 modehud) == "[Right-click: paste][Scroll: turn][Middle-click: mirror][Hold Left Control: line up][H: Lock (Off)][R: Mode (Off)][Esc/Left-click: close]" ]]'
 place_click 1
 check "the click places all but the stone's block and the water, and the stone stays, as both clients show" eval \
 	'arrive 134 -57 64 minecraft:cobblestone && arrive 132 -58 62 minecraft:lantern &&
@@ -856,9 +860,9 @@ check "the copy rests from 150 -60 60 to 153 -60 60" drv 1 "await copy at 150,-6
 use_click 1
 drv 1 "lookat 159.5 -60 60.5" "wait 5" > /dev/null
 check "a Line of 3 copies" drv 1 "await set 3 copies"
-check "blue, with the controls line reading \"[Right-click: paste 3 copies as real blocks]\"" eval \
+check "blue, with the controls line reading \"[Right-click: paste 3 copies]\"" eval \
 	'drv 1 "await copycolour BLUE" > /dev/null &&
-	[[ $(val 1 modehud) == "[Right-click: paste 3 copies as real blocks][Scroll: turn][Middle-click: mirror][H: Lock (Off)][R: Mode (Line)][Esc/Left-click: cancel]" ]]'
+	[[ $(val 1 modehud) == "[Right-click: paste 3 copies][Scroll: turn][Middle-click: mirror][H: Lock (Off)][R: Mode (Line)][Esc/Left-click: cancel]" ]]'
 shots 1 real-copies-line
 place_click 1
 check "the second click sends one place of the 3 copies' 12 blocks" eval '[[ $(val 1 placesent) == 12 ]]'
@@ -992,7 +996,7 @@ drv 1 "window 854 480 2" "cmd gamemode survival @s" "ebmode LINE" "cmd tp @s 102
 	"cmd tp Planner2 103.5 -60 38.5 180 30" "wait 40" > /dev/null
 stock minecraft:oak_planks 5
 aim 1 100 -60 46
-check "Line's controls line reads \"[Right-click: start placing]\" again" eval \
+check "Line's controls line reads \"[Right-click: start placing]\", as with the setting on" eval \
 	'[[ $(val 1 modehud) == "[Right-click: start placing][Left-click: start erasing][H: Lock (Off)][Esc: exit mode]" ]]'
 draw 1 100 -60 46 104 -60 46
 place_click 1
@@ -1008,7 +1012,7 @@ box 100.5 -59 40.5 -59 104 40 -60
 check "a box around the real Line copies its 5 blocks" client_said 1 "Copied 5 blocks."
 drv 1 "lookat 102.5 -60 48.5" "wait 5" > /dev/null
 check "the copy rests from 100 -60 48 to 104 -60 48" drv 1 "await copy at 100,-60,48..104,-60,48"
-check "with its controls line reading \"[Right-click: paste]\" again" eval \
+check "with its controls line reading \"[Right-click: paste]\", as with the setting on" eval \
 	'[[ $(val 1 modehud) == "[Right-click: paste][Scroll: turn][Middle-click: mirror][H: Lock (Off)][R: Mode (Off)][Esc/Left-click: close]" ]]'
 place_click 1
 check "the paste writes ghost oak planks on both clients, sending an edit and no place" eval \

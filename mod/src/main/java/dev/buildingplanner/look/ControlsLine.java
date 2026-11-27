@@ -91,15 +91,10 @@ public final class ControlsLine {
 	/**
 	 * The copy at the aim as its line tells it: its mode, whether it's locked, the number of copies in a fixed set (0
 	 * before the first click in Line, Wall or Floor), whether the player has pasted in this dimension (so the copy can
-	 * line up with the latest paste), why the server would refuse its paste, or null, and whether the paste places real
-	 * blocks (see "Place real blocks": "A paste").
+	 * line up with the latest paste), and why the server would refuse its paste, or null. The line reads the same
+	 * whether the paste writes ghost blocks or places real blocks (1411 [c2]).
 	 */
-	public record CopyState(CopyMode mode, boolean locked, int set, boolean pasted, CopyColour.Refusal refusal,
-		boolean real) {
-		/** A copy whose paste writes ghost blocks. */
-		public CopyState(CopyMode mode, boolean locked, int set, boolean pasted, CopyColour.Refusal refusal) {
-			this(mode, locked, set, pasted, refusal, false);
-		}
+	public record CopyState(CopyMode mode, boolean locked, int set, boolean pasted, CopyColour.Refusal refusal) {
 	}
 
 	/**
@@ -257,21 +252,16 @@ public final class ControlsLine {
 	/**
 	 * A build mode as its line tells it (see "Locking and the first click": "Controls line"): whether the mode is Single,
 	 * whether a position is locked, whether the locked position is red (outside the world's build height or its border),
-	 * which shape is under way, the block in hand as the turning line tells it, and whether the right click places real
-	 * blocks (see "Place real blocks": "The preview").
+	 * which shape is under way, and the block in hand as the turning line tells it. The line reads the same whether the
+	 * right click places ghost blocks or real blocks (1411 [c3]).
 	 */
-	public record ShapeState(boolean single, boolean locked, boolean red, Underway underway, TurnState turn,
-		boolean real) {
-		/** A build mode whose right click places ghost blocks. */
-		public ShapeState(boolean single, boolean locked, boolean red, Underway underway, TurnState turn) {
-			this(single, locked, red, underway, turn, false);
-		}
+	public record ShapeState(boolean single, boolean locked, boolean red, Underway underway, TurnState turn) {
 	}
 
 	/**
 	 * A build mode's line, in every mode but Disable (see "Locking and the first click": "Controls line"). Before the
-	 * first click: the right click (placing in Single, starting a shape in the others, each with "real blocks" while it
-	 * places them, or in red why the locked position can't place), the nudge keys while it's locked, the left click (erasing in
+	 * first click: the right click (placing in Single, starting a shape in the others, or in red why the locked position
+	 * can't place), the nudge keys while it's locked, the left click (erasing in
 	 * Single, starting an erasing shape in the others), the turning controls, the lock key with the lock's state, and Esc,
 	 * which leaves the mode. During a shape, beside Effortless Building's own line, only the lock and the turning controls:
 	 * the nudge keys while it's locked, the turning controls during a shape drawn with the place click, and the lock key.
@@ -283,7 +273,8 @@ public final class ControlsLine {
 		List<Text> rects = new ArrayList<>();
 		boolean before = state.underway() == Underway.NONE;
 		if (before) {
-			rects.add(state.red() ? reason(SINGLE + ".outside") : hint(RIGHT, placing(state)));
+			rects.add(state.red() ? reason(SINGLE + ".outside")
+				: hint(RIGHT, state.single() ? TURN + ".place" : SHAPE + ".start_placing"));
 		}
 		if (state.locked()) {
 			Text nudge = nudge(keys);
@@ -302,17 +293,6 @@ public final class ControlsLine {
 			rects.add(hint(Translated.of(SHAPE + ".esc", Look.PLAIN), SHAPE + ".exit_mode"));
 		}
 		return new Line(null, List.copyOf(rects));
-	}
-
-	/**
-	 * The right click's action before a shape's first click: placing in Single and starting a shape in the others, of
-	 * real blocks while the right click places them ("place real blocks", "start placing real blocks").
-	 */
-	private static String placing(ShapeState state) {
-		if (state.single()) {
-			return state.real() ? SHAPE + ".place_real" : TURN + ".place";
-		}
-		return state.real() ? SHAPE + ".start_placing_real" : SHAPE + ".start_placing";
 	}
 
 	/**
@@ -344,7 +324,7 @@ public final class ControlsLine {
 
 	/**
 	 * The copy at the aim's line (see "Building Planner's mouse modes"), with no label: the right click (in Off the paste; in Line, Wall and Floor before the first click setting the start, and
-	 * after it the set's paste with its count; each paste "as real blocks" while it places them), with the reason in red
+	 * after it the set's paste with its count), with the reason in red
 	 * in the paste's place, or before setting the start, while the copy is red; the nudge keys while it's locked; the wheel; the middle click; the sprint key while
 	 * the copy follows the aim and there's a paste to line up with (a locked copy, and a set's fixed first copy, don't
 	 * line up); the lock key with the lock's state; the mode key with the mode; and Esc and the left click, which close
@@ -353,12 +333,10 @@ public final class ControlsLine {
 	public static Line copy(CopyState state, Keys keys) {
 		List<Text> rects = new ArrayList<>();
 		boolean set = state.set() > 0;
-		String real = state.real() ? "_real" : "";
 		if (set) {
 			rects.add(state.refusal() != null ? refusal(state.refusal())
-				: hint(RIGHT, state.set() == 1 ? Translated.of(COPY + ".paste_set_one" + real, Look.ACTION)
-					: Translated.of(COPY + ".paste_set" + real, Look.ACTION,
-						new Literal(String.valueOf(state.set())))));
+				: hint(RIGHT, state.set() == 1 ? Translated.of(COPY + ".paste_set_one", Look.ACTION)
+					: Translated.of(COPY + ".paste_set", Look.ACTION, new Literal(String.valueOf(state.set())))));
 		} else if (state.mode() != CopyMode.OFF) {
 			// The first click still fixes the first copy while the copy is red, so it stays, after the reason.
 			if (state.refusal() != null) {
@@ -366,7 +344,7 @@ public final class ControlsLine {
 			}
 			rects.add(hint(RIGHT, COPY + ".start"));
 		} else {
-			rects.add(state.refusal() != null ? refusal(state.refusal()) : hint(RIGHT, COPY + ".paste" + real));
+			rects.add(state.refusal() != null ? refusal(state.refusal()) : hint(RIGHT, COPY + ".paste"));
 		}
 		if (state.locked()) {
 			Text nudge = nudge(keys);

@@ -803,9 +803,8 @@ left click (1238 Q2 A):
   Line, Wall and Floor before the first click the reason goes in the same place, before "[Right-click: set the
   start]", which stays since that click still fixes the first copy: "[Can't paste: too many blocks][Right-click: set
   the start][Scroll: turn]...";
-- while "Place real blocks" acts, the paste's control says it places real blocks, "[Right-click: paste real blocks]",
-  "[Right-click: paste 4 copies as real blocks]" and "[Right-click: paste 1 copy as real blocks]", and a red copy's
-  reason may also be "[Can't paste: not enough blocks]" (see "A paste" under "Place real blocks").
+- while "Place real blocks" acts, the lines read as without it (1411 [c2]), and a red copy's reason may also be
+  "[Can't paste: not enough blocks]" (see "A paste" under "Place real blocks").
 
 Each key goes by its name as Controls shows it ("H", "Page Up", "Left Control"), and a key held down as "Hold" and its
 name ("Hold Left Control"). The six nudge keys make one control, "<keys>: nudge": the four along the ground show as
@@ -2021,9 +2020,7 @@ torch standing on a block the shape also builds under it, draws red though the s
 draws each block in the state the click sends (`RealShape`), so a block that fills a ghost block shows the ghost
 block's turn while "Match ghost blocks" acts. The game works the shape out once a client tick for each set of positions the preview shows, and
 the place sound (hook E41) plays when `RealPlace`'s count of the inventory covers the blocks going in. The controls
-line shows the state on the right click's own control, by Geo's rule for the lines (1313 [c1]):
-"[Right-click: place real blocks]" in Single and "[Right-click: start placing real blocks]" before a shape's first
-click, in the wording Geo approves in build step 5.
+lines read as without the setting (1411 [c3]), in Single, before a shape's first click and after it.
 
 **A paste** (1372 Q6 B). While the setting acts, the copy's right click (hook M2; see "Copy and paste") places the
 copy's blocks as real blocks instead of writing ghost blocks, by the rules for a shape above: within 64 blocks of the
@@ -2057,10 +2054,9 @@ out once a client tick, as the copy and the inventory may change between ticks.
 
 While the copy is red, the reason shows in red in place of the right click's control, "[Can't paste: too many
 blocks]" or "[Can't paste: not enough blocks]", and a right click pastes nothing and sends nothing, as for a red copy
-of ghost blocks. Otherwise the right click's control says the paste places real blocks, "[Right-click: paste real
-blocks]", "[Right-click: paste 4 copies as real blocks]" and "[Right-click: paste 1 copy as real blocks]", in the
-wording Geo approves in build step 5. Before a Line, Wall or Floor's first click, which pastes nothing, the control
-reads "[Right-click: set the start]" as without the setting, after the reason while the copy is red.
+of ghost blocks. Otherwise the copy's lines read as without the setting (1411 [c2]): "[Right-click: paste]",
+"[Right-click: paste 4 copies]" and "[Right-click: paste 1 copy]", and before a Line, Wall or Floor's first click
+"[Right-click: set the start]", after the reason while the copy is red.
 
 **Undo** (1372 Q5 B). Ctrl+Z and Ctrl+Y undo and redo only changes to ghost blocks: a shape or a paste of real blocks
 makes no step on the player's undo list and leaves the redo list as it is (see "Undo"). So Ctrl+Z right after a shape
@@ -3210,8 +3206,8 @@ driver's `realstates`):
 - Planner1's "Settings" has the row "Place real blocks" right after "Match ghost blocks", off at first. A click on its
   switch turns it on and saves nothing until "Save" saves `place-real-blocks=true`; the row shows it on when the screen
   opens again and after a restart. With the mouse on its label, the row shows its tooltip.
-- The controls line reads "[Right-click: start placing real blocks]" before a Line's first click, and Single's reads
-  "[Right-click: place real blocks]".
+- The controls lines read as with the setting off: "[Right-click: start placing]" before a Line's first click,
+  "[H: Lock (Off)]" after it, and "[Right-click: place]" in Single.
 - After a Line of ghost stone bricks drawn with the setting off and then a Line of 5 real oak planks, Ctrl+Z undoes the
   ghost Line on both clients and leaves the real blocks, and Ctrl+Y redoes it; with no change to ghost blocks left to
   undo, Ctrl+Z says "Nothing to undo." and the real blocks stay.
@@ -3256,8 +3252,8 @@ driver's `realstates`):
 - A hut of cobblestone built with commands (a floor, walls and a roof, an oak door, and inside a wall torch, a lantern
   hanging from the roof, a double stone slab, 3 candles and a water source in the floor: 86 blocks), copied with the
   radial menu's Copy button and a box of three left clicks, as `step9.sh` copies its house. On the ground beside it,
-  with exactly the items its paste uses, the copy shows yellow (for the water) with "[Right-click: paste real
-  blocks]"; with one cobblestone fewer it's red with "[Can't paste: not enough blocks]", and a right click sends
+  with exactly the items its paste uses, the copy shows yellow (for the water) with "[Right-click: paste]", as with
+  the setting off; with one cobblestone fewer it's red with "[Can't paste: not enough blocks]", and a right click sends
   nothing and places nothing. With the items again, the right click sends one `place` of the copy's 86 blocks and no
   edit: on the server each block is the hut's, as `/execute if blocks` compares them once the hut's water is taken
   out, with the door's two halves, the torch on its wall, the lantern hanging, the double slab and the 3 candles, and
@@ -3267,7 +3263,7 @@ driver's `realstates`):
   after the first paste, and the paste leaves the stone and places the rest, using 78 cobblestone.
 - A Floor of 5 by 5 copies of the hut, 2,150 blocks, draws red with "[Can't paste: too many blocks]", and its second
   click sends nothing and places nothing.
-- A Line of 3 copies of a row of 4 real oak planks shows blue with "[Right-click: paste 3 copies as real blocks]" and
+- A Line of 3 copies of a row of 4 real oak planks shows blue with "[Right-click: paste 3 copies]" and
   sends one `place` of all 12 blocks at its second click; all 12 are real oak planks on the server, using the 12 in the
   inventory.
 - Beside a stone column east of it, Planner1's own right click in Disable, facing north, places a door hinged on the
@@ -3284,9 +3280,9 @@ driver's `realstates`):
   again. Planner2, who isn't an operator, draws and places a Line of 7 within those 16 blocks with its own clicks:
   nothing goes in, and Planner2 gets the notice.
 - Turned off with the switch and "Save", the setting saves `place-real-blocks=false`, Line's controls line reads
-  "[Right-click: start placing]" again, and a Line draws ghost blocks on both clients, places no real block and uses no
-  item. A copy's line reads "[Right-click: paste]" again, and its paste writes ghost blocks on both clients, sending
-  an edit and no `place`, places no real block and uses no item.
+  "[Right-click: start placing]" as with it on, and a Line draws ghost blocks on both clients, places no real block
+  and uses no item. A copy's line reads "[Right-click: paste]" as with it on, and its paste writes ghost blocks on
+  both clients, sending an edit and no `place`, places no real block and uses no item.
 - Neither client's log has a self-check warning, before the server starts again or after.
 - Shots, at 854 by 480 and 1920 by 1080, GUI scale 2: "Settings" with the row on and with its tooltip, the controls
   line in Line and in Single, the whole Line red for 1 oak plank short with its icons, the Line through the stone and
@@ -3326,13 +3322,11 @@ short, for one copy and for a set of two, while a block that doesn't go in needs
 needing no item of its own. `PayloadsTest` covers `place`: a shape's and a
 paste's round trip, a `place` of as many blocks as an `edit` carries fitting the room it's registered with, a hit that
 isn't a position ending the connection, and the cap's notices grouping their digits ("2,001"). `ControlsLineTest`
-covers the shape's lines with the setting on and off: the right click's control in Single and before a shape's first
-click, with the lock off and on, and a shape under way and a red locked position reading as they do without the
-setting; and the copy's lines with the setting on: "[Right-click: paste real blocks]" following the aim and locked,
-"[Right-click: paste 4 copies as real blocks]" and "[Right-click: paste 1 copy as real blocks]" after a set's first
-click, "[Right-click: set the start]" before it as without the setting, and the red reasons "[Can't paste: not enough
-blocks]" (following the aim, and before "[Right-click: set the start]") and "[Can't paste: too many blocks]" for a
-set, in the warning's colour.
+covers the lines of a shape and a copy of real blocks reading as those of ghost blocks: the shape's right click's
+control in Single and before a shape's first click, and a shape under way; the copy's "[Right-click: paste]"
+following the aim and locked, and "[Right-click: paste 3 copies]" and "[Right-click: paste 1 copy]" after a set's
+first click; and the red reason "[Can't paste: not enough blocks]" (following the aim, for a set, and before
+"[Right-click: set the start]"), in the warning's colour.
 
 `local.sh`, servers without Building Planner (proposed for 0.10.0; the checks follow the options the requests
 recommend), on the dev server started with the add-on left off its classpath (`start_server "$ADDON"
