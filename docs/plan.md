@@ -583,6 +583,11 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
   - a shape or a paste of real blocks makes no undo step, so Ctrl+Z right after one undoes the player's newest change
     to ghost blocks, made before it;
   - a real block that fills a ghost block takes it out of the layer, as any real block does.
+
+  Asked in 1408, Geo picked, for a shape drawn with torches (or signs, banners, heads or coral fans) aimed at the side
+  of a wall, "Nothing, as now." (Q1 C): each block keeps Effortless Building's standing form, which can't stay beside
+  a wall, so nothing goes in; and for a block another player puts in a spot between the preview and the click, "No:
+  it's skipped silently, like the spots the preview already showed red." (Q2 A).
 - **Building Planner 0.10.0** works on servers that don't run Building Planner, as Geo asked in the trial of 0.7.0
   (1359, c4): "I have ideals for this being a client-side only mod that could be used on other servers that don't need
   other people to be able to see your own ghost blocks." Asked in 1368, Geo picked:
