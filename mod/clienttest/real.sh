@@ -384,11 +384,11 @@ check "client 1 starts a session on hello" drv 1 "await session" "await noscreen
 check "client 2 starts a session on hello" drv 2 "await session" "await noscreen"
 
 # Planner1 in survival, facing north 3.5 blocks south of each Line, with Planner2 nearby; the Lines run eastward, 5
-# blocks apart. The animals the world made with its land are killed, so none is in a shape's way. Both windows are 854
-# by 480 at GUI scale 2.
+# blocks apart. The game spawns no mobs, and the animals the world made with its land are killed, so none is in a
+# shape's way. Both windows are 854 by 480 at GUI scale 2.
 drv 1 "window 854 480 2" "cmd setworldspawn 0 -60 0" "cmd gamemode survival @s" "cmd tp @s 102.5 -60 36.5 180 30" \
-	"cmd tp Planner2 103.5 -60 35.5 180 30" "ebmode LINE" "wait 40" "cmd kill @e[type=!minecraft:player]" \
-	"wait 10" > /dev/null
+	"cmd tp Planner2 103.5 -60 35.5 180 30" "ebmode LINE" "cmd gamerule spawn_mobs false" "wait 40" \
+	"cmd kill @e[type=!minecraft:player]" "wait 10" > /dev/null
 drv 2 "window 854 480 2" "ebmode DISABLED" > /dev/null
 
 # A ghost shape for undo, drawn with the setting off as it starts: a Line of ghost stone bricks from 100 -60 44 to
@@ -747,10 +747,13 @@ drv 1 "close" "wait 10" > /dev/null
 check "the list's Info HUD again takes the material list panel off the screen" eval '[[ $(val 1 matpanel) == hidden ]]'
 
 # The release request's shots of a shape short of items, then placed: the mix's Line at z 55 again, 1 short of the item
-# it uses fewer of, with the other covered, then with both covered.
-drv 1 "setmix minecraft:cobblestone:80,minecraft:mossy_cobblestone:20" "wait 5" > /dev/null
+# it uses fewer of, with the other covered, then with both covered. Planner1 stands southeast of the Line and draws it
+# from its east end, so the shots show the whole Line, up to its west end at the crosshair; Planner2 stands behind
+# Planner1, out of the shots, and the animals the world made with its land that walked in are killed.
+drv 1 "setmix minecraft:cobblestone:80,minecraft:mossy_cobblestone:20" "cmd tp @s 63.5 -60 58.5 90 30" \
+	"cmd tp Planner2 66.5 -60 60.5 90 30" "cmd kill @e[type=!minecraft:player]" "wait 20" > /dev/null
 stock minecraft:cobblestone 64
-draw 1 40 -60 55 59 -60 55
+draw 1 59 -60 55 40 -60 55
 check "the mix's Line at z 55 draws 20 blocks again" preview_is 1 20
 shown=$(mix_states 55)
 cobble=$(count_of minecraft:cobblestone "$shown")
@@ -788,7 +791,7 @@ check "the click places the Line, each block the one the preview showed, as both
 check "and the panel goes with the shape" eval '[[ $(val 1 clickpanel) == hidden ]]'
 shot_box 1 "the placed Line" 40 -60 55 59 -60 55
 shots 1 real-release-placed
-drv 1 "setmix" > /dev/null
+drv 1 "setmix" "cmd tp Planner2 50.5 -60 45.5 180 30" > /dev/null
 
 # With the mirror across x 50, a Line of 5 from 40 to 44 at z 60 and its copy from 55 to 59 need 10 oak planks.
 drv 1 "cmd tp @s 49.5 -60 56.5 180 30" "wait 20" "ebmirror 50" "wait 5" > /dev/null
@@ -1239,11 +1242,11 @@ check "and gets the notice for one block" client_said 2 "1 block wasn't placed (
 drv 1 "cmd gamemode creative Planner2" > /dev/null
 
 # The cap, in creative: 2,001 blocks from 40 -60 100 to 59 -60 199 and at 40 -60 200, then the 2,000 alone and right
-# after them 1 more, with both players east of the blocks, out of their way and within 64 blocks of every one. The
-# game spawns no mobs until the cap's checks end, and the animals the world made as it made the land are killed right
-# before the 2,000, so nothing is in the blocks' way.
+# after them 1 more, with both players east of the blocks, out of their way and within 64 blocks of every one, and
+# the animals the world made as it made the land around them killed right before the 2,000, so nothing is in the
+# blocks' way.
 drv 1 "cmd gamemode creative @s" "cmd tp @s 61.5 -60 150.5 90 30" "cmd tp Planner2 62.5 -60 140.5 90 30" \
-	"cmd gamerule spawn_mobs false" "wait 60" > /dev/null
+	"wait 60" > /dev/null
 stock minecraft:oak_planks 1
 # Each notice's shots come once the commands' chat lines have faded.
 drv 1 "wait 210" > /dev/null
@@ -1272,7 +1275,6 @@ check "on the server, all 2,000 are real oak planks and the 1 more isn't placed,
 echo "  on the server, $(server_count minecraft:oak_planks 40 -60 100 59 -60 200) oak planks from 40 -60 100 to 59 -60 200" \
 	>> /out/checks.log
 check "and they used no item" eval '[[ $(items minecraft:oak_planks) == 1 ]]'
-drv 1 "cmd gamerule spawn_mobs true" > /dev/null
 
 check "neither client's log has a self-check warning" eval \
 	'! grep -F "Self-check:" /out/client1.log /out/client2.log >> /out/checks.log'

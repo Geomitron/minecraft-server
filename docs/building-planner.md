@@ -3267,10 +3267,10 @@ and `/item`. Planner1 and Planner2 turn the setting on in "Settings" with real c
 placed, and each copy pasted, with the player's own clicks, which send it as one `place` while the setting acts (the
 driver's `placesent`, the blocks of each `place` the click sent). A few checks send boxes of
 blocks with the driver's `sendplace` instead, with a face and a hit of their own. Each shape is drawn by a player
-standing south of it, with nothing real between their eyes and its clicks, and the script kills the animals the world
-made with its land, so none is in a shape's way. "On the server" means the dev server's own world, as `/execute if
-block` finds it (the script's `server_count`), and every real block checked there is checked on both clients too (the
-driver's `realstates`):
+standing south of it, with nothing real between their eyes and its clicks, and the script turns off the game's spawning
+of mobs and kills the animals the world made with its land, so none is in a shape's way. "On the server" means the dev
+server's own world, as `/execute if block` finds it (the script's `server_count`), and every real block checked there is
+checked on both clients too (the driver's `realstates`):
 
 - Planner1's "Settings" has the row "Place real blocks" right after "Match ghost blocks", off at first. A click on its
   switch turns it on and saves nothing until "Save" saves `place-real-blocks=true`; the row shows it on when the screen
