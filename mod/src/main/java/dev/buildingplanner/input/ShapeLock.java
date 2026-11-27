@@ -1,6 +1,8 @@
 package dev.buildingplanner.input;
 
 import java.util.List;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.phys.BlockHitResult;
@@ -53,6 +55,25 @@ public final class ShapeLock {
 	 */
 	public static boolean drawnBeforeFirstClick(boolean controlsActive, int size) {
 		return controlsActive && size == 1;
+	}
+
+	/**
+	 * Hook E38: the positions the red frame for the left click shows on before the first click (see "Locking and the
+	 * first click": "The first click's blocks"). {@code leftClick} gives where a left click would start erasing, the
+	 * aimed block with its copies by the mirror, radial mirror and array, or none while the player aims at nothing.
+	 * Nothing shows while the lock's controls aren't active (no session, Disable, a mouse mode on, or no item that
+	 * places a block in hand), during a shape (a step past 0), or while the first position is locked, where both
+	 * clicks start, which shows the copy's box. In Single, a left click erases ghost blocks and nothing else, so only
+	 * the ghost blocks among the positions ({@code ghost}) show it (1369); in the other modes, every position, where
+	 * the erasing shape starts.
+	 */
+	public static List<BlockPos> framed(boolean controlsActive, boolean single, int step, boolean firstLocked,
+		Supplier<List<BlockPos>> leftClick, Predicate<BlockPos> ghost) {
+		if (!controlsActive || step != 0 || firstLocked) {
+			return List.of();
+		}
+		List<BlockPos> positions = leftClick.get();
+		return single ? positions.stream().filter(ghost).toList() : positions;
 	}
 
 	/**

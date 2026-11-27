@@ -278,7 +278,7 @@ Effortless Building, under `common/src/main/java/nl/requios/effortlessbuilding/`
 | E32 | `buildpipeline/BuildPipelineClient.java`, `handleClick` and `getPreviewBlocks` | `@WrapOperation` on private static `resolveFirstClickPos`, beside E9's wrap of `ClientLevel.clip` | While a first position is locked (`ShapeLock`), the first click and the first click's preview take the locked position, and E9's aim returns the hit it was locked with, moved by the nudges, so `getFirstClickHit()` gives E1 that hit's face (see "Locking and the first click"). |
 | E33 | `buildmode/TwoClicksBuildMode.java` field `firstBlockEntry`; `buildmode/ThreeClicksBuildMode.java` fields `firstBlockEntry` and `secondBlockEntry`; `buildpipeline/BuildPipelineClient.java` private static field `firstClickHit` | `@Accessor` on each (accessor mixins, getter and setter) | During a shape, a nudge that moves the whole shape moves the positions its clicks have set, and the first click's hit with them, by replacing each with a `BlockEntry` (or hit) one block over; `findCoordinates` reads them each frame, so the preview and the finished shape follow (see "Locking and the first click"). |
 | E37 | `buildmode/TwoClicksBuildMode.java`, `findCoordinates`; `buildmode/ThreeClicksBuildMode.java`, `onClick` and `findCoordinates` | `@WrapOperation` on each call to the abstract `findSecondPos(Player, BlockPos, boolean)`, and on the call to `findThirdPos(Player, BlockPos, BlockPos, boolean)` in `ThreeClicksBuildMode.findCoordinates` | While the step under way is locked (`ShapeLock`), each call returns the step's locked position, moved by the nudges, instead of the position the aim finds, so the preview, the click that sets a three-click mode's second position (`onClick` at its second click) and the finished shape take it. These are the only places a mode finds its second and third positions (see "Locking and the first click"). |
-| E38 | `render/BlockPreviewRenderer.java`, `render` | `@Inject` at tail; `@Invoker` on private static `renderBoundingBoxFaces`, `renderEdgeQuads` and `computeBorderEdges`, whose `Set<EdgeKey>` of a private record the invokers name as a raw `Set` | Before the first click, draw the positions a left click would start erasing from in Effortless Building's own erase look, red sides and a red outline, beside the first click's block (see "Locking and the first click": "The first click's blocks"). |
+| E38 | `render/BlockPreviewRenderer.java`, `render`; private static `renderBoundingBoxFaces`, `renderEdgeQuads` and `computeBorderEdges` | `@Inject` at tail; `@Invoker` on each of the three (`BlockPreviewRendererInvoker`), whose `Set<EdgeKey>` of a private record the invokers name as a raw `Set` | Before the first click, draw the positions a left click would start erasing from (`ShapeLock.framed`: the aimed block and its copies, in Single only the ghost blocks among them) in Effortless Building's own erase look, red sides and a red outline, beside the first click's block the method drew (see "Locking and the first click": "The first click's blocks"). The method's earlier returns come where nothing is aimed at or the lock's controls aren't active (hook E30), where no frame shows either. |
 | E39 | `screen/ClientConfigScreen.java`, the constructor; `screen/RadialMenu.java`, `MenuButton`'s constructor | `@ModifyArg` on `Component.translatable` in the constructor; `@ModifyArg` on `I18n.get` in `MenuButton`'s constructor when its key is `effortlessbuilding.action.open_client_config` | The screen's title and the radial menu's button read "Settings" (`buildingplanner.ui.settings`) instead of Effortless Building's "Visual Settings", on any server (see "Settings"). |
 | E34 | `screen/RadialMenu.java`, `extractRenderState` | `@ModifyExpressionValue` on the `hasPermission(Permissions.COMMANDS_GAMEMASTER)` check before the "Functional Settings" button | During a session, the button isn't added, for operators too: it changes Effortless Building's settings on the server, which this server doesn't run, and "Show or hide ghost blocks" takes its place under the wrench (see "The radial menu's buttons and sliders"). |
 | E35 | `screen/RadialMenu.java`, private `performAction` | `@WrapWithCondition` on `LocalPlayer.sendOverlayMessage` after `BuildModes.setBuildMode` | During a session, choosing a mode doesn't put its name in the action bar, since the name shows beside the hotbar (see "The build mode's name and the held item's name"). |
@@ -1558,11 +1558,16 @@ have the red frame block around it (the same thing that shows once first left cl
 at the same time as the hovering placement block frame"). That block is the aimed one, a ghost block or a real block
 by hook E9's aim, since Effortless Building starts a shape drawn with the break click on the aimed block
 (`resolveFirstClickPos` returns the hit block for `BREAKING`), with its copies by the mirror, radial mirror and array
-(`BuildPipelineClient.CLIENT.processBlocks` on a `BREAKING` set). Hook E38 draws it after the preview with Effortless
-Building's own drawing (`renderBoundingBoxFaces`, `renderEdgeQuads`). In Single, a left click on a real block erases
-nothing, so there the red frame shows only on a ghost block, and in the other modes on any aimed block, where the
-erasing shape starts ("Yes, but on ghost blocks only, since single does erase ghost blocks", Geo, 1369 Q1). While the first click's position is locked, both clicks start at the locked position,
-which shows the copy's box (see "Colours"), so no red frame shows.
+(`BuildPipelineClient.CLIENT.processBlocks` on a `BREAKING` set), only those it leaves valid. Hook E38 draws it after
+the preview with Effortless Building's own drawing (`renderBoundingBoxFaces`, `renderEdgeQuads`). In Single, a left
+click on a real block erases nothing, so there the red frame shows only on a ghost block, and in the other modes on any
+aimed block, where the erasing shape starts ("Yes, but on ghost blocks only, since single does erase ghost blocks",
+Geo, 1369 Q1). With the mirror, radial mirror or array on in Single, it shows on each of those positions that holds a
+ghost block, the ones a left click erases, whether or not the aimed one does. A pure function, `ShapeLock.framed`,
+holds the rule: no frame while the lock's controls aren't active (above), during a shape, or while the first click's
+position is locked, since both clicks then start at the locked position, which shows the copy's box (see "Colours");
+otherwise the positions a left click would start from, in Single only the ghost blocks among them while ghost blocks
+show. Hook E38 traces the aim for those positions only while a frame can show.
 
 **Locking and nudging.** H ("Lock or unlock") locks the position the aim is setting at that moment, for the step
 under way (Geo's comment c3 on 1359): before the first click, the first click's position (980 Q4 A); during a shape,
@@ -2872,6 +2877,15 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   click places the 12 stairs as one edit, on both clients, and ends the lock. The Line is shot before the second click
   at 854 by 480 and 1920 by 1080, GUI scale 2. Then, from a first click on the grass with the far end aimed 4 blocks
   east and locked, Up, across the line, moves the whole Line of 5 a block north, where the second click places it.
+- The red frame for the left click, with oak stairs, facing north: what the last whole frame framed in red (the
+  driver's `redframe`: the positions drawn in the break look while no shape is under way, which only hook E38 draws)
+  is, in Single aimed at a ghost stone brick's top, that ghost block, beside the stair the preview draws on it;
+  aimed at the grass, nothing, with the stair at the aim; with Effortless Building's mirror on, the ghost block and not
+  its copy over the grass, and both copies once the copy's position holds a ghost block too. In Wall, aimed at a real
+  stone's top, it's the stone, beside the stair the preview draws on it; aimed at the grass, the grass block; aimed at
+  the ghost block, the ghost block; with the mirror on, the grass block and its copy; once H locks the first corner,
+  nothing, and unlocked again, both copies; during the wall, after its first click, nothing; and in Disable, nothing.
+  Single on the ghost block and Wall on the stone are shot at 854 by 480 and 1920 by 1080, GUI scale 2.
 - One ghost block, turning and flipping (step 16): with oak stairs in Single mode, facing north, a notch up with Left
   Ctrl held turns the stair a quarter turn clockwise, to face east (the driver's `heldturn`), and the hotbar slot
   stays; locked, the preview draws the stair facing east (the driver's `previewstate`); the stair placed then faces
@@ -3355,7 +3369,11 @@ click, unlocking ending every step's lock, the finder each mode's steps use and 
 one block long and longer, Wall one block wide and wider, `findFloor`'s and `findHeight`'s steps), a nudge in each,
 setting the step or moving the whole shape, a first position locked before the first click moving with the whole
 shape, a nudge before the first click moving the position and the hit point one block, and a shape's first click
-moving with a nudge.
+moving with a nudge. It also covers where the red frame for the left click shows (`ShapeLock.framed`): in Single on an
+aimed ghost block and not on a real block, and with the mirror's copies on only the ghost blocks among them; in the
+other modes on an aimed ghost block, a real block and each copy; and nowhere while the first position is locked,
+during a shape, in Disable, with a mouse mode on, without a session or a block in hand, or aiming at nothing, where it
+doesn't trace the aim either.
 `EscStepsTest` covers the order of Esc's steps (see "Esc"): during a copy's set, dropping the set, putting the copy
 away, Disable and the pause; in Delete, ending its box, clearing the marks and ending Delete; a box ending before
 anything else; a shape cancelled before Disable; and the pause in Disable with no mode on.

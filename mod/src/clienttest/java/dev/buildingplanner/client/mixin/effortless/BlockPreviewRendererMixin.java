@@ -17,9 +17,9 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * Tells the driver which positions Effortless Building's preview draws, for its {@code preview}, and the state of each
- * block it draws, for its {@code previewstate}. In a mixin config of its own that isn't required, since a check may
- * start a client without Effortless Building.
+ * Tells the driver which positions Effortless Building's preview draws, for its {@code preview}, the state of each
+ * block it draws, for its {@code previewstate}, and the positions hook E38 frames in red, for its {@code redframe}. In
+ * a mixin config of its own that isn't required, since a check may start a client without Effortless Building.
  */
 @Mixin(value = BlockPreviewRenderer.class, remap = false)
 abstract class BlockPreviewRendererMixin {
@@ -27,6 +27,12 @@ abstract class BlockPreviewRendererMixin {
 	private static void buildingplanner_clienttest$drawing(PoseStack poseStack, SubmitNodeCollector collector,
 		List<BlockPos> positions, double camX, double camY, double camZ, boolean breaking, boolean unbreakable,
 		CallbackInfo ci) {
+		if (breaking && BuildPipelineClient.getBuildState() == null) {
+			// Effortless Building draws in the break look only during a shape drawn with the break click; before a
+			// shape, only hook E38 does, for the red frame for the left click.
+			PreviewProbe.drawingFrame(positions);
+			return;
+		}
 		PreviewProbe.drawing(positions);
 		if (!breaking && !unbreakable) {
 			// The method draws a block to place red where it's marked missing, as Disable's turned block that can't stay.

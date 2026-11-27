@@ -714,6 +714,11 @@ public final class Driver implements ClientModInitializer {
 				// it can't place, as x,y,z, or none.
 				return PreviewProbe.red();
 			}
+			case "redframe" -> {
+				// redframe: the positions the red frame for the left click covered in the last whole frame (hook
+				// E38), as x,y,z, or none.
+				return PreviewProbe.frame();
+			}
 			case "previewstate" -> {
 				// previewstate x y z: the state Effortless Building's preview drew there in the last whole frame, with its
 				// properties, such as minecraft:oak_stairs[facing=east,...], or none.

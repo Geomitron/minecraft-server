@@ -12,14 +12,17 @@ import net.minecraft.world.level.block.state.BlockState;
 /**
  * What Effortless Building's preview drew in the last whole frame: the positions it drew as blocks to place or break,
  * as its {@code renderBoundingBoxFaces} gets them, for the driver's {@code preview}, and the state it drew each block
- * in, after the entry's mirror and turn, for its {@code previewstate}, and the positions it drew red, for its
- * {@code previewred}.
+ * in, after the entry's mirror and turn, for its {@code previewstate}, the positions it drew red, for its
+ * {@code previewred}, and the positions hook E38 drew in the break look before a shape, the red frame for the left
+ * click, for its {@code redframe}.
  */
 public final class PreviewProbe {
 	private static List<BlockPos> drawing = new ArrayList<>();
 	private static List<BlockPos> drawn = List.of();
 	private static List<BlockPos> redDrawing = new ArrayList<>();
 	private static List<BlockPos> redDrawn = List.of();
+	private static List<BlockPos> frameDrawing = new ArrayList<>();
+	private static List<BlockPos> frameDrawn = List.of();
 	private static Map<BlockPos, BlockState> statesDrawing = new HashMap<>();
 	private static Map<BlockPos, BlockState> statesDrawn = Map.of();
 
@@ -32,6 +35,8 @@ public final class PreviewProbe {
 		drawing = new ArrayList<>();
 		redDrawn = redDrawing;
 		redDrawing = new ArrayList<>();
+		frameDrawn = frameDrawing;
+		frameDrawing = new ArrayList<>();
 		statesDrawn = statesDrawing;
 		statesDrawing = new HashMap<>();
 	}
@@ -46,6 +51,11 @@ public final class PreviewProbe {
 		positions.forEach(pos -> redDrawing.add(pos.immutable()));
 	}
 
+	/** Hook E38 frames these positions in red in this frame, for the left click. */
+	public static void drawingFrame(List<BlockPos> positions) {
+		positions.forEach(pos -> frameDrawing.add(pos.immutable()));
+	}
+
 	/** The preview draws the block at {@code pos} in this state in this frame. */
 	public static void drawingState(BlockPos pos, BlockState state) {
 		statesDrawing.put(pos.immutable(), state);
@@ -53,14 +63,22 @@ public final class PreviewProbe {
 
 	/** The positions the last whole frame's preview drew, as x,y,z in the order drawn, or none. */
 	static String positions() {
-		return drawn.isEmpty() ? "none" : String.join(" ",
-			drawn.stream().map(pos -> pos.getX() + "," + pos.getY() + "," + pos.getZ()).toList());
+		return text(drawn);
 	}
 
 	/** The positions the last whole frame's preview drew red, as x,y,z in the order drawn, or none. */
 	static String red() {
-		return redDrawn.isEmpty() ? "none" : String.join(" ",
-			redDrawn.stream().map(pos -> pos.getX() + "," + pos.getY() + "," + pos.getZ()).toList());
+		return text(redDrawn);
+	}
+
+	/** The positions the last whole frame's red frame for the left click covered, as x,y,z in order, or none. */
+	static String frame() {
+		return text(frameDrawn);
+	}
+
+	private static String text(List<BlockPos> positions) {
+		return positions.isEmpty() ? "none" : String.join(" ",
+			positions.stream().map(pos -> pos.getX() + "," + pos.getY() + "," + pos.getZ()).toList());
 	}
 
 	/**

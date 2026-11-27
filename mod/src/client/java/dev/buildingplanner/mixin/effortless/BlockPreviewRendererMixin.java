@@ -5,9 +5,13 @@ import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
+import com.mojang.blaze3d.vertex.PoseStack;
 import dev.buildingplanner.client.Aim;
 import dev.buildingplanner.client.BuildingPlannerClient;
 import dev.buildingplanner.client.EffortlessShapes;
+import java.util.List;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BlockItem;
@@ -25,7 +29,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * Hook E6: while the mix applies, the preview draws each position's block from the mix. Hook E22: no preview while a
  * mouse mode is on. Hook E24: the preview's first block aims, and faces, from Freecam's camera while it's on. Hooks
  * E28 and E30: the first click's block is drawn, at a locked position in the state the hit it was locked with gives
- * it, and so is Disable's block, in the state a right click would place.
+ * it, and so is Disable's block, in the state a right click would place. Hook E38: beside it, the red frame for the
+ * left click.
  */
 @Mixin(value = BlockPreviewRenderer.class, remap = false)
 abstract class BlockPreviewRendererMixin {
@@ -54,6 +59,31 @@ abstract class BlockPreviewRendererMixin {
 	private static int buildingplanner$drawLockedBlock(int size) {
 		return BuildingPlannerClient.active() ? EffortlessShapes.previewSize(size) : size;
 	}
+
+	/**
+	 * Hook E38: before the first click, the block a left click would start erasing from, with its copies, drawn after
+	 * the preview in Effortless Building's own look for a shape drawn with the break click, red sides with a checkered
+	 * texture and a red outline ({@code EffortlessShapes.leftClickFrame}). The method's earlier returns come where
+	 * nothing is aimed at or the lock's controls aren't active (hook E30), where no frame shows either.
+	 */
+	@Inject(method = "render", at = @At("TAIL"))
+	private static void buildingplanner$leftClickFrame(PoseStack poseStack, SubmitNodeCollector collector, double camX,
+		double camY, double camZ, CallbackInfo ci) {
+		if (!BuildingPlannerClient.active()) {
+			return;
+		}
+		List<BlockPos> framed = EffortlessShapes.leftClickFrame();
+		if (framed.isEmpty()) {
+			return;
+		}
+		BlockPreviewRendererInvoker.buildingplanner$faces(poseStack, collector, framed, camX, camY, camZ, true, false);
+		BlockPreviewRendererInvoker.buildingplanner$edges(poseStack, collector,
+			BlockPreviewRendererInvoker.buildingplanner$borderEdges(framed), camX, camY, camZ, OUTLINE_HALF_WIDTH,
+			255, 0, 0, 255);
+	}
+
+	/** The half-width of Effortless Building's outline, in blocks, as its {@code render} draws it. */
+	private static final float OUTLINE_HALF_WIDTH = 0.02f;
 
 	private static final String PLACEMENT_STATE ="getPlacementState(Lnet/minecraft/world/item/BlockItem;"
 		+ "Lnet/minecraft/client/Minecraft;Lnet/minecraft/world/item/ItemStack;)"

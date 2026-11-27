@@ -201,11 +201,10 @@ public final class EffortlessShapes {
 	}
 
 	/**
-	 * Where a right click would start now, unlocked: beside the aimed face, at the position Effortless Building's preview
-	 * draws its first block (its {@code resolveFirstClickPos}), aimed as its preview aims: with its reach, at ghost
-	 * blocks too (E9) and from Freecam's camera while it's on (E24). Null with nothing aimed at.
+	 * The block Effortless Building's first click and its preview aim at now, unlocked: with its reach, at ghost blocks
+	 * too (E9) and from Freecam's camera while it's on (E24). Null with nothing aimed at.
 	 */
-	private static Aimed aimed() {
+	private static BlockHitResult aimHit() {
 		Minecraft mc = Minecraft.getInstance();
 		Player player = mc.player;
 		if (player == null || mc.level == null) {
@@ -216,11 +215,56 @@ public final class EffortlessShapes {
 		Vec3 end = start.add(aim.getLookAngle().scale(ServerConfig.INSTANCE.getReach(player)));
 		ClipContext context = new ClipContext(start, end, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player);
 		BlockHitResult hit = nearerHit(mc.level.clip(context), context);
-		if (hit.getType() != HitResult.Type.BLOCK) {
+		return hit.getType() == HitResult.Type.BLOCK ? hit : null;
+	}
+
+	/**
+	 * Where a right click would start now, unlocked: beside the aimed face ({@link #aimHit}), at the position
+	 * Effortless Building's preview draws its first block (its {@code resolveFirstClickPos}). Null with nothing aimed
+	 * at.
+	 */
+	private static Aimed aimed() {
+		BlockHitResult hit = aimHit();
+		if (hit == null) {
 			return null;
 		}
 		return new Aimed(BuildPipelineClientAccessor.buildingplanner$resolveFirstClickPos(hit,
-			BuildPipeline.BuildState.PLACING, mc.level), hit);
+			BuildPipeline.BuildState.PLACING, Minecraft.getInstance().level), hit);
+	}
+
+	/**
+	 * Hook E38: the positions the red frame for the left click shows on now ({@link ShapeLock#framed}), from where a
+	 * left click would start erasing ({@link #leftClickStart}); in Single, the ghost blocks among them, while ghost
+	 * blocks show.
+	 */
+	public static List<BlockPos> leftClickFrame() {
+		ClientSession session = BuildingPlannerClient.session();
+		int step = step();
+		return ShapeLock.framed(BuildingPlannerClient.lockActive(), singleMode(), step,
+			step == 0 && session != null && session.lock().on(0), EffortlessShapes::leftClickStart,
+			pos -> session.ghostsShown() && !session.replica().layer().get(pos).isAir());
+	}
+
+	/**
+	 * Where a left click would start erasing now, unlocked: the aimed block itself ({@link #aimHit}), a ghost block or
+	 * a real one, since Effortless Building's {@code resolveFirstClickPos} keeps the hit block for the break click,
+	 * with its copies by the mirror, radial mirror and array, run through Effortless Building's modifiers and
+	 * constraints ({@code processBlocks}) as a shape drawn with the break click is; only the valid ones, which a click
+	 * erases at. None with nothing aimed at.
+	 */
+	private static List<BlockPos> leftClickStart() {
+		BlockHitResult hit = aimHit();
+		if (hit == null) {
+			return List.of();
+		}
+		BlockPos pos = hit.getBlockPos();
+		BlockSet blocks = new BlockSet();
+		blocks.add(new BlockEntry(pos));
+		blocks.firstPos = pos;
+		blocks.lastPos = pos;
+		BuildPipelineClient.CLIENT.processBlocks(blocks, Minecraft.getInstance().player,
+			BuildPipeline.BuildState.BREAKING);
+		return blocks.validPositions();
 	}
 
 	/** The position a right click would place at, and the hit that aims there. */

@@ -8,6 +8,8 @@ import dev.buildingplanner.input.ShapeLock.Finder;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.phys.BlockHitResult;
@@ -67,6 +69,77 @@ class ShapeLockTest {
 	@Test
 	void aSetOfCopiesIsLeftToBeDrawnAsItIs() {
 		assertFalse(ShapeLock.drawnBeforeFirstClick(true, 3));
+	}
+
+	/** A ghost block aimed at, a real block, and the mirror's copy of each across x 0. */
+	private static final BlockPos GHOST = new BlockPos(3, -60, 7);
+	private static final BlockPos GHOST_COPY = new BlockPos(-4, -60, 7);
+	private static final BlockPos REAL = new BlockPos(5, -61, 7);
+	private static final BlockPos REAL_COPY = new BlockPos(-6, -61, 7);
+	private static final Predicate<BlockPos> GHOSTS = Set.of(GHOST, GHOST_COPY)::contains;
+	private static final boolean ACTIVE = ShapeLock.controlsActive(true, false, false, true);
+
+	/** The red frame's positions before the first click, unlocked, in Single or another mode, for these positions. */
+	private static List<BlockPos> framed(boolean single, BlockPos... leftClick) {
+		return ShapeLock.framed(ACTIVE, single, 0, false, () -> List.of(leftClick), GHOSTS);
+	}
+
+	/** Where no frame shows, the left click's positions aren't even found: no aim is traced for it. */
+	private static final Supplier<List<BlockPos>> NOT_AIMED = () -> {
+		throw new AssertionError("aimed while no frame shows");
+	};
+
+	@Test
+	void inSingleTheRedFrameShowsOnAnAimedGhostBlock() {
+		assertEquals(List.of(GHOST), framed(true, GHOST));
+	}
+
+	@Test
+	void inSingleNoRedFrameShowsOnARealBlock() {
+		assertEquals(List.of(), framed(true, REAL));
+	}
+
+	@Test
+	void inSingleWithTheMirrorOnlyTheGhostBlocksAmongTheCopiesAreFramed() {
+		assertEquals(List.of(GHOST), framed(true, GHOST, REAL_COPY));
+		assertEquals(List.of(GHOST, GHOST_COPY), framed(true, GHOST, GHOST_COPY));
+		assertEquals(List.of(GHOST_COPY), framed(true, REAL, GHOST_COPY));
+	}
+
+	@Test
+	void inTheOtherModesTheRedFrameShowsOnAnyAimedBlockAndEachCopy() {
+		assertEquals(List.of(GHOST), framed(false, GHOST));
+		assertEquals(List.of(REAL), framed(false, REAL));
+		assertEquals(List.of(REAL, REAL_COPY), framed(false, REAL, REAL_COPY));
+		assertEquals(List.of(GHOST, REAL_COPY), framed(false, GHOST, REAL_COPY));
+	}
+
+	@Test
+	void noRedFrameWhileTheFirstPositionIsLocked() {
+		assertEquals(List.of(), ShapeLock.framed(ACTIVE, true, 0, true, NOT_AIMED, GHOSTS));
+		assertEquals(List.of(), ShapeLock.framed(ACTIVE, false, 0, true, NOT_AIMED, GHOSTS));
+	}
+
+	@Test
+	void noRedFrameDuringAShape() {
+		assertEquals(List.of(), ShapeLock.framed(ACTIVE, false, 1, false, NOT_AIMED, GHOSTS));
+		assertEquals(List.of(), ShapeLock.framed(ACTIVE, false, 2, false, NOT_AIMED, GHOSTS));
+	}
+
+	@Test
+	void noRedFrameInDisableWithAMouseModeOnWithoutASessionOrWithoutABlockInHand() {
+		for (boolean active : List.of(ShapeLock.controlsActive(true, true, false, true),
+			ShapeLock.controlsActive(true, false, true, true), ShapeLock.controlsActive(false, false, false, true),
+			ShapeLock.controlsActive(true, false, false, false))) {
+			assertEquals(List.of(), ShapeLock.framed(active, true, 0, false, NOT_AIMED, GHOSTS));
+			assertEquals(List.of(), ShapeLock.framed(active, false, 0, false, NOT_AIMED, GHOSTS));
+		}
+	}
+
+	@Test
+	void noRedFrameAimingAtNothing() {
+		assertEquals(List.of(), framed(true));
+		assertEquals(List.of(), framed(false));
 	}
 
 	@Test

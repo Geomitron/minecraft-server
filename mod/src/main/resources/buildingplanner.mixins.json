@@ -11,6 +11,7 @@
 		"minecraft.LevelChunkMixin"
 	],
 	"client": [
+		"effortless.BlockPreviewRendererInvoker",
 		"effortless.BlockPreviewRendererMixin",
 		"effortless.ClientConfigScreenMixin",
 		"effortless.BuildModeEyeMixin",
