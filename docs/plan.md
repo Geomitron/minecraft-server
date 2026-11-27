@@ -519,6 +519,9 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
 
   In Single, the red frame shows on ghost blocks only, and in the other modes on any aimed block: "Yes, but on ghost
   blocks only, since single does erase ghost blocks" (1369 Q1).
+
+  Geo approved 0.8.0's texts and the player guide's sentences as proposed, with no edits (1391), and for the red frame
+  on a ghost block picked "Draw it more strongly on ghost blocks, so it reads as red." (1391 Q1 B).
 - **Building Planner 0.9.0** adds the setting "Place real blocks", which Geo asked for in the trial of 0.7.0 (1359,
   c4): "I also want a setting for "place real blocks". However, I have ideals for this being a client-side only mod
   that could be used on other servers that don't need other people to be able to see your own ghost blocks. And in
