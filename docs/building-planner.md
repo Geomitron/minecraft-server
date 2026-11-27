@@ -1901,8 +1901,9 @@ ghost block takes it out of the layer, as any real block does (see "Ghost blocks
 **How the server places each block.** The game sends a shape as one `place(dimension, face, hit, blocks)`: the first
 click's face and hit, and each block's position and state (the layer's codec for a change), without the other half of
 a two-part block, which Minecraft places itself. The server places the blocks from the lowest level up, and gives
-each block that couldn't stay one more try after the rest, so a torch or a hanging lantern whose support the same
-`place` puts in goes in too (`RealPlace.order`). It places each block as the player's own right click would place it
+each block that couldn't stay one more try after the rest, from the highest level down, so a torch or a hanging lantern
+whose support the same `place` puts in goes in too, and so do blocks hanging one under another, such as pointed
+dripstone (`RealPlace.order`). It places each block as the player's own right click would place it
 there, through Minecraft's `BlockItem.place` with a `BlockPlaceContext` at that position (read in the 26.3 jar):
 Minecraft checks that the block is enabled and that the space takes a block (`BlockPlaceContext.canPlace`: air,
 water, lava, grass, a single snow layer), asks the item for the state (`getPlacementState`, which hook S2 turns),
@@ -1926,7 +1927,9 @@ Before it places, the server checks the shape as `ServerGamePacketListenerImpl.h
 lets them build (`Player.mayBuild`, false in adventure and spectator); the block's chunk is loaded
 (`ServerChunkCache.getChunkNow`, so placing never loads a chunk); the block is within the build height, inside the
 world border and outside spawn protection (`MinecraftServer.isUnderSpawnProtection`, `ServerLevel.mayInteract`);
-it is within 64 blocks of the player's eyes, the player's and not Freecam's camera's (1372 Q2 A); and an item places
+it is within 64 blocks of the player's eyes, the player's and not Freecam's camera's (1372 Q2 A), measured to the
+block's nearest point as Minecraft measures a right click's reach (`Player.isWithinBlockInteractionRange`); and an
+item places
 it (`Block.asItem` gives a `BlockItem`: water, lava, fire, a portal and a piston's head have none). Effortless
 Building's own server checks no distance: its `handlePlaceBuildMode` places wherever the game's packet says. Its game
 aims each click of a shape within its reach, 32 in survival, so a Line, Wall, Floor or Cube between such clicks stays
@@ -1939,14 +1942,18 @@ server runs none.
   wall torch) from the player's inventory, the main hand's stack first and then the inventory's slots in order, as
   Effortless Building's server takes them (`InventoryHelper.consumeItems`). A block made of several items uses that
   many, as by hand: a double slab two slabs, and three candles three candles, as for sea pickles, snow layers, turtle
-  eggs and pink petals. Nothing goes in unless the inventory contains every item the blocks that pass the checks above
-  need: the blocks those checks leave out need none, every block of the mirror's and the array's copies counts, and
-  with the block mix each block counts as its own item (a Line of 16 cobblestone and 4 mossy cobblestone needs 16 and
-  4). When the inventory lacks any of them, the server places nothing and its `notice` names each item short and how
-  many, in the wording Geo approves in build step 5. A stack with components (a named block, a filled shulker box)
-  places as by hand, its components going to the block entity.
+  eggs, pink petals and leaf litter. Nothing goes in unless the inventory contains every item the blocks that pass the
+  checks above need: the blocks those checks leave out need none, every block of the mirror's and the array's copies
+  counts, and with the block mix each block counts as its own item (a Line of 16 cobblestone and 4 mossy cobblestone
+  needs 16 and 4). When the inventory lacks any of them, the server places nothing and its `notice` names each item
+  short and how many, in the wording Geo approves in build step 5. A stack with components (a named block, a filled
+  shulker box) places as by hand, its components going to the block entity.
 - **Real blocks in the way** (1372 Q3 A). A block goes only into a space a right click could place it into
-  (`BlockPlaceContext.canPlace`), so a shape or a paste never replaces a real block. Effortless Building's "Replace
+  (`BlockPlaceContext.canPlace`), so a shape or a paste never replaces a real block, nor adds to one:
+  `RealPlace.spaceTakes` lets a block into a space Minecraft lets any block replace (air, water, lava, grass, fire, a
+  vine), a snow layer only while it's one layer, and never a space holding the block's own item, where a right click
+  would add a slab to a slab or a candle to candles. The server checks it before it places, so such a block uses no
+  item and doesn't count toward the inventory. Effortless Building's "Replace
   mode" button in
   the radial menu changes nothing, as with the setting off: its modes act only in the packet Building Planner never
   sends.
@@ -3187,17 +3194,21 @@ scripts' `server_has`), and every real block checked there is checked on both cl
   crosshair's icons, the whole Line red for 1 oak plank short, the controls line in Single and in Line, the copy's box
   yellow and red with its lines, and Planner2's view of the placed Wall and the pasted hut.
 
-`RealPlaceTest` covers the rule for each block: the order (the lowest level first, and a block that can't stay tried
-again after the rest), the inventory (the main hand's stack first, each mix block as its own item, every block of the
-mirror's and the array's copies counted, none for a block the checks leave out, 2 slabs for a double slab and as many
-items as a block is made of, nothing going in when one item is short, and nothing used in creative), the reach (63,
-64 and 65 blocks from the eyes along each axis and a diagonal), a space that doesn't take a block, a block no item
-places, the cap of 2,000, and the setting acting only during a session whose server takes `place`, in every mode but
-Disable, with an item that places a block. `CopyColourTest` covers the copy's colours with the setting on: blue on
-clear ground and over ghost blocks; yellow for a real block in a space, a block past the reach, one outside the build
-height or the border, and water; red past 2,000 blocks, checked first, and in survival for an inventory one item
-short. `PayloadsTest` covers `place` and its limits, and `ControlsLineTest` the lines with the setting on, the copy's
-included.
+`RealPlaceTest` covers the rule for each block: the order (the lowest level first, in the shape's order within a
+level, and a block that can't stay tried again after the rest, from the highest level down, with a wall torch, a
+hanging lantern and two pointed dripstones hanging one under the other), the inventory (the main hand's stack first
+and then the slots in order, across stacks, each mix block as its own item, every block of the mirror's and the
+array's copies counted, none for a block the checks leave out, 2 slabs for a double slab and as many items as a block
+is made of, nothing going in when one item is short, and nothing used in creative), the reach (63, 64 and 65 blocks
+from the eyes to the block's nearest face along each axis both ways, and 63, just under and just over 64, and 65 to
+its nearest corner along a diagonal), a space that takes a block (air, water, lava, grass, fire, a vine and a single
+snow layer) and one that doesn't (a real block, a slab, candles or a snow layer of 2, and the block's own item), the
+world's own checks asked before the space is read, a block no item places, the cap of 2,000, and the setting acting
+only during a session whose server takes `place`, in every mode but Disable, with an item that places a block.
+`CopyColourTest` covers the copy's colours with the setting on: blue on clear ground and over ghost blocks; yellow for
+a real block in a space, a block past the reach, one outside the build height or the border, and water; red past 2,000
+blocks, checked first, and in survival for an inventory one item short. `PayloadsTest` covers `place` and its limits,
+and `ControlsLineTest` the lines with the setting on, the copy's included.
 
 `local.sh`, servers without Building Planner (proposed for 0.10.0; the checks follow the options the requests
 recommend), on the dev server started with the add-on left off its classpath (`start_server "$ADDON"
