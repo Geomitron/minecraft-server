@@ -575,6 +575,11 @@ public final class Driver implements ClientModInitializer {
 				// holdlog: ticks each mouse button was down, and the edits Building Planner sent since holdreset.
 				return SentPackets.holdLog();
 			}
+			case "placesent" -> {
+				// placesent: the place payloads Building Planner sent since holdreset, each by its number of blocks,
+				// comma-separated, or none.
+				return SentPackets.places();
+			}
 			case "countblocks" -> {
 				// countblocks <x1> <x2> <y> <z> <block>: how many blocks of that id the plans show along that row.
 				int count = 0;

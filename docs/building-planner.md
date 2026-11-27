@@ -3196,7 +3196,8 @@ world's spawn, where Planner2, who isn't an operator, may build:
 `real.sh`, "Place real blocks" (proposed for 0.9.0), more than 16 blocks from the world's spawn, which the script sets
 at 0 -60 0, unless a check says otherwise, with Planner1 in survival (`/gamemode`) and its inventory set with `/clear`
 and `/item`. Planner1 and Planner2 turn the setting on in "Settings" with real clicks, and each shape is drawn and
-placed with the player's own clicks, which send it as one `place` while the setting acts. A few checks send boxes of
+placed, and each copy pasted, with the player's own clicks, which send it as one `place` while the setting acts (the
+driver's `placesent`, the blocks of each `place` the click sent). A few checks send boxes of
 blocks with the driver's `sendplace` instead, with a face and a hit of their own. Each shape is drawn by a player
 standing south of it, with nothing real between their eyes and its clicks, and the script kills the animals the world
 made with its land, so none is in a shape's way. "On the server" means the dev server's own world, as `/execute if
@@ -3223,9 +3224,11 @@ driver's `realstates`):
 - With 19 oak planks, the preview of the same Line draws all 20 red and the icons show 19 oak planks and a red 1; the
   click places nothing, the notice names 1 oak plank short, the inventory still has its 19, and Planner1's game plays
   no place sound.
-- A Line of 8 torches along a real stone wall, aimed at the wall's side, places 8 wall torches facing away from the
-  wall. In Single, a door has both halves and a bed both parts, its head on the far side, each placed with one click
-  and using its one item.
+- A Line of 8 torches along a real stone wall, aimed at the wall's side, draws all 8 red, as standing torches that
+  can't stay there, and its click places nothing on the server or either client: Planner1 keeps all 8 torches, and
+  no notice comes (a say Planner1 sends after the click is the only new line in its chat; 1408 Q1 C). In Single, a
+  door has both halves and a bed both parts, its head on the far side, each placed with one click and using its one
+  item.
 - With the mix of 80 cobblestone and 20 mossy cobblestone, each block of a 20-block Line on the server is the block the
   preview showed there when the inventory contains as many of each block as the preview uses, and none is left. With
   one mossy cobblestone fewer than a second Line uses, nothing goes in and the notice names 1 mossy cobblestone short.
@@ -3244,7 +3247,23 @@ driver's `realstates`):
 - Floors of oak planks sent over a ghost floor of oak planks and over one of ghost stone bricks take the ghost oak
   planks out of the layer on both clients and leave the ghost stone bricks, which Litematica marks red as wrong blocks
   (the driver's `overlay`).
-- A paste of 5 oak planks sent as one `place`: the server sends Planner1's game and Planner2's each one place sound.
+- A hut of cobblestone built with commands (a floor, walls and a roof, an oak door, and inside a wall torch, a lantern
+  hanging from the roof, a double stone slab, 3 candles and a water source in the floor: 86 blocks), copied with the
+  radial menu's Copy button and a box of three left clicks, as `step9.sh` copies its house. On the ground beside it,
+  with exactly the items its paste uses, the copy shows yellow (for the water) with "[Right-click: paste real
+  blocks]"; with one cobblestone fewer it's red with "[Can't paste: not enough blocks]", and a right click sends
+  nothing and places nothing. With the items again, the right click sends one `place` of the copy's 86 blocks and no
+  edit: on the server each block is the hut's, as `/execute if blocks` compares them once the hut's water is taken
+  out, with the door's two halves, the torch on its wall, the lantern hanging, the double slab and the 3 candles, and
+  no water; the inventory has none of those items left, the server sends Planner1's game and Planner2's each one place
+  sound, and no notice comes. The pasted door's state goes to the checks' log.
+- Pasted again over a real stone block in its wall, the copy shows yellow, its line has "[Hold Left Control: line up]"
+  after the first paste, and the paste leaves the stone and places the rest, using 78 cobblestone.
+- A Floor of 5 by 5 copies of the hut, 2,150 blocks, draws red with "[Can't paste: too many blocks]", and its second
+  click sends nothing and places nothing.
+- A Line of 3 copies of a row of 4 real oak planks shows blue with "[Right-click: paste 3 copies as real blocks]" and
+  sends one `place` of all 12 blocks at its second click; all 12 are real oak planks on the server, using the 12 in the
+  inventory.
 - In adventure mode, Planner2's place of 5 blocks places nothing, and Planner2 gets the notice "5 blocks weren't
   placed: the server doesn't allow them there."
 - In creative, a place of 2,001 blocks places nothing and gets the cap's notice; one of 2,000 places all of them and
@@ -3257,26 +3276,13 @@ driver's `realstates`):
   nothing goes in, and Planner2 gets the notice.
 - Turned off with the switch and "Save", the setting saves `place-real-blocks=false`, Line's controls line reads
   "[Right-click: start placing]" again, and a Line draws ghost blocks on both clients, places no real block and uses no
-  item.
+  item. A copy's line reads "[Right-click: paste]" again, and its paste writes ghost blocks on both clients, sending
+  an edit and no `place`, places no real block and uses no item.
 - Neither client's log has a self-check warning, before the server starts again or after.
 - Shots, at 854 by 480 and 1920 by 1080, GUI scale 2: "Settings" with the row on, the controls line in Line and in
   Single, the whole Line red for 1 oak plank short with its icons, the Line through the stone and the cow with its red
-  blocks and icons, and Planner2's view of the placed Wall.
-
-Step 4 of 0.9.0 makes the paste's checks through Planner1's own clicks with the setting on, and adds these:
-
-- A copy of a hut (a cobblestone floor and walls, an oak door, a wall torch inside, a lantern hanging from its roof, a
-  double stone slab, 3 candles and a water block) shows yellow (for the water) with "[Right-click: paste real
-  blocks]", and, with exactly the items it needs, pastes as one `place`: on the server each block is as the copy
-  shows it, the door with both halves, the torch on its wall and the lantern under the roof, the water isn't placed,
-  and the inventory has none of those items left (2 stone slabs for the double slab, 3 candles). Planner1 and Planner2
-  each hear one place sound. With one cobblestone fewer, the box is red, the line reads "[Can't paste: not enough
-  blocks]", and a right click places nothing and sends nothing. Pasted over a real stone block, the paste leaves the
-  stone and places the rest. A Line of 3 copies of a 4-block copy places all 12 blocks at its second click, as one
-  `place`, and a Floor of copies over 2,000 blocks draws red with "[Can't paste: too many blocks]".
-- Turned off, pastes draw ghost blocks again.
-- Shots, at 854 by 480 and 1920 by 1080, GUI scale 2: the copy's box yellow and red with its lines, and Planner2's view
-  of the pasted hut.
+  blocks and icons, Planner2's view of the placed Wall, the copy of the hut yellow and red with its lines, and
+  Planner2's view of the pasted hut.
 
 `RealPlaceTest` covers the rule for each block: the order (the lowest level first, in the shape's order within a
 level, and a block that can't stay tried again after the rest, from the highest level down, with a wall torch, a

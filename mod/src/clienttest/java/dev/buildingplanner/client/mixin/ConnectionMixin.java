@@ -22,7 +22,8 @@ abstract class ConnectionMixin {
 		if (packet instanceof ServerboundCustomPayloadPacket custom) {
 			var id = custom.payload().type().id();
 			SentPackets.sent(id.getNamespace(), id.getPath(),
-				custom.payload() instanceof Payloads.Edit edit ? edit.changes() : List.of());
+				custom.payload() instanceof Payloads.Edit edit ? edit.changes()
+					: custom.payload() instanceof Payloads.Place place ? place.blocks() : List.of());
 		}
 	}
 }

@@ -12,11 +12,14 @@ import net.minecraft.core.BlockPos;
 /**
  * The custom payloads this client has sent to the server, for the driver's {@code ebsent} (the kinds of Effortless
  * Building packet) and {@code holdlog} (the client ticks Building Planner's edits went out on, and how long each mouse
- * button was down, and how many different blocks the edits changed).
+ * button was down, and how many different blocks the edits changed), and {@code placesent} (the blocks of each
+ * {@code place} since then).
  */
 public final class SentPackets {
 	private static final Set<String> EFFORTLESS = new ConcurrentSkipListSet<>();
 	private static final List<Integer> EDITS = new ArrayList<>();
+	/** The number of blocks each {@code place} sent since the hold log started carried, in order. */
+	private static final List<Integer> PLACES = new ArrayList<>();
 	/** The blocks the edits sent so far changed. */
 	private static final Set<BlockPos> CHANGED = new HashSet<>();
 	private static volatile int tick;
@@ -39,6 +42,20 @@ public final class SentPackets {
 					CHANGED.add(change.pos());
 				}
 			}
+		} else if (namespace.equals("buildingplanner") && path.equals("place")) {
+			synchronized (EDITS) {
+				PLACES.add(changes.size());
+			}
+		}
+	}
+
+	/**
+	 * The {@code place} payloads sent since the hold log started, for the driver's {@code placesent}: each one's number of
+	 * blocks, comma-separated, or "none".
+	 */
+	static String places() {
+		synchronized (EDITS) {
+			return PLACES.isEmpty() ? "none" : String.join(",", PLACES.stream().map(String::valueOf).toList());
 		}
 	}
 
@@ -76,6 +93,7 @@ public final class SentPackets {
 	static void resetHoldLog() {
 		synchronized (EDITS) {
 			EDITS.clear();
+			PLACES.clear();
 			CHANGED.clear();
 			useDown = 0;
 			attackDown = 0;
