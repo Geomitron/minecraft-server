@@ -4,11 +4,12 @@
 # set with /clear and /item: the controls lines, Ctrl+Z and Ctrl+Y after a ghost shape and a Line of real blocks, the
 # break click erasing ghost blocks only, a whole Line from the main hand and the inventory and its one place sound,
 # nothing, the whole Line red and no sound for a Line 1 oak plank short, nothing for a Line of torches along a wall's
-# side, a door, a bed, the mix, the mirror's copies counted, stairs in a Wall turned with the wheel and mirrored, a real
-# block and a cow in the way and red, ghost blocks filled and left red, a copy of a hut with a door, a wall torch, a
-# hanging lantern, a double slab, candles and water, yellow, red 1 cobblestone short, pasted with one place sound for
-# each player and around a real block in its way, a Floor of its copies red past 2,000 blocks, a Line of 3 copies, and
-# a copied door keeping its hinge where Minecraft would hinge it on the other side;
+# side, a Line of scaffolding up from the ground red above its first block and placed whole, a door, a bed, the mix,
+# the mirror's copies counted, stairs in a Wall turned with the wheel and mirrored, a real block and a cow in the way and
+# red, ghost blocks filled and left red, a copy of a hut with a door, a wall torch, a hanging lantern, a double slab,
+# candles and water, yellow, red 1 cobblestone short, pasted with one place sound for each player and around a real
+# block in its way, a Floor of its copies red past 2,000 blocks, a Line of 3 copies, and a copied door keeping its
+# hinge where Minecraft would hinge it on the other side;
 # in creative, the reach and the copy past it red, the cap of 2,000 blocks a place and a second, and the time a place
 # of 2,000 takes; for Planner2, who isn't an operator, adventure mode and, once the server has started again with spawn
 # protection, the spawn; then the setting off again, for a shape and a paste. Everything else happens more than 16
@@ -128,6 +129,12 @@ count_of() {
 # as <name>-<size>-gui2; the window is 854 by 480 again after.
 shots() {
 	drv "$1" "wait 210" "notoasts" "wait 5" "shot $2-854x480-gui2" "window 1920 1080 2" "wait 20" "notoasts" \
+		"shot $2-1920x1080-gui2" "window 854 480 2" "wait 20" > /dev/null
+}
+# chat_shots <client> <name>: the same shots at once, while the chat still shows its newest lines, such as a notice
+# that came after the chat faded.
+chat_shots() {
+	drv "$1" "notoasts" "wait 5" "shot $2-854x480-gui2" "window 1920 1080 2" "wait 20" "notoasts" \
 		"shot $2-1920x1080-gui2" "window 854 480 2" "wait 20" > /dev/null
 }
 
@@ -316,6 +323,18 @@ settings_screen 1
 check "opened again, the screen shows it on" eval '[[ $(row 1 "Place real blocks") == "ON "* ]]'
 xdo 1 mousemove --window %w 2 2
 shots 1 real-settings
+# real_label_hover: moves client 1's mouse onto the row's label, which shows its tooltip over the row.
+real_label_hover() {
+	local left top right bottom
+	read -r left top right bottom < <(val 1 "drawnbox Place real blocks")
+	xdo 1 mousemove --window %w $(((left + right) / 2)) $(((top + bottom) / 2))
+}
+real_label_hover
+check "the row's label shows its tooltip" eval 'drv 1 "wait 5" > /dev/null &&
+	[[ $(val 1 tooltips) == "Shapes place real blocks from your inventory instead of ghost blocks" ]]'
+drv 1 "notoasts" "wait 5" "shot real-settings-tooltip-854x480-gui2" "window 1920 1080 2" "wait 20" > /dev/null
+real_label_hover
+drv 1 "wait 5" "notoasts" "shot real-settings-tooltip-1920x1080-gui2" "window 854 480 2" "wait 20" > /dev/null
 drv 1 "close" > /dev/null
 settings_screen 2
 real_switch 2
@@ -400,6 +419,7 @@ drv 1 "soundreset" > /dev/null
 place_click 1
 check "the click gets the notice naming 1 oak plank short" client_said 1 \
 	"Not enough items, so nothing was placed. You're short of 1 Oak Planks."
+chat_shots 1 real-short-notice
 check "nothing went in on the server or either client" lands minecraft:oak_planks oak_planks 40 -60 45 59 -60 45 0
 check "the inventory still has its 19" eval '[[ $(items minecraft:oak_planks) == 19 ]]'
 check "and Planner1's game played no place sound" eval '[[ $(val 1 "sounds block.wood.place") == 0 ]]'
@@ -416,6 +436,7 @@ drv 1 "lookat 77.5 -58.5 31" "wait 5" > /dev/null
 check "a Line of torches along the wall's side draws 8 blocks" preview_is 1 8
 echo "  the preview's first torch: $(val 1 "previewstate 70 -59 31")" >> /out/checks.log
 check "all 8 red, as torches that can't stay there" eval '[[ $(red 1 | wc -w) == 8 ]]'
+shots 1 real-torches-red
 lines=$(chat_lines)
 place_click 1
 check "no notice comes for the click: Planner1's chat shows only a say sent after it" no_notice_since "$lines"
@@ -423,6 +444,21 @@ check "it places no torch on the server or either client" eval \
 	'lands minecraft:torch torch 70 -59 31 77 -59 31 0 &&
 	[[ $(server_count minecraft:wall_torch 70 -59 31 77 -59 31) == 0 ]]'
 check "and Planner1 keeps all 8 torches" eval '[[ $(items minecraft:torch) == 8 ]]'
+
+# A Line of 4 scaffolding up from the ground at 88 -60 32 to 88 -57 32. The preview checks each block against the world
+# as it is, where the 3 above the first have nothing under them yet, so it draws them red; the server places from the
+# lowest level up, each on the one under it, so all 4 go in.
+drv 1 "cmd tp @s 88.5 -60 36.5 180 30" "cmd tp Planner2 89.5 -60 37.5 180 30" "wait 20" > /dev/null
+stock minecraft:scaffolding 4
+draw 1 88 -60 32 88 -57 32
+check "a Line of scaffolding up from the ground draws 4 blocks" preview_is 1 4
+check "the 3 above the first red, with nothing under them yet" eval \
+	'[[ $(red 1) == "88,-57,32 88,-58,32 88,-59,32" ]]'
+shots 1 real-scaffolding-red
+place_click 1
+check "the click places all 4 on the server, as both clients show" eval \
+	'arrive 88 -57 32 minecraft:scaffolding && lands minecraft:scaffolding scaffolding 88 -60 32 88 -57 32 4'
+check "using the 4 scaffolding" eval '[[ $(items minecraft:scaffolding) == 0 ]]'
 
 # In Single, a door at 62 -60 32 and a bed at 65 -60 32, Planner1 facing north, each placed with one click.
 drv 1 "ebmode SINGLE" "cmd tp @s 63.5 -60 35.5 180 30" "cmd tp Planner2 64.5 -60 36.5 180 30" "wait 20" > /dev/null
@@ -823,6 +859,7 @@ check "a Line of 3 copies" drv 1 "await set 3 copies"
 check "blue, with the controls line reading \"[Right-click: paste 3 copies as real blocks]\"" eval \
 	'drv 1 "await copycolour BLUE" > /dev/null &&
 	[[ $(val 1 modehud) == "[Right-click: paste 3 copies as real blocks][Scroll: turn][Middle-click: mirror][H: Lock (Off)][R: Mode (Line)][Esc/Left-click: cancel]" ]]'
+shots 1 real-copies-line
 place_click 1
 check "the second click sends one place of the 3 copies' 12 blocks" eval '[[ $(val 1 placesent) == 12 ]]'
 check "on the server, the 12 are real oak planks, as both clients show" eval \
@@ -836,43 +873,6 @@ attack_click 1
 check "R three times sets Off again, and a left click puts the copy away" eval \
 	'drv 1 "wait 5" > /dev/null && [[ $(val 1 copymode) == OFF && $(val 1 copy) == away* ]]'
 
-# In adventure mode, 5 blocks from 68 -60 52 to 72 -60 52.
-drv 1 "cmd gamemode adventure Planner2" "cmd tp Planner2 70.5 -60 47.5 180 30" "cmd tp @s 69.5 -60 47.5 180 30" \
-	"wait 40" > /dev/null
-check "in adventure mode, Planner2's place of 5 blocks is sent" eval \
-	'[[ $(sent 2 "sendplace up 68.5 -60 52.5 shape 68 -60 52 72 -60 52 minecraft:oak_planks") == "5 blocks" ]]'
-check "Planner2 gets the notice" client_said 2 "5 blocks weren't placed: the server doesn't allow them there."
-check "and nothing went in" lands minecraft:oak_planks oak_planks 68 -60 52 72 -60 52 0
-drv 1 "cmd gamemode creative Planner2" > /dev/null
-
-# The cap, in creative: 2,001 blocks from 40 -60 100 to 59 -60 199 and at 40 -60 200, then the 2,000 alone and right
-# after them 1 more, with both players east of the blocks, out of their way and within 64 blocks of every one, and
-# the animals the world made as it made the land killed, so nothing is in the blocks' way.
-drv 1 "cmd gamemode creative @s" "cmd tp @s 61.5 -60 150.5 90 30" "cmd tp Planner2 62.5 -60 140.5 90 30" \
-	"wait 60" "cmd kill @e[type=!minecraft:player]" "wait 10" > /dev/null
-stock minecraft:oak_planks 1
-check "a place of 2,001 blocks is sent" eval '[[ $(sent 1 "sendplace up 40.5 -60 100.5 shape 40 -60 100 59 -60 199 minecraft:oak_planks 40 -60 200 40 -60 200 minecraft:oak_planks") == "2001 blocks" ]]'
-check "it gets the cap's notice" client_said 1 \
-	"That's 2,001 blocks, more than the 2,000 real blocks you can place at once, so nothing was placed."
-check "and nothing went in" eval '[[ $(clients_count 40 -60 100 59 -60 200 oak_planks) == "0 0" ]] &&
-	server_has 40 -60 100 minecraft:air && server_has 59 -60 199 minecraft:air && server_has 40 -60 200 minecraft:air'
-debug_log=run/server/logs/debug.log
-before=$(wc -l < "$debug_log")
-check "a place of 2,000 blocks and, right after it, one of 1 more are sent" eval \
-	'[[ $(drv 1 "sendplace up 40.5 -60 100.5 shape 40 -60 100 59 -60 199 minecraft:oak_planks" "sendplace up 40.5 -60 200.5 shape 40 -60 200 40 -60 200 minecraft:oak_planks" | sed "s/^.* => //" | tr "\n" " ") == "2000 blocks 1 blocks " ]]'
-check "the second gets the notice of the cap a second" client_said 1 \
-	"That would place more than 2,000 real blocks in a second, so nothing was placed."
-# The server's 2,000 blocks match a box of oak planks /fill makes at y -40 for the check.
-cap_tag=$(new_tag)
-check "on the server, all 2,000 are real oak planks and the 1 more isn't placed, as both clients show" eval \
-	'arrive 59 -60 199 minecraft:oak_planks && arrive 40 -60 100 minecraft:oak_planks &&
-	[[ $(server_said "$cap_tag" "cmd fill 40 -40 100 59 -40 199 minecraft:oak_planks" \
-		"cmd execute if blocks 40 -60 100 59 -60 199 40 -40 100 all run say $cap_tag-hit" \
-		"cmd fill 40 -40 100 59 -40 199 minecraft:air") == 1 ]] &&
-	server_has 40 -60 200 minecraft:air && [[ $(clients_count 40 -60 100 59 -60 200 oak_planks) == "2000 2000" ]]'
-check "and they used no item" eval '[[ $(items minecraft:oak_planks) == 1 ]]'
-
-check "neither client's log has a self-check warning" eval \
 # A pasted door keeps the copy's hinge. Beside a stone column on its east side, Minecraft hinges a door that Planner1,
 # facing north, places by hand on the right, against the stone (DoorBlock's hinge rule); in Disable, Planner1's own
 # right click shows it at 194 -60 60, beside stone at 195 -60 60 and 195 -59 60. An oak door facing north with its hinge
@@ -905,6 +905,48 @@ check "using the one door" eval '[[ $(items minecraft:oak_door) == 0 ]]'
 attack_click 1
 check "a left click puts the copy away" eval 'drv 1 "wait 5" > /dev/null && [[ $(val 1 copy) == away* ]]'
 
+# In adventure mode, 5 blocks from 68 -60 52 to 72 -60 52.
+drv 1 "cmd gamemode adventure Planner2" "cmd tp Planner2 70.5 -60 47.5 180 30" "cmd tp @s 69.5 -60 47.5 180 30" \
+	"wait 40" > /dev/null
+check "in adventure mode, Planner2's place of 5 blocks is sent" eval \
+	'[[ $(sent 2 "sendplace up 68.5 -60 52.5 shape 68 -60 52 72 -60 52 minecraft:oak_planks") == "5 blocks" ]]'
+check "Planner2 gets the notice" client_said 2 "5 blocks weren't placed: the server doesn't allow them there."
+check "and nothing went in" lands minecraft:oak_planks oak_planks 68 -60 52 72 -60 52 0
+drv 1 "cmd gamemode creative Planner2" > /dev/null
+
+# The cap, in creative: 2,001 blocks from 40 -60 100 to 59 -60 199 and at 40 -60 200, then the 2,000 alone and right
+# after them 1 more, with both players east of the blocks, out of their way and within 64 blocks of every one, and
+# the animals the world made as it made the land killed, so nothing is in the blocks' way.
+drv 1 "cmd gamemode creative @s" "cmd tp @s 61.5 -60 150.5 90 30" "cmd tp Planner2 62.5 -60 140.5 90 30" \
+	"wait 60" "cmd kill @e[type=!minecraft:player]" "wait 10" > /dev/null
+stock minecraft:oak_planks 1
+# Each notice's shots come once the commands' chat lines have faded.
+drv 1 "wait 210" > /dev/null
+check "a place of 2,001 blocks is sent" eval '[[ $(sent 1 "sendplace up 40.5 -60 100.5 shape 40 -60 100 59 -60 199 minecraft:oak_planks 40 -60 200 40 -60 200 minecraft:oak_planks") == "2001 blocks" ]]'
+check "it gets the cap's notice" client_said 1 \
+	"That's 2,001 blocks, more than the 2,000 real blocks you can place at once, so nothing was placed."
+chat_shots 1 real-cap-notice
+check "and nothing went in" eval '[[ $(clients_count 40 -60 100 59 -60 200 oak_planks) == "0 0" ]] &&
+	server_has 40 -60 100 minecraft:air && server_has 59 -60 199 minecraft:air && server_has 40 -60 200 minecraft:air'
+debug_log=run/server/logs/debug.log
+before=$(wc -l < "$debug_log")
+drv 1 "wait 210" > /dev/null
+check "a place of 2,000 blocks and, right after it, one of 1 more are sent" eval \
+	'[[ $(drv 1 "sendplace up 40.5 -60 100.5 shape 40 -60 100 59 -60 199 minecraft:oak_planks" "sendplace up 40.5 -60 200.5 shape 40 -60 200 40 -60 200 minecraft:oak_planks" | sed "s/^.* => //" | tr "\n" " ") == "2000 blocks 1 blocks " ]]'
+check "the second gets the notice of the cap a second" client_said 1 \
+	"That would place more than 2,000 real blocks in a second, so nothing was placed."
+chat_shots 1 real-rate-notice
+# The server's 2,000 blocks match a box of oak planks /fill makes at y -40 for the check.
+cap_tag=$(new_tag)
+check "on the server, all 2,000 are real oak planks and the 1 more isn't placed, as both clients show" eval \
+	'arrive 59 -60 199 minecraft:oak_planks && arrive 40 -60 100 minecraft:oak_planks &&
+	[[ $(server_said "$cap_tag" "cmd fill 40 -40 100 59 -40 199 minecraft:oak_planks" \
+		"cmd execute if blocks 40 -60 100 59 -60 199 40 -40 100 all run say $cap_tag-hit" \
+		"cmd fill 40 -40 100 59 -40 199 minecraft:air") == 1 ]] &&
+	server_has 40 -60 200 minecraft:air && [[ $(clients_count 40 -60 100 59 -60 200 oak_planks) == "2000 2000" ]]'
+check "and they used no item" eval '[[ $(items minecraft:oak_planks) == 1 ]]'
+
+check "neither client's log has a self-check warning" eval \
 	'! grep -F "Self-check:" /out/client1.log /out/client2.log >> /out/checks.log'
 
 # Spawn protection: the dev server starts with none (build.gradle's prepareDevServer), and Minecraft reads it only as
@@ -935,8 +977,10 @@ drv 1 "cmd tp Planner2 4.5 -60 0.5 0 30" "cmd item replace entity Planner2 weapo
 drv 2 "ebmode LINE" "wait 5" > /dev/null
 draw 2 2 -60 4 8 -60 4
 check "Planner2's Line within the spawn protection draws 7 blocks" preview_is 2 7
+drv 2 "wait 210" > /dev/null
 place_click 2
 check "Planner2's click gets the notice" client_said 2 "7 blocks weren't placed: the server doesn't allow them there."
+chat_shots 2 real-left-out-notice
 check "and nothing went in" lands minecraft:oak_planks oak_planks 2 -60 4 8 -60 4 0
 
 # Turned off, a shape draws ghost blocks again: a Line of 5 from 100 -60 46 to 104 -60 46.

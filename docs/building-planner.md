@@ -3209,7 +3209,7 @@ driver's `realstates`):
 
 - Planner1's "Settings" has the row "Place real blocks" right after "Match ghost blocks", off at first. A click on its
   switch turns it on and saves nothing until "Save" saves `place-real-blocks=true`; the row shows it on when the screen
-  opens again and after a restart.
+  opens again and after a restart. With the mouse on its label, the row shows its tooltip.
 - The controls line reads "[Right-click: start placing real blocks]" before a Line's first click, and Single's reads
   "[Right-click: place real blocks]".
 - After a Line of ghost stone bricks drawn with the setting off and then a Line of 5 real oak planks, Ctrl+Z undoes the
@@ -3232,6 +3232,9 @@ driver's `realstates`):
   no notice comes (a say Planner1 sends after the click is the only new line in its chat; 1408 Q1 C). In Single, a
   door has both halves and a bed both parts, its head on the far side, each placed with one click and using its one
   item.
+- A Line of 4 scaffolding up from the ground draws the 3 above the first red, since the preview checks each block
+  against the world as it is, where nothing stands under them yet; its click places all 4 on the server, each on the
+  one under it, and uses the 4 scaffolding.
 - With the mix of 80 cobblestone and 20 mossy cobblestone, each block of a 20-block Line on the server is the block the
   preview showed there when the inventory contains as many of each block as the preview uses, and none is left. With
   one mossy cobblestone fewer than a second Line uses, nothing goes in and the notice names 1 mossy cobblestone short.
@@ -3267,12 +3270,12 @@ driver's `realstates`):
 - A Line of 3 copies of a row of 4 real oak planks shows blue with "[Right-click: paste 3 copies as real blocks]" and
   sends one `place` of all 12 blocks at its second click; all 12 are real oak planks on the server, using the 12 in the
   inventory.
-- In adventure mode, Planner2's place of 5 blocks places nothing, and Planner2 gets the notice "5 blocks weren't
-  placed: the server doesn't allow them there."
-- In creative, a place of 2,001 blocks places nothing and gets the cap's notice; one of 2,000 places all of them and
 - Beside a stone column east of it, Planner1's own right click in Disable, facing north, places a door hinged on the
   right, against the stone. A copy of a door hinged on the left, pasted at a spot with the same stone column beside it,
   shows blue and places the door hinged on the left, both halves, on the server and both clients, using the one door.
+- In adventure mode, Planner2's place of 5 blocks places nothing, and Planner2 gets the notice "5 blocks weren't
+  placed: the server doesn't allow them there."
+- In creative, a place of 2,001 blocks places nothing and gets the cap's notice; one of 2,000 places all of them and
   uses no item, and a place of 1 more block right after it places nothing and gets the notice of the cap a second. The
   time the server took to place the 2,000, which `RealPlacer` logs at debug level (the dev server's `logs/debug.log`),
   goes to the checks' log and "Unverified".
@@ -3285,10 +3288,12 @@ driver's `realstates`):
   item. A copy's line reads "[Right-click: paste]" again, and its paste writes ghost blocks on both clients, sending
   an edit and no `place`, places no real block and uses no item.
 - Neither client's log has a self-check warning, before the server starts again or after.
-- Shots, at 854 by 480 and 1920 by 1080, GUI scale 2: "Settings" with the row on, the controls line in Line and in
-  Single, the whole Line red for 1 oak plank short with its icons, the Line through the stone and the cow with its red
-  blocks and icons, Planner2's view of the placed Wall, the copy of the hut yellow and red with its lines, and
-  Planner2's view of the pasted hut.
+- Shots, at 854 by 480 and 1920 by 1080, GUI scale 2: "Settings" with the row on and with its tooltip, the controls
+  line in Line and in Single, the whole Line red for 1 oak plank short with its icons, the Line through the stone and
+  the cow with its red blocks and icons, the Line of torches along the wall red, the Line of scaffolding red above its
+  first block, Planner2's view of the placed Wall, the copy of the hut yellow and red with its lines, Planner2's view
+  of the pasted hut, and the Line of 3 copies with its line; and, while the chat shows each, the notices for 1 oak
+  plank short, the cap, the cap a second, and Planner2's Line within the spawn protection.
 
 `RealPlaceTest` covers the rule for each block: the order (the lowest level first, in the shape's order within a
 level, and a block that can't stay tried again after the rest, from the highest level down, with a wall torch, a
