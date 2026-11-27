@@ -596,11 +596,21 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
   - the control hints stay as they are with the setting on: "Again I don't want the control hints to change based on
     the place real blocks setting" (1411 [c2], on "[Right-click: paste real blocks]") and "This is not necessary;
     don't change the control hints for this" (1411 [c3], on the Line's controls line before its first click);
-  - the notice when the inventory is short reads, in Geo's wording, "Nothing was placed (missing 1 oak planks)", and
-    Geo asked for a box listing the items the action needs (1411 [c1]): "I think if we're about to place something, we
+  - Geo asked for a box listing the items the action needs (1411 [c1]): "I think if we're about to place something, we
     can show a box like that to indicate how many blocks the action will require, and compare that to the number of
-    each that you currently have. This is basically like a materials list, but just for this particular action." Its
-    design goes to Geo in 1411's next revision;
+    each that you currently have. This is basically like a materials list, but just for this particular action."
+    Asked in 1411 revision 2, Geo picked, for when it shows, "In survival, from a shape's first click until it's
+    placed, and while a copy is at your aim." (Q1 A); for what it's like, "The material list panel: each item's icon,
+    how many the click uses, how many you have, and how many are missing, in red." (Q2 A); for chat after a click that
+    places nothing because the inventory is short, "Only that something is missing, for one item or several:
+    "Nothing was placed (not enough blocks)"" (Q3 B, which replaces Geo's earlier wording "Nothing was placed
+    (missing 1 oak planks)"); and for "[Can't paste: not enough blocks]" on a copy that's red for being short, "Yes,
+    as "[Can't paste: too many blocks]" shows for a copy over the limit." (Q4 A). Where the panel goes, its headings,
+    how many rows it shows and whether the icons beside the crosshair still show go to Geo in 1411's next revision;
+  - Geo approved, as proposed in 1411 revision 2, the other notices "Nothing was placed (2,001 blocks, over the limit
+    of 2,000 at once)", "Nothing was placed (over the limit of 2,000 blocks a second)", "1 block wasn't placed (not
+    allowed there)" and "7 blocks weren't placed (not allowed there)", the guide's paragraph on items without the
+    screen's details, and its paragraph on pastes without "with the reason above the hotbar";
   - Geo read the setting's label and tooltip ("Place real blocks"; "Shapes and pastes place real blocks from your
     inventory, not ghost blocks"), the player guide's sentences on turning it on, on where blocks go, on red in the
     preview, on torches and signs, on undo, and the first sentence on pastes, with no edit or comment (1411 PR1, PR2,
