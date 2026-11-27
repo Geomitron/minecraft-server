@@ -75,6 +75,8 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	 */
 	private static EditGlow glow;
 	private static ThroughWallsOutline throughWalls;
+	/** Hook E38's red frame on ghost blocks, drawn after the ghost blocks through walls; null while off, as above. */
+	private static GhostFrameOutline ghostFrame;
 	/** The player's block mix, kept while the game runs, across servers. */
 	private static final BlockMix MIX = new BlockMix();
 
@@ -150,6 +152,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		MarksOutline.registered(() -> session != null && session.deleteOn() ? session.marks() : null);
 		throughWalls = ThroughWallsOutline.registered(
 			() -> session != null && session.ghostsShown() ? session.replica().layer() : null);
+		ghostFrame = GhostFrameOutline.registered();
 		modeHud = new ModeHud(BuildingPlannerClient::mouseMode, BuildingPlannerClient::boxShown,
 			BuildingPlannerClient::copyLine, BuildingPlannerClient::deleteLines, BuildingPlannerClient::modelessLine,
 			() -> effortless && EffortlessShapes.shapeUnderWay(),
@@ -320,6 +323,18 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	/** The ghost blocks the last frame drew through walls, or none. */
 	static ThroughWalls.Found throughWallsDrawn() {
 		return throughWalls == null ? ThroughWalls.Found.NONE : throughWalls.drawn();
+	}
+
+	/** Hook E38: the framed ghost blocks for this frame, which the red frame draws on more strongly. */
+	public static void frameGhostBlocks(List<BlockPos> ghosts) {
+		if (ghostFrame != null) {
+			ghostFrame.frame(ghosts);
+		}
+	}
+
+	/** The positions the last frame drew the red frame on more strongly, as ghost blocks, or none. */
+	static List<BlockPos> ghostFrameDrawn() {
+		return ghostFrame == null ? List.of() : ghostFrame.drawn();
 	}
 
 	/** The game time of the scan that last changed the ghost blocks drawn through walls. */

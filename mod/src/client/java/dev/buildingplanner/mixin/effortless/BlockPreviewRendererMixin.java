@@ -63,8 +63,10 @@ abstract class BlockPreviewRendererMixin {
 	/**
 	 * Hook E38: before the first click, the block a left click would start erasing from, with its copies, drawn after
 	 * the preview in Effortless Building's own look for a shape drawn with the break click, red sides with a checkered
-	 * texture and a red outline ({@code EffortlessShapes.leftClickFrame}). The method's earlier returns come where
-	 * nothing is aimed at or the lock's controls aren't active (hook E30), where no frame shows either.
+	 * texture and a red outline ({@code EffortlessShapes.leftClickFrame}); the ghost blocks among them are handed on to
+	 * be drawn again, more strongly, after the world ({@code GhostFrameOutline}), where Litematica's overlay and the
+	 * ghost blocks through walls no longer draw over the frame. The method's earlier returns come where nothing is
+	 * aimed at or the lock's controls aren't active (hook E30), where no frame shows either.
 	 */
 	@Inject(method = "render", at = @At("TAIL"))
 	private static void buildingplanner$leftClickFrame(PoseStack poseStack, SubmitNodeCollector collector, double camX,
@@ -80,6 +82,7 @@ abstract class BlockPreviewRendererMixin {
 		BlockPreviewRendererInvoker.buildingplanner$edges(poseStack, collector,
 			BlockPreviewRendererInvoker.buildingplanner$borderEdges(framed), camX, camY, camZ, OUTLINE_HALF_WIDTH,
 			255, 0, 0, 255);
+		BuildingPlannerClient.frameGhostBlocks(EffortlessShapes.framedGhosts(framed));
 	}
 
 	/** The half-width of Effortless Building's outline, in blocks, as its {@code render} draws it. */

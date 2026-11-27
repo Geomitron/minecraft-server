@@ -2258,7 +2258,8 @@ drv 1 "edit -62 -60 -39 -58 -60 -39 minecraft:air" "await block -58 -60 -39 mine
 # the stair a right click would place. In Single only on a ghost block, since a left click there erases nothing else;
 # in the other modes on any aimed block, with the mirror's copy. A ghost stone brick stands at -62 -60 -40, a real
 # stone at -60 -60 -40 for a while, and Effortless Building's mirror across x -66 puts a copy of -62 at -71 and of -60
-# at -73.
+# at -73. On ghost blocks the frame draws again after the world, more strongly (the driver's `ghostframe`), and on real
+# blocks only in Effortless Building's look.
 # frame_is [<positions>...]: the red frame covered exactly these positions (x,y,z) in the last whole frame, in any
 # order; none without any.
 frame_is() {
@@ -2266,26 +2267,34 @@ frame_is() {
 	drv 1 "wait 5" > /dev/null
 	[[ $(val 1 redframe | tr ' ' '\n' | sort | xargs) == "$(tr ' ' '\n' <<< "$want" | sort | xargs)" ]]
 }
+# ghost_frame_is [<positions>...]: the last frame drew the stronger frame on exactly these ghost blocks, in any order.
+ghost_frame_is() {
+	local want=${*:-none}
+	[[ $(val 1 ghostframe | tr ' ' '\n' | sort | xargs) == "$(tr ' ' '\n' <<< "$want" | sort | xargs)" ]]
+}
 drv 1 "cmd item replace entity @s weapon.mainhand with minecraft:oak_stairs" "ebmode SINGLE" "ebarray 0" \
 	"cmd tp @s -59.5 -58 -35.5 180 30" "edit -62 -60 -40 -62 -60 -40 minecraft:stone_bricks" \
 	"await block -62 -60 -40 minecraft:stone_bricks" "wait 40" > /dev/null
 aim 1 -62 -59 -40
 check "in Single, aimed at a ghost block's top, the red frame covers the ghost block" frame_is -62,-60,-40
+check "and draws on it again, more strongly, after the world" ghost_frame_is -62,-60,-40
 check "beside the stair a right click would place on it" eval '[[ $(val 1 preview) == -62,-59,-40 ]]'
 shots frame-single-ghost
 aim 1 -60 -60 -40
 check "in Single, aimed at the grass, a real block, no red frame shows, and the preview draws the stair" eval \
-	'frame_is && [[ $(val 1 preview) == -60,-60,-40 ]]'
+	'frame_is && ghost_frame_is && [[ $(val 1 preview) == -60,-60,-40 ]]'
 drv 1 "ebmirror -66" "wait 5" > /dev/null
 aim 1 -62 -59 -40
 check "with the mirror on, the red frame covers the ghost block and not its copy over the grass" frame_is -62,-60,-40
 drv 1 "edit -71 -60 -40 -71 -60 -40 minecraft:stone_bricks" "await block -71 -60 -40 minecraft:stone_bricks" \
 	> /dev/null
 check "and with a ghost block at the copy too, both mirror copies" frame_is -62,-60,-40 -71,-60,-40
+check "both drawn more strongly too" ghost_frame_is -62,-60,-40 -71,-60,-40
 drv 1 "ebmode WALL" "ebarray 0" "cmd setblock -60 -60 -40 minecraft:stone" \
 	"await real -60 -60 -40 minecraft:stone" "wait 5" > /dev/null
 aim 1 -60 -59 -40
 check "in Wall, aimed at a real stone's top, the red frame covers the aimed real block" frame_is -60,-60,-40
+check "in Effortless Building's look alone" ghost_frame_is
 check "beside the stair a right click would start the wall with" eval '[[ $(val 1 preview) == -60,-59,-40 ]]'
 shots frame-wall-real
 drv 1 "cmd setblock -60 -60 -40 minecraft:air" "await real -60 -60 -40 minecraft:air" > /dev/null
@@ -2293,19 +2302,20 @@ aim 1 -60 -60 -40
 check "aimed at the grass, the grass block" frame_is -60,-61,-40
 aim 1 -62 -59 -40
 check "and aimed at a ghost block, the ghost block" frame_is -62,-60,-40
+check "drawn more strongly, as in Single" ghost_frame_is -62,-60,-40
 drv 1 "ebmirror -66" "wait 5" > /dev/null
 aim 1 -60 -60 -40
 check "with the mirror on, both mirror copies: the aimed grass and its copy's" frame_is -60,-61,-40 -73,-61,-40
 press 1 h
 check "H locks the first corner, and no red frame shows" eval \
-	'[[ $(val 1 lock) == "locked -60,-60,-40 active" ]] && frame_is'
+	'[[ $(val 1 lock) == "locked -60,-60,-40 active" ]] && frame_is && ghost_frame_is'
 press 1 h
 check "H unlocks it, and the red frame shows again" frame_is -60,-61,-40 -73,-61,-40
 use_click 1
 check "during the wall, after the first click, no red frame shows" eval \
 	'drv 1 "wait 5" > /dev/null && [[ $(val 1 holdlog) == *" edits=0 "* ]] && frame_is'
 drv 1 "ebmode DISABLED" "wait 5" > /dev/null
-check "in Disable, no red frame shows" frame_is
+check "in Disable, no red frame shows" eval 'frame_is && ghost_frame_is'
 drv 1 "ebmode SINGLE" "ebarray 0" "edit -71 -60 -40 -62 -60 -40 minecraft:air" \
 	"await block -62 -60 -40 minecraft:air" "await block -71 -60 -40 minecraft:air" > /dev/null
 

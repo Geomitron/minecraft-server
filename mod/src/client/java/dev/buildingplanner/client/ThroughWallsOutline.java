@@ -69,7 +69,7 @@ final class ThroughWallsOutline implements IRenderer {
 
 	private static OutlineMesh.Look look(String name, int rgb) {
 		return new OutlineMesh.Look(name, (rgb >> 16 & 0xFF) / 255f, (rgb >> 8 & 0xFF) / 255f, (rgb & 0xFF) / 255f,
-			0.1f, 0.8f, () -> MaLiLibPipelines.POSITION_COLOR_TRANSLUCENT_NO_DEPTH,
+			0.1f, 0.8f, 2f, OutlineMesh.EXPAND, () -> MaLiLibPipelines.POSITION_COLOR_TRANSLUCENT_NO_DEPTH,
 			() -> MaLiLibPipelines.DEBUG_LINES_TRANSLUCENT_NO_DEPTH);
 	}
 

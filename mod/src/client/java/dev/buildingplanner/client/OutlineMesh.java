@@ -25,17 +25,18 @@ import org.joml.Matrix4fStack;
  * builds its terrain, and each frame draws each section where it is from the camera.
  */
 final class OutlineMesh {
-	/** How far the sides stand out from the blocks, as MaLiLib's box sides do, so they don't flicker with them. */
-	private static final float EXPAND = 0.002f;
-	private static final float LINE_WIDTH = 2f;
+	/** How far a shape's sides stand out from the blocks, as MaLiLib's box sides do, so they don't flicker. */
+	static final float EXPAND = 0.002f;
 	private static final Direction[] DIRECTIONS = Direction.values();
 
 	/**
-	 * A shape's colour (each part 0 to 1), its sides' and lines' alpha, and the pipelines that draw them, read when the
-	 * shape is built: MaLiLib sets its pipelines after Building Planner's renderers are made.
+	 * A shape's colour (each part 0 to 1), its sides' and lines' alpha, its lines' width in pixels, how far its sides
+	 * stand out from the blocks ({@link #EXPAND} but where they must stand in front of other sides), and the pipelines
+	 * that draw them, read when the shape is built: MaLiLib sets its pipelines after Building Planner's renderers are
+	 * made.
 	 */
-	record Look(String name, float red, float green, float blue, float sidesAlpha, float linesAlpha,
-		Supplier<RenderPipeline> sides, Supplier<RenderPipeline> lines) {
+	record Look(String name, float red, float green, float blue, float sidesAlpha, float linesAlpha, float lineWidth,
+		float expand, Supplier<RenderPipeline> sides, Supplier<RenderPipeline> lines) {
 	}
 
 	/** A section's blocks, and its shape's sides and lines, counted from the section's lowest corner. */
@@ -153,8 +154,8 @@ final class OutlineMesh {
 
 	/** The block's face on {@code side}, its corners counter-clockwise seen from outside. */
 	private static void face(BufferBuilder builder, int x, int y, int z, Direction side, Look look) {
-		float lo = -EXPAND;
-		float hi = 1 + EXPAND;
+		float lo = -look.expand();
+		float hi = 1 + look.expand();
 		float[][] corners = switch (side) {
 			case UP -> new float[][] {{lo, hi, hi}, {hi, hi, hi}, {hi, hi, lo}, {lo, hi, lo}};
 			case DOWN -> new float[][] {{lo, lo, lo}, {hi, lo, lo}, {hi, lo, hi}, {lo, lo, hi}};
@@ -186,9 +187,9 @@ final class OutlineMesh {
 			}
 		}
 		builder.addVertex(x + from[0], y + from[1], z + from[2])
-			.setColor(look.red(), look.green(), look.blue(), look.linesAlpha()).setLineWidth(LINE_WIDTH);
+			.setColor(look.red(), look.green(), look.blue(), look.linesAlpha()).setLineWidth(look.lineWidth());
 		builder.addVertex(x + to[0], y + to[1], z + to[2])
-			.setColor(look.red(), look.green(), look.blue(), look.linesAlpha()).setLineWidth(LINE_WIDTH);
+			.setColor(look.red(), look.green(), look.blue(), look.linesAlpha()).setLineWidth(look.lineWidth());
 	}
 
 	private static RenderContext upload(RenderContext context, BufferBuilder builder) {

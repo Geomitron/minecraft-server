@@ -29,7 +29,7 @@ import org.joml.Vector4f;
  */
 final class MarksOutline implements IRenderer {
 	private static final OutlineMesh.Look LOOK = new OutlineMesh.Look("marks", 1f, 112 / 255f, 112 / 255f, 0.2f, 1f,
-		() -> MaLiLibPipelines.POSITION_COLOR_TRANSLUCENT_LEQUAL_DEPTH,
+		2f, OutlineMesh.EXPAND, () -> MaLiLibPipelines.POSITION_COLOR_TRANSLUCENT_LEQUAL_DEPTH,
 		() -> MaLiLibPipelines.DEBUG_LINES_MASA_SIMPLE_NO_DEPTH_NO_CULL);
 
 	private final Supplier<DeleteMarks> marks;

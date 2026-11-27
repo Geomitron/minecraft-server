@@ -719,6 +719,13 @@ public final class Driver implements ClientModInitializer {
 				// E38), as x,y,z, or none.
 				return PreviewProbe.frame();
 			}
+			case "ghostframe" -> {
+				// ghostframe: the ghost blocks the last frame drew the red frame on more strongly, after the world, as
+				// x,y,z in order, or none.
+				List<BlockPos> drawn = BuildingPlannerClient.ghostFrameDrawn();
+				return drawn.isEmpty() ? "none" : drawn.stream()
+					.map(at -> at.getX() + "," + at.getY() + "," + at.getZ()).collect(Collectors.joining(" "));
+			}
 			case "previewstate" -> {
 				// previewstate x y z: the state Effortless Building's preview drew there in the last whole frame, with its
 				// properties, such as minecraft:oak_stairs[facing=east,...], or none.

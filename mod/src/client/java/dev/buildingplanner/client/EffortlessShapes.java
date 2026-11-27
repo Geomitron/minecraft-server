@@ -10,6 +10,7 @@ import dev.buildingplanner.input.ShapeLock;
 import dev.buildingplanner.layer.GhostErase;
 import dev.buildingplanner.layer.OtherHalf;
 import dev.buildingplanner.look.ControlsLine;
+import dev.buildingplanner.look.GhostFrame;
 import dev.buildingplanner.mixin.effortless.BuildPipelineClientAccessor;
 import dev.buildingplanner.mixin.effortless.ThreeClicksBuildModeAccessor;
 import dev.buildingplanner.mixin.effortless.TwoClicksBuildModeAccessor;
@@ -242,7 +243,21 @@ public final class EffortlessShapes {
 		int step = step();
 		return ShapeLock.framed(BuildingPlannerClient.lockActive(), singleMode(), step,
 			step == 0 && session != null && session.lock().on(0), EffortlessShapes::leftClickStart,
-			pos -> session.ghostsShown() && !session.replica().layer().get(pos).isAir());
+			pos -> ghostShown(session, pos));
+	}
+
+	/**
+	 * Hook E38: the ghost blocks among the positions the red frame shows on ({@link #leftClickFrame}), on which it draws
+	 * more strongly ({@link GhostFrame#on}), while ghost blocks show.
+	 */
+	public static List<BlockPos> framedGhosts(List<BlockPos> framed) {
+		ClientSession session = BuildingPlannerClient.session();
+		return session == null ? List.of() : GhostFrame.on(framed, pos -> ghostShown(session, pos));
+	}
+
+	/** Whether the player's copy of the layer holds a ghost block at {@code pos} that shows now. */
+	private static boolean ghostShown(ClientSession session, BlockPos pos) {
+		return session.ghostsShown() && !session.replica().layer().get(pos).isAir();
 	}
 
 	/**
