@@ -574,8 +574,7 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
     one place sound a shape or a paste;
   - the preview draws red each block the player's game can tell won't go in, and the whole shape when the inventory
     doesn't cover it; Effortless Building's own icons beside the crosshair count the blocks the click uses; and the
-    right click's control says it places real blocks (Geo's rule for the controls lines, 1313 [c1]), in words Geo
-    approves in build step 5;
+    controls lines read the same with the setting on as with it off (1411 [c2], [c3], below);
   - the copy's box is blue where every block would go in, yellow where some wouldn't (a real block in the space, past
     the reach, outside the world, or a block no item places, such as water), and red where nothing would (over 2,000
     blocks, or an inventory that doesn't cover it), with the reason on the controls line and a click that pastes
@@ -588,6 +587,24 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
   of a wall, "Nothing, as now." (Q1 C): each block keeps Effortless Building's standing form, which can't stay beside
   a wall, so nothing goes in; and for a block another player puts in a spot between the preview and the click, "No:
   it's skipped silently, like the spots the preview already showed red." (Q2 A).
+
+  Geo's answers on 0.9.0's texts and screenshots (1411):
+  - in a shape aimed at the side of a wall, heads go in standing upright, "Yes, as the preview shows them." (Q1 A);
+  - a block that another block of the same shape holds up, such as scaffolding in a Line up from the ground, "Show it
+    as going in." (Q2 B), with Geo's comment: "Can't you do this, but only narrow that check if the placement involves
+    scaffolding and any of the other rare blocks that this might apply to?";
+  - the control hints stay as they are with the setting on: "Again I don't want the control hints to change based on
+    the place real blocks setting" (1411 [c2], on "[Right-click: paste real blocks]") and "This is not necessary;
+    don't change the control hints for this" (1411 [c3], on the Line's controls line before its first click);
+  - the notice when the inventory is short reads, in Geo's wording, "Nothing was placed (missing 1 oak planks)", and
+    Geo asked for a box listing the items the action needs (1411 [c1]): "I think if we're about to place something, we
+    can show a box like that to indicate how many blocks the action will require, and compare that to the number of
+    each that you currently have. This is basically like a materials list, but just for this particular action." Its
+    design goes to Geo in 1411's next revision;
+  - Geo read the setting's label and tooltip ("Place real blocks"; "Shapes and pastes place real blocks from your
+    inventory, not ghost blocks"), the player guide's sentences on turning it on, on where blocks go, on red in the
+    preview, on torches and signs, on undo, and the first sentence on pastes, with no edit or comment (1411 PR1, PR2,
+    PR5 c2, PR6, PR8, PR10 c1).
 - **Building Planner 0.10.0** works on servers that don't run Building Planner, as Geo asked in the trial of 0.7.0
   (1359, c4): "I have ideals for this being a client-side only mod that could be used on other servers that don't need
   other people to be able to see your own ghost blocks." Asked in 1368, Geo picked:
