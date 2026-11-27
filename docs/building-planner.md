@@ -285,7 +285,7 @@ Minecraft 26.3, read in the client jar Loom maps (`minecraft-clientonly-deobf-26
 | # | File, method | Hook | Purpose |
 |---|---|---|---|
 | M1 | `Minecraft.java`, `startAttack()` | `@Inject` at head, cancellable, returning false | While a box is drawn, the left click sets its next corner; while the copy is at the aim, it drops the copy's set, or puts the copy away when no set is fixed (1238 Q2 A); in Delete, it starts the box with Left Ctrl held, and the one-second hold that erases the marks without it. None attacks or breaks. `handleKeybinds` calls it once for each press of the attack key. |
-| M2 | `Minecraft.java`, `startUseItem()` | `@Inject` at head, cancellable | While the copy is at the aim, the right click pastes it, fixes its set's first copy, or pastes the set; while a box is drawn, it leaves that mode and uses nothing. In Delete it clears the marks, or leaves the mode when there are none. `handleKeybinds` also calls `startUseItem` every 4 ticks while the use key stays down (`rightClickDelay`), so the use key does nothing more until it's let go. |
+| M2 | `Minecraft.java`, `startUseItem()` | `@Inject` at head, cancellable | While the copy is at the aim, the right click pastes it, fixes its set's first copy, or pastes the set, as real blocks while "Place real blocks" acts (see "A paste" there); while a box is drawn, it leaves that mode and uses nothing. In Delete it clears the marks, or leaves the mode when there are none. `handleKeybinds` also calls `startUseItem` every 4 ticks while the use key stays down (`rightClickDelay`), so the use key does nothing more until it's let go. |
 | M3 | `Minecraft.java`, `continueAttack(boolean)` | `@Inject` at head, cancellable | Holding the left click breaks nothing while a box is drawn, the copy is at the aim, or Delete is on. In Delete, the client tick reads the attack key's state each tick (`KeyMapping.isDown`) for the box's second corner, which it sets when the key is let go, and for the erase's hold. |
 | M4 | `Minecraft.java`, `pickBlockOrEntity()` | `@Inject` at head, cancellable | While the copy is at the aim, the middle click (the pick block key) mirrors the copy; while a box is drawn or Delete is on, it does nothing. While the turning controls are active (every mode, Disable's as "Turning real blocks in Disable" describes), with a block in hand that flips and Minecraft's sprint key held, it flips the block (see "Locking and the first click"). |
 | M5 | `MouseHandler.java`, `onScroll(long, double, double)` | `@WrapWithCondition` on `Inventory.setSelectedSlot`, reading the local `wheel` | While the copy is at the aim, each notch of the wheel turns the copy a quarter turn, instead of changing the hotbar slot: clockwise seen from above for a notch up, counterclockwise for a notch down, as Satisfactory's wheel turns a hologram. While the turning controls are active (every mode, Disable's as "Turning real blocks in Disable" describes), with a block in hand that turns and Minecraft's sprint key held, each notch turns the block the same way. The method reaches that call only with no screen open and the player not a spectator. |
@@ -802,7 +802,10 @@ left click (1238 Q2 A):
   part of the copy is outside the world]" (the build height or the border) or "[Can't paste: too many blocks]". In
   Line, Wall and Floor before the first click the reason goes in the same place, before "[Right-click: set the
   start]", which stays since that click still fixes the first copy: "[Can't paste: too many blocks][Right-click: set
-  the start][Scroll: turn]...".
+  the start][Scroll: turn]...";
+- while "Place real blocks" acts, the paste's control says it places real blocks, "[Right-click: paste real blocks]",
+  "[Right-click: paste 4 copies as real blocks]" and "[Right-click: paste 1 copy as real blocks]", and a red copy's
+  reason may also be "[Can't paste: not enough blocks]" (see "A paste" under "Place real blocks").
 
 Each key goes by its name as Controls shows it ("H", "Page Up", "Left Control"), and a key held down as "Hold" and its
 name ("Hold Left Control"). The six nudge keys make one control, "<keys>: nudge": the four along the ground show as
@@ -1362,7 +1365,8 @@ blocks already there, which the paste still does, as Satisfactory's yellow "soft
 a set over the block cap. While it's red, the controls line says why (a Line, Wall or Floor copy's too, before its
 first click) and a right click pastes nothing and sends no
 edit. Hook L6 leaves the copy and its set out of Litematica's own placement boxes, as it does tiles. The copy's blocks
-draw as Litematica draws them.
+draw as Litematica draws them. While "Place real blocks" acts, the colours follow the rules for real blocks instead
+(see "A paste" under "Place real blocks").
 
 The colour is a pure function (`CopyColour`), worked out each frame and at each click. With a set fixed, each copy's
 box is drawn, and the whole set has one colour, since it pastes as one edit. Red follows the server's checks in its
@@ -2022,24 +2026,35 @@ paste needs, and at most 2,000 blocks. A paste sends one `place` of each block o
 structure void, at the position and in the state where Litematica draws it, and a Line, Wall or Floor of copies sends
 one `place` for the whole set at its second click. A paste has no first click, so its `place` carries the top face
 and a hit at the bottom middle of its first block, as if each block were placed onto the block under it; hook S2 then
-gives each block the copy's orientation. The copy leaves out block entities' contents, so a pasted chest is empty and a
-pasted sign blank. The copy stays at the aim for more pastes, and each paste's box joins the recent pastes the copy
-snaps to (`PasteBoxes`), as a paste of ghost blocks does.
+gives each block the copy's orientation. Its first block is the first the copy holds, in the order of its own unturned
+box (east fastest, then up, then south), and a set's is its first copy's. The copy leaves out block entities'
+contents, so a pasted chest is empty and a pasted sign blank. The copy stays at the aim for more pastes, and each
+paste's box joins the recent pastes the copy snaps to (`PasteBoxes`), as a paste of ghost blocks does. Since a paste of
+real blocks writes no ghost blocks, it leaves hidden ghost blocks hidden, unlike a paste of ghost blocks, which shows
+them again.
 
 While the setting acts, the copy's colour (`CopyColour`) follows the rules for real blocks:
 
 - blue where every block of the copy would go in, as far as the player's game can tell;
 - yellow where some blocks wouldn't and the rest would, as Satisfactory's yellow still builds: a space that doesn't
-  take a block (a real block there), a block past the reach, outside the build height or the border, or a block no
-  item places, such as water. Ghost blocks under the copy don't make it yellow, since real blocks don't replace them.
-  Whether each block can stay is the server's alone, since the copy's own blocks may hold it up;
+  take a block (a real block there), a block past the reach, outside the build height or the border, a block no
+  item places, such as water, or an entity in a block's way. A copy none of whose blocks would go in for those reasons
+  is yellow too, since the server refuses none of it and places what goes in. Ghost blocks under the copy don't make
+  it yellow, since real blocks don't replace them. Whether each block can stay is the server's alone, since the copy's
+  own blocks may hold it up;
 - red where nothing would go in: more than 2,000 blocks in the paste or the set, checked first, as on the server, or,
   in survival, an inventory without every item the paste needs, counted as for a shape.
+
+A door's upper half and a bed's head count toward the 2,000, as the server counts every block a `place` carries, but
+need no item and no check of their own, since the server places them with their first half. The game works the colour
+out once a client tick, as the copy and the inventory may change between ticks.
 
 While the copy is red, the reason shows in red in place of the right click's control, "[Can't paste: too many
 blocks]" or "[Can't paste: not enough blocks]", and a right click pastes nothing and sends nothing, as for a red copy
 of ghost blocks. Otherwise the right click's control says the paste places real blocks, "[Right-click: paste real
-blocks]" and "[Right-click: paste 4 copies as real blocks]", in the wording Geo approves in build step 5.
+blocks]", "[Right-click: paste 4 copies as real blocks]" and "[Right-click: paste 1 copy as real blocks]", in the
+wording Geo approves in build step 5. Before a Line, Wall or Floor's first click, which pastes nothing, the control
+reads "[Right-click: set the start]" as without the setting, after the reason while the copy is red.
 
 **Undo** (1372 Q5 B). Ctrl+Z and Ctrl+Y undo and redo only changes to ghost blocks: a shape or a paste of real blocks
 makes no step on the player's undo list and leaves the redo list as it is (see "Undo"). So Ctrl+Z right after a shape
@@ -2057,7 +2072,7 @@ a 0.9.0 server work together, and so do a 0.9.0 game and a 0.8.0 server, with gh
 | E40 | `buildpipeline/BuildPipelineClient.java`, private static `updateDisplayTrackers(Player, BlockSet)` | `@Inject` at tail | While the setting acts, set `ITEM_USAGE.missingPositions` to every block of the shape when `ITEM_USAGE.hasMissing()`, and otherwise to the blocks `RealPlace` refuses, as hook E29 marks Disable's one block. |
 | E41 | `buildpipeline/BuildPipelineClient.java`, private static `handleClick(Minecraft, BuildPipeline.BuildState)` | `@WrapWithCondition` on `ClientLevel.playLocalSound(BlockPos, SoundEvent, SoundSource, float, float, boolean)` | While the setting acts, play the place sound only when `RealPlace` finds that the inventory covers the click's blocks (the local `BlockSet blocks`), since otherwise nothing goes in. |
 | E43 | `render/BlockPreviewRenderer.java`, `render` | `@WrapOperation` on `BlockEntry.applyTransforms(BlockState)` | While the setting acts, outside the break click's shape, each block drawn in the state the click sends where that differs, which is the turn of a ghost block it fills (`RealShape.drawn`). |
-| M2 | `Minecraft.java`, `startUseItem()` | the same hook | While the setting acts, a paste goes to the server as `place` instead of as an edit, and a red copy's click sends nothing. |
+| M2 | `Minecraft.java`, `startUseItem()` | the same hook | While the setting acts, a paste, or a set of copies at its second click, goes to the server as one `place` instead of as an edit (`ClientSession.sendPaste`), and a red copy's click sends nothing. |
 | S2 | `BlockItem.place`, `getPlacementState` | the same hook | While the server places a shape or a paste, the shape's orientation and count for that block in place of the player's turn, the shape's form where Minecraft gives the other form of the same item (`StandingAndWallBlockItem`), and null when Minecraft's state is any other block. |
 | S3 | `net/minecraft/world/item/BlockItem.java`, `place(BlockPlaceContext)` | `@WrapWithCondition` on `Level.playSound(Entity, BlockPos, SoundEvent, SoundSource, float, float)` | While the server places a shape or a paste, only its first block plays the place sound; a paste's first block plays it to the player too (`Level.playSound(null, …)`). |
 
@@ -3280,14 +3295,23 @@ that doesn't go in, or the whole shape when an item is short). `PlaceRateTest`
 covers the cap a second: a place goes in while it and the blocks placed in the second before stay within 2,000,
 several places in a second add up, blocks placed a second ago no longer count, and each player has their own count
 until they leave.
-`CopyColourTest` covers the copy's colours with the setting on: blue on clear ground and over ghost blocks; yellow for
-a real block in a space, a block past the reach, one outside the build height or the border, and water; red past 2,000
-blocks, checked first, and in survival for an inventory one item short. `PayloadsTest` covers `place`: a shape's and a
+`CopyColourTest` covers the copy's colours with the setting on: blue on clear ground and over ghost blocks (the same
+spot over a ghost block the copy would replace is yellow for ghost blocks), and beside a real block in the copy's
+empty space or water in a block's space; yellow for a real block in a block's space, a block past the reach (63.5 and
+just over 64 blocks from the eyes, and every block past it), part of the copy outside the build height (above and
+below) or the border, water, and an entity in a block's way; red past 2,000 blocks (1,001 copies of 2, checked first,
+before an empty inventory and blocks past the reach; 1,000 copies are blue), and in survival for an inventory one item
+short, for one copy and for a set of two, while a block that doesn't go in needs no item; and a door's upper half
+needing no item of its own. `PayloadsTest` covers `place`: a shape's and a
 paste's round trip, a `place` of as many blocks as an `edit` carries fitting the room it's registered with, a hit that
 isn't a position ending the connection, and the cap's notices grouping their digits ("2,001"). `ControlsLineTest`
 covers the shape's lines with the setting on and off: the right click's control in Single and before a shape's first
 click, with the lock off and on, and a shape under way and a red locked position reading as they do without the
-setting. Step 4 adds the copy's lines with the setting on.
+setting; and the copy's lines with the setting on: "[Right-click: paste real blocks]" following the aim and locked,
+"[Right-click: paste 4 copies as real blocks]" and "[Right-click: paste 1 copy as real blocks]" after a set's first
+click, "[Right-click: set the start]" before it as without the setting, and the red reasons "[Can't paste: not enough
+blocks]" (following the aim, and before "[Right-click: set the start]") and "[Can't paste: too many blocks]" for a
+set, in the warning's colour.
 
 `local.sh`, servers without Building Planner (proposed for 0.10.0; the checks follow the options the requests
 recommend), on the dev server started with the add-on left off its classpath (`start_server "$ADDON"

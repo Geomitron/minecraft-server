@@ -6,7 +6,6 @@ import dev.buildingplanner.input.RealPlace.Entry;
 import dev.buildingplanner.input.RealPlace.Tried;
 import dev.buildingplanner.sync.Payloads;
 import dev.buildingplanner.sync.PlayerMessage;
-import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,7 +26,6 @@ import net.minecraft.util.Util;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
@@ -139,7 +137,7 @@ public final class RealPlacer {
 		Vec3 eyes = player.getEyePosition();
 		boolean mayPlace = level == player.level() && player.mayBuild();
 		List<Entry> going = RealPlace.goingIn(blocks, world(level, player, mayPlace), eyes);
-		Map<Item, Integer> lacking = inventory(player).shortOf(RealPlace.needs(going));
+		Map<Item, Integer> lacking = RealPlace.Inventory.of(player).shortOf(RealPlace.needs(going));
 		if (!lacking.isEmpty()) {
 			notice(player, PlayerMessage.placeShort(names(lacking)));
 			return;
@@ -216,7 +214,7 @@ public final class RealPlacer {
 			return now.cantStay ? Tried.CANT_STAY : Tried.LEFT_OUT;
 		}
 		// BlockItem.place used up one item; a block made of several uses the rest.
-		for (RealPlace.Take take : inventory(player).takes(item, RealPlace.items(block.state()) - 1)) {
+		for (RealPlace.Take take : RealPlace.Inventory.of(player).takes(item, RealPlace.items(block.state()) - 1)) {
 			player.getInventory().getItem(take.slot()).shrink(take.count());
 		}
 		return Tried.PLACED;
@@ -230,20 +228,8 @@ public final class RealPlacer {
 		if (player.hasInfiniteMaterials()) {
 			return new ItemStack(item);
 		}
-		List<RealPlace.Take> takes = inventory(player).takes(item, 1);
+		List<RealPlace.Take> takes = RealPlace.Inventory.of(player).takes(item, 1);
 		return takes.isEmpty() ? null : player.getInventory().getItem(takes.getFirst().slot());
-	}
-
-	private static RealPlace.Inventory inventory(ServerPlayer player) {
-		if (player.hasInfiniteMaterials()) {
-			return RealPlace.Inventory.CREATIVE;
-		}
-		Inventory inventory = player.getInventory();
-		List<ItemStack> stacks = new ArrayList<>(inventory.getContainerSize());
-		for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
-			stacks.add(inventory.getItem(slot));
-		}
-		return RealPlace.Inventory.of(stacks, inventory.getSelectedSlot(), false);
 	}
 
 	/** Each item short and how many, in English, as "1 Oak Planks, 4 Mossy Cobblestone". */

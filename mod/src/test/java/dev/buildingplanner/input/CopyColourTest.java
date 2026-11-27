@@ -7,15 +7,24 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import dev.buildingplanner.input.CopyColour.Refusal;
 import dev.buildingplanner.input.CopyColour.Shown;
 import dev.buildingplanner.input.CopyPlacement.Spot;
+import dev.buildingplanner.input.RealPlace.Inventory;
+import dev.buildingplanner.input.RealPlace.Slot;
 import dev.buildingplanner.layer.Layer;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
 import net.minecraft.server.Bootstrap;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
+import net.minecraft.world.phys.Vec3;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -179,5 +188,126 @@ class CopyColourTest {
 		assertFalse(asked[0]);
 		CopyColour.of(at(0, 0, 0), 2, WORLD, 100, () -> asked[0] = true);
 		assertTrue(asked[0]);
+	}
+
+	/** Eyes at the middle of the lowest block of a copy at {@code at(0, 0, 0)}. */
+	private static final Vec3 EYES = new Vec3(0.5, 0.5, 0.5);
+
+	/**
+	 * The world for real blocks: {@link #WORLD}'s build height and border, air but the given real blocks, and an entity
+	 * in the way at each of {@code entities}.
+	 */
+	private static RealPlace.World real(Map<BlockPos, BlockState> real, Set<BlockPos> entities) {
+		return new RealPlace.World() {
+			@Override
+			public boolean allows(BlockPos pos) {
+				return WORLD.inBuildHeight(pos.getY()) && WORLD.insideBorder(pos);
+			}
+
+			@Override
+			public BlockState at(BlockPos pos) {
+				return real.getOrDefault(pos, Blocks.AIR.defaultBlockState());
+			}
+
+			@Override
+			public boolean unobstructed(RealPlace.Entry block) {
+				return !entities.contains(block.pos());
+			}
+		};
+	}
+
+	private static Shown real(List<Spot> set, Map<BlockPos, BlockState> real, Vec3 eyes) {
+		return CopyColour.ofReal(set, blocks, real(real, Set.of()), eyes, Inventory.CREATIVE);
+	}
+
+	/** A survival inventory holding these items, one stack each. */
+	private static Inventory holding(Map<Item, Integer> items) {
+		return new Inventory(items.entrySet().stream().map(item -> new Slot(item.getKey(), item.getValue())).toList(), 0,
+			false);
+	}
+
+	@Test
+	void withRealBlocksACopyOnClearGroundIsBlue() {
+		assertEquals(Shown.BLUE, real(at(0, 0, 0), Map.of(), EYES));
+	}
+
+	@Test
+	void withRealBlocksGhostBlocksUnderTheCopyDontCount() {
+		// The colour for real blocks reads no layer: the spot over a different ghost block that is yellow for ghost blocks
+		// is blue for real ones, since real blocks don't replace ghost blocks.
+		Layer layer = new Layer();
+		layer.set(new BlockPos(1, 1, 1), dirt);
+		assertEquals(Shown.YELLOW, colour(at(0, 0, 0), layer, 100));
+		assertEquals(Shown.BLUE, real(at(0, 0, 0), Map.of(), EYES));
+	}
+
+	@Test
+	void withRealBlocksARealBlockInACopysBlockMakesItYellow() {
+		assertEquals(Shown.YELLOW, real(at(0, 0, 0), Map.of(new BlockPos(1, 1, 1), dirt), EYES));
+		// In the copy's empty space it's in no block's way, and a space that takes a block, such as water, isn't either.
+		assertEquals(Shown.BLUE, real(at(0, 0, 0), Map.of(new BlockPos(1, 0, 0), dirt), EYES));
+		assertEquals(Shown.BLUE, real(at(0, 0, 0), Map.of(new BlockPos(1, 1, 1), Blocks.WATER.defaultBlockState()), EYES));
+	}
+
+	@Test
+	void withRealBlocksABlockPastTheReachMakesTheCopyYellow() {
+		// The stone 63.5 blocks from the eyes, the glass just over 64.
+		assertEquals(Shown.YELLOW, real(at(64, 0, 0), Map.of(), EYES));
+		assertEquals(Shown.BLUE, real(at(63, 0, 0), Map.of(), EYES));
+		// With every block past the reach the server would place nothing and refuse nothing, and the copy is yellow too.
+		assertEquals(Shown.YELLOW, real(at(70, 0, 0), Map.of(), EYES));
+	}
+
+	@Test
+	void withRealBlocksPartOutsideTheBuildHeightOrTheBorderIsYellowNotRed() {
+		assertEquals(Shown.YELLOW, real(at(0, 319, 0), Map.of(), new Vec3(0.5, 319.5, 0.5)));
+		assertEquals(Shown.BLUE, real(at(0, 318, 0), Map.of(), new Vec3(0.5, 318.5, 0.5)));
+		assertEquals(Shown.YELLOW, real(at(0, -65, 0), Map.of(), new Vec3(0.5, -64.5, 0.5)));
+		assertEquals(Shown.YELLOW, real(at(99, 0, 0), Map.of(), new Vec3(99.5, 0.5, 0.5)));
+		assertEquals(Shown.BLUE, real(at(98, 0, 0), Map.of(), new Vec3(98.5, 0.5, 0.5)));
+	}
+
+	@Test
+	void withRealBlocksABlockNoItemPlacesOrAnEntityInTheWayMakesTheCopyYellow() {
+		Map<BlockPos, BlockState> withWater = Map.of(BlockPos.ZERO, stone, new BlockPos(1, 1, 1),
+			Blocks.WATER.defaultBlockState());
+		assertEquals(Shown.YELLOW, CopyColour.ofReal(at(0, 0, 0), withWater, real(Map.of(), Set.of()), EYES,
+			Inventory.CREATIVE));
+		assertEquals(Shown.YELLOW, CopyColour.ofReal(at(0, 0, 0), blocks, real(Map.of(), Set.of(new BlockPos(1, 1, 1))),
+			EYES, Inventory.CREATIVE));
+	}
+
+	@Test
+	void withRealBlocksPast2000BlocksIsRedCheckedFirst() {
+		// 1,001 copies of 2 blocks, in survival with an empty inventory, and past the reach: too many blocks comes first.
+		List<Spot> over = Collections.nCopies(1001, new Spot(new BlockPos(70, 0, 0), SIZE));
+		assertEquals(Shown.red(Refusal.TOO_MANY_BLOCKS),
+			CopyColour.ofReal(over, blocks, real(Map.of(), Set.of()), EYES, holding(Map.of())));
+		List<Spot> atTheCap = Collections.nCopies(1000, new Spot(BlockPos.ZERO, SIZE));
+		assertEquals(Shown.BLUE, real(atTheCap, Map.of(), EYES));
+	}
+
+	@Test
+	void withRealBlocksInSurvivalAnInventoryOneItemShortIsRed() {
+		assertEquals(Shown.red(Refusal.NOT_ENOUGH_BLOCKS), CopyColour.ofReal(at(0, 0, 0), blocks,
+			real(Map.of(), Set.of()), EYES, holding(Map.of(Items.STONE, 1))));
+		assertEquals(Shown.BLUE, CopyColour.ofReal(at(0, 0, 0), blocks, real(Map.of(), Set.of()), EYES,
+			holding(Map.of(Items.STONE, 1, Items.GLASS, 1))));
+		// Two copies need 2 of each.
+		List<Spot> two = List.of(new Spot(BlockPos.ZERO, SIZE), new Spot(new BlockPos(2, 0, 0), SIZE));
+		assertEquals(Shown.red(Refusal.NOT_ENOUGH_BLOCKS), CopyColour.ofReal(two, blocks, real(Map.of(), Set.of()), EYES,
+			holding(Map.of(Items.STONE, 2, Items.GLASS, 1))));
+		// A block that doesn't go in needs no item.
+		assertEquals(Shown.YELLOW, CopyColour.ofReal(at(0, 0, 0), blocks,
+			real(Map.of(new BlockPos(1, 1, 1), dirt), Set.of()), EYES, holding(Map.of(Items.STONE, 1))));
+	}
+
+	@Test
+	void withRealBlocksADoorsUpperHalfNeedsNoItemOfItsOwn() {
+		BlockState lower = Blocks.OAK_DOOR.defaultBlockState();
+		Map<BlockPos, BlockState> door = Map.of(BlockPos.ZERO, lower, BlockPos.ZERO.above(),
+			lower.setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER));
+		assertEquals(Shown.BLUE, CopyColour.ofReal(List.of(new Spot(BlockPos.ZERO, new Vec3i(1, 2, 1))), door,
+			real(Map.of(), Set.of()), EYES, holding(Map.of(Items.OAK_DOOR, 1))));
 	}
 }

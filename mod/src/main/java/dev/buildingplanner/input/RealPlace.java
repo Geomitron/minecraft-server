@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -281,6 +282,22 @@ public final class RealPlace {
 		}
 
 		/**
+		 * {@code player}'s inventory as it is now, on the server or in the player's game, or {@link #CREATIVE} for a
+		 * player with infinite materials, which covers every block.
+		 */
+		public static Inventory of(Player player) {
+			if (player.hasInfiniteMaterials()) {
+				return CREATIVE;
+			}
+			net.minecraft.world.entity.player.Inventory inventory = player.getInventory();
+			List<ItemStack> stacks = new ArrayList<>(inventory.getContainerSize());
+			for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
+				stacks.add(inventory.getItem(slot));
+			}
+			return of(stacks, inventory.getSelectedSlot(), false);
+		}
+
+		/**
 		 * The items the inventory falls short of for {@code needs}: each item it has fewer of than needed, and how many
 		 * fewer, in the order of {@code needs}. Nothing goes in unless this is empty; in creative it always is.
 		 */
@@ -340,7 +357,7 @@ public final class RealPlace {
 	}
 
 	/** Whether a {@code place} of {@code blocks} blocks is past the cap: the server refuses it whole, and the copy is red. */
-	public static boolean tooMany(int blocks) {
+	public static boolean tooMany(long blocks) {
 		return blocks > MAX_BLOCKS;
 	}
 

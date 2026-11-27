@@ -11,6 +11,7 @@ import dev.buildingplanner.input.CopyGrid;
 import dev.buildingplanner.input.EraseHold;
 import dev.buildingplanner.input.MouseMode;
 import dev.buildingplanner.input.PasteBoxes;
+import dev.buildingplanner.input.RealPlace;
 import dev.buildingplanner.input.ShapeLock;
 import dev.buildingplanner.layer.BoxCount;
 import dev.buildingplanner.layer.DeleteMarks;
@@ -42,8 +43,11 @@ import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.CollisionContext;
 
 /**
  * Building Planner on one connection to a server that has it: the player's copy of the layer, kept equal to the
@@ -72,6 +76,14 @@ final class ClientSession {
 	private Map<BlockPos, BlockState> ghostsBlocks;
 	private Layer ghostsLayer;
 	private long ghostsVersion;
+	/**
+	 * The copy's colour for real blocks ({@link CopyColour#ofReal}), worked out for these set boxes and these blocks at
+	 * this client tick, since the world, the player's eyes and the inventory it reads change from tick to tick.
+	 */
+	private CopyColour.Shown realShown;
+	private List<CopyPlacement.Spot> realSet;
+	private Map<BlockPos, BlockState> realBlocks;
+	private long realTick;
 	private final BoxDraw box;
 	private final BoxList list = new BoxList();
 	/** Whether Delete is on. */
@@ -630,9 +642,10 @@ final class ClientSession {
 	 * first click fixes the copy as the set's first, and the second pastes the whole set as one shape edit, which one
 	 * undo takes back. A paste names only the copies' blocks, so their empty space leaves the layer's, and each copy's
 	 * box joins the recent pastes the copy snaps to, as a paste of its own, in the set's order; the copy stays at the
-	 * aim, unlocked, and follows the aim for the next paste. While the copy, or its set, is red ({@link #copyShown}), the
-	 * click that would paste pastes nothing and sends no edit; a set's first click, which pastes nothing anyway, still
-	 * fixes the first copy.
+	 * aim, unlocked, and follows the aim for the next paste. While "Place real blocks" acts, the paste goes to the server
+	 * as one {@code place} of real blocks instead ({@link #sendPlace}). While the copy, or its set, is red
+	 * ({@link #copyShown}), the click that would paste pastes nothing and sends nothing; a set's first click, which
+	 * pastes nothing anyway, still fixes the first copy.
 	 */
 	void paste() {
 		if (!clipboard.atAim()) {
@@ -643,7 +656,7 @@ final class ClientSession {
 			if (red) {
 				return;
 			}
-			if (sendShape(EditKind.SHAPE, clipboard.worldBlocks())) {
+			if (sendPaste(clipboard.worldBlocks())) {
 				pastes.add(clipboard.spot());
 				clipboard.unlock();
 				followAim();
@@ -653,7 +666,7 @@ final class ClientSession {
 			followAim();
 		} else if (!red) {
 			List<CopyPlacement.Spot> copies = clipboard.setSpots();
-			if (sendShape(EditKind.SHAPE, clipboard.setBlocks())) {
+			if (sendPaste(clipboard.setBlocks())) {
 				pastes.addAll(copies);
 				clipboard.unlock();
 				dropSet();
@@ -666,15 +679,20 @@ final class ClientSession {
 	 * height and border and the server's block cap, and the player's copy of the layer whether or not ghost blocks show,
 	 * since a paste shows them again and replaces them. Asked each frame to draw it and at each paste, so whether the
 	 * copy is over ghost blocks, which reads each of its blocks, is kept until the set's boxes, the copy, its turn or
-	 * the layer change. Null while the copy isn't at the aim.
+	 * the layer change. While "Place real blocks" acts, the colour for real blocks instead ({@link #realShown}). Null
+	 * while the copy isn't at the aim.
 	 */
 	CopyColour.Shown copyShown() {
 		ClientLevel level = Minecraft.getInstance().level;
-		if (!clipboard.atAim() || level == null) {
+		Player player = Minecraft.getInstance().player;
+		if (!clipboard.atAim() || level == null || player == null) {
 			return null;
 		}
 		List<CopyPlacement.Spot> set = clipboard.setSpots();
 		Map<BlockPos, BlockState> blocks = clipboard.blocksFromCorner();
+		if (BuildingPlannerClient.realActs()) {
+			return realShown(level, player, set, blocks);
+		}
 		Layer layer = replica.layer();
 		return CopyColour.of(set, blocks.size(), world(level), maxEditBlocks, () -> {
 			if (!set.equals(ghostsSet) || blocks != ghostsBlocks || layer != ghostsLayer
@@ -687,6 +705,73 @@ final class ClientSession {
 			}
 			return overGhosts;
 		});
+	}
+
+	/**
+	 * A paste of {@code blocks} (world positions and states): as one {@code place} of real blocks while "Place real
+	 * blocks" acts, otherwise as one shape edit. Returns whether it was sent.
+	 */
+	private boolean sendPaste(Map<BlockPos, BlockState> blocks) {
+		return BuildingPlannerClient.realActs() ? sendPlace(blocks) : sendShape(EditKind.SHAPE, blocks);
+	}
+
+	/**
+	 * Sends a paste's real blocks as one {@code place} (hook M2; see "Place real blocks": "A paste"): each block of the
+	 * copy as {@code blocks} gives them, with the top face and a hit at the bottom middle of its first block, as if each
+	 * block were placed onto the block under it. Hidden ghost blocks stay hidden, and the paste makes no undo step.
+	 * Returns whether it was sent.
+	 */
+	private boolean sendPlace(Map<BlockPos, BlockState> blocks) {
+		if (blocks.isEmpty() || replica.dimension() == null) {
+			return false;
+		}
+		List<LayerChange> changes = new ArrayList<>(blocks.size());
+		blocks.forEach((pos, state) -> changes.add(new LayerChange(pos.immutable(), state)));
+		ClientPlayNetworking.send(new Payloads.Place(replica.dimension(), Direction.UP,
+			Vec3.atBottomCenterOf(changes.getFirst().pos()), true, changes));
+		return true;
+	}
+
+	/**
+	 * The copy's colour for real blocks ({@link CopyColour#ofReal}), against the real world as the player's game has it,
+	 * the reach from the player's eyes (not Freecam's camera) and the player's inventory, worked out once a client tick
+	 * for the set's boxes and the copy's blocks, as the shape's preview is.
+	 */
+	private CopyColour.Shown realShown(ClientLevel level, Player player, List<CopyPlacement.Spot> set,
+		Map<BlockPos, BlockState> blocks) {
+		long tick = level.getGameTime();
+		if (realShown == null || tick != realTick || blocks != realBlocks || !set.equals(realSet)) {
+			realShown = CopyColour.ofReal(set, blocks, realWorld(level, player), player.getEyePosition(),
+				RealPlace.Inventory.of(player));
+			realTick = tick;
+			realBlocks = blocks;
+			realSet = set;
+		}
+		return realShown;
+	}
+
+	/**
+	 * The world as the player's game checks a real block before placing it (see "Place real blocks"): within the build
+	 * height and inside the world border, the real block there, and whether an entity is in its way, as Minecraft checks
+	 * it for the player's placing.
+	 */
+	static RealPlace.World realWorld(ClientLevel level, Player player) {
+		return new RealPlace.World() {
+			@Override
+			public boolean allows(BlockPos pos) {
+				return !level.isOutsideBuildHeight(pos) && level.getWorldBorder().isWithinBounds(pos);
+			}
+
+			@Override
+			public BlockState at(BlockPos pos) {
+				return level.getBlockState(pos);
+			}
+
+			@Override
+			public boolean unobstructed(RealPlace.Entry block) {
+				return level.isUnobstructed(block.state(), block.pos(), CollisionContext.placementContext(player));
+			}
+		};
 	}
 
 	/**
@@ -715,8 +800,8 @@ final class ClientSession {
 
 	/**
 	 * The copy at the aim as its controls line tells it ({@link ControlsLine#copy}): its mode, whether it's locked, the
-	 * copies in a fixed set, whether the player has pasted in this dimension, and why its paste would be refused. Null
-	 * while the copy isn't at the aim.
+	 * copies in a fixed set, whether the player has pasted in this dimension, why its paste would be refused, and
+	 * whether it pastes real blocks. Null while the copy isn't at the aim.
 	 */
 	ControlsLine.CopyState copyState() {
 		CopyColour.Shown shown = copyShown();
@@ -724,7 +809,8 @@ final class ClientSession {
 			return null;
 		}
 		return new ControlsLine.CopyState(copyMode, clipboard.locked(),
-			clipboard.setFixed() ? clipboard.setSpots().size() : 0, pastes.latest() != null, shown.refusal());
+			clipboard.setFixed() ? clipboard.setSpots().size() : 0, pastes.latest() != null, shown.refusal(),
+			BuildingPlannerClient.realActs());
 	}
 
 	/**

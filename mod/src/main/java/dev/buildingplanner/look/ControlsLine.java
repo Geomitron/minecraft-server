@@ -91,9 +91,15 @@ public final class ControlsLine {
 	/**
 	 * The copy at the aim as its line tells it: its mode, whether it's locked, the number of copies in a fixed set (0
 	 * before the first click in Line, Wall or Floor), whether the player has pasted in this dimension (so the copy can
-	 * line up with the latest paste), and why the server would refuse its paste, or null.
+	 * line up with the latest paste), why the server would refuse its paste, or null, and whether the paste places real
+	 * blocks (see "Place real blocks": "A paste").
 	 */
-	public record CopyState(CopyMode mode, boolean locked, int set, boolean pasted, CopyColour.Refusal refusal) {
+	public record CopyState(CopyMode mode, boolean locked, int set, boolean pasted, CopyColour.Refusal refusal,
+		boolean real) {
+		/** A copy whose paste writes ghost blocks. */
+		public CopyState(CopyMode mode, boolean locked, int set, boolean pasted, CopyColour.Refusal refusal) {
+			this(mode, locked, set, pasted, refusal, false);
+		}
 	}
 
 	/**
@@ -338,8 +344,8 @@ public final class ControlsLine {
 
 	/**
 	 * The copy at the aim's line (see "Building Planner's mouse modes"), with no label: the right click (in Off the paste; in Line, Wall and Floor before the first click setting the start, and
-	 * after it the set's paste with its count), with the reason in red in the paste's place, or before setting the
-	 * start, while the copy is red; the nudge keys while it's locked; the wheel; the middle click; the sprint key while
+	 * after it the set's paste with its count; each paste "as real blocks" while it places them), with the reason in red
+	 * in the paste's place, or before setting the start, while the copy is red; the nudge keys while it's locked; the wheel; the middle click; the sprint key while
 	 * the copy follows the aim and there's a paste to line up with (a locked copy, and a set's fixed first copy, don't
 	 * line up); the lock key with the lock's state; the mode key with the mode; and Esc and the left click, which close
 	 * the copy, or cancel the set after its first click. A key with no key bound is left out.
@@ -347,10 +353,12 @@ public final class ControlsLine {
 	public static Line copy(CopyState state, Keys keys) {
 		List<Text> rects = new ArrayList<>();
 		boolean set = state.set() > 0;
+		String real = state.real() ? "_real" : "";
 		if (set) {
 			rects.add(state.refusal() != null ? refusal(state.refusal())
-				: hint(RIGHT, state.set() == 1 ? Translated.of(COPY + ".paste_set_one", Look.ACTION)
-					: Translated.of(COPY + ".paste_set", Look.ACTION, new Literal(String.valueOf(state.set())))));
+				: hint(RIGHT, state.set() == 1 ? Translated.of(COPY + ".paste_set_one" + real, Look.ACTION)
+					: Translated.of(COPY + ".paste_set" + real, Look.ACTION,
+						new Literal(String.valueOf(state.set())))));
 		} else if (state.mode() != CopyMode.OFF) {
 			// The first click still fixes the first copy while the copy is red, so it stays, after the reason.
 			if (state.refusal() != null) {
@@ -358,7 +366,7 @@ public final class ControlsLine {
 			}
 			rects.add(hint(RIGHT, COPY + ".start"));
 		} else {
-			rects.add(state.refusal() != null ? refusal(state.refusal()) : hint(RIGHT, COPY + ".paste"));
+			rects.add(state.refusal() != null ? refusal(state.refusal()) : hint(RIGHT, COPY + ".paste" + real));
 		}
 		if (state.locked()) {
 			Text nudge = nudge(keys);
@@ -509,6 +517,7 @@ public final class ControlsLine {
 		return reason(switch (refusal) {
 			case TOO_MANY_BLOCKS -> COPY + ".too_many";
 			case BUILD_HEIGHT, WORLD_BORDER -> COPY + ".outside";
+			case NOT_ENOUGH_BLOCKS -> COPY + ".not_enough";
 		});
 	}
 }

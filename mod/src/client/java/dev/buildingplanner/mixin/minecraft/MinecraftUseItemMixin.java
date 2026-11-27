@@ -9,7 +9,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
  * Hook M2: while a mouse mode is on, the game's use key (the right click unless the player moved it) works the mode:
- * it pastes the copy at the aim, and otherwise leaves the mode.
+ * it pastes the copy at the aim, as real blocks while "Place real blocks" acts, and otherwise leaves the mode.
  * Freecam doesn't cancel {@code startUseItem}, so this hook keeps the default priority, unlike M1, M3 and M4
  * ({@link MinecraftMouseModeMixin}).
  */

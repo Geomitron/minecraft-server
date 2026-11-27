@@ -20,7 +20,6 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
@@ -29,7 +28,6 @@ import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
-import net.minecraft.world.phys.shapes.CollisionContext;
 import nl.requios.effortlessbuilding.buildpipeline.BuildPipelineClient;
 import nl.requios.effortlessbuilding.utilities.BlockEntry;
 import nl.requios.effortlessbuilding.utilities.BlockSet;
@@ -126,7 +124,7 @@ public final class RealShape {
 	 */
 	public static boolean covered(BlockSet blocks) {
 		Player player = Minecraft.getInstance().player;
-		return player != null && inventory(player).covers(RealPlace.needs(check(blocks,
+		return player != null && RealPlace.Inventory.of(player).covers(RealPlace.needs(check(blocks,
 			BuildPipelineClient.getFirstClickHit()).goingIn()));
 	}
 
@@ -179,7 +177,8 @@ public final class RealShape {
 			}
 			sent.add(block);
 		}
-		List<RealPlace.Entry> goingIn = RealPlace.goingIn(sent, world(level, player), player.getEyePosition());
+		List<RealPlace.Entry> goingIn = RealPlace.goingIn(sent, ClientSession.realWorld(level, player),
+			player.getEyePosition());
 		Set<BlockPos> stay = new HashSet<>();
 		for (RealPlace.Entry block : goingIn) {
 			if (stays(player, block, face, hit)) {
@@ -237,38 +236,5 @@ public final class RealShape {
 		BlockState formed = RealPlace.formed(placed, block.state());
 		return formed != null && PlaceTurns.checked(updated, placed, formed,
 			state -> invoker.buildingplanner$canPlace(updated, state)).stays();
-	}
-
-	/** The world as the player's game checks it before placing: within the build height and inside the world border. */
-	private static RealPlace.World world(ClientLevel level, Player player) {
-		return new RealPlace.World() {
-			@Override
-			public boolean allows(BlockPos pos) {
-				return !level.isOutsideBuildHeight(pos) && level.getWorldBorder().isWithinBounds(pos);
-			}
-
-			@Override
-			public BlockState at(BlockPos pos) {
-				return level.getBlockState(pos);
-			}
-
-			@Override
-			public boolean unobstructed(RealPlace.Entry block) {
-				return level.isUnobstructed(block.state(), block.pos(), CollisionContext.placementContext(player));
-			}
-		};
-	}
-
-	/** The player's inventory as the server takes items from it, or a creative player's, which covers every block. */
-	private static RealPlace.Inventory inventory(Player player) {
-		if (player.hasInfiniteMaterials()) {
-			return RealPlace.Inventory.CREATIVE;
-		}
-		Inventory inventory = player.getInventory();
-		List<ItemStack> stacks = new ArrayList<>(inventory.getContainerSize());
-		for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
-			stacks.add(inventory.getItem(slot));
-		}
-		return RealPlace.Inventory.of(stacks, inventory.getSelectedSlot(), false);
 	}
 }

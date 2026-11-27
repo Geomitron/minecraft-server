@@ -443,6 +443,38 @@ class ControlsLineTest {
 	}
 
 	@Test
+	void withPlaceRealBlocksTheCopysRightClickPastesRealBlocks() {
+		assertEquals("[Right-click: paste real blocks]" + COPY_END,
+			copy(new CopyState(CopyMode.OFF, false, 0, false, null, true), DEFAULT));
+		assertEquals("[Right-click: paste real blocks]" + NUDGES + LOCKED_END,
+			copy(new CopyState(CopyMode.OFF, true, 0, false, null, true), DEFAULT));
+		assertEquals("[Right-click: paste 4 copies as real blocks]" + TURN_MIRROR
+			+ "[H: Lock (Off)][R: Mode (Line)][Esc/Left-click: cancel]",
+			copy(new CopyState(CopyMode.LINE, false, 4, true, null, true), DEFAULT));
+		assertEquals("[Right-click: paste 1 copy as real blocks]" + TURN_MIRROR
+			+ "[H: Lock (Off)][R: Mode (Wall)][Esc/Left-click: cancel]",
+			copy(new CopyState(CopyMode.WALL, false, 1, false, null, true), DEFAULT));
+		// A set's first click pastes nothing, so it reads as without the setting.
+		assertEquals("[Right-click: set the start]" + TURN_MIRROR
+			+ "[H: Lock (Off)][R: Mode (Floor)][Esc/Left-click: close]",
+			copy(new CopyState(CopyMode.FLOOR, false, 0, false, null, true), DEFAULT));
+	}
+
+	@Test
+	void withPlaceRealBlocksARedCopySaysWhy() {
+		assertEquals("[Can't paste: not enough blocks]" + COPY_END,
+			copy(new CopyState(CopyMode.OFF, false, 0, false, Refusal.NOT_ENOUGH_BLOCKS, true), DEFAULT));
+		assertEquals("[Can't paste: too many blocks]" + TURN_MIRROR
+			+ "[H: Lock (Off)][R: Mode (Floor)][Esc/Left-click: cancel]",
+			copy(new CopyState(CopyMode.FLOOR, false, 25, false, Refusal.TOO_MANY_BLOCKS, true), DEFAULT));
+		assertEquals("[Can't paste: not enough blocks][Right-click: set the start]" + TURN_MIRROR
+			+ "[H: Lock (Off)][R: Mode (Line)][Esc/Left-click: close]",
+			copy(new CopyState(CopyMode.LINE, false, 0, false, Refusal.NOT_ENOUGH_BLOCKS, true), DEFAULT));
+		assertEquals(List.of("Can't paste: not enough blocks"), collect(ControlsLine.copy(
+			new CopyState(CopyMode.OFF, false, 0, false, Refusal.NOT_ENOUGH_BLOCKS, true), DEFAULT), Look.WARNING));
+	}
+
+	@Test
 	void withPlaceRealBlocksAShapeUnderWayAndARedLockedPositionReadAsWithout() {
 		assertEquals("[Hold Left Control: turn or flip][H: Lock (Off)]",
 			shape(new ShapeState(false, false, false, Underway.PLACING, STAIRS, true), DEFAULT));

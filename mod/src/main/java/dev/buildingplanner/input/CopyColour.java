@@ -3,6 +3,7 @@ package dev.buildingplanner.input;
 import dev.buildingplanner.input.CopyPlacement.Spot;
 import dev.buildingplanner.layer.Layer;
 import dev.buildingplanner.layer.LayerSection;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -10,11 +11,13 @@ import java.util.function.BooleanSupplier;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * The colour of the copy at the aim, in Satisfactory's hologram colours: red where the server would refuse its paste,
  * yellow where some of its blocks would replace ghost blocks already there, and blue where the paste would go in as it
- * shows. With a set fixed, the whole set has one colour, since it pastes as one edit.
+ * shows. While "Place real blocks" acts, the rules for real blocks ({@link #ofReal}). With a set fixed, the whole set has
+ * one colour, since it pastes as one edit.
  */
 public final class CopyColour {
 	private static final Vec3i ONE = new Vec3i(1, 1, 1);
@@ -26,9 +29,12 @@ public final class CopyColour {
 		BLUE, YELLOW, RED
 	}
 
-	/** Why the server would refuse the paste, checked in the server's order: the block cap, then each block's place. */
+	/**
+	 * Why the server would refuse the paste, checked in the server's order: the block cap, then each block's place; and
+	 * for real blocks the cap, then the inventory ({@code NOT_ENOUGH_BLOCKS}).
+	 */
 	public enum Refusal {
-		TOO_MANY_BLOCKS, BUILD_HEIGHT, WORLD_BORDER
+		TOO_MANY_BLOCKS, BUILD_HEIGHT, WORLD_BORDER, NOT_ENOUGH_BLOCKS
 	}
 
 	/** The copy's colour, with the server's reason while it's red. */
@@ -128,6 +134,35 @@ public final class CopyColour {
 		}));
 	}
 
+
+	/**
+	 * The colour of a set of copies while "Place real blocks" acts (see "Place real blocks": "A paste"), the copies in
+	 * the boxes {@code set} (the copy's own box alone without a set), each holding {@code blocks}, by their position
+	 * from the copy's lowest corner. Red while the set carries more than {@link RealPlace#MAX_BLOCKS} blocks, checked
+	 * first, as on the server, or while {@code inventory} lacks an item the blocks that go in need, counted as for a
+	 * shape ({@link RealPlace#needs}); otherwise yellow while any block the server places itself (all but the second
+	 * half of a two-part block) wouldn't go in as far as the player's game can tell ({@link RealPlace#goesIn}: a block
+	 * no item places, such as water, past the reach from {@code eyes}, outside the world, in a space that doesn't take
+	 * it, or with an entity in its way), and blue where every one would. Ghost blocks don't count, since real blocks
+	 * don't replace them, and neither does whether a block can stay, since the copy's own blocks may hold it up.
+	 */
+	public static Shown ofReal(List<Spot> set, Map<BlockPos, BlockState> blocks, RealPlace.World world, Vec3 eyes,
+		RealPlace.Inventory inventory) {
+		if (RealPlace.tooMany((long) set.size() * blocks.size())) {
+			return Shown.red(Refusal.TOO_MANY_BLOCKS);
+		}
+		List<RealPlace.Entry> placed = new ArrayList<>(set.size() * blocks.size());
+		for (Spot spot : set) {
+			BlockPos corner = spot.min();
+			blocks.forEach((offset, state) -> placed.add(new RealPlace.Entry(corner.offset(offset), state)));
+		}
+		List<RealPlace.Entry> own = RealPlace.withoutSecondHalves(placed);
+		List<RealPlace.Entry> going = RealPlace.goingIn(own, world, eyes);
+		if (!inventory.covers(RealPlace.needs(going))) {
+			return Shown.red(Refusal.NOT_ENOUGH_BLOCKS);
+		}
+		return going.size() == own.size() ? Shown.BLUE : Shown.YELLOW;
+	}
 
 	private static boolean anyColumn(Layer layer, Spot box) {
 		BlockPos min = box.min();
