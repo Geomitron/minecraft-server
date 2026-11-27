@@ -70,6 +70,9 @@ From inbox requests 401 and 402 (revisions 1 to 4):
 - Randomized block mixes, such as cobblestone with some mossy cobblestone (402 r2, c1).
 - Layout guides are shared with everyone on the server; client-only guides like MiniHUD's are rejected (402 r2, c2).
 - No automation (block placers, breakers, quarries) for now (402 r2).
+- The server runs under its own account, `minecraft`, locked down by systemd, rather than as root. Asked in 1420
+  whether to, Geo answered: "this really isn't a concern; I trust all my players. But if there are no noticeable
+  downsides to adding this security change, than sure, you can do it".
 - Build the planning mod with live shared editing: each change to a plan reaches everyone as it's made, and several
   players can edit one plan at once (402 r4, Q1 B).
 - Players get their mods from a Prism Launcher instance that updates itself at each launch (packwiz's installer
