@@ -1713,14 +1713,17 @@ check "and the line stays as it was" eval '[[ $(result modehud) == "$delete_mark
 check "let go then, it erases nothing, and the bar goes" eval '[[ $(val 1 holdlog) == *" edits=0 "* ]] &&
 	[[ $(val 1 marks) == "$marked" ]] && [[ $(val 1 erasing) == -1 ]] && [[ $(val 1 erasebar) == hidden ]]'
 # Held 20 ticks it sends one edit, which takes the door's upper half too, which Planner2 sees glow with Planner1's
-# name, and says how many it erased; the message is shot. Holding on erases nothing more.
+# name, and says how many it erased; the message is shot. Holding on erases nothing more. Planner2's game awaits the
+# glow from before the hold, as the glow lasts 3 seconds and Planner1's message may take longer to reach its log.
 erased_before=$(chat_count 1 "Erased 11 ghost blocks.")
 drv 1 "holdreset" > /dev/null
+drv 2 "await glow Planner1:11" > /dev/null &
+glow_seen=$!
 xdo 1 mousedown 1
 check "a left click held 20 ticks erases the marks, saying how many" eval 'drv 1 "await erasing 10" > /dev/null &&
 	client_said 1 "Erased 11 ghost blocks."'
 check "which Planner2 sees glow with Planner1's name, the door's upper half with it" eval \
-	'drv 2 "await glow Planner1:11" "await block 100 -53 40 minecraft:air" "await block 111 -55 40 minecraft:air" \
+	'wait "$glow_seen" && drv 2 "await block 100 -53 40 minecraft:air" "await block 111 -55 40 minecraft:air" \
 	"await block 111 -54 40 minecraft:air" > /dev/null'
 drv 1 "shot delete-erased-message" "wait 20" > /dev/null
 echo "  delete-erased-message: $(val 1 modewrap) | box $(val 1 modebox)" >> /out/checks.log
