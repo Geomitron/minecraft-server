@@ -471,7 +471,8 @@ class ControlsLineTest {
 
 	/**
 	 * Every controls line Geo approved for 0.7.0, exactly (1313: revision 1's texts, with revision 2's lines without
-	 * status labels, and with the tools' names beside the hotbar), each from the state the request shows it in.
+	 * status labels, and with the tools' names beside the hotbar), with Delete's "toggle mark" as approved for 0.8.0
+	 * (1391), each from the state the request shows it in.
 	 */
 	@Test
 	void everyApprovedLine() {

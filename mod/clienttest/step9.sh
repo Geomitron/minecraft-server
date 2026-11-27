@@ -291,6 +291,10 @@ check "without a copy, the menu shows its seven buttons in their slots, with the
 # Building Planner's name, where Effortless Building draws its own: the text at the menu's lower right.
 check "the menu's corner text reads \"Building Planner\"" eval '[[ $(val 1 cornertext) == "Building Planner | "* ]]'
 check "and the menu draws no \"Effortless Building\"" eval '[[ $(val 1 drawntexts) != *"Effortless Building"* ]]'
+# In Single, the speed sliders' headings and values, exactly as Geo approved them (1391).
+check "in Single, the headings \"Build speed\" and \"Break speed\" over \"5 blocks/s\" and \"3.33 blocks/s\"" eval \
+	'drawn=" | $(val 1 drawntexts) | " && [[ $drawn == *" | Build speed | "* && $drawn == *" | Break speed | "* &&
+	$(val 1 texts) == "5 blocks/s | 3.33 blocks/s | "* ]]'
 radial_point "Delete"
 drv 1 "wait 10" "notoasts" "shot radial-delete-hover-854x480-gui2" > /dev/null
 echo "  radial-delete-hover-854x480-gui2 buttons: $(val 1 buttons)" >> /out/checks.log

@@ -184,7 +184,8 @@ every part of this spec that mentions them is marked as proposed for 0.11.0. The
   hasn't changed it from Litematica's default (off, and 0.5), and never again, so a player's own later change stays.
   This happens whether or not the player joins a server with Building Planner.
 - **Messages.** Building Planner's messages show in the player's chat. Every text players see (messages, key names,
-  button and slider labels, the panel) is in the wording Geo approved, which this spec quotes (0.7.0's in 1313).
+  button and slider labels, the panel) is in the wording Geo approved, which this spec quotes (0.7.0's in 1313,
+  0.8.0's in 1391).
 - **Other servers.** As proposed for 0.10.0, on a server that doesn't run Building Planner, Building Planner works
   from the player's computer alone: their ghost blocks are saved on their computer for that server, and only they see
   them. This server still shares its ghost blocks (see "Servers without Building Planner"). In the player's own world,
@@ -2651,6 +2652,8 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   1 and 2 frames after the menu opens show the buttons nearer the middle and smaller than when it's open, as the menu's
   own are. With Effortless Building's mode Line, no mode segment shows selected while the copy is at the aim or a box is
   drawn, and Paste, Copy, "Material list" or Delete does; with the box ended, Line's segment does, and no button.
+- In Single, the menu's right side reads "Build speed" and "Break speed" (the driver's `drawntexts`) over the sliders'
+  values "5 blocks/s" and "3.33 blocks/s" (its `texts`), exactly as Geo approved them (1391).
 - The menu's corner text reads "Building Planner", and Controls shows Building Planner's keys, the copy's eight among
   them, and Effortless Building's under the "Building Planner" heading, sorted by name as Controls sorts them, with no
   raw key name;

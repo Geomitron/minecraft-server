@@ -64,7 +64,7 @@ These are the keys for planning. You can change any of them in Controls, under t
 | Left Alt (hold) | "Open Radial Menu" | Open the radial menu, where you choose a build mode or a planning tool. |
 | N | "Show or hide ghost blocks" | Hide all ghost blocks on your screen, or show them again. |
 | B | "Block mix" | Open the block mix. |
-| H | "Lock or unlock" | Lock where your next shape starts, or lock the copy in place. |
+| H | "Lock or unlock" | Lock where your next click goes, or lock the copy in place. |
 | Arrow keys, Page Up, Page Down | "Nudge forward", "Nudge back", "Nudge left", "Nudge right", "Nudge up", "Nudge down" | Move what's locked by one block. |
 | R | "Change copy mode" | Switch the copy between Off, Line, Wall, and Floor. |
 | Ctrl+Z | "Undo" | Undo your newest change to the ghost blocks. |
@@ -82,7 +82,7 @@ Each ghost block is tinted to show what's built there:
 - **Red:** a different block is there.
 - **Orange:** the right block is there, but facing another way, or with a different number of a block that stacks in one space, such as candles.
 
-Red and orange ghost blocks within 32 blocks of you also show through walls, so you can find mistakes.
+Ghost blocks within 32 blocks of you also show through walls, so you can find mistakes and what's left to build.
 
 When you place the same block as a ghost block, facing the same way, the ghost block disappears for everyone. Breaking the real block later doesn't bring the ghost block back.
 
@@ -95,18 +95,18 @@ Press N to hide all ghost blocks on your own screen, and press it again to show 
 Hold Left Alt to open the radial menu. Point at a build mode or a button, and click it or let go of Left Alt to choose it. Pointing at a button shows its name.
 
 - **Build modes:** the ring around the middle shows "Disable", "Single", "Line", "Wall", "Floor", "Cube", "Diagonal Line", "Diagonal Wall", "Slope Floor", "Circle", "Cylinder", and "Sphere".
-- **Effortless Building's buttons:** undo, redo, "Visual Settings", and the wrench, which opens "Modifier Settings", where you can turn on mirror, radial mirror, and array to repeat each shape.
+- **Effortless Building's buttons:** undo, redo, "Settings", and the wrench, which opens "Modifier Settings", where you can turn on mirror, radial mirror, and array to repeat each shape.
 - **Building Planner's buttons:** "Copy", "Paste", and "Delete" in the row above the wrench, and "Block mix", "Material list", and "Material lists" in the row above that. The button under the wrench shows or hides ghost blocks, as N does.
-- **Sliders:** "Build speed" and "Break speed", under the buttons.
+- **Sliders:** "Build speed" and "Break speed", on the right side of the menu while "Single" is the build mode.
 
 ### Shapes
 
 1. Hold Left Alt and choose a build mode, such as "Wall". Its name shows to the left of your hotbar while it's on.
 2. Hold a block, or another item that places a block, such as redstone dust, a fence, a door, or seeds.
-3. Aim where the shape starts. The block your click would place shows there. Right-click.
+3. Aim where the shape starts. The block a right-click would place shows there, and a red frame shows on the block a left-click would start from. Right-click.
 4. Aim where the shape ends, and right-click again. "Cube", "Cylinder", "Sphere", "Slope Floor", "Diagonal Line", and "Diagonal Wall" need a third right-click for the height.
 
-To erase ghost blocks, draw a shape with left-clicks instead. In "Single", each right-click places one ghost block and each left-click erases one. Hold the button to keep placing or erasing, at the speed the "Build speed" and "Break speed" sliders set.
+To erase ghost blocks, draw a shape with left-clicks instead. In "Single", each right-click places one ghost block and each left-click erases one, so the red frame shows only on ghost blocks. Hold the button to keep placing or erasing, at the speed the "Build speed" and "Break speed" sliders set.
 
 A shape can start on a ghost block or on a real block. A line above the hotbar shows the controls you can use at each moment. With a tool, food, or an empty hand, clicks break and use real blocks as they do without mods. To place real blocks with a block in hand, choose "Disable".
 
@@ -114,7 +114,7 @@ A shape can start on a ghost block or on a real block. A line above the hotbar s
 
 Press H to lock where your next shape starts. The locked block stays where it is while you walk or fly around it. The arrow keys move it one block forward, back, left, or right of the way you face, and Page Up and Page Down move it up or down. Your next click starts the shape at the locked block, wherever you aim.
 
-During a shape, H locks every point your clicks have set so far, and the nudge keys move them together while the far end still follows your aim. The lock ends once the shape is placed or erased, or when you press H again.
+During a shape, H locks the point your next click sets, such as a wall's far corner or a cube's height. The nudge keys then move that point, which changes the shape's size. A nudge that wouldn't change the size (such as across a wall) moves the whole shape. After each click, the next point follows your aim until you lock it. The lock ends once the shape is placed or erased, or when you press H again.
 
 While a block is locked, a box shows around it: blue where the block will go in, yellow where it would replace a different ghost block, and red where it's outside the world, where a click places nothing.
 
@@ -126,7 +126,7 @@ This works for real blocks in "Disable" too. Hold Left Control to see the block 
 
 To place real blocks facing the way their ghost blocks face:
 
-1. Hold Left Alt and click "Visual Settings".
+1. Hold Left Alt and click "Settings".
 2. Turn on "Match ghost blocks", and click "Save".
 
 With it on, while ghost blocks show, a block you place into a ghost block of the same block faces the way the ghost block does, whichever way you stand.
