@@ -1935,7 +1935,10 @@ other form of the same item, such as a standing torch for a wall torch or a stan
 way; it returns null when Minecraft's state is any other block. So a shape places the form Effortless Building gives
 it: a Line of torches aimed at a wall's side is standing torches, as are signs, banners, heads and coral fans, which
 can't stay beside the wall, so none goes in, the player keeps every item, and no notice comes (1408 Q1 C). A paste
-places the copy's own form, a wall torch as a wall torch. S2 then checks the turned state as it checks
+places the copy's own form, a wall torch as a wall torch, and gives a door the copy's hinge, which Minecraft would
+otherwise pick from the door's neighbours and the player's facing (`DoorBlock.getHinge`), so the pasted door opens on
+the side the copy shows (`RealPlace.formed`; 1372 Q6 B). A shape's door keeps the hinge Minecraft picks as it places
+it. S2 then checks the turned state as it checks
 Disable's (`PlaceTurns.checked`: shaped by its neighbours, and placed only where it can stay). A block that doesn't go
 in uses no item. `RealPlacer` sorts each block Minecraft refuses: one that can't stay (Minecraft or S2 gave no state
 because it can't stay there, or an entity is in its way), which the order tries again; or one refused for another
@@ -2029,7 +2032,7 @@ paste needs, and at most 2,000 blocks. A paste sends one `place` of each block o
 structure void, at the position and in the state where Litematica draws it, and a Line, Wall or Floor of copies sends
 one `place` for the whole set at its second click. A paste has no first click, so its `place` carries the top face
 and a hit at the bottom middle of its first block, as if each block were placed onto the block under it; hook S2 then
-gives each block the copy's orientation. Its first block is the first the copy holds, in the order of its own unturned
+gives each block the copy's orientation, and a door the copy's hinge. Its first block is the first the copy holds, in the order of its own unturned
 box (east fastest, then up, then south), and a set's is its first copy's. The copy leaves out block entities'
 contents, so a pasted chest is empty and a pasted sign blank. The copy stays at the aim for more pastes, and each
 paste's box joins the recent pastes the copy snaps to (`PasteBoxes`), as a paste of ghost blocks does. Since a paste of
@@ -2076,7 +2079,7 @@ a 0.9.0 server work together, and so do a 0.9.0 game and a 0.8.0 server, with gh
 | E41 | `buildpipeline/BuildPipelineClient.java`, private static `handleClick(Minecraft, BuildPipeline.BuildState)` | `@WrapWithCondition` on `ClientLevel.playLocalSound(BlockPos, SoundEvent, SoundSource, float, float, boolean)` | While the setting acts, play the place sound only when `RealPlace` finds that the inventory covers the click's blocks (the local `BlockSet blocks`), since otherwise nothing goes in. |
 | E43 | `render/BlockPreviewRenderer.java`, `render` | `@WrapOperation` on `BlockEntry.applyTransforms(BlockState)` | While the setting acts, outside the break click's shape, each block drawn in the state the click sends where that differs, which is the turn of a ghost block it fills (`RealShape.drawn`). |
 | M2 | `Minecraft.java`, `startUseItem()` | the same hook | While the setting acts, a paste, or a set of copies at its second click, goes to the server as one `place` instead of as an edit (`ClientSession.sendPaste`), and a red copy's click sends nothing. |
-| S2 | `BlockItem.place`, `getPlacementState` | the same hook | While the server places a shape or a paste, the shape's orientation and count for that block in place of the player's turn, the shape's form where Minecraft gives the other form of the same item (`StandingAndWallBlockItem`), and null when Minecraft's state is any other block. |
+| S2 | `BlockItem.place`, `getPlacementState` | the same hook | While the server places a shape or a paste, the shape's orientation and count for that block in place of the player's turn, the shape's form where Minecraft gives the other form of the same item (`StandingAndWallBlockItem`), for a paste the copy's hinge of a door, and null when Minecraft's state is any other block. |
 | S3 | `net/minecraft/world/item/BlockItem.java`, `place(BlockPlaceContext)` | `@WrapWithCondition` on `Level.playSound(Entity, BlockPos, SoundEvent, SoundSource, float, float)` | While the server places a shape or a paste, only its first block plays the place sound; a paste's first block plays it to the player too (`Level.playSound(null, …)`). |
 
 `RealPlace` (common) is the rule for each block, the order, the inventory and the cap, which the game's preview, the
@@ -3267,6 +3270,9 @@ driver's `realstates`):
 - In adventure mode, Planner2's place of 5 blocks places nothing, and Planner2 gets the notice "5 blocks weren't
   placed: the server doesn't allow them there."
 - In creative, a place of 2,001 blocks places nothing and gets the cap's notice; one of 2,000 places all of them and
+- Beside a stone column east of it, Planner1's own right click in Disable, facing north, places a door hinged on the
+  right, against the stone. A copy of a door hinged on the left, pasted at a spot with the same stone column beside it,
+  shows blue and places the door hinged on the left, both halves, on the server and both clients, using the one door.
   uses no item, and a place of 1 more block right after it places nothing and gets the notice of the cap a second. The
   time the server took to place the 2,000, which `RealPlacer` logs at debug level (the dev server's `logs/debug.log`),
   goes to the checks' log and "Unverified".
@@ -3297,7 +3303,8 @@ world's own checks asked before the space is read and the space before entities,
 out with no item needed for it, a block no item places, a two-part block's second half left to its first (a door's
 upper half, a bed's head and a tall plant's upper half), hook S2's state (the shape's orientation with Minecraft's
 other values, the shape's form of the same item for a torch and a sign, nothing where Minecraft gives another block or
-none, and the shape's count of 3 candles and of a double slab), the cap of 2,000, the setting acting only during a
+none, the shape's count of 3 candles and of a double slab, and a door's hinge from the copy for a paste and from
+Minecraft for a shape), the cap of 2,000, the setting acting only during a
 session whose server takes `place`, in every mode but Disable, with an item that places a block, the setting saved as
 `true` or `false` and read as off when missing or any other value, and the blocks the preview draws red (each block
 that doesn't go in, or the whole shape when an item is short). `PlaceRateTest`

@@ -79,12 +79,13 @@ public final class RealPlacer {
 
 	/**
 	 * Hook S2's state for the block {@link #places} places: {@code placed}, as Minecraft gives it for the context, in the
-	 * shape's form, orientation and count ({@link RealPlace#formed}), checked as Disable's turn is
-	 * ({@link PlaceTurns#checked}, with {@code placeable} Minecraft's own check), or null where it doesn't go in.
+	 * shape's form, orientation and count, and for a paste a door's hinge ({@link RealPlace#formed}), checked as
+	 * Disable's turn is ({@link PlaceTurns#checked}, with {@code placeable} Minecraft's own check), or null where it
+	 * doesn't go in.
 	 */
 	public static BlockState state(BlockPlaceContext context, BlockState placed, Predicate<BlockState> placeable) {
 		Placing now = placing;
-		BlockState formed = RealPlace.formed(placed, now.block.state());
+		BlockState formed = RealPlace.formed(placed, now.block.state(), now.paste);
 		if (formed == null) {
 			// Minecraft gave no state where its own block can't stay or an entity is in its way.
 			now.cantStay = placed == null;

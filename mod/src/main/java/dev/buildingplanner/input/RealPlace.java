@@ -189,9 +189,11 @@ public final class RealPlace {
 	 * torch for a wall torch, a standing sign for a wall sign: the shape's block with {@code placed}'s other values,
 	 * {@code Block.withPropertiesOf}), with the shape's orientation (its values of {@link BlockTurn}'s properties,
 	 * through {@link PlaceTurn#accepted}) and the shape's count of a block made of several items (3 candles; a double
-	 * slab is a slab's type, which the orientation sets). Null when Minecraft gives no state or another block.
+	 * slab is a slab's type, which the orientation sets). For a {@code paste}, a door also takes the copy's hinge,
+	 * which Minecraft picks from the door's neighbours and the player's facing ({@code DoorBlock.getHinge}), so the
+	 * pasted door opens on the side the copy shows. Null when Minecraft gives no state or another block.
 	 */
-	public static BlockState formed(BlockState placed, BlockState shape) {
+	public static BlockState formed(BlockState placed, BlockState shape, boolean paste) {
 		Item item = item(shape);
 		if (placed == null || item == null) {
 			return null;
@@ -209,6 +211,10 @@ public final class RealPlace {
 			if (turned.hasProperty(count) && shape.hasProperty(count)) {
 				turned = turned.setValue(count, shape.getValue(count));
 			}
+		}
+		if (paste && turned.hasProperty(BlockStateProperties.DOOR_HINGE)
+			&& shape.hasProperty(BlockStateProperties.DOOR_HINGE)) {
+			turned = turned.setValue(BlockStateProperties.DOOR_HINGE, shape.getValue(BlockStateProperties.DOOR_HINGE));
 		}
 		return turned;
 	}

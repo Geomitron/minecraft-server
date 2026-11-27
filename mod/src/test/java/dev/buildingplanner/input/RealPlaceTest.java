@@ -29,6 +29,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BedPart;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.DoorHingeSide;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.level.block.state.properties.Half;
 import net.minecraft.world.level.block.state.properties.SlabType;
@@ -354,40 +355,56 @@ class RealPlaceTest {
 		BlockState shape = Blocks.OAK_STAIRS.defaultBlockState()
 			.setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.EAST).setValue(BlockStateProperties.HALF, Half.TOP);
 		assertEquals(placed.setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.EAST)
-			.setValue(BlockStateProperties.HALF, Half.TOP), RealPlace.formed(placed, shape));
-		assertEquals(planks(), RealPlace.formed(planks(), planks()));
+			.setValue(BlockStateProperties.HALF, Half.TOP), RealPlace.formed(placed, shape, false));
+		assertEquals(planks(), RealPlace.formed(planks(), planks(), false));
 	}
 
 	@Test
 	void hookS2TakesTheShapesFormOfTheSameItem() {
 		BlockState wallTorch = Blocks.WALL_TORCH.defaultBlockState()
 			.setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.EAST);
-		assertEquals(wallTorch, RealPlace.formed(Blocks.TORCH.defaultBlockState(), wallTorch));
+		assertEquals(wallTorch, RealPlace.formed(Blocks.TORCH.defaultBlockState(), wallTorch, false));
 		BlockState wallSign = Blocks.OAK_WALL_SIGN.defaultBlockState()
 			.setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.SOUTH);
 		assertEquals(wallSign, RealPlace.formed(Blocks.OAK_SIGN.defaultBlockState()
-			.setValue(BlockStateProperties.ROTATION_16, 4), wallSign));
-		assertEquals(Blocks.TORCH.defaultBlockState(), RealPlace.formed(wallTorch, Blocks.TORCH.defaultBlockState()));
+			.setValue(BlockStateProperties.ROTATION_16, 4), wallSign, false));
+		assertEquals(Blocks.TORCH.defaultBlockState(),
+			RealPlace.formed(wallTorch, Blocks.TORCH.defaultBlockState(), false));
 	}
 
 	@Test
 	void hookS2PlacesNothingWhereMinecraftGivesAnotherBlockOrNone() {
-		assertNull(RealPlace.formed(Blocks.STONE.defaultBlockState(), planks()));
+		assertNull(RealPlace.formed(Blocks.STONE.defaultBlockState(), planks(), false));
 		assertNull(RealPlace.formed(Blocks.SOUL_WALL_TORCH.defaultBlockState(),
-			Blocks.WALL_TORCH.defaultBlockState()));
-		assertNull(RealPlace.formed(null, planks()));
-		assertNull(RealPlace.formed(Blocks.WATER.defaultBlockState(), Blocks.WATER.defaultBlockState()));
+			Blocks.WALL_TORCH.defaultBlockState(), false));
+		assertNull(RealPlace.formed(null, planks(), false));
+		assertNull(RealPlace.formed(Blocks.WATER.defaultBlockState(), Blocks.WATER.defaultBlockState(), false));
 	}
 
 	@Test
 	void hookS2GivesTheShapesCountOfABlockMadeOfSeveralItems() {
 		BlockState candle = Blocks.CANDLE.defaultBlockState();
 		assertEquals(candle.setValue(BlockStateProperties.CANDLES, 3),
-			RealPlace.formed(candle, candle.setValue(BlockStateProperties.CANDLES, 3)));
+			RealPlace.formed(candle, candle.setValue(BlockStateProperties.CANDLES, 3), false));
 		BlockState slab = Blocks.OAK_SLAB.defaultBlockState();
 		assertEquals(slab.setValue(BlockStateProperties.SLAB_TYPE, SlabType.DOUBLE),
 			RealPlace.formed(slab.setValue(BlockStateProperties.SLAB_TYPE, SlabType.BOTTOM),
-				slab.setValue(BlockStateProperties.SLAB_TYPE, SlabType.DOUBLE)));
+				slab.setValue(BlockStateProperties.SLAB_TYPE, SlabType.DOUBLE), false));
+	}
+
+	@Test
+	void hookS2GivesAPastedDoorTheCopysHingeAndAShapesDoorMinecraftsOwn() {
+		BlockState placed = Blocks.OAK_DOOR.defaultBlockState()
+			.setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.WEST)
+			.setValue(BlockStateProperties.DOOR_HINGE, DoorHingeSide.RIGHT);
+		BlockState copy = Blocks.OAK_DOOR.defaultBlockState()
+			.setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH)
+			.setValue(BlockStateProperties.DOOR_HINGE, DoorHingeSide.LEFT);
+		BlockState facingNorth = placed.setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH);
+		assertEquals(facingNorth.setValue(BlockStateProperties.DOOR_HINGE, DoorHingeSide.LEFT),
+			RealPlace.formed(placed, copy, true));
+		assertEquals(facingNorth, RealPlace.formed(placed, copy, false));
+		assertEquals(planks(), RealPlace.formed(planks(), planks(), true));
 	}
 
 	@Test

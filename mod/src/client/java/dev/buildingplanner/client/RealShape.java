@@ -233,7 +233,7 @@ public final class RealShape {
 		}
 		BlockItemInvoker invoker = (BlockItemInvoker) item;
 		BlockState placed = invoker.buildingplanner$placementState(updated);
-		BlockState formed = RealPlace.formed(placed, block.state());
+		BlockState formed = RealPlace.formed(placed, block.state(), false);
 		return formed != null && PlaceTurns.checked(updated, placed, formed,
 			state -> invoker.buildingplanner$canPlace(updated, state)).stays();
 	}

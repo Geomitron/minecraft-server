@@ -7,7 +7,8 @@
 # side, a door, a bed, the mix, the mirror's copies counted, stairs in a Wall turned with the wheel and mirrored, a real
 # block and a cow in the way and red, ghost blocks filled and left red, a copy of a hut with a door, a wall torch, a
 # hanging lantern, a double slab, candles and water, yellow, red 1 cobblestone short, pasted with one place sound for
-# each player and around a real block in its way, a Floor of its copies red past 2,000 blocks, and a Line of 3 copies;
+# each player and around a real block in its way, a Floor of its copies red past 2,000 blocks, a Line of 3 copies, and
+# a copied door keeping its hinge where Minecraft would hinge it on the other side;
 # in creative, the reach and the copy past it red, the cap of 2,000 blocks a place and a second, and the time a place
 # of 2,000 takes; for Planner2, who isn't an operator, adventure mode and, once the server has started again with spawn
 # protection, the spawn; then the setting off again, for a shape and a paste. Everything else happens more than 16
@@ -872,6 +873,38 @@ check "on the server, all 2,000 are real oak planks and the 1 more isn't placed,
 check "and they used no item" eval '[[ $(items minecraft:oak_planks) == 1 ]]'
 
 check "neither client's log has a self-check warning" eval \
+# A pasted door keeps the copy's hinge. Beside a stone column on its east side, Minecraft hinges a door that Planner1,
+# facing north, places by hand on the right, against the stone (DoorBlock's hinge rule); in Disable, Planner1's own
+# right click shows it at 194 -60 60, beside stone at 195 -60 60 and 195 -59 60. An oak door facing north with its hinge
+# on the left, at 180 -60 60, is copied and pasted at 190 -60 60, beside stone at 191 -60 60 and 191 -59 60.
+drv 1 "cmd setblock 180 -60 60 minecraft:oak_door[facing=north,half=lower,hinge=left]" \
+	"cmd setblock 180 -59 60 minecraft:oak_door[facing=north,half=upper,hinge=left]" \
+	"cmd fill 191 -60 60 191 -59 60 minecraft:stone" "cmd fill 195 -60 60 195 -59 60 minecraft:stone" \
+	"cmd tp @s 194.5 -60 64.5 180 30" "cmd tp Planner2 186.5 -60 68.5 180 30" "ebmode DISABLED" "wait 40" \
+	"cmd kill @e[type=!minecraft:player]" "wait 10" > /dev/null
+stock minecraft:oak_door 1
+aim 1 194 -60 60
+place_click 1
+check "in Disable, Planner1's own right click beside the stone places a door hinged on the right" eval \
+	'arrive 194 -59 60 minecraft:oak_door && server_has 194 -60 60 "minecraft:oak_door[facing=north,half=lower,hinge=right]"'
+drv 1 "ebmode LINE" "cmd tp @s 180.5 -60 64.5 180 30" "wait 20" > /dev/null
+copy_button
+box 180.5 -58.5 60.95 -59 180 60 -60
+check "a box around the door hinged on the left copies its 2 blocks" client_said 1 "Copied 2 blocks."
+drv 1 "cmd tp @s 190.5 -60 64.5 180 30" "wait 20" "lookat 190.5 -60 60.5" "wait 5" > /dev/null
+stock minecraft:oak_door 1
+check "the copy rests at 190 -60 60, beside the stone, blue" eval \
+	'drv 1 "await copy at 190,-60,60..190,-59,60" "await copycolour BLUE" > /dev/null'
+place_click 1
+check "the paste places the door hinged on the left, as the copy shows, on the server and both clients" eval \
+	'arrive 190 -59 60 minecraft:oak_door &&
+	server_has 190 -60 60 "minecraft:oak_door[facing=north,half=lower,hinge=left]" &&
+	server_has 190 -59 60 "minecraft:oak_door[facing=north,half=upper,hinge=left]" &&
+	[[ $(clients_count 190 -60 60 190 -59 60 hinge=left) == "2 2" ]]'
+check "using the one door" eval '[[ $(items minecraft:oak_door) == 0 ]]'
+attack_click 1
+check "a left click puts the copy away" eval 'drv 1 "wait 5" > /dev/null && [[ $(val 1 copy) == away* ]]'
+
 	'! grep -F "Self-check:" /out/client1.log /out/client2.log >> /out/checks.log'
 
 # Spawn protection: the dev server starts with none (build.gradle's prepareDevServer), and Minecraft reads it only as
