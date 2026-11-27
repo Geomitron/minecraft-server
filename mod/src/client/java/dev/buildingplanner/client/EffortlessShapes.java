@@ -118,9 +118,9 @@ public final class EffortlessShapes {
 
 	/**
 	 * The blocks a shape's valid entries get ({@link #place}), with the other half of each two-block one, by their
-	 * positions in the world.
+	 * positions in the world; package-private for the in-game checks' driver, which sends a shape's real blocks.
 	 */
-	private static Map<BlockPos, BlockState> states(BlockSet blocks, BlockHitResult first) {
+	static Map<BlockPos, BlockState> states(BlockSet blocks, BlockHitResult first) {
 		Minecraft mc = Minecraft.getInstance();
 		Player player = mc.player;
 		Player placer = Aim.placer();

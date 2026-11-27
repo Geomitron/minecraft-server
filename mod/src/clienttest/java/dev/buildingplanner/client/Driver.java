@@ -8,6 +8,7 @@ import dev.buildingplanner.input.CopyPlacement;
 import dev.buildingplanner.input.RepeatSpeed;
 import dev.buildingplanner.look.ControlsLine;
 import dev.buildingplanner.sync.EditKind;
+import dev.buildingplanner.sync.LayerChange;
 import dev.buildingplanner.sync.Payloads;
 import dev.buildingplanner.sync.SyncLimits;
 import fi.dy.masa.litematica.config.Configs;
@@ -43,6 +44,7 @@ import java.util.Map;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -55,9 +57,11 @@ import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.commands.arguments.EntityAnchorArgument;
 import net.minecraft.commands.arguments.blocks.BlockStateParser;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.permissions.Permissions;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
@@ -730,6 +734,57 @@ public final class Driver implements ClientModInitializer {
 				// previewstate x y z: the state Effortless Building's preview drew there in the last whole frame, with its
 				// properties, such as minecraft:oak_stairs[facing=east,...], or none.
 				return PreviewProbe.state(pos(a, 1));
+			}
+			case "placepreview" -> {
+				// placepreview [paste]: sends the server one place of the blocks Effortless Building's preview shows, each
+				// in the state hook E1 gives it, with the shape's first click's face and hit (the aim's before a shape's
+				// first click), as the place click will while "Place real blocks" acts, and cancels the shape underway, so
+				// its click makes no ghost blocks; with paste, as a paste. Gives "N blocks" sent, a two-part block's
+				// other half included, which the server leaves out.
+				Payloads.Place place = EffortlessDriver.previewPlace(mc, a.length > 1 && a[1].equals("paste"));
+				if (place == null) {
+					return "nothing drawn";
+				}
+				ClientPlayNetworking.send(place);
+				return place.blocks().size() + " blocks";
+			}
+			case "sendplace" -> {
+				// sendplace <face> <hx> <hy> <hz> shape|paste {<x1> <y1> <z1> <x2> <y2> <z2> <state>}...: sends the
+				// server one place of every block of the boxes, each box's blocks in its state, with that face and hit.
+				// Gives "N blocks" sent.
+				List<LayerChange> blocks = new ArrayList<>();
+				for (int i = 6; i + 6 < a.length; i += 7) {
+					BlockState state = state(a[i + 6]);
+					for (BlockPos pos : BlockPos.betweenClosed(pos(a, i), pos(a, i + 3))) {
+						blocks.add(new LayerChange(pos.immutable(), state));
+					}
+				}
+				ClientPlayNetworking.send(new Payloads.Place(mc.level.dimension().identifier(), Direction.byName(a[1]),
+					vec(a, 2), a[5].equals("paste"), blocks));
+				return blocks.size() + " blocks";
+			}
+			case "itemcount" -> {
+				// itemcount <item>: how many of the item, such as minecraft:oak_planks, the player's inventory holds in
+				// all its slots.
+				int count = 0;
+				for (int slot = 0; slot < mc.player.getInventory().getContainerSize(); slot++) {
+					ItemStack stack = mc.player.getInventory().getItem(slot);
+					if (BuiltInRegistries.ITEM.getKey(stack.getItem()).toString().equals(a[1])) {
+						count += stack.getCount();
+					}
+				}
+				return String.valueOf(count);
+			}
+			case "soundreset" -> {
+				// soundreset: forgets the sounds played so far, for sounds and serversounds.
+				SoundProbe.reset();
+				return "ok";
+			}
+			case "sounds", "serversounds" -> {
+				// sounds <text>: how many sounds this game played in its world since soundreset whose id has the text,
+				// such as block.wood.place, its own included (Effortless Building's as its preview changes);
+				// serversounds <text>: how many of them the server sent.
+				return String.valueOf(SoundProbe.count(a[1], a[0].equals("serversounds")));
 			}
 			case "heldturn" -> {
 				// heldturn: the turn of the block in hand, its properties' values as name=value, or none.
