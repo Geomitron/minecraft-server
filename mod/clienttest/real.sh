@@ -138,6 +138,13 @@ shots() {
 	drv "$1" "wait 210" "notoasts" "wait 5" "shot $2-854x480-gui2" "window 1920 1080 2" "wait 20" "notoasts" \
 		"shot $2-1920x1080-gui2" "window 854 480 2" "wait 20" > /dev/null
 }
+# shot_box <client> <what> <x1 y1 z1 x2 y2 z2>: the window's pixels the blocks of that box cover at 1920 by 1080, GUI
+# scale 2, in checks.log, for outlining them in that client's shots; the window is 854 by 480 again after.
+shot_box() {
+	drv "$1" "window 1920 1080 2" "wait 20" > /dev/null
+	echo "  $2 at 1920 by 1080: $(val "$1" "screenbox $3 $4 $5 $6 $7 $8")" >> /out/checks.log
+	drv "$1" "window 854 480 2" "wait 20" > /dev/null
+}
 # chat_shots <client> <name>: the same shots at once, while the chat still shows its newest lines, such as a notice
 # that came after the chat faded.
 chat_shots() {
@@ -772,13 +779,14 @@ else
 	stock minecraft:cobblestone "$cobble"
 fi
 check "with both covered, the panel shows none missing and none of the Line is red" eval \
-	'[[ $(val 1 clickpanel) == "$panel_head | minecraft:"* && $(val 1 clickpanel) != *red* && $(red 1) == none ]]'
+	'[[ $(val 1 clickpanel) == "$panel_head | minecraft:"* && $(val 1 clickpanel) != *" red"* && $(red 1) == none ]]'
 place_click 1
 check "the click places the Line, each block the one the preview showed, as both clients show" eval \
 	'drv 1 "await real 59 -60 55 $(tail -1 <<< "$shown")" > /dev/null &&
 	drv 2 "await real 59 -60 55 $(tail -1 <<< "$shown")" > /dev/null && mix_on_server 55 && mix_matches 1 55 &&
 	mix_matches 2 55'
 check "and the panel goes with the shape" eval '[[ $(val 1 clickpanel) == hidden ]]'
+shot_box 1 "the placed Line" 40 -60 55 59 -60 55
 shots 1 real-release-placed
 drv 1 "setmix" > /dev/null
 
@@ -1057,6 +1065,7 @@ check "using every item the paste needs" hut_used
 check "the server sends Planner1's game and Planner2's each one place sound" eval \
 	'[[ $(val 1 "serversounds .place") == 1 && $(val 2 "serversounds .place") == 1 ]]'
 drv 2 "lookat 122.5 -58.5 65" "wait 5" > /dev/null
+shot_box 2 "the pasted hut" 120 -60 60 124 -57 64
 shots 2 real-paste-placed
 
 # The same paste at 130 -60 60, over a real stone at 130 -59 62 in its west wall: 78 cobblestone go in.
@@ -1191,10 +1200,22 @@ kinds_short="minecraft:glass 1 0 1 red | minecraft:granite 1 0 1 red | minecraft
 drv 1 "window 1920 1080 2" "wait 20" > /dev/null
 check "at 1920 by 1080, the click's panel shows the 3 kinds short first, then the 7 most used, and counts the other 4" \
 	eval '[[ $(val 1 clickpanel) == "$panel_head | $kinds_short | minecraft:stone 6 64 0 green | "*" | +4 more" ]]'
-echo "  Litematica's lines about the ghost block at the crosshair: $(val 1 linesbox); the panel: $(val 1 clickpanelbox)" \
-	>> /out/checks.log
+# lines_box: Litematica's lines about the ghost block at Planner1's crosshair, as linesbox gives them, read up to 20
+# times a tick apart until they show: Litematica writes them only as it draws a frame, and at 1920 by 1080 the
+# container's software rendering may take longer than the 250 ms after which linesbox no longer counts them as showing.
+lines_box() {
+	local i box
+	for i in $(seq 20); do
+		box=$(val 1 linesbox)
+		[[ $box != none ]] && break
+		drv 1 "wait 1" > /dev/null
+	done
+	echo "  Litematica's lines about the ghost block at the crosshair: $box, read $i times;" \
+		"the panel: $(val 1 clickpanelbox)" >> /out/checks.log
+	echo "$box"
+}
 check "the panel keeps clear of Litematica's lines about the ghost block at the crosshair, at the top right" eval \
-	'[[ $(val 1 linesbox) != none ]] && apart "$(val 1 clickpanelbox)" "$(val 1 linesbox)"'
+	'lines=$(lines_box) && [[ $lines != none ]] && apart "$(val 1 clickpanelbox)" "$lines"'
 drv 1 "window 854 480 2" "wait 20" > /dev/null
 echo "  at 854 by 480: $(val 1 clickpanel)" >> /out/checks.log
 check "at 854 by 480, the panel \"Required blocks\" and its headings overlap nothing it keeps out of" \
@@ -1218,10 +1239,11 @@ check "and gets the notice for one block" client_said 2 "1 block wasn't placed (
 drv 1 "cmd gamemode creative Planner2" > /dev/null
 
 # The cap, in creative: 2,001 blocks from 40 -60 100 to 59 -60 199 and at 40 -60 200, then the 2,000 alone and right
-# after them 1 more, with both players east of the blocks, out of their way and within 64 blocks of every one, and
-# the animals the world made as it made the land killed, so nothing is in the blocks' way.
+# after them 1 more, with both players east of the blocks, out of their way and within 64 blocks of every one. The
+# game spawns no mobs until the cap's checks end, and the animals the world made as it made the land are killed right
+# before the 2,000, so nothing is in the blocks' way.
 drv 1 "cmd gamemode creative @s" "cmd tp @s 61.5 -60 150.5 90 30" "cmd tp Planner2 62.5 -60 140.5 90 30" \
-	"wait 60" "cmd kill @e[type=!minecraft:player]" "wait 10" > /dev/null
+	"cmd gamerule spawn_mobs false" "wait 60" > /dev/null
 stock minecraft:oak_planks 1
 # Each notice's shots come once the commands' chat lines have faded.
 drv 1 "wait 210" > /dev/null
@@ -1233,7 +1255,7 @@ check "and nothing went in" eval '[[ $(clients_count 40 -60 100 59 -60 200 oak_p
 	server_has 40 -60 100 minecraft:air && server_has 59 -60 199 minecraft:air && server_has 40 -60 200 minecraft:air'
 debug_log=run/server/logs/debug.log
 before=$(wc -l < "$debug_log")
-drv 1 "wait 210" > /dev/null
+drv 1 "cmd kill @e[type=!minecraft:player]" "wait 210" > /dev/null
 check "a place of 2,000 blocks and, right after it, one of 1 more are sent" eval \
 	'[[ $(drv 1 "sendplace up 40.5 -60 100.5 shape 40 -60 100 59 -60 199 minecraft:oak_planks" "sendplace up 40.5 -60 200.5 shape 40 -60 200 40 -60 200 minecraft:oak_planks" | sed "s/^.* => //" | tr "\n" " ") == "2000 blocks 1 blocks " ]]'
 check "the second gets the notice of the cap a second" client_said 1 \
@@ -1250,6 +1272,7 @@ check "on the server, all 2,000 are real oak planks and the 1 more isn't placed,
 echo "  on the server, $(server_count minecraft:oak_planks 40 -60 100 59 -60 200) oak planks from 40 -60 100 to 59 -60 200" \
 	>> /out/checks.log
 check "and they used no item" eval '[[ $(items minecraft:oak_planks) == 1 ]]'
+drv 1 "cmd gamerule spawn_mobs true" > /dev/null
 
 check "neither client's log has a self-check warning" eval \
 	'! grep -F "Self-check:" /out/client1.log /out/client2.log >> /out/checks.log'
