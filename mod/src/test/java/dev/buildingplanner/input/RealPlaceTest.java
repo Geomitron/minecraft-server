@@ -27,7 +27,10 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BedPart;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
+import net.minecraft.world.level.block.state.properties.Half;
 import net.minecraft.world.level.block.state.properties.SlabType;
 import net.minecraft.world.phys.Vec3;
 import org.junit.jupiter.api.BeforeAll;
@@ -35,7 +38,8 @@ import org.junit.jupiter.api.Test;
 
 /**
  * The rule for each real block a shape or a paste places: when the setting acts, the order, the inventory, the reach, a
- * space that takes a block, a block an item places, and the cap.
+ * space that takes a block, an entity in the way, a block an item places, a two-part block's second half, the state
+ * hook S2 gives a block, and the cap.
  */
 class RealPlaceTest {
 	/** The slots of a player's inventory: the main inventory, the armour and the off hand. */
@@ -50,6 +54,12 @@ class RealPlaceTest {
 
 	/** A world of air with the given real blocks, letting a block in anywhere {@code allows} does. */
 	private static RealPlace.World world(Map<BlockPos, BlockState> real, Predicate<BlockPos> allows) {
+		return world(real, allows, Set.of());
+	}
+
+	/** A world as {@link #world(Map, Predicate)} gives, with an entity in the way at each of {@code entities}. */
+	private static RealPlace.World world(Map<BlockPos, BlockState> real, Predicate<BlockPos> allows,
+		Set<BlockPos> entities) {
 		return new RealPlace.World() {
 			@Override
 			public boolean allows(BlockPos pos) {
@@ -59,6 +69,11 @@ class RealPlaceTest {
 			@Override
 			public BlockState at(BlockPos pos) {
 				return real.getOrDefault(pos, Blocks.AIR.defaultBlockState());
+			}
+
+			@Override
+			public boolean unobstructed(Entry block) {
+				return !entities.contains(block.pos());
 			}
 		};
 	}
@@ -254,8 +269,9 @@ class RealPlaceTest {
 	}
 
 	@Test
-	void theWorldsOwnChecksComeBeforeTheSpaceIsRead() {
+	void theWorldsOwnChecksComeFirstThenTheSpaceThenEntities() {
 		BlockPos outside = new BlockPos(5, 1, 0);
+		BlockPos stone = new BlockPos(7, 1, 0);
 		RealPlace.World world = new RealPlace.World() {
 			@Override
 			public boolean allows(BlockPos pos) {
@@ -267,11 +283,92 @@ class RealPlaceTest {
 				if (pos.equals(outside)) {
 					throw new AssertionError("read a block the world's checks leave out");
 				}
-				return Blocks.AIR.defaultBlockState();
+				return pos.equals(stone) ? Blocks.STONE.defaultBlockState() : Blocks.AIR.defaultBlockState();
+			}
+
+			@Override
+			public boolean unobstructed(Entry block) {
+				if (block.pos().equals(outside) || block.pos().equals(stone)) {
+					throw new AssertionError("looked for entities where the earlier checks leave the block out");
+				}
+				return true;
 			}
 		};
 		assertFalse(RealPlace.goesIn(new Entry(outside, planks()), world, EYES));
+		assertFalse(RealPlace.goesIn(new Entry(stone, planks()), world, EYES));
 		assertTrue(RealPlace.goesIn(new Entry(outside.east(), planks()), world, EYES));
+	}
+
+	@Test
+	void anEntityInTheWayKeepsABlockOutAndNeedsNoItem() {
+		BlockPos cow = new BlockPos(1, 1, 0);
+		RealPlace.World world = world(Map.of(), pos -> true, Set.of(cow));
+		List<Entry> going = RealPlace.goingIn(line(new BlockPos(0, 1, 0), 3, planks()), world, EYES);
+		assertEquals(List.of(new BlockPos(0, 1, 0), new BlockPos(2, 1, 0)), going.stream().map(Entry::pos).toList());
+		assertEquals(Map.of(Items.OAK_PLANKS, 2), RealPlace.needs(going));
+	}
+
+	@Test
+	void theSecondHalfOfATwoPartBlockIsLeftToItsFirst() {
+		BlockState door = Blocks.OAK_DOOR.defaultBlockState();
+		BlockState bed = Blocks.STRAW_BED.defaultBlockState();
+		BlockState grass = Blocks.TALL_GRASS.defaultBlockState();
+		Entry doorLower = new Entry(new BlockPos(0, 1, 0), door);
+		Entry doorUpper = new Entry(new BlockPos(0, 2, 0),
+			door.setValue(BlockStateProperties.DOUBLE_BLOCK_HALF, DoubleBlockHalf.UPPER));
+		Entry bedFoot = new Entry(new BlockPos(2, 1, 0), bed.setValue(BlockStateProperties.BED_PART, BedPart.FOOT));
+		Entry bedHead = new Entry(new BlockPos(2, 1, -1), bed.setValue(BlockStateProperties.BED_PART, BedPart.HEAD));
+		Entry grassUpper = new Entry(new BlockPos(4, 2, 0),
+			grass.setValue(BlockStateProperties.DOUBLE_BLOCK_HALF, DoubleBlockHalf.UPPER));
+		Entry plank = new Entry(new BlockPos(5, 1, 0), planks());
+		List<Entry> own = RealPlace.withoutSecondHalves(List.of(doorLower, doorUpper, bedFoot, bedHead, grassUpper,
+			plank));
+		assertEquals(List.of(doorLower, bedFoot, plank), own);
+		assertEquals(Map.of(Items.OAK_DOOR, 1, Blocks.STRAW_BED.asItem(), 1, Items.OAK_PLANKS, 1), RealPlace.needs(own));
+	}
+
+	@Test
+	void hookS2GivesTheShapesOrientationAndKeepsMinecraftsOtherValues() {
+		BlockState placed = Blocks.OAK_STAIRS.defaultBlockState()
+			.setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH)
+			.setValue(BlockStateProperties.HALF, Half.BOTTOM).setValue(BlockStateProperties.WATERLOGGED, true);
+		BlockState shape = Blocks.OAK_STAIRS.defaultBlockState()
+			.setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.EAST).setValue(BlockStateProperties.HALF, Half.TOP);
+		assertEquals(placed.setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.EAST)
+			.setValue(BlockStateProperties.HALF, Half.TOP), RealPlace.formed(placed, shape));
+		assertEquals(planks(), RealPlace.formed(planks(), planks()));
+	}
+
+	@Test
+	void hookS2TakesTheShapesFormOfTheSameItem() {
+		BlockState wallTorch = Blocks.WALL_TORCH.defaultBlockState()
+			.setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.EAST);
+		assertEquals(wallTorch, RealPlace.formed(Blocks.TORCH.defaultBlockState(), wallTorch));
+		BlockState wallSign = Blocks.OAK_WALL_SIGN.defaultBlockState()
+			.setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.SOUTH);
+		assertEquals(wallSign, RealPlace.formed(Blocks.OAK_SIGN.defaultBlockState()
+			.setValue(BlockStateProperties.ROTATION_16, 4), wallSign));
+		assertEquals(Blocks.TORCH.defaultBlockState(), RealPlace.formed(wallTorch, Blocks.TORCH.defaultBlockState()));
+	}
+
+	@Test
+	void hookS2PlacesNothingWhereMinecraftGivesAnotherBlockOrNone() {
+		assertNull(RealPlace.formed(Blocks.STONE.defaultBlockState(), planks()));
+		assertNull(RealPlace.formed(Blocks.SOUL_WALL_TORCH.defaultBlockState(),
+			Blocks.WALL_TORCH.defaultBlockState()));
+		assertNull(RealPlace.formed(null, planks()));
+		assertNull(RealPlace.formed(Blocks.WATER.defaultBlockState(), Blocks.WATER.defaultBlockState()));
+	}
+
+	@Test
+	void hookS2GivesTheShapesCountOfABlockMadeOfSeveralItems() {
+		BlockState candle = Blocks.CANDLE.defaultBlockState();
+		assertEquals(candle.setValue(BlockStateProperties.CANDLES, 3),
+			RealPlace.formed(candle, candle.setValue(BlockStateProperties.CANDLES, 3)));
+		BlockState slab = Blocks.OAK_SLAB.defaultBlockState();
+		assertEquals(slab.setValue(BlockStateProperties.SLAB_TYPE, SlabType.DOUBLE),
+			RealPlace.formed(slab.setValue(BlockStateProperties.SLAB_TYPE, SlabType.BOTTOM),
+				slab.setValue(BlockStateProperties.SLAB_TYPE, SlabType.DOUBLE)));
 	}
 
 	@Test

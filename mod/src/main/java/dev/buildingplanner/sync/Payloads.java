@@ -12,6 +12,7 @@ import java.util.TreeMap;
 import java.util.UUID;
 import java.util.function.Function;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
+import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.FriendlyByteBuf;
@@ -22,10 +23,11 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 
 /**
- * Building Planner's network payloads for the shared layer, the material lists and the turn of real blocks placed in
- * Disable, namespace {@code buildingplanner},
+ * Building Planner's network payloads for the shared layer, the material lists, the turn of real blocks placed in
+ * Disable and the real blocks of a shape or a paste, namespace {@code buildingplanner},
  * protocol version 5. Dimensions travel as their ids; block states as ids in the block-state registry and items as ids
  * in the item registry, since both sides run the same vanilla blocks and items.
  */
@@ -263,6 +265,45 @@ public final class Payloads {
 		}
 	}
 
+	/**
+	 * The real blocks of a shape or a paste while "Place real blocks" acts (see "Place real blocks"): the first click's
+	 * face and hit, each block's position and state as the preview shows it, and whether it's a paste, whose first block
+	 * plays its sound to the player too. A hit that isn't a finite position ends the connection, as Minecraft's own
+	 * check of a move does.
+	 */
+	public record Place(Identifier dimension, Direction face, Vec3 hit, boolean paste, List<LayerChange> blocks)
+		implements CustomPacketPayload {
+		public static final Type<Place> TYPE = payloadType("place");
+		static final StreamCodec<FriendlyByteBuf, Place> CODEC = StreamCodec.of(
+			(buf, p) -> {
+				buf.writeIdentifier(p.dimension);
+				buf.writeEnum(p.face);
+				buf.writeDouble(p.hit.x);
+				buf.writeDouble(p.hit.y);
+				buf.writeDouble(p.hit.z);
+				buf.writeBoolean(p.paste);
+				writeChanges(buf, p.blocks);
+			},
+			buf -> {
+				Identifier dimension = buf.readIdentifier();
+				Direction face = buf.readEnum(Direction.class);
+				Vec3 hit = new Vec3(buf.readDouble(), buf.readDouble(), buf.readDouble());
+				if (!Double.isFinite(hit.x) || !Double.isFinite(hit.y) || !Double.isFinite(hit.z)) {
+					throw new IllegalArgumentException("A place's hit isn't a position: " + hit);
+				}
+				return new Place(dimension, face, hit, buf.readBoolean(), readChanges(buf));
+			});
+
+		public Place {
+			blocks = List.copyOf(blocks);
+		}
+
+		@Override
+		public Type<Place> type() {
+			return TYPE;
+		}
+	}
+
 	// Server to client.
 
 	/** Sent at join: the server's protocol version and the block cap for an edit. */
@@ -447,6 +488,8 @@ public final class Payloads {
 		serverbound.register(OpenList.TYPE, OpenList.CODEC);
 		serverbound.registerLarge(CurrentList.TYPE, CurrentList.CODEC, MAX_LIST_MESSAGE_BYTES);
 		serverbound.register(PlaceTurn.TYPE, PlaceTurn.CODEC);
+		// As large as an edit, so a shape past the cap of real blocks arrives and gets the cap's notice.
+		serverbound.registerLarge(Place.TYPE, Place.CODEC, MAX_EDIT_BYTES);
 		PayloadTypeRegistry<?> clientbound = PayloadTypeRegistry.clientboundPlay();
 		clientbound.register(Hello.TYPE, Hello.CODEC);
 		clientbound.registerLarge(Columns.TYPE, Columns.CODEC, MAX_CLIENTBOUND_BYTES);

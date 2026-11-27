@@ -454,8 +454,9 @@ Payloads (namespace `buildingplanner`, protocol version 5):
   changes)` where `kind` is shape or erase and `changes` is a list of world position and block state (air for an
   erase), `undo` and `redo`; for material lists `save_list`, `delete_list`, `open_list` and `current_list` (see
   "The lists on the server"); `place_turn(item, properties)`, the turn of the real block a right click places in
-  Disable (see "Turning real blocks in Disable"); and, proposed for 0.9.0, `place(dimension, face, hit, blocks)`, the
-  real blocks of a shape or a paste (see "Place real blocks"), which protocol version 5 takes as one more payload.
+  Disable (see "Turning real blocks in Disable"); and, proposed for 0.9.0, `place(dimension, face, hit, paste,
+  blocks)`, the real blocks of a shape or a paste (see "Place real blocks"), which protocol version 5 takes as one more
+  payload.
 - Server to client: `hello(protocolVersion, limits)` at join, where `limits` is the block cap for an edit;
   `columns(dimension, columns)`, each column its position and its sections, each section its height, palette and
   packed blocks; `applied(dimension, author, clientSeq, changes)`, whose author is the nil UUID for ghost blocks real blocks filled (see
@@ -1898,9 +1899,15 @@ shape erases ghost blocks, as with the setting off (1372 Q4 A), and Delete, the 
 count ghost blocks. A shape or a paste of real blocks leaves hidden ghost blocks hidden. A real block that fills a
 ghost block takes it out of the layer, as any real block does (see "Ghost blocks the real world fills").
 
-**How the server places each block.** The game sends a shape as one `place(dimension, face, hit, blocks)`: the first
-click's face and hit, and each block's position and state (the layer's codec for a change), without the other half of
-a two-part block, which Minecraft places itself. The server places the blocks from the lowest level up, and gives
+**How the server places each block.** The game sends a shape as one `place(dimension, face, hit, paste, blocks)`: the
+first click's face and hit, whether it is a paste (for hook S3), and each block's position and state (the layer's
+codec for a change), without the other half of a two-part block, which Minecraft places itself; the server leaves out
+any such half it's sent (`RealPlace.withoutSecondHalves`: a door's upper half, a bed's head). `place` has the room of
+an `edit` (`registerLarge` with `MAX_EDIT_BYTES`), so a `place` past the cap arrives and gets the cap's notice, and a
+hit that isn't a position (not a finite number) ends the connection, as any payload that can't be read does.
+`RealPlacer` takes a `place` in this order, and places nothing when any of the first three fails: the cap on its
+blocks, the inventory for the blocks that pass the checks below, the cap a second over those blocks, and then the
+placing. The server places the blocks from the lowest level up, and gives
 each block that couldn't stay one more try after the rest, from the highest level down, so a torch or a hanging lantern
 whose support the same `place` puts in goes in too, and so do blocks hanging one under another, such as pointed
 dripstone (`RealPlace.order`). It places each block as the player's own right click would place it
@@ -1920,7 +1927,12 @@ orientation of the shape's state (its values of the properties `BlockTurn` sets,
 place of the player's turn for Disable, and the count of a block made of several items. Where Minecraft gives the
 other form of the same item, such as a standing torch for a wall torch or a standing sign for a wall sign
 (`StandingAndWallBlockItem`, whose form depends on where the player looks), S2 takes the shape's form, turned the same
-way; it returns null when Minecraft's state is any other block. A block that doesn't go in uses no item.
+way; it returns null when Minecraft's state is any other block. S2 then checks the turned state as it checks
+Disable's (`PlaceTurns.checked`: shaped by its neighbours, and placed only where it can stay). A block that doesn't go
+in uses no item. `RealPlacer` sorts each block Minecraft refuses: one that can't stay (Minecraft or S2 gave no state
+because it can't stay there, or an entity is in its way), which the order tries again; or one refused for another
+reason (S2's other block, an operator's block for a player who isn't one, a space an earlier block of the same `place`
+filled, such as a bed's head), which counts toward the notice.
 
 Before it places, the server checks the shape as `ServerGamePacketListenerImpl.handleUseItemOn` checks a right click
 (read in the 26.3 jar), and skips each block that fails: the dimension is the player's own; the player's game mode
@@ -1946,29 +1958,42 @@ server runs none.
   checks above need: the blocks those checks leave out need none, every block of the mirror's and the array's copies
   counts, and with the block mix each block counts as its own item (a Line of 16 cobblestone and 4 mossy cobblestone
   needs 16 and 4). When the inventory lacks any of them, the server places nothing and its `notice` names each item
-  short and how many, in the wording Geo approves in build step 5. A stack with components (a named block, a filled
+  short and how many, in the wording Geo approves in build step 5: each as its count and the item's English name, as
+  the server gives it (`Item.getName`), joined with commas, such as "1 Oak Planks, 4 Mossy Cobblestone". A stack with components (a named block, a filled
   shulker box) places as by hand, its components going to the block entity.
 - **Real blocks in the way** (1372 Q3 A). A block goes only into a space a right click could place it into
   (`BlockPlaceContext.canPlace`), so a shape or a paste never replaces a real block, nor adds to one:
   `RealPlace.spaceTakes` lets a block into a space Minecraft lets any block replace (air, water, lava, grass, fire, a
   vine), a snow layer only while it's one layer, and never a space holding the block's own item, where a right click
   would add a slab to a slab or a candle to candles. The server checks it before it places, so such a block uses no
-  item and doesn't count toward the inventory. Effortless Building's "Replace
+  item and doesn't count toward the inventory. The same goes for an entity in the block's way, such as a cow or a
+  player: the server checks it before it places, last of the checks (`RealPlace.World.unobstructed`, through
+  `CollisionGetter.isUnobstructed` with the player's placement context, as `BlockItem.canPlace` checks it), so the
+  block uses no item and needs none. Effortless Building's "Replace
   mode" button in
   the radial menu changes nothing, as with the setting off: its modes act only in the packet Building Planner never
   sends.
 - **The cap.** The server refuses a `place` of more than 2,000 blocks (`RealPlace.MAX_BLOCKS`: Effortless Building's
   own cap on a survival player's shape, `ServerConfig.survivalMaxBlocksPlaced`, which such a shape never passes), and
   one that would take a player past that many real blocks in a second, with a `notice`, and places none of it. The cap
-  is fixed rather than a server setting, so the player's game knows it too, and the copy shows red past it (see "A
-  paste").
+  on a `place` counts every block it carries, before any other check. The cap a second (`PlaceRate`) counts the blocks
+  that pass the checks and the inventory: with the blocks the player's places put in during the last 1,000 ms before
+  this one arrives, they must be at most 2,000. A place's blocks count from the moment it ends, and the server forgets
+  a player's count when the player leaves. The cap is fixed rather than a server setting, so the player's game knows
+  it too, and the copy shows red past it (see "A paste").
 - **One sound.** Hook S3 lets only the first block placed play its place sound to the players nearby. The player hears
   a shape's from their own game, which plays it at the shape's first block as the click sends
   (`BuildPipelineClient.handleClick`), unless the inventory doesn't cover the shape (hook E41); a paste's first block
   plays its sound to the player too, since the game plays none for a paste.
-- **The notice.** When the server leaves out blocks the player's preview showed going in (someone built there since,
-  spawn protection, a chunk the server hasn't loaded), a `notice` says how many, in the wording Geo approves in build
-  step 5. A shape whose blocks all go in sends nothing back; the player sees the blocks arrive as any block changes.
+- **The notice.** When the server leaves out blocks the player's preview showed going in, a `notice` says how many,
+  in the wording Geo approves in build step 5. It counts the blocks the server's own checks keep out and the player's
+  game can't check (another dimension, a game mode that can't build, a chunk the server hasn't loaded, spawn
+  protection): the blocks that pass the checks the game makes too (`RealPlace.goingIn` over the world as the server
+  has it, with a chunk it hasn't loaded taken as empty), less those that pass all of them. It adds the blocks
+  Minecraft refused for a reason other than one the preview shows (see `RealPlacer`'s sorting above). A block someone
+  built in the way since the preview drew isn't counted: the server can't tell it from a real block the preview
+  already showed red. A shape whose blocks all go in sends nothing back; the player sees the blocks arrive as any
+  block changes.
 
 **The preview.** While the setting acts, Effortless Building's preview counts the inventory as it does on its own
 servers, over the blocks that would go in: hook E8 lets `ItemUsageTracker.compute` run on the blocks `RealPlace`
@@ -3203,12 +3228,21 @@ is made of, nothing going in when one item is short, and nothing used in creativ
 from the eyes to the block's nearest face along each axis both ways, and 63, just under and just over 64, and 65 to
 its nearest corner along a diagonal), a space that takes a block (air, water, lava, grass, fire, a vine and a single
 snow layer) and one that doesn't (a real block, a slab, candles or a snow layer of 2, and the block's own item), the
-world's own checks asked before the space is read, a block no item places, the cap of 2,000, and the setting acting
-only during a session whose server takes `place`, in every mode but Disable, with an item that places a block.
+world's own checks asked before the space is read and the space before entities, an entity in the way keeping a block
+out with no item needed for it, a block no item places, a two-part block's second half left to its first (a door's
+upper half, a bed's head and a tall plant's upper half), hook S2's state (the shape's orientation with Minecraft's
+other values, the shape's form of the same item for a torch and a sign, nothing where Minecraft gives another block or
+none, and the shape's count of 3 candles and of a double slab), the cap of 2,000, and the setting acting only during a
+session whose server takes `place`, in every mode but Disable, with an item that places a block. `PlaceRateTest`
+covers the cap a second: a place goes in while it and the blocks placed in the second before stay within 2,000,
+several places in a second add up, blocks placed a second ago no longer count, and each player has their own count
+until they leave.
 `CopyColourTest` covers the copy's colours with the setting on: blue on clear ground and over ghost blocks; yellow for
 a real block in a space, a block past the reach, one outside the build height or the border, and water; red past 2,000
-blocks, checked first, and in survival for an inventory one item short. `PayloadsTest` covers `place` and its limits,
-and `ControlsLineTest` the lines with the setting on, the copy's included.
+blocks, checked first, and in survival for an inventory one item short. `PayloadsTest` covers `place`: a shape's and a
+paste's round trip, a `place` of as many blocks as an `edit` carries fitting the room it's registered with, a hit that
+isn't a position ending the connection, and the cap's notices grouping their digits ("2,001"). `ControlsLineTest`
+covers the lines with the setting on, the copy's included.
 
 `local.sh`, servers without Building Planner (proposed for 0.10.0; the checks follow the options the requests
 recommend), on the dev server started with the add-on left off its classpath (`start_server "$ADDON"

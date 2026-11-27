@@ -1,5 +1,6 @@
 package dev.buildingplanner.sync;
 
+import dev.buildingplanner.input.RealPlace;
 import java.util.List;
 import java.util.Locale;
 
@@ -102,6 +103,35 @@ public record PlayerMessage(String key, List<String> args) {
 	/** The player's Delete erased {@code blocks} ghost blocks, the count written with digit grouping ("16,001"). */
 	public static PlayerMessage erased(int blocks) {
 		return blocks == 1 ? new PlayerMessage(PREFIX + "delete.done_one", List.of())
-			: new PlayerMessage(PREFIX + "delete.done", List.of(String.format(Locale.US, "%,d", blocks)));
+			: new PlayerMessage(PREFIX + "delete.done", List.of(grouped(blocks)));
+	}
+
+	/**
+	 * The player's inventory lacks items a shape or a paste of real blocks needs, so nothing went in; {@code missing}
+	 * names each item short and how many ("1 Oak Planks, 4 Mossy Cobblestone").
+	 */
+	public static PlayerMessage placeShort(String missing) {
+		return new PlayerMessage(PREFIX + "place.short", List.of(missing));
+	}
+
+	/** A shape or a paste of {@code blocks} real blocks, past the cap ({@link RealPlace#MAX_BLOCKS}): nothing went in. */
+	public static PlayerMessage placeTooMany(int blocks) {
+		return new PlayerMessage(PREFIX + "place.too_many", List.of(grouped(blocks), grouped(RealPlace.MAX_BLOCKS)));
+	}
+
+	/** A shape or a paste that would take the player past the cap's real blocks in a second: nothing went in. */
+	public static PlayerMessage placeTooFast() {
+		return new PlayerMessage(PREFIX + "place.too_fast", List.of(grouped(RealPlace.MAX_BLOCKS)));
+	}
+
+	/** The server left out {@code blocks} real blocks the player's preview showed going in. */
+	public static PlayerMessage placeLeftOut(int blocks) {
+		return blocks == 1 ? new PlayerMessage(PREFIX + "place.left_out_one", List.of())
+			: new PlayerMessage(PREFIX + "place.left_out", List.of(grouped(blocks)));
+	}
+
+	/** A count with digit grouping, as "16,001". */
+	private static String grouped(int count) {
+		return String.format(Locale.US, "%,d", count);
 	}
 }

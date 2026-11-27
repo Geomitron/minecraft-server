@@ -11,7 +11,9 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BedPart;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.level.block.state.properties.SlabType;
 import net.minecraft.world.phys.AABB;
@@ -122,16 +124,77 @@ public final class RealPlace {
 
 		/** The real block at {@code pos}. */
 		BlockState at(BlockPos pos);
+
+		/**
+		 * Whether no entity is in the way of {@code block}, as Minecraft checks it as it places the block
+		 * ({@code Level.isUnobstructed} with the player's {@code CollisionContext.placementContext}). Asked last.
+		 */
+		boolean unobstructed(Entry block);
 	}
 
 	/**
 	 * Whether {@code block} goes in, as far as the checks before placing can tell: an item places it, it's within the
-	 * reach, the world allows it there, and its space takes it. Whether it can stay, and whether an entity is in its way,
-	 * Minecraft checks as it places it.
+	 * reach, the world allows it there, its space takes it, and no entity is in its way, which Minecraft checks again
+	 * as it places it. Whether it can stay Minecraft checks as it places it, after the blocks under it.
 	 */
 	public static boolean goesIn(Entry block, World world, Vec3 eyes) {
 		return item(block.state()) != null && inReach(block.pos(), eyes) && world.allows(block.pos())
-			&& spaceTakes(world.at(block.pos()), block.state());
+			&& spaceTakes(world.at(block.pos()), block.state()) && world.unobstructed(block);
+	}
+
+	/**
+	 * Whether {@code state} is the part of a two-part block that Minecraft places with the other
+	 * ({@code Block.setPlacedBy}): a door's or a tall plant's upper half, or a bed's head.
+	 */
+	public static boolean secondHalf(BlockState state) {
+		return state.hasProperty(BlockStateProperties.DOUBLE_BLOCK_HALF)
+			&& state.getValue(BlockStateProperties.DOUBLE_BLOCK_HALF) == DoubleBlockHalf.UPPER
+			|| state.hasProperty(BlockStateProperties.BED_PART)
+			&& state.getValue(BlockStateProperties.BED_PART) == BedPart.HEAD;
+	}
+
+	/**
+	 * The blocks of a shape or a paste the server places itself, in their order: all but the {@link #secondHalf} of a
+	 * two-part block, which a paste carries and which uses no item of its own.
+	 */
+	public static List<Entry> withoutSecondHalves(List<Entry> blocks) {
+		List<Entry> own = new ArrayList<>(blocks.size());
+		for (Entry block : blocks) {
+			if (!secondHalf(block.state())) {
+				own.add(block);
+			}
+		}
+		return own;
+	}
+
+	/**
+	 * Hook S2's state for a real block of a shape or a paste: {@code placed}, the state Minecraft gives the block's item
+	 * at its position, in the form of {@code shape} where Minecraft gives the other form of the same item (a standing
+	 * torch for a wall torch, a standing sign for a wall sign: the shape's block with {@code placed}'s other values,
+	 * {@code Block.withPropertiesOf}), with the shape's orientation (its values of {@link BlockTurn}'s properties,
+	 * through {@link PlaceTurn#accepted}) and the shape's count of a block made of several items (3 candles; a double
+	 * slab is a slab's type, which the orientation sets). Null when Minecraft gives no state or another block.
+	 */
+	public static BlockState formed(BlockState placed, BlockState shape) {
+		Item item = item(shape);
+		if (placed == null || item == null) {
+			return null;
+		}
+		BlockState form;
+		if (placed.getBlock() == shape.getBlock()) {
+			form = placed;
+		} else if (item(placed) == item) {
+			form = shape.getBlock().withPropertiesOf(placed);
+		} else {
+			return null;
+		}
+		BlockState turned = PlaceTurn.turned(form, PlaceTurn.accepted(item, BlockTurn.values(shape)), item, true);
+		for (IntegerProperty count : ITEM_COUNTS) {
+			if (turned.hasProperty(count) && shape.hasProperty(count)) {
+				turned = turned.setValue(count, shape.getValue(count));
+			}
+		}
+		return turned;
 	}
 
 	/** The blocks of {@code blocks} that go in ({@link #goesIn}), in their order. */

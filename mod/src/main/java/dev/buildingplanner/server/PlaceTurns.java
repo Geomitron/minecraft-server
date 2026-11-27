@@ -71,17 +71,25 @@ public final class PlaceTurns {
 
 	/**
 	 * Hook S2's step, which Disable's preview takes too: {@code placed}, the state Minecraft would place for the context,
-	 * with {@code turn} when it's for the item in the main hand ({@link PlaceTurn#turned}), its shape set again from its
-	 * neighbours ({@code Block.updateFromNeighbourShapes}) unless it's a block of two parts, and whether the turned
-	 * block can stay: Minecraft's own check ({@code placeable}, as {@code BlockItem.canPlace} gives it), a block the
-	 * shape update changes into another (a torch turned away from its wall turns to air) never, and a bed only where the
-	 * space toward its turned facing takes a block inside the world border. A state the turn leaves as it was stays, as
-	 * Minecraft would place it.
+	 * with {@code turn} when it's for the item in the main hand ({@link PlaceTurn#turned}), {@link #checked}.
 	 */
 	public static Placed place(BlockPlaceContext context, BlockState placed, BlockTurn.Held turn,
 		Predicate<BlockState> placeable) {
 		BlockState turned = PlaceTurn.turned(placed, turn, context.getItemInHand().getItem(),
 			context.getHand() == InteractionHand.MAIN_HAND);
+		return checked(context, placed, turned, placeable);
+	}
+
+	/**
+	 * {@code turned}, which hook S2 gives in place of {@code placed}, the state Minecraft would place for the context
+	 * (Disable's turn, or a shape's real block), with its shape set again from its neighbours
+	 * ({@code Block.updateFromNeighbourShapes}) unless it's a block of two parts, and whether it can stay: Minecraft's
+	 * own check ({@code placeable}, as {@code BlockItem.canPlace} gives it), a block the shape update changes into
+	 * another (a torch turned away from its wall turns to air) never, and a bed only where the space toward its turned
+	 * facing takes a block inside the world border. A state left as Minecraft gave it stays, as Minecraft would place it.
+	 */
+	public static Placed checked(BlockPlaceContext context, BlockState placed, BlockState turned,
+		Predicate<BlockState> placeable) {
 		if (turned == placed) {
 			return new Placed(placed, true);
 		}

@@ -4,10 +4,12 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import dev.buildingplanner.input.RealPlace;
 import dev.buildingplanner.layer.PackedSection;
 import io.netty.buffer.Unpooled;
 import java.io.InputStreamReader;
@@ -38,6 +40,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.StairBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -87,6 +90,57 @@ class PayloadsTest {
 		assertTrue(buf.readableBytes() <= Payloads.MAX_EDIT_BYTES,
 			buf.readableBytes() + " bytes, room for " + Payloads.MAX_EDIT_BYTES);
 		assertEquals(edit, Payloads.Edit.CODEC.decode(buf));
+	}
+
+	@Test
+	void aPlaceOfRealBlocksRoundTrips() {
+		List<LayerChange> blocks = List.of(new LayerChange(new BlockPos(-3, -64, 1_000_000), stairs),
+			new LayerChange(new BlockPos(1, 319, 3), Blocks.OAK_PLANKS.defaultBlockState()));
+		Payloads.Place shape = new Payloads.Place(NETHER, Direction.EAST, new Vec3(-2.25, 64.5, 1_000_000.75), false,
+			blocks);
+		assertEquals(shape, roundTrip(Payloads.Place.CODEC, shape));
+		Payloads.Place paste = new Payloads.Place(NETHER, Direction.UP, new Vec3(0.5, 64, 0.5), true, blocks);
+		assertEquals(paste, roundTrip(Payloads.Place.CODEC, paste));
+	}
+
+	/**
+	 * A place of as many blocks as an edit carries, each with the highest block state id, fits what the payload is
+	 * registered for, so a shape past the cap of real blocks arrives and gets the cap's notice.
+	 */
+	@Test
+	void aPlaceOfTheMostBlocksFitsItsRegisteredSize() {
+		BlockState highest = Block.BLOCK_STATE_REGISTRY.byId(Block.BLOCK_STATE_REGISTRY.size() - 1);
+		BlockPos far = new BlockPos(-30_000_000, -64, 30_000_000);
+		Payloads.Place place = new Payloads.Place(
+			Identifier.fromNamespaceAndPath("some_namespace", "some/long/dimension_path"), Direction.SOUTH,
+			new Vec3(-30_000_000.5, -64.5, 30_000_000.5), true,
+			java.util.Collections.nCopies(SyncLimits.WIRE_MAX_EDIT_BLOCKS, new LayerChange(far, highest)));
+		FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
+
+		Payloads.Place.CODEC.encode(buf, place);
+
+		assertTrue(buf.readableBytes() <= Payloads.MAX_EDIT_BYTES,
+			buf.readableBytes() + " bytes, room for " + Payloads.MAX_EDIT_BYTES);
+		assertEquals(place, Payloads.Place.CODEC.decode(buf));
+		assertTrue(SyncLimits.WIRE_MAX_EDIT_BLOCKS > RealPlace.MAX_BLOCKS);
+	}
+
+	@Test
+	void aPlaceWhoseHitIsntAPositionEndsTheConnection() {
+		List<LayerChange> blocks = List.of(new LayerChange(BlockPos.ZERO, stairs));
+		for (Vec3 hit : List.of(new Vec3(Double.NaN, 64, 0), new Vec3(0, Double.POSITIVE_INFINITY, 0),
+			new Vec3(0, 64, Double.NEGATIVE_INFINITY))) {
+			FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
+			Payloads.Place.CODEC.encode(buf, new Payloads.Place(NETHER, Direction.UP, hit, false, blocks));
+			assertThrows(IllegalArgumentException.class, () -> Payloads.Place.CODEC.decode(buf), hit.toString());
+		}
+	}
+
+	@Test
+	void theCapsNoticesGroupTheirDigits() {
+		assertEquals(List.of("2,001", "2,000"), PlayerMessage.placeTooMany(2_001).args());
+		assertEquals(List.of("2,000"), PlayerMessage.placeTooFast().args());
+		assertEquals(List.of("1,500"), PlayerMessage.placeLeftOut(1_500).args());
 	}
 
 	@Test

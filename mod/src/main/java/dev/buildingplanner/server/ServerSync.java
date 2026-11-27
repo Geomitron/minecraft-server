@@ -37,7 +37,8 @@ import net.minecraft.world.level.storage.LevelResource;
 
 /**
  * Connects the server's shared layer ({@link LayerSync}, protocol 5), each player's material lists
- * ({@link MaterialLists}) and each player's turn for placing in Disable ({@link PlaceTurns}) to the game: one of each
+ * ({@link MaterialLists}), each player's turn for placing in Disable ({@link PlaceTurns}) and the placing of real
+ * blocks ({@link RealPlacer}) to the game: one of each
  * per running server, fed by the payload handlers (which Fabric runs on the server thread) and sending only to players
  * who can receive Building Planner's payloads. The layer lives in
  * {@code <world>/building-planner/layer/}; before that folder exists, the server builds it from the plans Syncmatica
@@ -50,6 +51,7 @@ public final class ServerSync {
 	private static MaterialLists lists;
 	private static ListFiles listFiles;
 	private static PlaceTurns placeTurns;
+	private static RealPlacer realPlacer;
 
 	private ServerSync() {
 	}
@@ -88,6 +90,7 @@ public final class ServerSync {
 				System.currentTimeMillis());
 			placeTurns = new PlaceTurns();
 			PlaceTurns.serve(placeTurns);
+			realPlacer = new RealPlacer();
 		});
 		ServerTickEvents.START_SERVER_TICK.register(server -> {
 			if (layer != null) {
@@ -127,6 +130,7 @@ public final class ServerSync {
 			listFiles = null;
 			placeTurns = null;
 			PlaceTurns.serve(null);
+			realPlacer = null;
 		});
 
 		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
@@ -150,6 +154,9 @@ public final class ServerSync {
 			}
 			if (placeTurns != null) {
 				placeTurns.left(handler.getPlayer().getUUID());
+			}
+			if (realPlacer != null) {
+				realPlacer.left(handler.getPlayer().getUUID());
 			}
 		});
 		ServerEntityLevelChangeEvents.AFTER_PLAYER_CHANGE_LEVEL.register((player, from, to) -> {
@@ -210,6 +217,11 @@ public final class ServerSync {
 				// At debug level, so the in-game checks can count the turns that arrive (the dev server's debug.log).
 				BuildingPlanner.LOGGER.debug("Building Planner took {}'s turn for placing: {}", playerName(context.player()),
 					turn.turn() == null ? "none" : turn.turn().values());
+			}
+		});
+		ServerPlayNetworking.registerGlobalReceiver(Payloads.Place.TYPE, (payload, context) -> {
+			if (realPlacer != null) {
+				realPlacer.place(context.player(), payload);
 			}
 		});
 		BuildingPlanner.LOGGER.info("Building Planner live sync: {} blocks an edit", limits.maxEditBlocks());
