@@ -53,7 +53,7 @@ Always start Minecraft from the "Server Pack" instance. Starting it anywhere els
 
 ## Build Plans
 
-You plan a build in ghost blocks: see-through blocks that show where real blocks will go. Everyone on the server sees the same ghost blocks, anyone can add or erase them, and each change shows for everyone as it's made. Ghost blocks never turn into real blocks and don't use up your items. Once a plan looks right, you build it for real by hand.
+You plan a build in ghost blocks: see-through blocks that show where real blocks will go. Everyone on the server sees the same ghost blocks, anyone can add or erase them, and each change shows for everyone as it's made. Ghost blocks never turn into real blocks and don't use up your items. Once a plan looks right, you build it for real by hand, or turn on "Place real blocks" to build it with shapes and pastes.
 
 ### Keys
 
@@ -108,7 +108,7 @@ Hold Left Alt to open the radial menu. Point at a build mode or a button, and cl
 
 To erase ghost blocks, draw a shape with left-clicks instead. In "Single", each right-click places one ghost block and each left-click erases one, so the red frame shows only on ghost blocks. Hold the button to keep placing or erasing, at the speed the "Build speed" and "Break speed" sliders set.
 
-A shape can start on a ghost block or on a real block. A line above the hotbar shows the controls you can use at each moment. With a tool, food, or an empty hand, clicks break and use real blocks as they do without mods. To place real blocks with a block in hand, choose "Disable".
+A shape can start on a ghost block or on a real block. A line above the hotbar shows the controls you can use at each moment. With a tool, food, or an empty hand, clicks break and use real blocks as they do without mods. To place real blocks with a block in hand, choose "Disable", or turn on "Place real blocks".
 
 ### Locking and Nudging
 
@@ -161,7 +161,7 @@ A sweep or a box that starts on a marked ghost block unmarks instead. Right-clic
 
 ### Copy and Paste
 
-Copy takes the blocks in a box, ghost blocks and real blocks alike, and pastes them as ghost blocks wherever you aim. Only you see the copy until you paste it.
+Copy takes the blocks in a box, ghost blocks and real blocks alike, and pastes them as ghost blocks wherever you aim, or as real blocks while "Place real blocks" is on. Only you see the copy until you paste it.
 
 1. Hold Left Alt and choose "Copy".
 2. Left-click to set one corner of the box, left-click again to set the opposite corner on the same level, and left-click a third time to set the height. The box shows white, with its size and the blocks in it. If you aim at the top of a block, the first corner is the space above it, so a box started on the ground includes what stands on it.
@@ -180,6 +180,23 @@ With the copy at your aim:
 The copy snaps flush to the sides of your recent pastes. Hold Left Control to keep it in line with your latest paste. Its box shows blue where it will paste, yellow where it would replace ghost blocks (it still pastes), and red where it can't paste, with the reason above the hotbar.
 
 Choosing a build mode or another planning tool, or showing or hiding ghost blocks, puts the copy away. Choose "Paste" in the radial menu to bring your latest copy back. Leaving the server or changing dimension forgets it.
+
+### Real Blocks
+
+With "Place real blocks" on, shapes and pastes place real blocks from your inventory instead of ghost blocks.
+
+1. Hold Left Alt and click "Settings".
+2. Turn on "Place real blocks", and click "Save".
+
+With it on, each right-click shape in a build mode other than "Disable" places real blocks, along with its mirror and array copies, using the block mix if it's on. Each block faces the way the preview shows it. Left-click shapes still erase ghost blocks.
+
+A block goes in only within 64 blocks of you, and only into a space a right-click could place it in, such as air, water, or grass, never in place of a real block or where a mob or player stands. You can place up to 2,000 real blocks at once, and up to 2,000 a second. If the server keeps any blocks out, chat says how many weren't placed.
+
+Before you click, each block that won't go in shows red in the preview, such as one too far away, one where a real block or a mob is, or a torch with nothing to stand on. If you're short of any item, the whole shape shows red.
+
+In a shape, torches, signs, banners, and coral fans stand upright even where you aim at the side of a wall, so beside a wall they go in only where a block under them holds them up. To put one on a wall, place it by hand in "Disable".
+
+Ctrl+Z doesn't take real blocks back: it undoes your newest change to ghost blocks. Real blocks come out only when you break them.
 
 ### Material Lists
 

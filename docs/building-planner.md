@@ -1885,7 +1885,8 @@ real blocks: open choices" (1372).
 **The setting.** "Place real blocks" is a row of "Settings" after "Match ghost blocks", drawn, explained and saved as
 that row is (hook E36's list of label keys gains its key; `VisualSettingsRow`): off at first, saved in
 `config/buildingplanner-client.properties` as `place-real-blocks` (`false` at first, which a missing or other value
-reads as). Its tooltip is in the wording Geo approves in build step 5. The row shows on any server. The setting acts
+reads as). Its tooltip reads "Shapes and pastes place real blocks from your inventory, not ghost blocks" (Geo's
+reading, 1411 PR1). The row shows on any server. The setting acts
 while Building Planner has a session and the server takes the payload `place` (`ClientPlayNetworking.canSend`): with
 it on, a server with 0.8.0 gets ghost blocks and a server without Building Planner gets nothing, as with it off. On a
 server without Building Planner, as proposed for 0.10.0, shapes draw ghost blocks with it on (see "Servers without
@@ -3205,7 +3206,8 @@ driver's `realstates`):
 
 - Planner1's "Settings" has the row "Place real blocks" right after "Match ghost blocks", off at first. A click on its
   switch turns it on and saves nothing until "Save" saves `place-real-blocks=true`; the row shows it on when the screen
-  opens again and after a restart. With the mouse on its label, the row shows its tooltip.
+  opens again and after a restart. With the mouse on its label, the row shows its tooltip, "Shapes and pastes place
+  real blocks from your inventory, not ghost blocks".
 - The controls lines read as with the setting off: "[Right-click: start placing]" before a Line's first click,
   "[H: Lock (Off)]" after it, and "[Right-click: place]" in Single.
 - After a Line of ghost stone bricks drawn with the setting off and then a Line of 5 real oak planks, Ctrl+Z undoes the

@@ -332,7 +332,7 @@ real_label_hover() {
 }
 real_label_hover
 check "the row's label shows its tooltip" eval 'drv 1 "wait 5" > /dev/null &&
-	[[ $(val 1 tooltips) == "Shapes place real blocks from your inventory instead of ghost blocks" ]]'
+	[[ $(val 1 tooltips) == "Shapes and pastes place real blocks from your inventory, not ghost blocks" ]]'
 drv 1 "notoasts" "wait 5" "shot real-settings-tooltip-854x480-gui2" "window 1920 1080 2" "wait 20" > /dev/null
 real_label_hover
 drv 1 "wait 5" "notoasts" "shot real-settings-tooltip-1920x1080-gui2" "window 854 480 2" "wait 20" > /dev/null

@@ -36,7 +36,7 @@
 	"buildingplanner.ui.visual_settings.match_ghost_turn": "Match ghost blocks",
 	"buildingplanner.ui.visual_settings.match_ghost_turn.tooltip": "Automatically flips and turns a block you place to match a ghost block you're filling in",
 	"buildingplanner.ui.visual_settings.place_real_blocks": "Place real blocks",
-	"buildingplanner.ui.visual_settings.place_real_blocks.tooltip": "Shapes place real blocks from your inventory instead of ghost blocks",
+	"buildingplanner.ui.visual_settings.place_real_blocks.tooltip": "Shapes and pastes place real blocks from your inventory, not ghost blocks",
 	"buildingplanner.ui.lists.date_time": "MMM d, h:mm a",
 	"buildingplanner.ui.save_list.title": "Save list",
 	"buildingplanner.ui.save_list.name": "Name",
