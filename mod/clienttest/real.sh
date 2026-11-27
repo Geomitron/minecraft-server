@@ -4,8 +4,8 @@
 # set with /clear and /item: the controls lines reading as with the setting off, Ctrl+Z and Ctrl+Y after a ghost shape
 # and a Line of real blocks, the break click erasing ghost blocks only, a whole Line from the main hand and the
 # inventory and its one place sound, nothing, the whole Line red and no sound for a Line 1 oak plank short, nothing
-# for a Line of torches along a wall's side nor for one of scaffolding there, red, Lines of scaffolding and of
-# carpets up from the ground, none red and placed whole, a door, a bed, the mix,
+# for a Line of torches along a wall's side nor for one of scaffolding there, red, a Line of heads there standing in
+# the air, Lines of scaffolding and of carpets up from the ground, none red and placed whole, a door, a bed, the mix,
 # the mirror's copies counted, stairs in a Wall turned with the wheel and mirrored, a real block and a cow in the way and
 # red, ghost blocks filled and left red, a copy of a hut with a door, a wall torch, a hanging lantern, a double slab,
 # candles and water, yellow, red 1 cobblestone short, pasted with one place sound for each player and around a real
@@ -464,6 +464,23 @@ check "no notice comes for the click" no_notice_since "$lines"
 check "it places no scaffolding on the server or either client" lands minecraft:scaffolding scaffolding \
 	70 -59 31 77 -59 31 0
 check "and Planner1 keeps all 8 scaffolding" eval '[[ $(items minecraft:scaffolding) == 8 ]]'
+
+# A Line of 8 skeleton skulls in the same spaces: each head stands upright, as for the torches, and since Minecraft has
+# no rule for what holds a head up, each goes in standing in the air beside the wall (1411 Q1 A).
+stock minecraft:skeleton_skull 8
+drv 1 "lookat 70.5 -58.5 31" "wait 5" > /dev/null
+use_click 1
+drv 1 "lookat 77.5 -58.5 31" "wait 5" > /dev/null
+check "a Line of heads along the wall's side draws 8 blocks" preview_is 1 8
+echo "  the preview's first head: $(val 1 "previewstate 70 -59 31")" >> /out/checks.log
+check "none of them red" eval '[[ $(red 1) == none ]]'
+shots 1 real-heads
+place_click 1
+check "the click places 8 standing skeleton skulls on the server, as both clients show" eval \
+	'arrive 77 -59 31 minecraft:skeleton_skull && lands minecraft:skeleton_skull skeleton_skull 70 -59 31 77 -59 31 8'
+echo "  the first head, as client 1 shows it: $(val 1 "realstate 70 -59 31")" >> /out/checks.log
+check "none on the wall" eval '[[ $(server_count minecraft:skeleton_wall_skull 70 -59 31 77 -59 31) == 0 ]]'
+check "using the 8 skeleton skulls" eval '[[ $(items minecraft:skeleton_skull) == 0 ]]'
 
 # A Line of 4 scaffolding up from the ground at 88 -60 32 to 88 -57 32: the server places from the lowest level up, each
 # on the one under it, and the preview checks each block in that order, so none is red (1411 Q2 B).

@@ -1933,8 +1933,10 @@ place of the player's turn for Disable, and the count of a block made of several
 other form of the same item, such as a standing torch for a wall torch or a standing sign for a wall sign
 (`StandingAndWallBlockItem`, whose form depends on where the player looks), S2 takes the shape's form, turned the same
 way; it returns null when Minecraft's state is any other block. So a shape places the form Effortless Building gives
-it: a Line of torches aimed at a wall's side is standing torches, as are signs, banners, heads and coral fans, which
-can't stay beside the wall, so none goes in, the player keeps every item, and no notice comes (1408 Q1 C). A paste
+it: a Line of torches aimed at a wall's side is standing torches, as are signs, banners and coral fans, which
+can't stay beside the wall, so none goes in, the player keeps every item, and no notice comes (1408 Q1 C). Heads
+stand upright too, and since Minecraft has no rule for what holds a head up, they go in standing in the air beside the
+wall, as the preview shows them (1411 Q1 A). A paste
 places the copy's own form, a wall torch as a wall torch, and gives a door the copy's hinge, which Minecraft would
 otherwise pick from the door's neighbours and the player's facing (`DoorBlock.getHinge`), so the pasted door opens on
 the side the copy shows (`RealPlace.formed`; 1372 Q6 B). A shape's door keeps the hinge Minecraft picks as it places
@@ -3251,8 +3253,10 @@ driver's `realstates`):
   can't stay there, and its click places nothing on the server or either client: Planner1 keeps all 8 torches, and
   no notice comes (a say Planner1 sends after the click is the only new line in its chat; 1408 Q1 C). A Line of 8
   scaffolding in the same spaces, which nothing of the shape holds up, draws all 8 red, and its click places nothing
-  and brings no notice: Planner1 keeps all 8. In Single, a door has both halves and a bed both parts, its head on the
-  far side, each placed with one click and using its one item.
+  and brings no notice: Planner1 keeps all 8. A Line of 8 skeleton skulls there draws none red, and its click places 8
+  standing skulls in the air beside the wall, on the server and both clients, and none on the wall, using all 8
+  (1411 Q1 A); the first head's state goes to the checks' log. In Single, a door has both halves and a bed both parts,
+  its head on the far side, each placed with one click and using its one item.
 - A Line of 4 scaffolding up from the ground draws none red, since the preview checks each block in the server's
   order, where each stands on the one under it (1411 Q2 B); its click places all 4 on the server and uses the 4
   scaffolding. A Line of 4 white carpets up from the ground draws none red too, and its click places all 4 and uses
@@ -3312,8 +3316,8 @@ driver's `realstates`):
 - Neither client's log has a self-check warning, before the server starts again or after.
 - Shots, at 854 by 480 and 1920 by 1080, GUI scale 2: "Settings" with the row on and with its tooltip, the controls
   line in Line and in Single, the whole Line red for 1 oak plank short with its icons, the Line through the stone and
-  the cow with its red blocks and icons, the Lines of torches and of scaffolding along the wall red, the Line of
-  scaffolding up from the ground, Planner2's view of the placed Wall, the copy of the hut yellow and red with its lines, Planner2's view
+  the cow with its red blocks and icons, the Lines of torches and of scaffolding along the wall red, the Line of heads
+  there, the Line of scaffolding up from the ground, Planner2's view of the placed Wall, the copy of the hut yellow and red with its lines, Planner2's view
   of the pasted hut, and the Line of 3 copies with its line; and, while the chat shows each, the notices for 1 oak
   plank short, the cap, the cap a second, and Planner2's Line within the spawn protection.
 
