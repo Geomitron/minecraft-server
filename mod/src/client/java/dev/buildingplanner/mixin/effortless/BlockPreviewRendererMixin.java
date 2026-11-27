@@ -9,6 +9,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import dev.buildingplanner.client.Aim;
 import dev.buildingplanner.client.BuildingPlannerClient;
 import dev.buildingplanner.client.EffortlessShapes;
+import dev.buildingplanner.client.RealShape;
 import java.util.List;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.core.BlockPos;
@@ -18,7 +19,10 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
+import nl.requios.effortlessbuilding.buildpipeline.BuildPipeline;
+import nl.requios.effortlessbuilding.buildpipeline.BuildPipelineClient;
 import nl.requios.effortlessbuilding.render.BlockPreviewRenderer;
+import nl.requios.effortlessbuilding.utilities.BlockEntry;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -30,7 +34,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * mouse mode is on. Hook E24: the preview's first block aims, and faces, from Freecam's camera while it's on. Hooks
  * E28 and E30: the first click's block is drawn, at a locked position in the state the hit it was locked with gives
  * it, and so is Disable's block, in the state a right click would place. Hook E38: beside it, the red frame for the
- * left click.
+ * left click. Hook E43: while the place click places real blocks, a block "Match ghost blocks" turns is drawn in the
+ * ghost block's turn.
  */
 @Mixin(value = BlockPreviewRenderer.class, remap = false)
 abstract class BlockPreviewRendererMixin {
@@ -46,6 +51,19 @@ abstract class BlockPreviewRendererMixin {
 		if (BuildingPlannerClient.mouseModeOn()) {
 			ci.cancel();
 		}
+	}
+
+	/**
+	 * Hook E43: while "Place real blocks" acts, each block is drawn in the state the place click sends it in, which
+	 * "Match ghost blocks" gives the ghost block's turn where it fills one ({@code RealShape.drawn}).
+	 */
+	@WrapOperation(method = "render", at = @At(value = "INVOKE",
+		target = "Lnl/requios/effortlessbuilding/utilities/BlockEntry;applyTransforms(Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/state/BlockState;"))
+	private static BlockState buildingplanner$ghostTurned(BlockEntry entry, BlockState state,
+		Operation<BlockState> original) {
+		BlockState drawn = original.call(entry, state);
+		return BuildingPlannerClient.active() && BuildPipelineClient.getBuildState() != BuildPipeline.BuildState.BREAKING
+			&& RealShape.places() ? RealShape.drawn(entry.blockPos, drawn) : drawn;
 	}
 
 	/**

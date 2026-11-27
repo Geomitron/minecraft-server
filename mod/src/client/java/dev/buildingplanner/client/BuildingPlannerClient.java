@@ -13,6 +13,7 @@ import dev.buildingplanner.input.EscSteps;
 import dev.buildingplanner.input.GhostMatch;
 import dev.buildingplanner.input.MouseMode;
 import dev.buildingplanner.input.PlaceTurn;
+import dev.buildingplanner.input.RealPlace;
 import dev.buildingplanner.input.ShapeLock;
 import dev.buildingplanner.input.SingleRule;
 import dev.buildingplanner.layer.Layer;
@@ -286,6 +287,19 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	/** Whether "Match ghost blocks" is on, as the "Settings" screen saved it (see "Settings"). */
 	static boolean matchGhost() {
 		return config != null && GhostMatch.on(config.get(GhostMatch.SETTING));
+	}
+
+	/** Whether "Place real blocks" is on, as the "Settings" screen saved it (see "Place real blocks"). */
+	static boolean placeReal() {
+		return config != null && RealPlace.on(config.get(RealPlace.SETTING));
+	}
+
+	/**
+	 * Whether "Place real blocks" acts now: it's on, Building Planner has a session, and the server takes the payload
+	 * {@code place}, which a server with 0.8.0 doesn't.
+	 */
+	static boolean realActs() {
+		return RealPlace.acts(placeReal(), session != null, ClientPlayNetworking.canSend(Payloads.Place.TYPE));
 	}
 
 	private static void endSession() {
@@ -637,7 +651,8 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	/**
 	 * The line that shows with no mouse mode on, with the keys as the player has them bound: while the lock's controls
 	 * are active, in every one of Effortless Building's modes but Disable, the build modes' line
-	 * ({@link ControlsLine#shape}), with the reason in red while the locked position is red; in Disable, while its turning controls are active, Disable's line ({@link ControlsLine#disable}), with whether the
+	 * ({@link ControlsLine#shape}), with the reason in red while the locked position is red and whether the right click places
+	 * real blocks ({@link RealShape#places}); in Disable, while its turning controls are active, Disable's line ({@link ControlsLine#disable}), with whether the
 	 * block a right click would place hangs on the block behind it and whether the turned block can stay; or null.
 	 */
 	private static ControlsLine.Line modelessLine() {
@@ -656,7 +671,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 			boolean red = boxed != null && boxed.colour().red();
 			return ControlsLine.shape(new ControlsLine.ShapeState(EffortlessShapes.singleMode(),
 				session.lock().on(EffortlessShapes.step()), red,
-				EffortlessShapes.underway(), turn), keys);
+				EffortlessShapes.underway(), turn, RealShape.places()), keys);
 		}
 		String sprintKey = keys.sprint();
 		EffortlessShapes.DisableShown shown = sprint ? EffortlessShapes.disableShown() : null;

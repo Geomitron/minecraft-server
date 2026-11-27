@@ -251,15 +251,21 @@ public final class ControlsLine {
 	/**
 	 * A build mode as its line tells it (see "Locking and the first click": "Controls line"): whether the mode is Single,
 	 * whether a position is locked, whether the locked position is red (outside the world's build height or its border),
-	 * which shape is under way, and the block in hand as the turning line tells it.
+	 * which shape is under way, the block in hand as the turning line tells it, and whether the right click places real
+	 * blocks (see "Place real blocks": "The preview").
 	 */
-	public record ShapeState(boolean single, boolean locked, boolean red, Underway underway, TurnState turn) {
+	public record ShapeState(boolean single, boolean locked, boolean red, Underway underway, TurnState turn,
+		boolean real) {
+		/** A build mode whose right click places ghost blocks. */
+		public ShapeState(boolean single, boolean locked, boolean red, Underway underway, TurnState turn) {
+			this(single, locked, red, underway, turn, false);
+		}
 	}
 
 	/**
 	 * A build mode's line, in every mode but Disable (see "Locking and the first click": "Controls line"). Before the
-	 * first click: the right click (placing in Single, starting a shape in the
-	 * others, or in red why the locked position can't place), the nudge keys while it's locked, the left click (erasing in
+	 * first click: the right click (placing in Single, starting a shape in the others, each with "real blocks" while it
+	 * places them, or in red why the locked position can't place), the nudge keys while it's locked, the left click (erasing in
 	 * Single, starting an erasing shape in the others), the turning controls, the lock key with the lock's state, and Esc,
 	 * which leaves the mode. During a shape, beside Effortless Building's own line, only the lock and the turning controls:
 	 * the nudge keys while it's locked, the turning controls during a shape drawn with the place click, and the lock key.
@@ -271,8 +277,7 @@ public final class ControlsLine {
 		List<Text> rects = new ArrayList<>();
 		boolean before = state.underway() == Underway.NONE;
 		if (before) {
-			rects.add(state.red() ? reason(SINGLE + ".outside")
-				: hint(RIGHT, state.single() ? TURN + ".place" : SHAPE + ".start_placing"));
+			rects.add(state.red() ? reason(SINGLE + ".outside") : hint(RIGHT, placing(state)));
 		}
 		if (state.locked()) {
 			Text nudge = nudge(keys);
@@ -291,6 +296,17 @@ public final class ControlsLine {
 			rects.add(hint(Translated.of(SHAPE + ".esc", Look.PLAIN), SHAPE + ".exit_mode"));
 		}
 		return new Line(null, List.copyOf(rects));
+	}
+
+	/**
+	 * The right click's action before a shape's first click: placing in Single and starting a shape in the others, of
+	 * real blocks while the right click places them ("place real blocks", "start placing real blocks").
+	 */
+	private static String placing(ShapeState state) {
+		if (state.single()) {
+			return state.real() ? SHAPE + ".place_real" : TURN + ".place";
+		}
+		return state.real() ? SHAPE + ".start_placing_real" : SHAPE + ".start_placing";
 	}
 
 	/**

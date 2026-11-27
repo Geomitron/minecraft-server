@@ -266,7 +266,7 @@ Effortless Building, under `common/src/main/java/nl/requios/effortlessbuilding/`
 | E39 | `screen/ClientConfigScreen.java`, the constructor; `screen/RadialMenu.java`, `MenuButton`'s constructor | `@ModifyArg` on `Component.translatable` in the constructor; `@ModifyArg` on `I18n.get` in `MenuButton`'s constructor when its key is `effortlessbuilding.action.open_client_config` | The screen's title and the radial menu's button read "Settings" (`buildingplanner.ui.settings`) instead of Effortless Building's "Visual Settings", on any server (see "Settings"). |
 | E34 | `screen/RadialMenu.java`, `extractRenderState` | `@ModifyExpressionValue` on the `hasPermission(Permissions.COMMANDS_GAMEMASTER)` check before the "Functional Settings" button | During a session, the button isn't added, for operators too: it changes Effortless Building's settings on the server, which this server doesn't run, and "Show or hide ghost blocks" takes its place under the wrench (see "The radial menu's buttons and sliders"). |
 | E35 | `screen/RadialMenu.java`, private `performAction` | `@WrapWithCondition` on `LocalPlayer.sendOverlayMessage` after `BuildModes.setBuildMode` | During a session, choosing a mode doesn't put its name in the action bar, since the name shows beside the hotbar (see "The build mode's name and the held item's name"). |
-| E36 | `screen/ClientConfigScreen.java`, `init`, `extractRenderState`, private `renderRowTooltips` and private `save` | `@ModifyExpressionValue` on each read of the static `LABEL_KEYS`; `@Inject` at the tail of `init` and at the head of `save` | The "Match ghost blocks" row in "Settings": its label key after the screen's own, so the screen places, labels and explains one row more; its switch, with "Save" and "Cancel" a row down; and the setting saved with the screen's own (see "Settings"). |
+| E36 | `screen/ClientConfigScreen.java`, `init`, `extractRenderState`, private `renderRowTooltips` and private `save` | `@ModifyExpressionValue` on each read of the static `LABEL_KEYS`; `@Inject` at the tail of `init` and at the head of `save` | The rows "Match ghost blocks" and, proposed for 0.9.0, "Place real blocks" in "Settings": their label keys after the screen's own, so the screen places, labels and explains a row more for each; their switches, with "Save" and "Cancel" moved down by the rows; and the settings saved with the screen's own (see "Settings"). |
 
 Effortless Building's limits on its shapes come from its config on the player's computer (`config/ServerConfig.java`),
 which keeps its defaults, since only Effortless Building's server sends other values (`SyncServerConfigS2CPacket`): in
@@ -1866,8 +1866,9 @@ the player's computer); otherwise the click places as it would with the setting 
 block (see "Ghost blocks the real world fills"). The rule is a pure function (`GhostMatch`), beside `DisableTurn`.
 The setting changes nothing on the server and no payload, so it works with protocol version 5.
 
-The row "Place real blocks", proposed for 0.9.0, follows "Match ghost blocks" in the same screen (see "Place real
-blocks").
+The row "Place real blocks", proposed for 0.9.0, follows "Match ghost blocks" in the same screen, added the same way,
+and "Save" and "Cancel" move down by both rows (see "Place real blocks"). Each time the screen lays itself out, as for
+a new window size, both switches show their settings as saved, as the screen's own rows do.
 
 ### Place real blocks
 
@@ -1998,14 +1999,19 @@ server runs none.
 **The preview.** While the setting acts, Effortless Building's preview counts the inventory as it does on its own
 servers, over the blocks that would go in: hook E8 lets `ItemUsageTracker.compute` run on the blocks `RealPlace`
 lets in, in the form that counts each block's own item (`compute(Player, BlockSet, boolean)`), so the icons beside
-the crosshair show how many of each block the click uses, with the missing count in red
-(`RenderHandler.drawPlacingStacks`). Hook E40 then sets the blocks the preview draws red
-(`ItemUsageTracker.missingPositions`, which `BlockPreviewRenderer.render` reads): the whole shape when the inventory
-lacks any item (`ItemUsageTracker.hasMissing`), since then nothing goes in, and otherwise each block the server would
-leave out by the rule the player's computer can check: a space that doesn't take a block, a block past the reach, and
-a turned block that can't stay or has an entity in its way (`RealPlace`, the pure rule the server's placing uses too;
-spawn protection and later changes are the server's alone). The controls line shows the state on the right click's
-own control, by Geo's rule for the lines (1313 [c1]):
+the crosshair show how many of each block the inventory gives the click, with the count it lacks in red beside it
+(`RenderHandler.drawPlacingStacks`): 19 and a red 1 for a Line of 20 oak planks with 19 in the inventory. Hook E40
+then sets the blocks the preview draws red (`ItemUsageTracker.missingPositions`, which `BlockPreviewRenderer.render`
+reads): the whole shape when the inventory lacks any item (`ItemUsageTracker.hasMissing`), since then nothing goes in,
+and otherwise each block the server would leave out by the rule the player's computer can check: a space that doesn't
+take a block, a block past the reach, and a turned block that can't stay or has an entity in its way (`RealPlace`, the
+pure rule the server's placing uses too; spawn protection and later changes are the server's alone). Whether a block
+can stay is checked against the world as it is, so a block held up only by another block of the same shape, such as a
+torch on a wall the shape also builds, draws red though the server's order places it. Hook E43 draws each block in the
+state the click sends (`RealShape`), so a block that fills a ghost block shows the ghost block's turn while "Match
+ghost blocks" acts. The game works the shape out once a client tick for each set of positions the preview shows, and
+the place sound (hook E41) plays when `RealPlace`'s count of the inventory covers the blocks going in. The controls
+line shows the state on the right click's own control, by Geo's rule for the lines (1313 [c1]):
 "[Right-click: place real blocks]" in Single and "[Right-click: start placing real blocks]" before a shape's first
 click, in the wording Geo approves in build step 5.
 
@@ -2046,10 +2052,11 @@ a 0.9.0 server work together, and so do a 0.9.0 game and a 0.8.0 server, with gh
 
 | # | File, method | Hook | Purpose |
 |---|---|---|---|
-| E1 | `buildpipeline/BuildPipelineClient.java`, `handleClick` | the same hook | While the setting acts, the shape goes to the server as `place` instead of into the layer (`EffortlessShapes.place`). |
+| E1 | `buildpipeline/BuildPipelineClient.java`, `handleClick` | the same hook | While the setting acts, the shape goes to the server as `place` (`RealShape.place`) instead of into the layer (`EffortlessShapes.place`). |
 | E8 | `buildpipeline/BuildPipelineClient.java`, `updateDisplayTrackers` | the same hook | While the setting acts, the place click's tracker computes as Effortless Building's own, over the blocks `RealPlace` lets in and counting each block's own item (`compute(Player, BlockSet, boolean)`), so the icons count what the click uses; the break click's list stays cleared. |
 | E40 | `buildpipeline/BuildPipelineClient.java`, private static `updateDisplayTrackers(Player, BlockSet)` | `@Inject` at tail | While the setting acts, set `ITEM_USAGE.missingPositions` to every block of the shape when `ITEM_USAGE.hasMissing()`, and otherwise to the blocks `RealPlace` refuses, as hook E29 marks Disable's one block. |
 | E41 | `buildpipeline/BuildPipelineClient.java`, private static `handleClick(Minecraft, BuildPipeline.BuildState)` | `@WrapWithCondition` on `ClientLevel.playLocalSound(BlockPos, SoundEvent, SoundSource, float, float, boolean)` | While the setting acts, play the place sound only when `RealPlace` finds that the inventory covers the click's blocks (the local `BlockSet blocks`), since otherwise nothing goes in. |
+| E43 | `render/BlockPreviewRenderer.java`, `render` | `@WrapOperation` on `BlockEntry.applyTransforms(BlockState)` | While the setting acts, outside the break click's shape, each block drawn in the state the click sends where that differs, which is the turn of a ghost block it fills (`RealShape.drawn`). |
 | M2 | `Minecraft.java`, `startUseItem()` | the same hook | While the setting acts, a paste goes to the server as `place` instead of as an edit, and a red copy's click sends nothing. |
 | S2 | `BlockItem.place`, `getPlacementState` | the same hook | While the server places a shape or a paste, the shape's orientation and count for that block in place of the player's turn, the shape's form where Minecraft gives the other form of the same item (`StandingAndWallBlockItem`), and null when Minecraft's state is any other block. |
 | S3 | `net/minecraft/world/item/BlockItem.java`, `place(BlockPlaceContext)` | `@WrapWithCondition` on `Level.playSound(Entity, BlockPos, SoundEvent, SoundSource, float, float)` | While the server places a shape or a paste, only its first block plays the place sound; a paste's first block plays it to the player too (`Level.playSound(null, …)`). |
@@ -3258,8 +3265,10 @@ world's own checks asked before the space is read and the space before entities,
 out with no item needed for it, a block no item places, a two-part block's second half left to its first (a door's
 upper half, a bed's head and a tall plant's upper half), hook S2's state (the shape's orientation with Minecraft's
 other values, the shape's form of the same item for a torch and a sign, nothing where Minecraft gives another block or
-none, and the shape's count of 3 candles and of a double slab), the cap of 2,000, and the setting acting only during a
-session whose server takes `place`, in every mode but Disable, with an item that places a block. `PlaceRateTest`
+none, and the shape's count of 3 candles and of a double slab), the cap of 2,000, the setting acting only during a
+session whose server takes `place`, in every mode but Disable, with an item that places a block, the setting saved as
+`true` or `false` and read as off when missing or any other value, and the blocks the preview draws red (each block
+that doesn't go in, or the whole shape when an item is short). `PlaceRateTest`
 covers the cap a second: a place goes in while it and the blocks placed in the second before stay within 2,000,
 several places in a second add up, blocks placed a second ago no longer count, and each player has their own count
 until they leave.
@@ -3268,7 +3277,9 @@ a real block in a space, a block past the reach, one outside the build height or
 blocks, checked first, and in survival for an inventory one item short. `PayloadsTest` covers `place`: a shape's and a
 paste's round trip, a `place` of as many blocks as an `edit` carries fitting the room it's registered with, a hit that
 isn't a position ending the connection, and the cap's notices grouping their digits ("2,001"). `ControlsLineTest`
-covers the lines with the setting on, the copy's included.
+covers the shape's lines with the setting on and off: the right click's control in Single and before a shape's first
+click, with the lock off and on, and a shape under way and a red locked position reading as they do without the
+setting. Step 4 adds the copy's lines with the setting on.
 
 `local.sh`, servers without Building Planner (proposed for 0.10.0; the checks follow the options the requests
 recommend), on the dev server started with the add-on left off its classpath (`start_server "$ADDON"

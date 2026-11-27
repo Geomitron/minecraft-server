@@ -429,6 +429,29 @@ class ControlsLineTest {
 	}
 
 	@Test
+	void withPlaceRealBlocksTheRightClickPlacesRealBlocksAndOffItPlacesGhostBlocks() {
+		assertEquals("[Right-click: place real blocks][Left-click: erase]" + HOLD + "[H: Lock (Off)]" + ESC,
+			shape(new ShapeState(true, false, false, Underway.NONE, STAIRS, true), DEFAULT));
+		assertEquals("[Right-click: start placing real blocks][Left-click: start erasing]" + HOLD + "[H: Lock (Off)]"
+			+ ESC, shape(new ShapeState(false, false, false, Underway.NONE, STAIRS, true), DEFAULT));
+		assertEquals("[Right-click: place real blocks]" + NUDGES + "[Left-click: erase]" + HOLD + "[H: Lock (On)]" + ESC,
+			shape(new ShapeState(true, true, false, Underway.NONE, STAIRS, true), DEFAULT));
+		assertEquals("[Right-click: place][Left-click: erase]" + HOLD + "[H: Lock (Off)]" + ESC,
+			shape(new ShapeState(true, false, false, Underway.NONE, STAIRS, false), DEFAULT));
+		assertEquals("[Right-click: start placing][Left-click: start erasing]" + HOLD + "[H: Lock (Off)]" + ESC,
+			shape(new ShapeState(false, false, false, Underway.NONE, STAIRS, false), DEFAULT));
+	}
+
+	@Test
+	void withPlaceRealBlocksAShapeUnderWayAndARedLockedPositionReadAsWithout() {
+		assertEquals("[Hold Left Control: turn or flip][H: Lock (Off)]",
+			shape(new ShapeState(false, false, false, Underway.PLACING, STAIRS, true), DEFAULT));
+		assertEquals("[H: Lock (Off)]", shape(new ShapeState(false, false, false, Underway.BREAKING, STAIRS, true), DEFAULT));
+		assertEquals("[Can't place: outside the world]" + NUDGES + "[Left-click: erase]" + HOLD + "[H: Lock (On)]"
+			+ ESC, shape(new ShapeState(true, true, true, Underway.NONE, STAIRS, true), DEFAULT));
+	}
+
+	@Test
 	void duringAShapeDrawnWithThePlaceClickOnlyTheLockAndTheTurningControls() {
 		assertEquals("[Hold Left Control: turn or flip][H: Lock (Off)]",
 			shape(new ShapeState(false, false, false, Underway.PLACING, STAIRS), DEFAULT));

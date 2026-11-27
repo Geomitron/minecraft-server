@@ -1,10 +1,13 @@
 package dev.buildingplanner.input;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.BlockItem;
@@ -32,6 +35,8 @@ public final class RealPlace {
 	public static final int MAX_BLOCKS = 2_000;
 	/** How far from the player's eyes a real block goes in (1372 Q2 A). */
 	public static final double REACH = 64;
+	/** The setting's key in {@code config/buildingplanner-client.properties}. */
+	public static final String SETTING = "place-real-blocks";
 
 	/** The properties that count the items a block is made of, one item each (a slab's type aside). */
 	private static final List<IntegerProperty> ITEM_COUNTS = List.of(BlockStateProperties.CANDLES,
@@ -43,6 +48,16 @@ public final class RealPlace {
 
 	/** A block of a shape or a paste: where it goes, in the state the preview shows. */
 	public record Entry(BlockPos pos, BlockState state) {
+	}
+
+	/** Whether the setting's saved value is on: {@code true}; a missing or other value reads as off, as it starts. */
+	public static boolean on(String saved) {
+		return "true".equals(saved);
+	}
+
+	/** The value the "Settings" screen's "Save" button saves for the setting. */
+	public static String saved(boolean on) {
+		return String.valueOf(on);
 	}
 
 	/**
@@ -206,6 +221,21 @@ public final class RealPlace {
 			}
 		}
 		return going;
+	}
+
+	/**
+	 * The blocks of {@code shape} the preview draws red (hook E40): all of them while the inventory lacks an item the
+	 * blocks going in need ({@code lacking}), since then nothing goes in; otherwise each one not among {@code goingIn},
+	 * the blocks that pass the checks the player's computer can make and can stay where they go.
+	 */
+	public static Set<BlockPos> red(Collection<BlockPos> shape, Set<BlockPos> goingIn, boolean lacking) {
+		Set<BlockPos> red = new HashSet<>();
+		for (BlockPos pos : shape) {
+			if (lacking || !goingIn.contains(pos)) {
+				red.add(pos);
+			}
+		}
+		return red;
 	}
 
 	/**

@@ -118,7 +118,7 @@ public final class EffortlessShapes {
 
 	/**
 	 * The blocks a shape's valid entries get ({@link #place}), with the other half of each two-block one, by their
-	 * positions in the world; package-private for the in-game checks' driver, which sends a shape's real blocks.
+	 * positions in the world; package-private for the real blocks a shape places ({@link RealShape}).
 	 */
 	static Map<BlockPos, BlockState> states(BlockSet blocks, BlockHitResult first) {
 		Minecraft mc = Minecraft.getInstance();
@@ -505,16 +505,22 @@ public final class EffortlessShapes {
 		if (disableMode()) {
 			return placedByMinecraft(item, mc.player.getMainHandItem());
 		}
+		BlockHitResult hit = clickHit();
+		return hit == null ? item.getBlock().defaultBlockState() : placementState(item, mc.player.getMainHandItem(), hit);
+	}
+
+	/**
+	 * The hit the place click's shape takes its blocks' states from now: the locked position's while the lock takes the
+	 * first click, the shape's first click, or the aim ({@link #aimed}); null aimed at nothing.
+	 */
+	static BlockHitResult clickHit() {
 		BlockHitResult shown = shownHit();
 		BlockHitResult hit = shown != null ? shown : BuildPipelineClient.getFirstClickHit();
 		if (hit == null) {
 			Aimed aimed = aimed();
-			if (aimed == null) {
-				return item.getBlock().defaultBlockState();
-			}
-			hit = aimed.hit();
+			return aimed == null ? null : aimed.hit();
 		}
-		return placementState(item, mc.player.getMainHandItem(), hit);
+		return hit;
 	}
 
 	/** In Disable, the block Minecraft's own right click would place now ({@link #placedByMinecraft}), or null. */

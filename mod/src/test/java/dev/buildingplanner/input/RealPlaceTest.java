@@ -103,6 +103,25 @@ class RealPlaceTest {
 	}
 
 	@Test
+	void theSettingIsSavedAsTrueAndAMissingOrOtherValueReadsAsOff() {
+		assertTrue(RealPlace.on(RealPlace.saved(true)));
+		assertFalse(RealPlace.on(RealPlace.saved(false)));
+		assertFalse(RealPlace.on(null));
+		assertFalse(RealPlace.on("yes"));
+		assertEquals("true", RealPlace.saved(true));
+		assertEquals("false", RealPlace.saved(false));
+	}
+
+	@Test
+	void thePreviewDrawsRedEachBlockThatDoesntGoInOrTheWholeShapeWhenAnItemIsShort() {
+		List<BlockPos> shape = List.of(new BlockPos(0, 0, 0), new BlockPos(1, 0, 0), new BlockPos(2, 0, 0));
+		Set<BlockPos> going = Set.of(new BlockPos(0, 0, 0), new BlockPos(2, 0, 0));
+		assertEquals(Set.of(new BlockPos(1, 0, 0)), RealPlace.red(shape, going, false));
+		assertEquals(Set.copyOf(shape), RealPlace.red(shape, going, true));
+		assertEquals(Set.of(), RealPlace.red(shape, Set.copyOf(shape), false));
+	}
+
+	@Test
 	void theSettingActsOnlyDuringASessionWhoseServerTakesPlace() {
 		assertTrue(RealPlace.acts(true, true, true));
 		assertFalse(RealPlace.acts(false, true, true));
