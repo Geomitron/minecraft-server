@@ -675,7 +675,7 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
     game closes; a ghost block a real block fills goes only where the game sees the change or loads the chunk, and
     a placement the server refuses leaves it; "Place real blocks", Disable's turn and "Match ghost blocks" don't act;
     and the removal of the old plans' placements doesn't run;
-  - hook L7 shows Litematica's colour for extra blocks inside the player's own placements, on every server;
+  - Litematica's colour for extra blocks stays hidden in the player's own placements, as in 0.9.0 (1453 Q2 B);
   - during a local session, the radial menu shows a line above "Building Planner" in its corner, right-aligned as the
     name is and in the grey of the menu's mode descriptions, and a row above a hovered mode's description on a screen
     up to 256 high in the GUI's units, where the description would cross it;
@@ -691,6 +691,12 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
   1374 Q1 C and Q4 C: the radial menu's line in the grey of the mode descriptions (Q1 A), with the comment that it
   "should say "(client only)" instead" of the proposed "Only you see your ghost blocks here" (c1); the player's own
   worlds as designed (Q2 A); and there, "Up to 2,000, within 64 blocks of you, as on this server" (Q3 A).
+
+  Asked in 1453 ("Building Planner 0.10.0: the texts for other servers"), Geo approved the radial menu's line
+  "(client only)" and the guide's sections "Other Servers" and "Your Own Worlds" and its paragraph on the copy as
+  proposed; leaving a server or changing dimension puts the copy away, and "Paste" in the radial menu brings it back
+  (Q1 A); and for Litematica's magenta marks of extra blocks in the player's own placements, "No, keep them hidden, as
+  in 0.9.0" (Q2 B).
 
 - **Saved copies** is a feature Geo asked for in a comment on 1375 Q1: "I'd like to add a feature to save previously
   copied regions, like saved materials lists. Instead of a button next to the radial menu, you would access it as a
