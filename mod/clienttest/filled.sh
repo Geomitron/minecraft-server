@@ -366,7 +366,8 @@ stop_client 1
 stop_server
 start_server "$ADDON" server-without
 start_client 1
-check "client 1 joins the server without the add-on, with no session" drv 1 "await noscreen" "wait 40" "await nosession"
+check "client 1 joins the server without the add-on, with a local session" eval \
+	'drv 1 "await noscreen" "await session" > /dev/null && [[ $(val 1 sessionkind) == local ]]'
 drv 1 "cmd tp @s 300 -60 295 0 30" "wait 60" "cmd setblock 300 -60 300 minecraft:gold_block" \
 	"cmd setblock 301 -60 300 minecraft:gold_block" "cmd setblock 302 -60 300 minecraft:oak_stairs[facing=south]" \
 	"wait 20" > /dev/null

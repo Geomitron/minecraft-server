@@ -24,6 +24,8 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.level.chunk.LevelChunkSection;
 
 /**
  * The server's shared layer: each dimension's ghost blocks in memory, the columns each player watches, the order of
@@ -65,6 +67,15 @@ public final class LayerSync {
 
 		/** The real block at the position, or null when the server hasn't loaded its chunk; never loads one. */
 		BlockState realBlock(Identifier dimension, BlockPos pos);
+
+		/**
+		 * Whether the real block at the position is the game's guess at a block it placed, which a server hasn't
+		 * answered yet, so a ghost block it fills waits for the answer: only a local session's can be, never a
+		 * server's own.
+		 */
+		default boolean awaitingServer(Identifier dimension, BlockPos pos) {
+			return false;
+		}
 	}
 
 	/** One loaded chunk's real blocks, for the check at chunk load. */
@@ -72,6 +83,18 @@ public final class LayerSync {
 	public interface RealChunk {
 		/** The section at that section y, or null when it holds only air (or lies outside the build height). */
 		RealSection section(int sectionY);
+
+		/** A level's loaded chunk, the server's or the game's own. */
+		static RealChunk of(LevelChunk chunk) {
+			return sectionY -> {
+				int index = chunk.getSectionIndexFromSectionY(sectionY);
+				if (index < 0 || index >= chunk.getSectionsCount()) {
+					return null;
+				}
+				LevelChunkSection section = chunk.getSection(index);
+				return section.hasOnlyAir() ? null : section::getBlockState;
+			};
+		}
 	}
 
 	/** One section's real blocks, by their coordinates within the section. */
@@ -289,18 +312,22 @@ public final class LayerSync {
 	/**
 	 * At the end of the server tick: removes the ghost blocks noted since the last call that real blocks still fill, as
 	 * one edit for each dimension, split at the block cap. The edit belongs to no player, so no undo list gains a step,
-	 * and it goes to each watcher as an {@code applied} by {@link Payloads#FILLED_AUTHOR} with no client sequence.
+	 * and it goes to each watcher as an {@code applied} by {@link Payloads#FILLED_AUTHOR} with no client sequence. A
+	 * position whose real block awaits the server's answer ({@link World#awaitingServer}) stays noted for a later call.
 	 */
 	public void removeFilled() {
 		if (filled.isEmpty()) {
 			return;
 		}
+		Map<Identifier, LongSet> waiting = new LinkedHashMap<>();
 		filled.forEach((dimension, positions) -> {
 			Layer layer = layers.get(dimension);
 			List<LayerChange> removed = new ArrayList<>();
 			positions.forEach((long packed) -> {
 				BlockPos pos = BlockPos.of(packed);
-				if (builtOver(dimension, pos, layer.get(pos))) {
+				if (world.awaitingServer(dimension, pos)) {
+					waiting.computeIfAbsent(dimension, key -> new LongLinkedOpenHashSet()).add(packed);
+				} else if (builtOver(dimension, pos, layer.get(pos))) {
 					layer.set(pos, AIR);
 					removed.add(new LayerChange(pos, AIR));
 				}
@@ -312,6 +339,7 @@ public final class LayerSync {
 			}
 		});
 		filled.clear();
+		filled.putAll(waiting);
 	}
 
 	/** Whether the server has the position's chunk loaded and its real block fills the ghost block. */

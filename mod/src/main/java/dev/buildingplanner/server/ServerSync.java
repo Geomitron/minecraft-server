@@ -32,7 +32,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
-import net.minecraft.world.level.chunk.LevelChunkSection;
 import net.minecraft.world.level.storage.LevelResource;
 
 /**
@@ -242,14 +241,7 @@ public final class ServerSync {
 			return;
 		}
 		ChunkPos at = chunk.getPos();
-		layer.chunkLoaded(level.dimension().identifier(), at.x(), at.z(), sectionY -> {
-			int index = chunk.getSectionIndexFromSectionY(sectionY);
-			if (index < 0 || index >= chunk.getSectionsCount()) {
-				return null;
-			}
-			LevelChunkSection section = chunk.getSection(index);
-			return section.hasOnlyAir() ? null : section::getBlockState;
-		});
+		layer.chunkLoaded(level.dimension().identifier(), at.x(), at.z(), LayerSync.RealChunk.of(chunk));
 	}
 
 	private static String playerName(ServerPlayer player) {

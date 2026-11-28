@@ -42,7 +42,9 @@ import org.junit.jupiter.api.io.TempDir;
  * The local server a session runs on the player's computer, on a server that doesn't run Building Planner: the game's
  * own {@link LayerReplica} sends it each payload at once, as the client does, and reads what it queued at the start of
  * the next tick ({@link #tick}). The world is LayerNetwork's: the overworld and the Nether, a view distance of 4, and
- * every chunk loaded with only air unless the test says otherwise.
+ * every chunk loaded with only air unless the test says otherwise; the game's real blocks reach the local server as
+ * hook C1 and the check at chunk load hand them over, and {@code awaiting} holds the blocks the game placed that the
+ * server hasn't answered for yet.
  */
 class LocalServerTest {
 	private static final UUID PLAYER = UUID.fromString("527e7f9d-ae90-3a44-aa88-30a47a9cdf34");
@@ -57,6 +59,8 @@ class LocalServerTest {
 
 	private final Map<BlockPos, BlockState> real = new HashMap<>();
 	private final Set<ChunkPos> unloaded = new HashSet<>();
+	/** Positions where the game placed a block the server hasn't answered for yet. */
+	private final Set<BlockPos> awaiting = new HashSet<>();
 	private Identifier dimension = OVERWORLD;
 	private LayerSync.History history;
 	private LocalServer server;
@@ -278,6 +282,84 @@ class LocalServerTest {
 	}
 
 	@Test
+	void aRealBlockThatFillsAGhostBlockRemovesItAtTheEndOfTheTickWithNoUndoStep() {
+		edit(stone, A, B);
+		real.put(A, stone);
+		real.put(B, glass);
+
+		server.realChanged(OVERWORLD, A, stone);
+		server.realChanged(OVERWORLD, B, glass);
+		assertEquals(stone, at(A));
+		server.removeFilled();
+		tick();
+
+		assertEquals(air, at(A));
+		assertEquals(stone, at(B));
+		Payloads.Applied filled = (Payloads.Applied) received.getLast();
+		assertEquals(Payloads.FILLED_AUTHOR, filled.author());
+		assertEquals(List.of(new LayerChange(A, air)), filled.changes());
+		undo();
+		undo();
+		assertEquals(List.of(PlayerMessage.nothingToUndo()), notices());
+	}
+
+	@Test
+	void theCheckAtChunkLoadFindsABlockPlacedWhileTheChunkWasntLoaded() {
+		edit(stone, A);
+		unloaded.add(new ChunkPos(0, 0));
+		real.put(A, stone);
+		server.removeFilled();
+		tick();
+		assertEquals(stone, at(A));
+
+		unloaded.clear();
+		server.chunkLoaded(OVERWORLD, 0, 0, sectionY -> sectionY == A.getY() >> 4
+			? (x, y, z) -> real.getOrDefault(new BlockPos(x, (sectionY << 4) + y, z), air) : null);
+		server.removeFilled();
+		tick();
+
+		assertEquals(air, at(A));
+	}
+
+	@Test
+	void aBlockAwaitingTheServersAnswerWaitsForIt() {
+		edit(stone, A);
+		real.put(A, stone);
+		awaiting.add(A);
+
+		server.realChanged(OVERWORLD, A, stone);
+		server.removeFilled();
+		tick();
+		server.removeFilled();
+		tick();
+		assertEquals(stone, at(A));
+
+		awaiting.remove(A);
+		server.removeFilled();
+		tick();
+		assertEquals(air, at(A));
+	}
+
+	@Test
+	void aBlockTheServerRefusesLeavesItsGhostBlock() {
+		edit(stone, A);
+		real.put(A, stone);
+		awaiting.add(A);
+		server.realChanged(OVERWORLD, A, stone);
+		server.removeFilled();
+		tick();
+
+		// The server's answer puts back the block it had there.
+		real.remove(A);
+		awaiting.remove(A);
+		server.realChanged(OVERWORLD, A, air);
+		server.removeFilled();
+		tick();
+
+		assertEquals(stone, at(A));
+	}
+
+	@Test
 	void afterStoppingItTakesNothingMore() {
 		leave();
 
@@ -316,6 +398,11 @@ class LocalServerTest {
 					return null;
 				}
 				return in.equals(OVERWORLD) ? real.getOrDefault(pos, air) : air;
+			}
+
+			@Override
+			public boolean awaitingServer(Identifier in, BlockPos pos) {
+				return in.equals(dimension) && awaiting.contains(pos);
 			}
 		};
 	}

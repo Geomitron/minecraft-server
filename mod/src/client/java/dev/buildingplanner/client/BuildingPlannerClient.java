@@ -202,8 +202,15 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		// from a level the game has left are ignored.
 		ClientChunkEvents.CHUNK_LOAD.register((level, chunk) -> {
 			ChunkPos pos = chunk.getPos();
-			if (level == Minecraft.getInstance().level && LOADED.add(Layer.key(pos.x(), pos.z())) && session != null) {
+			if (level != Minecraft.getInstance().level) {
+				return;
+			}
+			if (LOADED.add(Layer.key(pos.x(), pos.z())) && session != null) {
 				session.chunkLoaded(pos.x(), pos.z());
+			}
+			// The check at chunk load finds the ghost blocks real blocks placed while the chunk wasn't loaded fill.
+			if (local != null) {
+				local.chunkLoaded(level, chunk);
 			}
 		});
 		ClientChunkEvents.CHUNK_UNLOAD.register((level, chunk) -> {
@@ -254,8 +261,22 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 				}
 			}
 			copyKeys.tick(client, session);
+			if (local != null) {
+				local.endTick();
+			}
 		});
 		BuildingPlanner.LOGGER.info("Building Planner client loaded");
+	}
+
+	/**
+	 * Hook C1: a real block changed in a chunk the game has loaded. During a local session, a change in the game's own
+	 * level goes to the local server, which removes the ghost block it fills at the end of the tick.
+	 */
+	public static void realChanged(ClientLevel level, BlockPos pos, BlockState state) {
+		Minecraft mc = Minecraft.getInstance();
+		if (local != null && level == mc.level && mc.isSameThread()) {
+			local.realChanged(level, pos, state);
+		}
 	}
 
 	/**

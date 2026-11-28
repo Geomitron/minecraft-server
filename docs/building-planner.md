@@ -2503,8 +2503,8 @@ As proposed for 0.10.0, in the player's own world, Building Planner's server par
 
 ### Servers without Building Planner
 
-Proposed for 0.10.0. Built so far (build step 1): which servers start a local session, the local server, the files,
-and undo and redo; the rest is proposed. Geo wants Building Planner to work as a client-side mod on other servers, where other
+Proposed for 0.10.0. Built so far (build steps 1 and 2): which servers start a local session, the local server, the
+files, undo and redo, and ghost blocks a real block fills; the rest is proposed. Geo wants Building Planner to work as a client-side mod on other servers, where other
 people don't need to see the player's ghost blocks (comment c4 on 1359), and picked "Yes, in a later version: there,
 your ghost blocks are saved on your computer and only you see them, and this server still shares them." (1368 Q1 A).
 Shapes place real blocks only on servers that run Building Planner (1368 Q2 A). For the player's own worlds, Geo picked
@@ -2560,12 +2560,16 @@ alone, except:
 - Undo and redo take back the player's own changes, with 50 steps and 2,000,000 blocks as on this server. The steps
   survive leaving and rejoining the server and changing dimension, and last until the game closes.
 - A real block fills a ghost block by the same rule, but only where the game sees it. Hook C1 notes each change to a
-  block in a chunk the game has loaded, and at the end of the client tick `LayerSync.removeFilled` removes the ghost
-  blocks still filled, as one edit with no undo step. A position where the game placed a block that the server hasn't
-  confirmed yet (`BlockStatePredictionHandler`) waits for the server's answer, so a placement the server refuses leaves
-  its ghost block in place. The check at chunk load (`ClientChunkEvents.CHUNK_LOAD`, `LayerSync.chunkLoaded`) finds blocks
-  placed while the chunk wasn't loaded. A block placed and broken again while the chunk wasn't loaded leaves its ghost
-  block, where this server's hook S1 would have removed it.
+  block in a chunk the game has loaded whose new block fills the ghost block there (`LayerSync.realChanged`), and at
+  the end of the client tick `LayerSync.removeFilled` removes the ghost blocks still filled, as one edit with no undo
+  step, which reaches the game at its next tick. A position where the game placed a block that the server hasn't
+  answered for yet waits for the answer: the client's `BlockStatePredictionHandler` keeps each such position, with
+  the server's last block there, until the server's answer arrives (`endPredictionsUpTo`), and the local server's
+  `LayerSync.World.awaitingServer` reads it (`ClientLevelInvoker`, `BlockStatePredictionHandlerAccessor`), so
+  `removeFilled` keeps the position for a later tick. A placement the server refuses comes back as the block it had
+  there, which fills nothing, so its ghost block stays. The check at chunk load (`ClientChunkEvents.CHUNK_LOAD`,
+  `LayerSync.chunkLoaded`) finds blocks placed while the chunk wasn't loaded. A block placed and broken again while
+  the chunk wasn't loaded leaves its ghost block, where this server's hook S1 would have removed it.
 - "Place real blocks" doesn't act: with it on, shapes draw ghost blocks, as with it off (1368 Q2 A).
 - In Disable, Left Ctrl, the wheel and the middle click work as in Minecraft, and "Match ghost blocks" doesn't act,
   since both turn a real block through the server's hook S2: real blocks place as Minecraft places them (1374 Q3).
@@ -2635,6 +2639,10 @@ does without Building Planner. The layer's tiles mark none.
 | C1 | `LevelChunk.setBlockState(BlockPos, BlockState, int)` | `@Inject` at return, in the mixin config's client section | During a local session, for the game's own level: note a position whose new state fills a ghost block of the local layer, for the check at the end of the client tick. |
 | L7 | `render/schematic/ChunkRendererSchematicVbo.java`, `getOverlayType(BlockState, BlockState)` | the same hook, or one on its caller where the block's position is known | Keep `EXTRA` inside the box of a placement that isn't a tile or the copy and holds air there. |
 | E42 | `screen/RadialMenu.java`, `drawTexts` | `@Inject` after the call that draws the corner's name (E18's string) | During a local session, draw the line above "Building Planner" (`buildingplanner.ui.radial.local`) at the row `RadialLine` gives for the screen's height, and record its text and row for the driver's checks. |
+
+C1 is `ClientLevelChunkMixin`, in the client source set beside the server's S1 (`LevelChunkMixin`) on the same
+method; `ClientLevelInvoker` and `BlockStatePredictionHandlerAccessor` read the positions awaiting the server's answer.
+`LayerSync.RealChunk.of` reads a loaded chunk's real blocks for the check at chunk load, the server's and the game's.
 
 `JoinRule` (common) is the pure rule for the session at joining and at a `hello`; `LocalFolders` (common) names the
 folders; `LocalServer` (common) runs the common classes for one player, and `LocalSession` (client) wires it to the
@@ -3234,8 +3242,8 @@ world's spawn, where Planner2, who isn't an operator, may build:
   clients; one Ctrl+Z brings the stone back, and Ctrl+Y removes it again.
 - A paste onto built blocks (the driver's `pastehere`, which copies a box and pastes it where it was copied from, and
   gives the copy as it was pasted) changes nothing, with no glow.
-- Ghost blocks saved over matching real blocks while the server ran without the add-on are gone once their chunk
-  loads, and a ghost stair under a real stair facing the other way stays.
+- Ghost blocks saved over matching real blocks while the server ran without the add-on, where Planner1's game ran
+  a local session, are gone once their chunk loads, and a ghost stair under a real stair facing the other way stays.
 - Neither client's log has a self-check warning, checked before the restarts and at the end.
 - Planner2 is shot at 854 by 480 and 1920 by 1080, GUI scale 2, looking at a ghost wall before and after real blocks
   fill half of it.
@@ -3447,7 +3455,8 @@ first click; and the red reason "[Can't paste: not enough blocks]" (following th
 "[Right-click: set the start]"), in the warning's colour.
 
 `local.sh`, servers without Building Planner (0.10.0), on the dev server started with the add-on left off its
-classpath (`start_server "$ADDON" server-without-addon`, as `step8.sh` starts it), with both clients having the add-on.
+classpath (`start_server "$ADDON" server-without-addon`, as `step8.sh` starts it) and with spawn protection (16
+blocks around the spawn at 0 -60 0, which the dev server is otherwise without), with both clients having the add-on.
 Real blocks are checked on the server with the script's `server_has`. It checks:
 
 - Both clients start a local session at joining, Planner1's log names the folder it keeps the ghost blocks in, and the
@@ -3461,19 +3470,21 @@ Real blocks are checked on the server with the script's `server_has`. It checks:
   the game restarts, which sends none of Building Planner's payloads either; a file made unreadable leaves its ghost
   blocks out, the log says so, and the file stays as it was after an edit in its area and a leave; put back, its ghost
   blocks show again.
-- Shots at 854 by 480 and 1920 by 1080, GUI scale 2: Planner1's ghost blocks on the server without the add-on, with
-  their screen box (the driver's `screenbox`) in `checks.log`.
+- Ghost blocks a real block fills, in Disable: a real oak plank Planner1 places by hand into a ghost oak plank removes
+  it once the server has it; so does one Planner1's `/setblock` puts in a chunk Planner1 has loaded, and the ghost
+  blocks beside them stay; one set while Planner1 is farther away than the view distance (the server keeping its chunk
+  loaded with `/forceload`) reaches the server but not Planner1's game, and its ghost block goes once Planner1 returns
+  and the chunk loads; and Planner2, who isn't an operator, places an oak plank into a ghost oak plank within the
+  spawn protection, which the game shows for a tick until the server refuses it (the driver's `watchblock`), and the
+  ghost block stays.
+- Shots at 854 by 480 and 1920 by 1080, GUI scale 2, from a few blocks back in Disable: Planner1's ghost blocks on the
+  server without the add-on, with their screen box (the driver's `screenbox`) in `checks.log`.
 
 The checks proposed for the later build steps of 0.10.0 (the checks follow the options the requests recommend):
 
 - With the radial menu open, the line above "Building Planner" shows at the row E42 records: one row above the name at
   1920 by 1080, GUI scales 2 and 4, and a row above a hovered mode's description at 854 by 480, GUI scale 2. With the
   server restarted with Building Planner, it doesn't show.
-- Ghost blocks a real block fills: a real oak plank Planner1 places into a ghost oak plank removes it; a `/setblock` of
-  oak planks from the server's console in a chunk Planner1 has loaded removes another; one set while Planner1 is
-  farther away than the view distance goes once Planner1 returns and the chunk loads; and with Planner1 no longer an
-  operator, an oak plank placed into a ghost oak plank within 16 blocks of the world's spawn, which the server refuses,
-  leaves the ghost block.
 - In Disable, with oak stairs in hand, Left Ctrl with the wheel changes the hotbar slot, and with "Match ghost blocks"
   on, an oak stair placed into a ghost oak stair facing east faces the way Minecraft places it, on the server.
 - With "Place real blocks" on, a Line draws ghost blocks and places no real block.
@@ -3511,10 +3522,11 @@ own world and a server that takes some or all of them (waiting for `hello`), a `
 game does. It covers the `hello` first, an edit reaching the replica at the next tick, an erase, undo and redo, an
 edit outside the watched columns refused, the steps kept across a rejoin and a change of dimension, the files written
 at leaving and every 30 seconds and read back at the next session, an unreadable file left out and never written over,
-and nothing taken after the stop. As proposed for later build steps, it covers a ghost block a real block fills at a
-change and at chunk load, a position awaiting the server's answer waiting and a refused one keeping its ghost block,
-and the lists kept. `LocalFoldersTest` covers the folders: each `:` turned into `_`, a Realm, an address that can't be
-a folder's name, and two players' UUIDs in two folders.
+nothing taken after the stop, a ghost block a real block fills at a change (and not one a block that doesn't fill it
+replaces) at the end of the tick with no undo step, one filled while its chunk wasn't loaded at chunk load, a
+position awaiting the server's answer waiting for it, and a refused one keeping its ghost block; build step 4 adds the
+lists kept. `LocalFoldersTest` covers the folders: each `:` turned into `_`, a Realm, an address that can't be a
+folder's name, and two players' UUIDs in two folders.
 As proposed, `RadialLineTest` covers the radial menu line's row on screens 240, 256, 257 and 270 high.
 
 The copy's placement has unit tests as pure functions. `CopyPlacementTest` covers the copy against each of the six
@@ -3802,9 +3814,9 @@ debug line; 115 and 168 ms in two earlier runs that placed 1,998 and 1,995 of th
     server running Building Planner takes, so no such server starts a local session: seen on the dev server, where no
     game with the add-on started one in `step8.sh`'s run, but not on a server behind a proxy; a `hello` that arrives
     during one replaces it, should the check be early.
-  - That the 26.3 client's `BlockStatePredictionHandler` tracks each position the game placed until the server answers,
-    so hook C1's check can wait for it: its methods (`startPredicting`, `retainKnownServerState`,
-    `endPredictionsUpTo`) were seen in the jar, their bytecode not read.
+  - That a block the server changes rather than refuses (another state than the game's guess) gives its ghost block
+    the server's answer: `ClientLevel.syncBlockState` sets the server's block when it differs, which hook C1 sees, read
+    in the 26.3 jar's bytecode; `local.sh` runs a block the server keeps and one it refuses.
   - How long the game takes to read a server's files at joining, on its render thread: expected a few milliseconds
     for a player's own ghost blocks, not measured.
   - MaLiLib's `StringUtils.getWorldOrServerName` read in its source (`sakura-ryoko/malilib`, branch `26.3`), which

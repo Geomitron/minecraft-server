@@ -3,6 +3,8 @@ package dev.buildingplanner.client;
 import dev.buildingplanner.BuildingPlanner;
 import dev.buildingplanner.server.LayerSync;
 import dev.buildingplanner.server.LocalFolders;
+import dev.buildingplanner.mixin.minecraft.BlockStatePredictionHandlerAccessor;
+import dev.buildingplanner.mixin.minecraft.ClientLevelInvoker;
 import dev.buildingplanner.server.LocalServer;
 import java.nio.file.Path;
 import java.util.HashMap;
@@ -23,7 +25,8 @@ import net.minecraft.world.level.chunk.status.ChunkStatus;
 /**
  * A local session's server part, wired to the game: the {@link LocalServer} for the player's folder for the server
  * they joined ({@link LocalFolders}), answering from the game's own level, and the link the session sends through.
- * The game hands the server's queued payloads to the session at the start of each client tick.
+ * The game hands the server's queued payloads to the session at the start of each client tick, and its real blocks'
+ * changes (hook C1) and loaded chunks to the server, which removes the ghost blocks they fill at the end of the tick.
  */
 final class LocalSession implements SessionLink {
 	/** Each folder's undo steps, kept while the game runs, so they survive leaving and rejoining the server. */
@@ -85,6 +88,22 @@ final class LocalSession implements SessionLink {
 		server.stop();
 	}
 
+	/** Hook C1: a real block of the game's own level changed. */
+	void realChanged(ClientLevel level, BlockPos pos, BlockState state) {
+		server.realChanged(level.dimension().identifier(), pos, state);
+	}
+
+	/** The game loaded a chunk of its own level. */
+	void chunkLoaded(ClientLevel level, LevelChunk chunk) {
+		server.chunkLoaded(level.dimension().identifier(), chunk.getPos().x(), chunk.getPos().z(),
+			LayerSync.RealChunk.of(chunk));
+	}
+
+	/** At the end of each client tick: the ghost blocks real blocks fill go. */
+	void endTick() {
+		server.removeFilled();
+	}
+
 	/**
 	 * The game as the layer sees it: the player's dimension and column, the radius of the chunks the game keeps
 	 * loaded, its level's build height and world border, and a real block only in a chunk the game has loaded.
@@ -123,6 +142,14 @@ final class LocalSession implements SessionLink {
 				LevelChunk chunk = level == null ? null : (LevelChunk) level.getChunkSource().getChunk(pos.getX() >> 4,
 					pos.getZ() >> 4, ChunkStatus.FULL, false);
 				return chunk == null ? null : chunk.getBlockState(pos);
+			}
+
+			@Override
+			public boolean awaitingServer(Identifier dimension, BlockPos pos) {
+				// A block the game placed stays in the prediction handler's server states until the server answers.
+				ClientLevel level = level(dimension);
+				return level != null && ((BlockStatePredictionHandlerAccessor) ((ClientLevelInvoker) level)
+					.buildingplanner$predictions()).buildingplanner$serverVerifiedStates().containsKey(pos.asLong());
 			}
 
 			private ClientLevel level(Identifier dimension) {

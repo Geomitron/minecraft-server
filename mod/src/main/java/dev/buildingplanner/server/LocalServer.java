@@ -10,8 +10,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.block.state.BlockState;
 
 /**
  * Building Planner's server part for one player, on their own computer, during a session with a server that doesn't
@@ -94,6 +96,33 @@ public final class LocalServer {
 	/** The player changed dimension: their game dropped every column it watched. */
 	public void changedDimension() {
 		layer.changedDimension(player);
+	}
+
+	/**
+	 * Hook C1: a real block changed in a chunk the game has loaded. When it fills the ghost block there, the position
+	 * waits for {@link #removeFilled}.
+	 */
+	public void realChanged(Identifier dimension, BlockPos pos, BlockState real) {
+		if (!stopped) {
+			layer.realChanged(dimension, pos, real);
+		}
+	}
+
+	/** The game loaded a chunk: the ghost blocks its real blocks fill wait for {@link #removeFilled}. */
+	public void chunkLoaded(Identifier dimension, int chunkX, int chunkZ, LayerSync.RealChunk real) {
+		if (!stopped) {
+			layer.chunkLoaded(dimension, chunkX, chunkZ, real);
+		}
+	}
+
+	/**
+	 * At the end of each client tick: removes the ghost blocks real blocks still fill, as one edit by no player,
+	 * which reaches the game at its next tick; a position whose real block the server hasn't answered for yet waits.
+	 */
+	public void removeFilled() {
+		if (!stopped) {
+			layer.removeFilled();
+		}
 	}
 
 	/** The player left the server, or the game is closing: writes every change and waits for the writes. */
