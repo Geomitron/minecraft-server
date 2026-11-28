@@ -5,13 +5,8 @@ ghost blocks that everyone on the server sees and edits live, then builds them b
 Building; Litematica draws the ghost blocks, out of sight. It hooks into unchanged copies of both. Geo's decisions
 behind it are in [plan.md](plan.md) ("Decisions").
 
-**What's built.** The server and the player pack run Building Planner 0.10.0, which has everything this spec describes
-except saved copies, 0.11.0's, below. `OPEN:` marks a choice still Geo's, with the inbox request that asks it.
-
-**Built for 0.11.0, not released.** Saved copies, which keep each player's recent and renamed copies on their computer
-and open with a key the copy's controls line shows (Geo's comment on 1375 Q1), are built as described in "Saved
-copies", in version 0.11.0, which isn't released yet, with the texts Geo approved in 1464. Their release is the last of
-their steps in [plan.md](plan.md).
+**What's built.** The server and the player pack run Building Planner 0.11.0, which has everything this spec
+describes. `OPEN:` marks a choice still Geo's, with the inbox request that asks it.
 
 ## What players get
 
@@ -1417,7 +1412,7 @@ the key held.
 
 #### Saved copies
 
-Built for 0.11.0, not released. Geo asked for it in a comment on 1375 Q1: "I'd like to add a feature to save
+Geo asked for it in a comment on 1375 Q1: "I'd like to add a feature to save
 previously copied regions, like saved materials lists. Instead of a button next to the radial menu, you would access it
 as a new keyboard press that's displayed while you're pasting. It would have a menu like the saved materials lists.
 Copies would save automatically, with the most recent 10, but you can view any of those copies in that menu and rename
