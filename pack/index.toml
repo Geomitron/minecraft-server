@@ -2,7 +2,7 @@ hash-format = "sha256"
 
 [[files]]
 file = "mods/building-planner.pw.toml"
-hash = "418c5ff7088b349bcb3d865c3acde995ea9716d510af49d9f2d981e4f4998887"
+hash = "01c5ca4bcb3ac79daf080011b9c257ae435f0d2e979395dd21922911d29af2da"
 metafile = true
 
 [[files]]
