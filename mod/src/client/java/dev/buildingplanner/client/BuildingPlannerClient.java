@@ -26,8 +26,11 @@ import dev.buildingplanner.sync.EditKind;
 import dev.buildingplanner.sync.JoinRule;
 import dev.buildingplanner.sync.Payloads;
 import dev.buildingplanner.sync.PlayerMessage;
+import fi.dy.masa.litematica.data.DataManager;
 import fi.dy.masa.litematica.schematic.container.LitematicaBlockStateContainer;
 import fi.dy.masa.litematica.schematic.placement.SchematicPlacement;
+import fi.dy.masa.litematica.schematic.placement.SchematicPlacementManager;
+import fi.dy.masa.litematica.util.OverlayType;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongSet;
 import java.util.Collection;
@@ -51,6 +54,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.SectionPos;
 import net.minecraft.core.Vec3i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -363,11 +367,23 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	}
 
 	/**
-	 * Whether "Place real blocks" acts now: it's on, Building Planner has a session, and the server takes the payload
-	 * {@code place}, which a server with 0.8.0 doesn't.
+	 * Whether "Place real blocks" acts now: it's on, Building Planner has a session with a server that runs it (not a
+	 * local session, where shapes draw ghost blocks), and the server takes the payload {@code place}, which a server
+	 * with 0.8.0 doesn't.
 	 */
 	static boolean realActs() {
-		return RealPlace.acts(placeReal(), session != null, ClientPlayNetworking.canSend(Payloads.Place.TYPE));
+		return RealPlace.acts(placeReal(), sessionKind() == JoinRule.Session.SERVER,
+			ClientPlayNetworking.canSend(Payloads.Place.TYPE));
+	}
+
+	/**
+	 * The session running: none, a local one on a server that doesn't run Building Planner, or the server's (see
+	 * "Servers without Building Planner").
+	 */
+	public static JoinRule.Session sessionKind() {
+		ClientSession now = session;
+		return now == null ? JoinRule.Session.NONE
+			: now.link().local() ? JoinRule.Session.LOCAL : JoinRule.Session.SERVER;
 	}
 
 	/** Ends the session and any local session, whose files it writes. */
@@ -659,11 +675,12 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	}
 
 	/**
-	 * Whether Disable's turning controls are active ({@link DisableTurn#active}): a session, Disable, no mouse mode, and
-	 * a block in hand that turns or flips; the turn then goes to the real block a right click places (hooks M6 and S2).
+	 * Whether Disable's turning controls are active ({@link DisableTurn#active}): the server's session, Disable, no mouse
+	 * mode, and a block in hand that turns or flips; the turn then goes to the real block a right click places (hooks M6
+	 * and S2).
 	 */
 	private static boolean disableTurning() {
-		return effortless && Minecraft.getInstance().player != null && DisableTurn.active(session != null,
+		return effortless && Minecraft.getInstance().player != null && DisableTurn.active(sessionKind(),
 			EffortlessShapes.disableMode(), mouseModeOn(), heldCan(BlockTurn::turns) || heldCan(BlockTurn::flips));
 	}
 
@@ -681,11 +698,12 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	 * ({@link DisableTurn#clickTakes}: the turn of the block in hand while the sprint key is held in Disable, and
 	 * otherwise none; or, with "Match ghost blocks" on, the ghost block's turn where the click fills one,
 	 * {@link EffortlessShapes#clickTurn}) differs from the one sent last, and keeps it as the one this computer's guess
-	 * of the block takes.
+	 * of the block takes. Only during the server's session: during a local session no hook S2 turns the block, so the
+	 * click places as Minecraft does and "Match ghost blocks" doesn't act.
 	 */
 	public static void beforeUseItemOn(BlockHitResult hit) {
 		Minecraft mc = Minecraft.getInstance();
-		if (session == null || mc.player == null) {
+		if (sessionKind() != JoinRule.Session.SERVER || mc.player == null) {
 			return;
 		}
 		Item inHand = mc.player.getMainHandItem().getItem();
@@ -959,6 +977,27 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	 */
 	public static boolean isOurs(SchematicPlacement placement) {
 		return session != null && (session.tiles().holds(placement) || session.clipboard().holds(placement));
+	}
+
+	/**
+	 * Hook L7: the mark Litematica's chunk renderer gives the real block at {@code pos}, from the one Litematica would
+	 * give it ({@code type}). With a session, a real block is marked as extra only inside the box of a placement that
+	 * isn't a tile or the copy or one of its set's, so the player's own placements mark extra blocks as Litematica
+	 * does, and the tiles, whose boxes cover whole sections of a chunk column, mark none. Runs on Litematica's rebuild
+	 * threads.
+	 */
+	public static OverlayType overlayType(OverlayType type, BlockPos pos) {
+		if (type != OverlayType.EXTRA || session == null) {
+			return type;
+		}
+		for (SchematicPlacementManager.PlacementPart part : DataManager.getSchematicPlacementManager()
+			.getPlacementPartsInChunk(SectionPos.blockToSectionCoord(pos.getX()),
+				SectionPos.blockToSectionCoord(pos.getZ()))) {
+			if (part.getBox().contains(pos) && !isOurs(part.getPlacement())) {
+				return type;
+			}
+		}
+		return OverlayType.NONE;
 	}
 
 	/** Hook L1: whether Litematica's block container is a tile's. */

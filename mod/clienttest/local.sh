@@ -4,9 +4,12 @@
 # and Ctrl+Z and Ctrl+Y take it back and forward; real oak planks placed by hand, by /setblock and while Planner1 is
 # away fill ghost oak planks, and one the server refuses Planner2 leaves its ghost block; after Planner1 leaves, the
 # area's file is in the game folder, and the ghost blocks show again after a rejoin and after the game restarts; a file
-# made unreadable stays as it was, and its ghost blocks don't show. Real blocks are checked on the server with
-# server_has. Sourced by inside.sh, which provides drv, val, check, xdo, keys, use_click, attack_click, client_said,
-# wait_for, start_server, stop_server, start_client, stop_client and $ADDON.
+# made unreadable stays as it was, and its ghost blocks don't show. What needs a server that runs Building Planner
+# doesn't act: in Disable, Left Ctrl with the wheel changes the hotbar slot, a stair placed into a ghost stair with
+# "Match ghost blocks" on faces as Minecraft places it, and with "Place real blocks" on a Line draws ghost blocks; and a
+# Litematica placement of Planner1's own marks extra blocks, while the tiles mark none. Real blocks are checked on the
+# server with server_has. Sourced by inside.sh, which provides drv, val, check, xdo, click, keys, use_click,
+# attack_click, client_said, wait_for, start_server, stop_server, start_client, stop_client and $ADDON.
 
 server_log=/out/server-without-addon.log
 planner1=527e7f9d-ae90-3a44-aa88-30a47a9cdf34
@@ -52,6 +55,20 @@ server_has() {
 	local tag=local$tags
 	drv 1 "cmd execute if block $1 $2 $3 $4 run say $tag-hit" "cmd say $tag-end" > /dev/null &&
 		wait_for "$server_log" "$tag-end" 20 && grep -qF -- "$tag-hit" "$server_log"
+}
+
+# switch_setting <client> <row>: opens "Settings", as the radial menu's button does, clicks the row's switch and then
+# the screen's "Save" button, which closes it, with the client's own mouse.
+client_config=run/client1/config/buildingplanner-client.properties
+switch_setting() {
+	local text x y
+	drv "$1" "close" "settings" "await screen Settings" "wait 10" > /dev/null
+	read -r text x y < <(val "$1" "settingrow $2")
+	click "$1" "$x" "$y"
+	drv "$1" "wait 5" > /dev/null
+	read -r x y < <(val "$1" "widget 0 Save")
+	click "$1" "$x" "$y"
+	drv "$1" "await noscreen" "wait 5" > /dev/null
 }
 
 # no_planner_payload <client>: the driver's counter of the custom payloads leaving that client counts none of
@@ -185,3 +202,58 @@ check "an oak plank the server refuses Planner2 shows until the server's answer"
 	! server_has 5 -60 5 minecraft:oak_planks'
 check "and leaves its ghost block" eval '[[ $(val 2 "layer 5 -60 5") == minecraft:oak_planks &&
 	$(val 2 "real 5 -60 5") == minecraft:air ]]'
+
+# What needs a server that runs Building Planner doesn't act during a local session. In Disable, with oak stairs in
+# hand, Left Ctrl with a notch up changes the hotbar slot, as without a session (step8.sh).
+drv 1 "ebmode DISABLED" "cmd item replace entity @s hotbar.4 with minecraft:oak_stairs 64" \
+	"cmd tp @s 40.5 -60 37.5 0 30" "await loaded minecraft:overworld 40 40" "wait 20" > /dev/null
+keys 1 key 5
+drv 1 "lookat 40.5 -60 40.5" "wait 5" > /dev/null
+xdo 1 keydown Control_L
+drv 1 "await sprint true" "wait 5" > /dev/null
+xdo 1 click 4
+check "in Disable, Left Ctrl with the wheel changes the hotbar slot" eval \
+	'drv 1 "wait 5" > /dev/null && [[ $(val 1 slot) == "3 "* ]]'
+xdo 1 keyup Control_L
+keys 1 key 5
+drv 1 "await sprint false" "wait 5" > /dev/null
+# With "Match ghost blocks" on, Planner1, 3 blocks north of a ghost oak stair facing east and facing south, places an
+# oak stair there: it faces south, as Minecraft places it, and leaves the ghost stair.
+switch_setting 1 "Match ghost blocks"
+check "\"Match ghost blocks\" is on, as \"Settings\" saved it" grep -q "^match-ghost-turn=true" "$client_config"
+drv 1 "edit 40 -60 40 40 -60 40 minecraft:oak_stairs[facing=east]" "await inlayer 40 -60 40 minecraft:oak_stairs" \
+	"lookat 40.5 -60 40.5" "wait 5" > /dev/null
+use_click 1
+check "with it on, a stair placed into a ghost stair facing east faces south, as Minecraft places it" eval \
+	'drv 1 "await real 40 -60 40 minecraft:oak_stairs" > /dev/null &&
+	[[ $(val 1 "realstate 40 -60 40") == *"facing=south,"* ]] &&
+	server_has 40 -60 40 "minecraft:oak_stairs[facing=south]"'
+check "and leaves the ghost stair" eval 'drv 1 "wait 10" > /dev/null &&
+	[[ $(val 1 "layer 40 -60 40") == minecraft:oak_stairs ]]'
+# With "Place real blocks" on, a Line of 4 oak planks from 40 -60 46 eastward draws ghost blocks.
+switch_setting 1 "Place real blocks"
+check "\"Place real blocks\" is on, as \"Settings\" saved it" grep -q "^place-real-blocks=true" "$client_config"
+drv 1 "cmd item replace entity @s weapon.mainhand with minecraft:oak_planks 64" "ebmode LINE" \
+	"cmd tp @s 41.5 -60 42.5 0 30" "wait 20" > /dev/null
+draw 1 40 -60 46 43 -60 46
+check "with it on, a Line of 4 oak planks draws 4 ghost blocks" eval \
+	'drv 1 "await block 43 -60 46 minecraft:oak_planks" > /dev/null &&
+	[[ $(val 1 "countblocks 40 43 -60 46 minecraft:oak_planks") == 4 ]]'
+check "and places no real block on the server" eval '! server_has 40 -60 46 minecraft:oak_planks &&
+	! server_has 43 -60 46 minecraft:oak_planks && [[ $(val 1 "real 40 -60 46") == minecraft:air ]]'
+check "and still sends none of Building Planner's payloads" no_planner_payload 1
+switch_setting 1 "Place real blocks"
+switch_setting 1 "Match ghost blocks"
+check "both settings are off again, as \"Settings\" saved them" eval \
+	'grep -q "^place-real-blocks=false" "$client_config" && grep -q "^match-ghost-turn=false" "$client_config"'
+
+# Litematica's extra blocks (hook L7): placements of Planner1's own, two empty plans of 3 by 3 laid on the ground at
+# 60 -61 60 and 64 -61 60 (the driver's oldplans, whose placements stay during a local session), mark the real grass
+# in them as extra, as Litematica does; the ground under the Lines' ghost blocks, in a tile's box alone, isn't marked.
+drv 1 "ebmode DISABLED" "cmd tp @s 63.5 -60 56.5 0 25" "await loaded minecraft:overworld 60 60" "wait 20" \
+	"oldplans 60 -61 60" "wait 40" > /dev/null
+check "a Litematica placement of Planner1's own marks a real block where it holds air as extra" eval \
+	'[[ $(val 1 "overlay 61 -61 61") == EXTRA && $(val 1 "overlay 65 -61 61") == EXTRA ]]'
+check "while no real block in a tile's box alone is marked" eval \
+	'[[ $(val 1 "overlay 20 -61 20") == NONE && $(val 1 "overlay 41 -61 46") == NONE ]]'
+shots 1 local-placement-extra-blocks "screenbox 60 -61 60 66 -61 62"

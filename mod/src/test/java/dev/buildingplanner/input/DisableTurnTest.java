@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import dev.buildingplanner.sync.JoinRule.Session;
 import java.util.Map;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.Direction;
@@ -26,16 +27,21 @@ class DisableTurnTest {
 	}
 
 	@Test
-	void activeInDisableWithASessionAndABlockThatTurnsOrFlips() {
-		assertTrue(DisableTurn.active(true, true, false, true));
+	void activeInDisableWithTheServersSessionAndABlockThatTurnsOrFlips() {
+		assertTrue(DisableTurn.active(Session.SERVER, true, false, true));
 	}
 
 	@Test
 	void notActiveInAnotherModeWithoutASessionWithAMouseModeOrForABlockThatNeitherTurnsNorFlips() {
-		assertFalse(DisableTurn.active(true, false, false, true));
-		assertFalse(DisableTurn.active(false, true, false, true));
-		assertFalse(DisableTurn.active(true, true, true, true));
-		assertFalse(DisableTurn.active(true, true, false, false));
+		assertFalse(DisableTurn.active(Session.SERVER, false, false, true));
+		assertFalse(DisableTurn.active(Session.NONE, true, false, true));
+		assertFalse(DisableTurn.active(Session.SERVER, true, true, true));
+		assertFalse(DisableTurn.active(Session.SERVER, true, false, false));
+	}
+
+	@Test
+	void notActiveDuringALocalSessionOnAServerWithoutBuildingPlanner() {
+		assertFalse(DisableTurn.active(Session.LOCAL, true, false, true));
 	}
 
 	@Test

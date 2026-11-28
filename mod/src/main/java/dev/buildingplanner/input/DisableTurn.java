@@ -1,5 +1,6 @@
 package dev.buildingplanner.input;
 
+import dev.buildingplanner.sync.JoinRule;
 import java.util.Objects;
 
 /**
@@ -12,10 +13,13 @@ public final class DisableTurn {
 
 	/**
 	 * Whether Disable's turning controls are active (Left Ctrl with the wheel and the middle click): Building Planner has
-	 * a session, Effortless Building's mode is Disable, no mouse mode is on, and the block in hand turns or flips.
+	 * a session with a server that runs it, whose hook S2 turns the real block (not a local session, where Left Ctrl,
+	 * the wheel and the middle click work as in Minecraft), Effortless Building's mode is Disable, no mouse mode is on,
+	 * and the block in hand turns or flips.
 	 */
-	public static boolean active(boolean session, boolean disableMode, boolean mouseMode, boolean turnsOrFlips) {
-		return session && disableMode && !mouseMode && turnsOrFlips;
+	public static boolean active(JoinRule.Session session, boolean disableMode, boolean mouseMode,
+		boolean turnsOrFlips) {
+		return session == JoinRule.Session.SERVER && disableMode && !mouseMode && turnsOrFlips;
 	}
 
 	/**
