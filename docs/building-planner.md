@@ -5,15 +5,8 @@ ghost blocks that everyone on the server sees and edits live, then builds them b
 Building; Litematica draws the ghost blocks, out of sight. It hooks into unchanged copies of both. Geo's decisions
 behind it are in [plan.md](plan.md) ("Decisions").
 
-**What's built.** The server and the player pack run Building Planner 0.9.0, which has everything this spec describes
-except 0.10.0's servers without Building Planner and the parts proposed for 0.11.0 below. `OPEN:` marks a choice
-still Geo's, with the inbox request that asks it.
-
-**Built for 0.10.0.** Building Planner on servers that don't run it, where the player's ghost blocks are saved on
-their computer and only they see them (Geo's comment c4 on 1359, 1368 Q1 A), and in the player's own worlds, where
-they're shared with the world's LAN guests (1374 Q4 C), is built as described in "Servers without Building Planner",
-in version 0.10.0, which isn't released yet; every part of this spec that mentions it is marked as 0.10.0's. Its
-release is the last of its steps in [plan.md](plan.md).
+**What's built.** The server and the player pack run Building Planner 0.10.0, which has everything this spec describes
+except the parts proposed for 0.11.0 below. `OPEN:` marks a choice still Geo's, with the inbox request that asks it.
 
 **Proposed for 0.11.0.** Saved copies, which keep each player's recent and renamed copies on their computer and open
 with a key the copy's controls line shows (Geo's comment on 1375 Q1), are designed in "Saved copies" and not built;
@@ -165,7 +158,7 @@ every part of this spec that mentions them is marked as proposed for 0.11.0. The
 - **Messages.** Building Planner's messages show in the player's chat. Every text players see (messages, key names,
   button and slider labels, the panel) is in the wording Geo approved, which this spec quotes (0.7.0's in 1313,
   0.8.0's in 1391).
-- **Other servers.** In 0.10.0, on a server that doesn't run Building Planner, Building Planner works
+- **Other servers.** On a server that doesn't run Building Planner, Building Planner works
   from the player's computer alone: their ghost blocks are saved on their computer for that server, and only they see
   them. This server still shares its ghost blocks (see "Servers without Building Planner"). In the player's own world,
   singleplayer or opened to LAN, Building Planner works as on this server, sharing the ghost blocks with the world's
@@ -197,7 +190,7 @@ menus, so it adds nothing to the registries Fabric API syncs at login, and playe
   (`DeleteMarks`).
 - **Server:** the layer store and its files, column watching, edits and their order, per-player undo, each player's
   material lists and their files, each player's turn for Disable (`PlaceTurns`), and the one-time import of the plans
-  Syncmatica shared. They run on a dedicated server, which is how the group plays. In 0.10.0, all but the import
+  Syncmatica shared. They run on a dedicated server, which is how the group plays. All but the import
   also run inside the game while a world of the player's own is open (see "The player's own worlds").
 - **Client:** the player's copy of the layer and its column watching, the tiles that hand it to Litematica and the
   hooks that hide them, the show or hide switch, the Effortless Building capture, hold to repeat, the radial menu's
@@ -1891,7 +1884,7 @@ reads as). Its tooltip reads "Shapes and pastes place real blocks from your inve
 reading, 1411 PR1). The row shows on any server. The setting acts
 while Building Planner has a session with a server that runs it and the server takes the payload `place`
 (`ClientPlayNetworking.canSend`): with it on, a server with 0.8.0 gets ghost blocks, as with it off. On a server
-without Building Planner, in 0.10.0, shapes draw ghost blocks with it on (see "Servers without Building Planner").
+without Building Planner, shapes draw ghost blocks with it on (see "Servers without Building Planner").
 
 **What a shape does.** While the setting acts, in every build mode but Disable, with an item that places a block in
 hand, the place (right) click's shape places real blocks instead of ghost blocks: the shape with Effortless
@@ -2500,12 +2493,12 @@ blocks and no lists on a server with 0.6.0 until their next launch updates it. T
 without any mods, join and play as before. It sends `hello` only to a game that also takes `columns`, since Building
 Planner 0.2 takes a `hello` of another layout under the same name.
 
-In 0.10.0, in the player's own world, Building Planner's server part runs inside the game and sends the `hello` (see
+In the player's own world, Building Planner's server part runs inside the game and sends the `hello` (see
 "The player's own worlds").
 
 ### Servers without Building Planner
 
-Built for 0.10.0, not yet released. Geo wants Building Planner to work as a client-side mod on other servers, where
+Geo wants Building Planner to work as a client-side mod on other servers, where
 other people don't need to see the player's ghost blocks (comment c4 on 1359), and picked "Yes, in a later version:
 there, your ghost blocks are saved on your computer and only you see them, and this server still shares them." (1368
 Q1 A). Shapes place real blocks only on servers that run Building Planner (1368 Q2 A). For the player's own worlds,
@@ -3459,7 +3452,7 @@ following the aim and locked, and "[Right-click: paste 3 copies]" and "[Right-cl
 first click; and the red reason "[Can't paste: not enough blocks]" (following the aim, for a set, and before
 "[Right-click: set the start]"), in the warning's colour.
 
-`local.sh`, servers without Building Planner (0.10.0), on the dev server started with the add-on left off its
+`local.sh`, servers without Building Planner, on the dev server started with the add-on left off its
 classpath (`start_server "$ADDON" server-without-addon`, as `step8.sh` starts it) and with spawn protection (16
 blocks around the spawn at 0 -60 0, which the dev server is otherwise without), with both clients having the add-on.
 Real blocks are checked on the server with the script's `server_has`. It checks:
@@ -3510,7 +3503,7 @@ Real blocks are checked on the server with the script's `server_has`. It checks:
   its line at 1920 by 1080, GUI scales 2 and 4, and at 854 by 480 with "Single" under the pointer, the line's window
   box in `checks.log`.
 
-`own.sh`, the player's own worlds (0.10.0), with the dev server stopped: Planner1's game opens a copy of the dev
+`own.sh`, the player's own worlds, with the dev server stopped: Planner1's game opens a copy of the dev
 server's world from its `saves` folder (`start_client 1 "" "" --quickPlaySingleplayer own`), then opens it to LAN
 with the driver's `lan` command (`IntegratedServer.publishServer`, at a free port it gives, with the world taking
 players without checking their accounts, since the dev clients' players have none), and Planner2's game joins it at
@@ -3831,7 +3824,7 @@ debug line; 115 and 168 ms in two earlier runs that placed 1,998 and 1,995 of th
   are made of several items (a double slab, candles, sea pickles, snow layers, turtle eggs, pink petals), each to be
   listed from the 26.3 jar's block state properties; and that a paste's context, the top face with a hit at each
   block's bottom middle, gives each block of a copy its own state once S2 turns it.
-- Servers without Building Planner (0.10.0), each not run unless it says so:
+- Servers without Building Planner, each not run unless it says so:
   - That `ClientPlayNetworking.canSend` at joining (`ClientPlayConnectionEvents.JOIN`) already knows every channel a
     server running Building Planner takes, so no such server starts a local session: seen on the dev server, where no
     game with the add-on started one in `step8.sh`'s run, but not on a server behind a proxy; a `hello` that arrives
