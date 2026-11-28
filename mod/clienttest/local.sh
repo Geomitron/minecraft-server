@@ -9,9 +9,11 @@
 # "Match ghost blocks" on faces as Minecraft places it, and with "Place real blocks" on a Line draws ghost blocks; and a
 # Litematica placement of Planner1's own marks extra blocks, while the tiles mark none; a box counted for a material
 # list, saved, with the panel on, comes back after a rejoin. With the server restarted with Building Planner, Planner1
-# sees the shared ghost blocks without its local ones, and a copy there of ghost and real blocks stays through a trip
-# to the Nether and, with the server restarted without it again, pastes as ghost blocks where the local ghost blocks
-# show again. Real blocks are checked on the server with server_has.
+# sees the shared ghost blocks without its local ones and no line above "Building Planner" in the radial menu, and a
+# copy there of ghost and real blocks stays through a trip to the Nether and, with the server restarted without it
+# again, pastes as ghost blocks where the local ghost blocks show again. There, the radial menu's line "(client only)"
+# sits a row above "Building Planner" at 1920 by 1080, GUI scales 2 and 4, and a row above a hovered mode's
+# description at 854 by 480. Real blocks are checked on the server with server_has.
 # Sourced by inside.sh, which provides drv, val, check, xdo, click, keys, use_click, attack_click, client_said,
 # wait_for, start_server, stop_server, start_client, stop_client and $ADDON.
 
@@ -286,6 +288,30 @@ radial_button() {
 	xdo 1 keyup Alt_L
 	drv 1 "await noscreen" "wait 5" > /dev/null
 }
+# radial_line <width> <height> <gui scale> <single or -> [shot]: in a window of that size at that GUI scale, opens the
+# radial menu (left Alt held), with the pointer over "Single" (about 33 right of the menu's middle and 35 above it) if
+# asked, so its name and description show, and shoots it as the shot, if given, once the chat has faded. The driver's
+# radialline goes to $line, and its cornertext to $corner, both to the log too.
+radial_line() {
+	drv 1 "window $1 $2 $3" "wait 20" > /dev/null
+	if [[ -n ${5:-} ]]; then
+		drv 1 "wait 210" > /dev/null
+	fi
+	xdo 1 keydown Alt_L
+	drv 1 "await screen Build Modes" "wait 10" > /dev/null
+	if [[ $4 == single ]]; then
+		xdo 1 mousemove --window %w $(($1 / 2 + 33 * $3)) $(($2 / 2 - 35 * $3))
+		drv 1 "wait 10" > /dev/null
+	fi
+	if [[ -n ${5:-} ]]; then
+		drv 1 "notoasts" "wait 5" "shot $5" > /dev/null
+	fi
+	line=$(val 1 radialline)
+	corner=$(val 1 cornertext)
+	echo "  the radial menu at $1x$2, GUI scale $3: the line $line; the corner $corner" >> /out/checks.log
+	xdo 1 keyup Alt_L
+	drv 1 "await noscreen" "wait 5" > /dev/null
+}
 # list_box <ax ay az> <y1> <x2 z2> <y3>: box's clicks for a material list, the last one a press and a release that the
 # list's screen, which it opens, takes from the game.
 list_box() {
@@ -372,6 +398,9 @@ check "with the server restarted with Building Planner, Planner1's game starts i
 near_both
 check "and Planner1 sees the shared ghost oak plank, without its local ghost blocks" eval \
 	'drv 1 "await block 80 -60 80 minecraft:oak_planks" > /dev/null && [[ $(val 1 "layer 20 -60 20") == minecraft:air ]]'
+radial_line 854 480 2 -
+check "and its radial menu doesn't show the line above \"Building Planner\"" eval \
+	'[[ $line == none && $corner == "Building Planner | "* ]]'
 drv 1 "cmd setblock 81 -60 80 minecraft:stone" "cmd tp @s 80.5 -60 77.5 0 30" "await real 81 -60 80 minecraft:stone" \
 	"wait 20" > /dev/null
 copy_box 80.5 -59 80.5 81 80 -60
@@ -404,3 +433,17 @@ check "the Paste button brings it to the aim, and a right click pastes it as gho
 	[[ $(val 1 "layer $px $py $pz") == minecraft:oak_planks && $(val 1 "layer $((px + 1)) $py $pz") == minecraft:stone ]]'
 check "and places no real block on the server" eval \
 	'! server_has "$px" "$py" "$pz" minecraft:oak_planks && ! server_has "$((px + 1))" "$py" "$pz" minecraft:stone'
+
+# The radial menu's line above "Building Planner" during a local session, at the row the driver's radialline gives,
+# with the strings drawn one row below it: the menu's name in the corner, or, on a screen up to 256 high in the GUI's
+# units, a hovered mode's description; the hotbar's counts can share the name's row. The line in each window size goes
+# to a shot, radial-line-<size>-gui<scale>.
+radial_line 1920 1080 2 - radial-line-1920x1080-gui2
+check "with the radial menu open, the line above \"Building Planner\" reads \"(client only)\", 4 from the right edge, a row above the name, at 1920 by 1080, GUI scale 2" \
+	eval '[[ $line == "(client only) | 520 4 | "* && " / ${line##* | } / " == *" / Building Planner / "* ]]'
+radial_line 1920 1080 4 - radial-line-1920x1080-gui4
+check "and at GUI scale 4" eval \
+	'[[ $line == "(client only) | 250 4 | "* && " / ${line##* | } / " == *" / Building Planner / "* ]]'
+radial_line 854 480 2 single radial-line-854x480-gui2
+check "and at 854 by 480, GUI scale 2, a row above the hovered mode's description" eval \
+	'[[ $line == "(client only) | 210 4 | "* && ${line##* | } != none && ${line##* | } != "Building Planner" ]]'

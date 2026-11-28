@@ -1127,6 +1127,12 @@ public final class Driver implements ClientModInitializer {
 				// radial menu draws its name, then " | " and its window box (left top right bottom), or none.
 				return ScreenProbe.cornerText(mc);
 			}
+			case "radialline" -> {
+				// radialline: the radial menu's line above its name as the last frame drew it: its text, its row and the
+				// gap from its end to the screen's right edge in the GUI's units, its window box (left top right bottom),
+				// and the strings drawn one row below it; or none.
+				return ScreenProbe.radialLine(mc);
+			}
 			case "keybinds" -> {
 				// keybinds: opens the key binds screen (Options, Controls, Key Binds).
 				ScreenProbe.openKeyBinds(mc);

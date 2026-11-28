@@ -2,8 +2,11 @@ package dev.buildingplanner.mixin.effortless;
 
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.llamalad7.mixinextras.injector.v2.WrapWithCondition;
+import com.llamalad7.mixinextras.sugar.Local;
 import dev.buildingplanner.client.BuildingPlannerClient;
 import dev.buildingplanner.client.RadialMenuWidgets;
+import dev.buildingplanner.look.RadialLine;
+import dev.buildingplanner.sync.JoinRule;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Renderable;
 import net.minecraft.client.gui.components.events.GuiEventListener;
@@ -12,6 +15,7 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
 import nl.requios.effortlessbuilding.screen.RadialMenu;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -22,8 +26,9 @@ import org.spongepowered.asm.mixin.injection.ModifyConstant;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * Hooks E11, E12, E16, E18, E19, E20, E34 and E35: Building Planner's widgets in Effortless Building's radial menu, and its name
- * in the menu's corner (E18). Minecraft clears a screen's widgets and calls {@code init} each time it opens, so E11
+ * Hooks E11, E12, E16, E18, E19, E20, E34, E35 and E42: Building Planner's widgets in Effortless Building's radial menu,
+ * its name in the menu's corner (E18), and, during a local session, the line above that name (E42), drawn as the menu
+ * draws the name, in the grey of its mode descriptions, at the row {@link RadialLine} gives. Minecraft clears a screen's widgets and calls {@code init} each time it opens, so E11
  * adds them there; as children of the screen they
  * get the clicks and drags the menu passes on to {@code Screen}. The menu draws itself without {@code Screen}'s own
  * drawing, so E12 places them for the menu's opening animation, read from its {@code visibility} (E20), and draws them,
@@ -39,6 +44,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 abstract class RadialMenuMixin extends Screen {
 	@Shadow
 	private float visibility;
+
+	@Shadow
+	@Final
+	private int descriptionTextColor;
 
 	/** The action of Building Planner's button under the pointer as {@code onClose} began, or null. */
 	@Unique
@@ -96,6 +105,17 @@ abstract class RadialMenuMixin extends Screen {
 	@ModifyConstant(method = "drawTexts", constant = @Constant(stringValue = "Effortless Building"))
 	private String buildingplanner$credits(String effortlessBuilding) {
 		return I18n.get("buildingplanner.ui.radial.credits");
+	}
+
+	@Inject(method = "drawTexts", at = @At(value = "INVOKE",
+		target = "Lnet/minecraft/client/gui/GuiGraphicsExtractor;text(Lnet/minecraft/client/gui/Font;Ljava/lang/String;IIIZ)V",
+		ordinal = 1, shift = At.Shift.AFTER))
+	private void buildingplanner$localLine(CallbackInfo ci, @Local(argsOnly = true) GuiGraphicsExtractor graphics) {
+		if (BuildingPlannerClient.sessionKind() != JoinRule.Session.LOCAL) {
+			return;
+		}
+		String line = I18n.get("buildingplanner.ui.radial.local");
+		graphics.text(font, line, width - font.width(line) - 4, RadialLine.row(height), descriptionTextColor, true);
 	}
 
 	@WrapWithCondition(method = "performAction", at = @At(value = "INVOKE",

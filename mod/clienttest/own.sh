@@ -1,12 +1,13 @@
 # The player's own worlds (0.10.0): with the dev server stopped, Planner1's game opens a copy of the dev server's world
 # from its saves folder, where Building Planner's server part runs inside the game. Planner1's game starts a session
-# from the world's hello; a Line of 4 oak planks draws ghost blocks and no real block, and Ctrl+Z and Ctrl+Y take it
-# back and forward; with "Place real blocks" on, a Line places 4 real oak planks; a real oak plank placed by hand into
-# a ghost one removes it. Opened to LAN, the world takes Planner2's game, which starts a session, shows Planner1's ghost
-# blocks, and draws a shape Planner1 sees glowing with Planner2's name. After Planner1 leaves, the area's file is in the
-# world's folder, the game folder has no config file of the server part's, and when the world opens again its ghost
-# blocks show and placements of old plans' files stay. Sourced by inside.sh, which provides drv, val, check, xdo, click, keys, use_click, attack_click,
-# client_said, wait_for, start_server, stop_server, start_client, stop_client and $ADDON.
+# from the world's hello, and its radial menu shows no line above "Building Planner"; a Line of 4 oak planks draws ghost
+# blocks and no real block, and Ctrl+Z and Ctrl+Y take it back and forward; with "Place real blocks" on, a Line places
+# 4 real oak planks; a real oak plank placed by hand into a ghost one removes it. Opened to LAN, the world takes
+# Planner2's game, which starts a session, shows no line in its radial menu and Planner1's ghost blocks, and draws a
+# shape Planner1 sees glowing with Planner2's name. After Planner1 leaves, the area's file is in the world's folder, the
+# game folder has no config file of the server part's, and when the world opens again its ghost blocks show and
+# placements of old plans' files stay. Sourced by inside.sh, which provides drv, val, check, xdo, click, keys,
+# use_click, attack_click, client_said, wait_for, start_server, stop_server, start_client, stop_client and $ADDON.
 
 world=run/client1/saves/own
 # The area file of the blocks near 0 0, in the world's folder.
@@ -41,6 +42,16 @@ shots() {
 	local after=${3:-mark}
 	drv "$1" "wait 210" "notoasts" "wait 5" "shot $2-854x480-gui2" "$after" "window 1920 1080 2" "wait 20" "notoasts" \
 		"shot $2-1920x1080-gui2" "$after" "window 854 480 2" "wait 20" > /dev/null
+}
+
+# radial_texts <client>: the driver's radialline and cornertext with that client's radial menu open (left Alt held),
+# separated by " || ".
+radial_texts() {
+	xdo "$1" keydown Alt_L
+	drv "$1" "await screen Build Modes" "wait 10" > /dev/null
+	echo "$(val "$1" radialline) || $(val "$1" cornertext)"
+	xdo "$1" keyup Alt_L
+	drv "$1" "await noscreen" "wait 5" > /dev/null
 }
 
 tags=0
@@ -79,6 +90,8 @@ start_client 1 "" "" --quickPlaySingleplayer own
 # The loading screen swallows key presses, so each check waits for it to close.
 check "Planner1's game starts a session from its own world's hello" eval \
 	'drv 1 "await noscreen" "await session" > /dev/null && [[ $(val 1 sessionkind) == server ]]'
+check "and its radial menu doesn't show the line above \"Building Planner\"" eval \
+	'[[ $(radial_texts 1) == "none || Building Planner | "* ]]'
 
 # A Line of 4 oak planks from 20 -60 20 eastward, drawn by Planner1 standing north of it.
 drv 1 "window 854 480 2" "cmd clear @s" "cmd item replace entity @s weapon.mainhand with minecraft:oak_planks 64" \
@@ -131,6 +144,8 @@ check "the world opens to LAN" eval '[[ $port =~ ^[0-9]+$ ]]'
 start_client 2 "" "" --quickPlayMultiplayer "localhost:$port"
 check "Planner2's game starts a session from the world's hello" eval \
 	'drv 2 "await noscreen" "await session" > /dev/null && [[ $(val 2 sessionkind) == server ]]'
+check "and its radial menu doesn't show the line above \"Building Planner\"" eval \
+	'[[ $(radial_texts 2) == "none || Building Planner | "* ]]'
 drv 1 "ebmode LINE" "cmd tp @s 21.5 -60 16.5 0 30" "cmd tp Planner2 24.5 -60 16.5 0 30" "wait 40" > /dev/null
 check "and shows Planner1's ghost blocks" eval 'drv 2 "await loaded minecraft:overworld 20 20" \
 	"await block 23 -60 20 minecraft:oak_planks" > /dev/null &&

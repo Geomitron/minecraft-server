@@ -2502,10 +2502,10 @@ As proposed for 0.10.0, in the player's own world, Building Planner's server par
 
 ### Servers without Building Planner
 
-Proposed for 0.10.0. Built so far (build steps 1 to 6): which servers start a local session, the local server, the
+Proposed for 0.10.0, and built (build steps 1 to 7): which servers start a local session, the local server, the
 files, undo and redo, ghost blocks a real block fills, what needs a server that runs Building Planner, Litematica's
-extra blocks, the material lists on the computer, the copy between servers, and the player's own worlds; the rest
-(the radial menu's line) is proposed. Geo wants Building Planner to work as a client-side mod on other servers, where other
+extra blocks, the material lists on the computer, the copy between servers, the player's own worlds, and the radial
+menu's line, whose wording Geo approves in build step 8. Geo wants Building Planner to work as a client-side mod on other servers, where other
 people don't need to see the player's ghost blocks (comment c4 on 1359), and picked "Yes, in a later version: there,
 your ghost blocks are saved on your computer and only you see them, and this server still shares them." (1368 Q1 A).
 Shapes place real blocks only on servers that run Building Planner (1368 Q2 A). For the player's own worlds, Geo picked
@@ -2647,7 +2647,7 @@ as Litematica does without Building Planner. The layer's tiles mark none.
 | # | File, method | Hook | Purpose |
 |---|---|---|---|
 | C1 | `LevelChunk.setBlockState(BlockPos, BlockState, int)` | `@Inject` at return, in the mixin config's client section | During a local session, for the game's own level: note a position whose new state fills a ghost block of the local layer, for the check at the end of the client tick. |
-| E42 | `screen/RadialMenu.java`, `drawTexts` | `@Inject` after the call that draws the corner's name (E18's string) | During a local session, draw the line above "Building Planner" (`buildingplanner.ui.radial.local`) at the row `RadialLine` gives for the screen's height, and record its text and row for the driver's checks. |
+| E42 | `screen/RadialMenu.java`, `drawTexts` | `@Inject` after the call that draws the corner's name (E18's string) | During a local session, draw the line above "Building Planner" (`buildingplanner.ui.radial.local`) at the row `RadialLine` gives for the screen's height. |
 
 C1 is `ClientLevelChunkMixin`, in the client source set beside the server's S1 (`LevelChunkMixin`) on the same
 method; `ClientLevelInvoker` and `BlockStatePredictionHandlerAccessor` read the positions awaiting the server's answer.
@@ -2656,7 +2656,7 @@ method; `ClientLevelInvoker` and `BlockStatePredictionHandlerAccessor` read the 
 `JoinRule` (common) is the pure rule for the session at joining and at a `hello`; `LocalFolders` (common) names the
 folders; `LocalServer` (common) runs the common classes for one player, and `LocalSession` (client) wires it to the
 game, keeping each folder's undo steps (`LayerSync.History`) while the game runs; `SessionLink` (client) is what
-`ClientSession` and `ListSync` send through. As proposed, `RadialLine` (client) is the pure rule for the radial menu
+`ClientSession` and `ListSync` send through. `RadialLine` (common) is the pure rule for the radial menu
 line's row: 20 above the screen's bottom, or 90 below the menu's middle on a screen up to 256 high.
 
 **Real blocks from the computer alone.** Shapes don't place real blocks on other servers (1368 Q2 A). What the sources
@@ -3506,16 +3506,16 @@ Real blocks are checked on the server with the script's `server_has`. It checks:
   away, through a trip to the Nether. With the server restarted without Building Planner again, the local ghost blocks
   show and the shared plank doesn't, the copy is still there, and the Paste button and a right click paste it as a
   ghost oak plank and a ghost stone, with no real block on the server.
+- The radial menu's line (hook E42), read with the driver's `radialline` from the strings the frame draws: its text,
+  its row and its gap to the screen's right edge in the GUI's units, and the strings one row below it. With the server
+  restarted with Building Planner, the menu shows "Building Planner" in its corner and no line. With the server
+  restarted without it again, the line reads "(client only)", 4 from the right edge, one row above "Building Planner"
+  at 1920 by 1080, GUI scales 2 (row 520) and 4 (row 250), and at 854 by 480, GUI scale 2, a row above the description
+  of "Single" under the pointer (row 210).
 - Shots at 854 by 480 and 1920 by 1080, GUI scale 2, from a few blocks back in Disable: Planner1's ghost blocks on the
   server without the add-on, and Planner1's two placements with their extra blocks marked, each with its screen box
-  (the driver's `screenbox`) in `checks.log`.
-
-The checks proposed for the later build steps of 0.10.0 (the checks follow the options the requests recommend):
-
-- With the radial menu open, the line above "Building Planner" shows at the row E42 records: one row above the name at
-  1920 by 1080, GUI scales 2 and 4, and a row above a hovered mode's description at 854 by 480, GUI scale 2. With the
-  server restarted with Building Planner, it doesn't show.
-- Shots at 854 by 480 and 1920 by 1080: the radial menu with its line, at GUI scale 4 too.
+  (the driver's `screenbox`) in `checks.log`; and the radial menu with its line at 1920 by 1080, GUI scales 2 and 4,
+  and at 854 by 480 with "Single" under the pointer, the line's window box in `checks.log`.
 
 `own.sh`, the player's own worlds (0.10.0), with the dev server stopped: Planner1's game opens a copy of the dev
 server's world from its `saves` folder (`start_client 1 "" "" --quickPlaySingleplayer own`), then opens it to LAN
@@ -3525,13 +3525,15 @@ that port. The copy has cheats off, as a dedicated server makes a world, so in t
 runs its command on the game's own server, with an operator's permissions; what the world holds is checked there
 with the script's `world_has`, whose `/execute if block` answers in Planner1's log. It checks:
 
-- Planner1's game starts a session from the world's `hello`.
+- Planner1's game starts a session from the world's `hello`, and its radial menu shows "Building Planner" in its
+  corner and no line above it.
 - A Line of 4 oak planks draws 4 ghost blocks and places no real block; Ctrl+Z takes them back, and Ctrl+Y draws them
   again; no place, break, undo or redo packet of Effortless Building's leaves the game.
 - With "Place real blocks" on, a Line of 4 oak planks places 4 real ones and no ghost block.
 - A real oak plank Planner1 places by hand into a ghost oak plank, in Disable, removes it.
-- With the world open to LAN, Planner2's game starts a session and shows Planner1's ghost blocks, and a Line Planner2
-  draws reaches Planner1 glowing with Planner2's name.
+- With the world open to LAN, Planner2's game starts a session, its radial menu shows no line above "Building
+  Planner", and it shows Planner1's ghost blocks; a Line Planner2 draws, between the players and Planner1's Line (an
+  aim through ghost blocks lands on them), reaches Planner1 glowing with Planner2's name.
 - After Planner1 leaves the world, the area's file is in
   `saves/own/building-planner/layer/minecraft/overworld/`, Planner1's game folder has no
   `config/buildingplanner.properties`, and when the world opens again, its ghost blocks show and the placements of two
@@ -3539,9 +3541,6 @@ with the script's `world_has`, whose `/execute if block` answers in Planner1's l
   `schematics/Building Planner/`, stay.
 - Shots at 854 by 480 and 1920 by 1080, GUI scale 2, from a few blocks back in Disable: Planner1's ghost blocks in its
   own world, and with Planner2's Line beside them in the LAN world, each with its screen box in `checks.log`.
-
-The checks proposed for build step 7: Planner1's radial menu in its own world, and Planner2's in the LAN world, don't
-show the line above "Building Planner".
 
 `JoinRuleTest` covers the rule at joining: a server that takes none of the ten payloads (a local session), the game's
 own world and a server that takes some or all of them (waiting for `hello`), a `hello` of this version whatever runs
@@ -3557,7 +3556,7 @@ the current list following the `hello`, none at first, and a list saved and a co
 on kept in the player's folder and read back at the next join, where the saved list opens. `LocalFoldersTest` covers the folders: each `:` turned into `_`, a Realm, an address that can't be a
 folder's name, and two players' UUIDs in two folders. `LayerFilesTest` covers a layer with a folder that can't be
 listed (one past the longest path the system takes) failing the read, which leaves the server part off.
-As proposed, `RadialLineTest` covers the radial menu line's row on screens 240, 256, 257 and 270 high.
+`RadialLineTest` covers the radial menu line's row on screens 240, 256, 257 and 270 high.
 
 The copy's placement has unit tests as pure functions. `CopyPlacementTest` covers the copy against each of the six
 faces, with sides of odd and even lengths, the origin for each turn and mirror filling the turned box, and a turn or
@@ -3839,7 +3838,7 @@ debug line; 115 and 168 ms in two earlier runs that placed 1,998 and 1,995 of th
   are made of several items (a double slab, candles, sea pickles, snow layers, turtle eggs, pink petals), each to be
   listed from the 26.3 jar's block state properties; and that a paste's context, the top face with a hit at each
   block's bottom middle, gives each block of a copy its own state once S2 turns it.
-- Servers without Building Planner (0.10.0, partly built), each not run unless it says so:
+- Servers without Building Planner (0.10.0), each not run unless it says so:
   - That `ClientPlayNetworking.canSend` at joining (`ClientPlayConnectionEvents.JOIN`) already knows every channel a
     server running Building Planner takes, so no such server starts a local session: seen on the dev server, where no
     game with the add-on started one in `step8.sh`'s run, but not on a server behind a proxy; a `hello` that arrives
@@ -3855,11 +3854,6 @@ debug line; 115 and 168 ms in two earlier runs that placed 1,998 and 1,995 of th
   - That hook L7's two wraps in `renderOverlay` read the neighbour's position: the second `BlockPos.MutableBlockPos`
     is the neighbour's at both calls in the local variable table of Litematica's jar; `local.sh` reads a block's own
     mark through the driver's `overlay`, which applies the same rule, and its shots show the marks drawn.
-  - That Fabric API's server events and networking (`ServerLifecycleEvents`, `ServerPlayConnectionEvents`,
-    `ServerPlayNetworking`) work on the game's own server, for the player's own game and for LAN guests, as on a
-    dedicated server: expected from Fabric API, not run with Building Planner.
-  - The radial menu line's row: Effortless Building's `RadialMenu.drawTexts` read in its source (branch `26.3`), not
-    drawn in the game.
 - How Freecam 1.5.1 stops a right click while "Allow interaction" is off, and that `Aim` can read the option by
   reflection, as it reads "Player control"; its source wasn't read for either.
 - That every orientation property `BlockTurn` stores is a separate property from the one a two-part block uses for its

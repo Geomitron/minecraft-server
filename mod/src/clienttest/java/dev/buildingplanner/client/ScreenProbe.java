@@ -14,6 +14,7 @@ import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsList;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsScreen;
+import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 
@@ -195,6 +196,27 @@ public final class ScreenProbe {
 		for (Drawn d : last) {
 			if (d.y() == screen.height - 10 && d.x() + d.width() == screen.width - 4) {
 				return d.text() + " | " + box(scale, d.x(), d.y(), d.x() + d.width(), d.y() + FONT_HEIGHT);
+			}
+		}
+		return "none";
+	}
+
+	/**
+	 * The radial menu's line above its name as the last frame drew it (hook E42, during a local session): its text, " | ",
+	 * its row and the gap from its end to the screen's right edge, in the GUI's units, " | ", its window box (left top
+	 * right bottom), and " | " and the strings the frame drew one row below it, separated by " / ", or none; or none.
+	 */
+	static String radialLine(Minecraft mc) {
+		String text = I18n.get("buildingplanner.ui.radial.local");
+		Screen screen = mc.gui.screen();
+		double scale = mc.getWindow().getGuiScale();
+		for (Drawn d : last) {
+			if (d.text().equals(text)) {
+				String below = last.stream().filter(other -> other.y() == d.y() + 10).map(Drawn::text)
+					.collect(Collectors.joining(" / "));
+				return d.text() + " | " + d.y() + " " + (screen.width - d.x() - d.width()) + " | "
+					+ box(scale, d.x(), d.y(), d.x() + d.width(), d.y() + FONT_HEIGHT) + " | "
+					+ (below.isEmpty() ? "none" : below);
 			}
 		}
 		return "none";
