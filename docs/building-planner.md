@@ -1375,8 +1375,9 @@ nothing, still fixes the first copy while the copy is red; the second click is t
 Turning and mirroring set the placement's rotation and mirror, which Litematica applies mirror first, then rotation;
 the mirror combines its flip with the turn already set, and the origin then moves so the copy keeps its place (see
 "Where the copy sits"). The radial menu's Paste button brings the most recent copy back to the aim, unlocked, as it was
-turned and mirrored, in the mode the player last set; with no copy since the player joined, it gives the message
-"Nothing to paste. Use Copy first.". Leaving the server or changing dimension drops the most recent copy.
+turned and mirrored, in the mode the player last set; with no copy since the game started, it gives the message
+"Nothing to paste. Use Copy first.". Leaving the server, joining another and changing dimension put the copy away, as
+Litematica clears its placements then, and keep it while the game runs (see "Between servers").
 
 #### Satisfactory's controls
 
@@ -2504,9 +2505,9 @@ As proposed for 0.10.0, in the player's own world, Building Planner's server par
 
 ### Servers without Building Planner
 
-Proposed for 0.10.0. Built so far (build steps 1 to 4): which servers start a local session, the local server, the
+Proposed for 0.10.0. Built so far (build steps 1 to 5): which servers start a local session, the local server, the
 files, undo and redo, ghost blocks a real block fills, what needs a server that runs Building Planner, Litematica's
-extra blocks, and the material lists on the computer; the rest is proposed. Geo wants Building Planner to work as a client-side mod on other servers, where other
+extra blocks, the material lists on the computer, and the copy between servers; the rest is proposed. Geo wants Building Planner to work as a client-side mod on other servers, where other
 people don't need to see the player's ghost blocks (comment c4 on 1359), and picked "Yes, in a later version: there,
 your ghost blocks are saved on your computer and only you see them, and this server still shares them." (1368 Q1 A).
 Shapes place real blocks only on servers that run Building Planner (1368 Q2 A). For the player's own worlds, Geo picked
@@ -2595,9 +2596,10 @@ alone, except:
 
 **Between servers.** The copy stays while the game runs: leaving a server, joining another and changing dimension don't
 drop it, on this server too, so a player can copy ghost blocks and real blocks on one server and paste them as
-ghost blocks on another (1375 Q1 A). The ghost blocks saved for a server stay in its
-folder, unused, while that server runs Building Planner, and show again if it stops running it (1375 Q2
-A).
+ghost blocks on another (1375 Q1 A). `ClientSession` keeps the copy's `Clipboard` in a static field, as it keeps
+the copy's mode, so the copy outlasts the session; a change of level and the session's end put it away. The ghost
+blocks saved for a server stay in its folder, unused, while that server runs Building Planner, and show again if it
+stops running it (1375 Q2 A).
 
 **This server.** On a server that runs Building Planner, 0.10.0 works as 0.9.0 does: the layer is shared, and the
 server keeps the lists. 0.10.0 changes nothing the server does and keeps protocol version 5, so a 0.9.0 game and a
@@ -3495,6 +3497,13 @@ Real blocks are checked on the server with the script's `server_has`. It checks:
 - Litematica's extra blocks (hook L7, the driver's `overlay`): two placements of Planner1's own, empty plans of 3 by 3
   laid on the ground (the driver's `oldplans`), mark the real grass in them as extra, and the ground under the Lines'
   ghost blocks, in a tile's box alone, isn't marked.
+- The copy between servers, with Planner1's game running throughout and the server stopping under it: before the
+  first restart, Planner1 draws a ghost oak plank in the shared layer of the server with Building Planner. With the
+  server restarted with Building Planner, Planner1 sees that plank without its local ghost blocks; a copy there, with
+  the radial menu's Copy button and three clicks, of the plank and a real stone beside it holds both, and stays, put
+  away, through a trip to the Nether. With the server restarted without Building Planner again, the local ghost blocks
+  show and the shared plank doesn't, the copy is still there, and the Paste button and a right click paste it as a
+  ghost oak plank and a ghost stone, with no real block on the server.
 - Shots at 854 by 480 and 1920 by 1080, GUI scale 2, from a few blocks back in Disable: Planner1's ghost blocks on the
   server without the add-on, and Planner1's two placements with their extra blocks marked, each with its screen box
   (the driver's `screenbox`) in `checks.log`.
@@ -3504,10 +3513,6 @@ The checks proposed for the later build steps of 0.10.0 (the checks follow the o
 - With the radial menu open, the line above "Building Planner" shows at the row E42 records: one row above the name at
   1920 by 1080, GUI scales 2 and 4, and a row above a hovered mode's description at 854 by 480, GUI scale 2. With the
   server restarted with Building Planner, it doesn't show.
-- A copy of ghost blocks and real blocks taken on the server with Building Planner pastes as ghost blocks on Planner1's
-  client after the server restarts without it, and the copy stays through a change of dimension.
-- With the server restarted with Building Planner, Planner1 sees the shared ghost blocks without its own local ones;
-  restarted without it again, its local ghost blocks show.
 - Shots at 854 by 480 and 1920 by 1080: the radial menu with its line, at GUI scale 4 too.
 
 `own.sh`, the player's own worlds (proposed for 0.10.0; the checks follow the options the request recommends), with

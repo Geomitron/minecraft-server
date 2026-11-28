@@ -68,7 +68,12 @@ final class ClientSession {
 	private final Tiles tiles;
 	private final SelfCheck check;
 	private final LayerReplica replica;
-	private final Clipboard clipboard = new Clipboard();
+	/**
+	 * The player's most recent copy, which stays while the game runs, across sessions, servers and dimensions, as the
+	 * copy's mode does (see "Servers without Building Planner": "Between servers"); a change of level and the
+	 * session's end put it away.
+	 */
+	private static final Clipboard clipboard = new Clipboard();
 	/** The build modes' lock on the first click's position (see "Locking and the first click"). */
 	private final ShapeLock lock = new ShapeLock();
 	/** The player's recent pastes in this dimension, which the copy snaps to. */
@@ -186,14 +191,16 @@ final class ClientSession {
 		return link;
 	}
 
-	/** The game's level changed; Litematica clears every placement then, the tiles among them. */
+	/**
+	 * The game's level changed; Litematica clears every placement then, the tiles among them, so the copy is put away.
+	 */
 	void levelChanged(Identifier dimension) {
 		removeOldPlans = !link.local();
 		replica.levelChanged(dimension);
 		check.clear();
 		box.end();
 		endDelete();
-		clipboard.clear();
+		clipboard.putAway();
 		lock.unlock();
 		pastes.clear();
 		glow.clear();
@@ -507,7 +514,7 @@ final class ClientSession {
 	void close() {
 		box.end();
 		endDelete();
-		clipboard.clear();
+		clipboard.putAway();
 		lock.unlock();
 		tiles.clear();
 		check.clear();

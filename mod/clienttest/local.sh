@@ -8,7 +8,10 @@
 # doesn't act: in Disable, Left Ctrl with the wheel changes the hotbar slot, a stair placed into a ghost stair with
 # "Match ghost blocks" on faces as Minecraft places it, and with "Place real blocks" on a Line draws ghost blocks; and a
 # Litematica placement of Planner1's own marks extra blocks, while the tiles mark none; a box counted for a material
-# list, saved, with the panel on, comes back after a rejoin. Real blocks are checked on the server with server_has.
+# list, saved, with the panel on, comes back after a rejoin. With the server restarted with Building Planner, Planner1
+# sees the shared ghost blocks without its local ones, and a copy there of ghost and real blocks stays through a trip
+# to the Nether and, with the server restarted without it again, pastes as ghost blocks where the local ghost blocks
+# show again. Real blocks are checked on the server with server_has.
 # Sourced by inside.sh, which provides drv, val, check, xdo, click, keys, use_click, attack_click, client_said,
 # wait_for, start_server, stop_server, start_client, stop_client and $ADDON.
 
@@ -77,6 +80,12 @@ switch_setting() {
 no_planner_payload() {
 	[[ $(val "$1" bpsent) == none ]]
 }
+
+# A ghost oak plank in the shared layer of the server with Building Planner, at 80 -60 80, for the checks of the copy
+# between servers at the end.
+drv 1 "await noscreen" "await session" "cmd tp @s 80.5 -60 77.5 0 30" "await loaded minecraft:overworld 80 80" \
+	"wait 20" "edit 80 -60 80 80 -60 80 minecraft:oak_planks" "await block 80 -60 80 minecraft:oak_planks" "wait 20" \
+	> /dev/null
 
 # The dev server again, with the add-on left off its classpath, and with spawn protection, which the dev server is
 # otherwise without, so it refuses a block Planner2, who isn't an operator, places near the world's spawn.
@@ -333,3 +342,65 @@ check "the panel shows it again" eval '[[ $(val 1 matpanel) == "$panel" ]]'
 check "and \"Line\" and \"Last counted\" are among the lists" eval \
 	'[[ $(val 1 listindex) == "last counted 4x2x1 | Line 4x2x1" ]]'
 echo "  the lists after the rejoin: $(val 1 listindex)" >> /out/checks.log
+
+# The copy between servers, kept while the game runs, which goes on throughout, the server stopping under it each time.
+# With the server restarted with Building Planner, Planner1 sees the shared ghost oak plank drawn at the start, without
+# its local ghost blocks; a copy there of that plank and a real stone beside it stays, put away, through a trip to the
+# Nether, and, with the server restarted without Building Planner again, where the local ghost blocks show again and
+# the shared plank doesn't, the radial menu's Paste button brings it back and a right click pastes it as ghost blocks.
+# copy_box <ax ay az> <x2 z2> <y3>: the radial menu's Copy button, then the box's three clicks: the first corner where
+# the player aims, the opposite one on its level, and the height.
+copy_box() {
+	radial_button Copy
+	drv 1 "lookat $1 $2 $3" "wait 5" > /dev/null
+	attack_click 1
+	drv 1 "lookat $(half "$4") $2 $(half "$5")" "wait 5" > /dev/null
+	attack_click 1
+	drv 1 "lookat $(half "$4") $(half "$6") $(half "$5")" "wait 10" > /dev/null
+	attack_click 1
+	drv 1 "wait 10" > /dev/null
+}
+# near_both: Planner1 stands where its game has the columns of 20 -60 20 and 80 -60 80.
+near_both() {
+	drv 1 "cmd tp @s 50.5 -60 46.5 0 30" "await loaded minecraft:overworld 20 20" \
+		"await loaded minecraft:overworld 80 80" "wait 40" > /dev/null
+}
+stop_server server-without-addon
+check "with the server restarted with Building Planner, Planner1's game starts its session at a rejoin" eval \
+	'start_server "" server-with-addon && grep -qF "Building Planner loaded" /out/server-with-addon.log &&
+	drv 1 "join localhost:25565" "await session" "await noscreen" > /dev/null && [[ $(val 1 sessionkind) == server ]]'
+near_both
+check "and Planner1 sees the shared ghost oak plank, without its local ghost blocks" eval \
+	'drv 1 "await block 80 -60 80 minecraft:oak_planks" > /dev/null && [[ $(val 1 "layer 20 -60 20") == minecraft:air ]]'
+drv 1 "cmd setblock 81 -60 80 minecraft:stone" "cmd tp @s 80.5 -60 77.5 0 30" "await real 81 -60 80 minecraft:stone" \
+	"wait 20" > /dev/null
+copy_box 80.5 -59 80.5 81 80 -60
+check "a copy of the shared ghost oak plank and a real stone beside it holds both" eval \
+	'[[ $(val 1 copy) == "at "*" NONE NONE unselected 2 blocks" ]]'
+check "and stays through a trip to the Nether, put away" eval \
+	'drv 1 "cmd execute in minecraft:the_nether run tp @s 80 70 80" "await loaded minecraft:the_nether 80 80" "wait 20" \
+	> /dev/null && [[ $(val 1 copy) == "away NONE NONE unselected 2 blocks" ]]'
+drv 1 "cmd execute in minecraft:overworld run tp @s 80.5 -60 77.5 0 30" "await loaded minecraft:overworld 80 80" \
+	"wait 20" > /dev/null
+stop_server server-with-addon
+server_log=/out/server-without-addon-again.log
+check "with the server restarted without Building Planner again, Planner1's game starts a local session at a rejoin" \
+	eval 'start_server "$ADDON" server-without-addon-again && ! grep -qF "Building Planner loaded" "$server_log" &&
+	drv 1 "join localhost:25565" "await session" "await noscreen" > /dev/null && [[ $(val 1 sessionkind) == local ]]'
+near_both
+check "where its local ghost blocks show again, and the shared plank doesn't" eval \
+	'drv 1 "await block 20 -60 20 minecraft:oak_planks" > /dev/null && [[ $(val 1 "layer 80 -60 80") == minecraft:air ]]'
+check "and the copy is still there, put away" eval '[[ $(val 1 copy) == "away NONE NONE unselected 2 blocks" ]]'
+drv 1 "cmd tp @s 90.5 -60 77.5 0 30" "await loaded minecraft:overworld 90 80" "wait 20" > /dev/null
+radial_button Paste
+aim 1 90 -60 80
+drv 1 "wait 10" > /dev/null
+spot=$(val 1 copy)
+echo "  the copy the Paste button brought to the aim: $spot" >> /out/checks.log
+read -r px py pz < <(sed -E 's/^at ([-0-9]+),([-0-9]+),([-0-9]+)[.][.].*/\1 \2 \3/' <<< "$spot")
+use_click 1
+check "the Paste button brings it to the aim, and a right click pastes it as ghost blocks: the oak plank and the stone" \
+	eval '[[ $spot == "at "* ]] && drv 1 "await block $px $py $pz minecraft:oak_planks" > /dev/null &&
+	[[ $(val 1 "layer $px $py $pz") == minecraft:oak_planks && $(val 1 "layer $((px + 1)) $py $pz") == minecraft:stone ]]'
+check "and places no real block on the server" eval \
+	'! server_has "$px" "$py" "$pz" minecraft:oak_planks && ! server_has "$((px + 1))" "$py" "$pz" minecraft:stone'
