@@ -856,7 +856,7 @@ step 5's last build. The in-game checks of real blocks are in `real.sh`, which s
    and the pack (see "Current setup"), with the guide's new sentences in Geo's wording.
 
 **Building Planner 0.10.0** (the bullet "Building Planner 0.10.0" in "Decisions" above: Geo's comment c4 on 1359,
-1368 Q1 A and Geo's answers in 1374, 1375 and 1381). "Servers without Building Planner" in
+1368 Q1 A and Geo's answers in 1374, 1375, 1381 and 1453). "Servers without Building Planner" in
 [building-planner.md](building-planner.md) is the design, with every choice answered. The steps start once 0.9.0 is
 released. 0.10.0 keeps protocol version 5 and changes nothing this server does.
 
@@ -895,10 +895,10 @@ checks that need both kinds of server. Those of the player's own worlds are in `
    (`--quickPlaySingleplayer`) and to LAN (the driver's `lan`), with Planner2's game joining it at that port. Done when
    `JoinRuleTest` covers the game's own world waiting for `hello`, `own.sh`'s checks pass, and `step6.sh`, `filled.sh`
    and `real.sh` pass unchanged.
-7. **The line in the radial menu** (in "What works there"). Hook E42, `RadialLine`, and the line's key in the language file. Done when `RadialLineTest`
-   covers the row on screens 240, 256, 257 and 270 high, `local.sh`'s checks of the line and `own.sh`'s checks that it
-   doesn't show pass, and `step10.sh`'s radial menu checks pass unchanged, with the line reading "(client only)" (1381 c1)
-   until Geo's wording from step 8.
+7. **The line in the radial menu** (in "What works there"). Hook E42, `RadialLine`, and the line's key in the language
+   file. Done when `RadialLineTest` covers the row on screens 240, 256, 257 and 270 high, `local.sh`'s checks of the
+   line and `own.sh`'s checks that it doesn't show pass, and `step10.sh`'s radial menu checks pass unchanged, with the
+   line reading "(client only)" (1381 c1; 1453).
 8. **Texts and screenshots for Geo**: the radial menu's line and the player guide's sentences on other servers and on
    the player's own worlds go to Geo as editable text, with every step's screenshots, the changes outlined in red, each
    text following the rule Geo approved for the game's texts (985 Q1 A; 1313). Geo's version is built in, `local.sh`

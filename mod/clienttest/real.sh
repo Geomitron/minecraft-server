@@ -1,4 +1,4 @@
-# "Place real blocks" (proposed for 0.9.0): the setting's row in "Settings", saved by its "Save" button, and what lands
+# "Place real blocks" (0.9.0): the setting's row in "Settings", saved by its "Save" button, and what lands
 # on the server. Each shape is drawn and placed, and each copy pasted, with Planner1's own clicks while the setting
 # acts; a few checks send boxes of blocks with the driver's sendplace instead. With Planner1 in survival, its inventory
 # set with /clear and /item: the controls lines reading as with the setting off, Ctrl+Z and Ctrl+Y after a ghost shape
