@@ -287,6 +287,7 @@ Minecraft 26.3, read in the client jar Loom maps (`minecraft-clientonly-deobf-26
 | M5 | `MouseHandler.java`, `onScroll(long, double, double)` | `@WrapWithCondition` on `Inventory.setSelectedSlot`, reading the local `wheel` | While the copy is at the aim, each notch of the wheel turns the copy a quarter turn, instead of changing the hotbar slot: clockwise seen from above for a notch up, counterclockwise for a notch down, as Satisfactory's wheel turns a hologram. While the turning controls are active (every mode, Disable's as "Turning real blocks in Disable" describes), with a block in hand that turns and Minecraft's sprint key held, each notch turns the block the same way. The method reaches that call only with no screen open and the player not a spectator. |
 | M7 | `KeyboardHandler.java`, `keyPress` | `@WrapWithCondition` on its call to `Minecraft.pauseGame(boolean)`, which it makes for Esc with no screen open | During a session, Esc takes the next step out of Building Planner's and Effortless Building's modes (`EscSteps`) and doesn't pause; with no step left, it pauses as usual (see "Esc"). The game's other calls to `pauseGame` (when the window loses focus) stay as they are. |
 | M8 | `gui/Hud.java`, `extractSelectedItemName` | `@ModifyArg` on the `y` of `GuiGraphicsExtractor.textWithBackdrop` | While Building Planner draws a line above the hotbar, the held item's name draws 2 above the top of its highest row instead of over it (see "The build mode's name and the held item's name"). |
+| M10 | `Minecraft.java`, `disconnect(Screen, boolean, boolean)` | `@Inject` at head | The session ends, and a local session writes its files, on the render thread before the game drops its queued tasks and takes the level away. Every leave runs it: the player's own (`disconnectFromWorld`) and the one after the server closes the connection (`ClientCommonPacketListenerImpl.onDisconnect`). |
 
 The hooks go by Minecraft's attack, use and pick block keys, so a player who moves one of them to another button finds
 the copy's controls there too. Effortless Building's own hooks into `startUseItem`, `startAttack` and
@@ -335,10 +336,11 @@ Fabric API: `PayloadTypeRegistry` (`registerLarge` for column snapshots), `Serve
 `ClientChunkEvents` (`CHUNK_LOAD`, `CHUNK_UNLOAD`), `ClientLevelEvents.AFTER_CLIENT_LEVEL_CHANGE`,
 `ServerEntityLevelChangeEvents.AFTER_PLAYER_CHANGE_LEVEL`, `HudElementRegistry` (the mix panel) and
 `KeyMappingHelper`. Both sides' payload handlers run on the main thread (server thread, render thread), which the
-ordering below relies on. `ClientPlayConnectionEvents.DISCONNECT` runs on the network thread when the server closes
-the connection (Fabric API's mixin at the head of `Connection.channelInactive`), so the game ends the session on the
-render thread (`Minecraft.execute`), which reads it every frame. Fabric splits a payload registered with `registerLarge` into packets of at most 1 MiB to
-players and joins them on arrival.
+ordering below relies on. `ClientPlayConnectionEvents.DISCONNECT` runs on the network thread as the connection closes
+(Fabric API's mixin at the head of `Connection.channelInactive`), so the game queues the session's end for the render
+thread (`Minecraft.execute`), which reads the session every frame. `Minecraft.disconnect` drops the queued tasks, so
+hook M10 ends the session at its head as well. Fabric splits a payload registered with `registerLarge` into packets
+of at most 1 MiB to players and joins them on arrival.
 
 ### Tiles: how Litematica draws the layer
 

@@ -196,9 +196,9 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 				}
 			}
 		});
-		// Fabric API fires DISCONNECT on the network thread when the server closes the connection (at the head of
-		// Connection.channelInactive), so the session ends on the render thread, which reads it every frame; a leave on
-		// the render thread ends it at once.
+		// Fabric API fires DISCONNECT on the network thread as the connection closes (at the head of
+		// Connection.channelInactive), so the session ends on the render thread, which reads it every frame. A leave
+		// through Minecraft.disconnect drops the queued end with the game's other tasks, so hook M10 ends it there.
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) ->
 			client.execute(BuildingPlannerClient::endSession));
 		ClientLifecycleEvents.CLIENT_STOPPING.register(client -> endSession());
@@ -384,6 +384,11 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		ClientSession now = session;
 		return now == null ? JoinRule.Session.NONE
 			: now.link().local() ? JoinRule.Session.LOCAL : JoinRule.Session.SERVER;
+	}
+
+	/** Hook M10: the game leaves the server or its own world, on the render thread, so the session ends. */
+	public static void disconnecting() {
+		endSession();
 	}
 
 	/** Ends the session and any local session, whose files it writes. */

@@ -47,6 +47,7 @@
 		"minecraft.HudMixin",
 		"minecraft.KeyboardHandlerMixin",
 		"minecraft.LevelMixin",
+		"minecraft.MinecraftDisconnectMixin",
 		"minecraft.MinecraftMouseModeMixin",
 		"minecraft.MinecraftUseItemMixin",
 		"minecraft.MouseHandlerMixin",
