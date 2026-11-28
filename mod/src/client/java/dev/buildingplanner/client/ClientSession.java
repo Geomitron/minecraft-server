@@ -653,17 +653,20 @@ final class ClientSession {
 
 	/**
 	 * Brings a saved copy to the aim, unlocked, as it was copied, in the copy's mode, in place of any copy: {@code blocks}
-	 * by their position from its lowest corner. It starts two blocks in front of the player's feet, where it stays until
-	 * the aim reaches a block.
+	 * by their position from its lowest corner. It starts on the player's level, its near side two blocks in front of
+	 * their feet, whichever way they face ({@link CopyPlacement#inFront}), where it stays until the aim reaches a block.
 	 */
 	void bringSaved(Map<BlockPos, BlockState> blocks) {
 		LocalPlayer player = Minecraft.getInstance().player;
-		if (player == null) {
+		if (player == null || blocks.isEmpty()) {
 			return;
 		}
-		BlockPos start = player.blockPosition().relative(player.getDirection(), 2);
+		BlockPos min = blocks.keySet().stream().reduce(BlockPos::min).orElseThrow();
+		BlockPos max = blocks.keySet().stream().reduce(BlockPos::max).orElseThrow();
+		BlockPos start = CopyPlacement.inFront(player.blockPosition(), player.getDirection(),
+			CopyPlacement.Spot.between(min, max).size()).min();
 		Map<BlockPos, BlockState> placed = new LinkedHashMap<>();
-		blocks.forEach((pos, state) -> placed.put(pos.offset(start), state));
+		blocks.forEach((pos, state) -> placed.put(pos.subtract(min).offset(start), state));
 		clipboard.place(placed);
 		followAim();
 	}

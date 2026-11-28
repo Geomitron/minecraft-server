@@ -919,8 +919,8 @@ checks that need both kinds of server. Those of the player's own worlds are in `
    (1461 Q2 A) and the pack (see "Current setup"), with the guide's new sentences in Geo's wording.
 
 **Building Planner 0.11.0** (the bullet "Saved copies" in "Decisions" above: Geo's comment on 1375 Q1 and the answers
-in 1384). "Saved copies" in [building-planner.md](building-planner.md) is the design. 0.11.0 starts once 0.10.0 is
-released, keeps protocol version 5, and changes nothing the server does.
+in 1384 and 1464). "Saved copies" in [building-planner.md](building-planner.md) is the design. 0.11.0 starts once
+0.10.0 is released, keeps protocol version 5, and changes nothing the server does.
 
 The steps come in this order, each needing the one before it, and each small enough for one child. 0.8.0's rules for
 commits, screenshots, the spec's "In-game checks" and the full set of in-game scripts apply; the full set runs once,

@@ -3,6 +3,7 @@ package dev.buildingplanner.client;
 import dev.buildingplanner.plan.CopyHistory;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -175,11 +176,12 @@ final class SavedCopiesScreen extends Screen {
 		}
 	}
 
-	/** The row's second line: the copy's size and its number of blocks. */
+	/** The row's second line: the copy's size and its number of blocks, with digit grouping ("81,920"). */
 	private static Component details(CopyHistory.Saved row) {
 		Component size = ListTexts.size(row.size());
 		return row.blocks() == 1 ? Component.translatable("buildingplanner.ui.saved_copies.details_one", size)
-			: Component.translatable("buildingplanner.ui.saved_copies.details", size, row.blocks());
+			: Component.translatable("buildingplanner.ui.saved_copies.details", size,
+				String.format(Locale.US, "%,d", row.blocks()));
 	}
 
 	/** Each row, scrolled into view or not, as its name and its second line, for the in-game checks. */

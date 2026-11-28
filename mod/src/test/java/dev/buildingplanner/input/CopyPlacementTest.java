@@ -56,6 +56,41 @@ class CopyPlacementTest {
 	}
 
 	@Test
+	void showsInFrontOfThePlayerOnTheirLevelWhateverWayTheyFace() {
+		BlockPos feet = new BlockPos(10, 64, -20);
+		// Facing south, the near side is at z -18, two blocks on; x 3 wide has its middle on the feet's x.
+		assertEquals(spot(9, 64, -18, 11, 65, -15), CopyPlacement.inFront(feet, Direction.SOUTH, ODD_EVEN));
+		// Facing north, the near side is at z -22, and the copy reaches away from the player, to z -25.
+		assertEquals(spot(9, 64, -25, 11, 65, -22), CopyPlacement.inFront(feet, Direction.NORTH, ODD_EVEN));
+		// Facing east, from x 12; z 4 deep has the lower of its two middles on the feet's z.
+		assertEquals(spot(12, 64, -21, 14, 65, -18), CopyPlacement.inFront(feet, Direction.EAST, ODD_EVEN));
+		// Facing west, ending at x 8.
+		assertEquals(spot(6, 64, -21, 8, 65, -18), CopyPlacement.inFront(feet, Direction.WEST, ODD_EVEN));
+		// x 4 wide: the lower middle, 1 in; z 1 deep.
+		assertEquals(spot(9, 64, -18, 12, 68, -18), CopyPlacement.inFront(feet, Direction.SOUTH, EVEN_ODD));
+		assertEquals(spot(9, 64, -22, 12, 68, -22), CopyPlacement.inFront(feet, Direction.NORTH, EVEN_ODD));
+		assertEquals(spot(12, 64, -20, 15, 68, -20), CopyPlacement.inFront(feet, Direction.EAST, EVEN_ODD));
+		assertEquals(spot(5, 64, -20, 8, 68, -20), CopyPlacement.inFront(feet, Direction.WEST, EVEN_ODD));
+	}
+
+	@Test
+	void inFrontNeverCoversThePlayerOrTheBlockBeforeThem() {
+		BlockPos feet = new BlockPos(10, 64, -20);
+		for (Direction facing : Direction.Plane.HORIZONTAL) {
+			for (Vec3i size : new Vec3i[] {new Vec3i(1, 1, 1), ODD_EVEN, EVEN_ODD, new Vec3i(64, 20, 64)}) {
+				Spot spot = CopyPlacement.inFront(feet, facing, size);
+				String name = facing + " " + size;
+				assertEquals(64, spot.min().getY(), name);
+				for (BlockPos clear : new BlockPos[] {feet, feet.above(), feet.relative(facing),
+					feet.relative(facing).above()}) {
+					assertTrue(!spot.contains(clear), name + " covers " + clear);
+				}
+				assertTrue(spot.contains(feet.relative(facing, 2)), name);
+			}
+		}
+	}
+
+	@Test
 	void neverOverlapsTheAimedBlockAndTouchesItsFace() {
 		for (Direction face : Direction.values()) {
 			for (Vec3i size : new Vec3i[] {ODD_EVEN, EVEN_ODD, new Vec3i(1, 1, 1), new Vec3i(6, 3, 7)}) {

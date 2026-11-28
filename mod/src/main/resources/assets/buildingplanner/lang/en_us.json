@@ -18,7 +18,7 @@
 	"buildingplanner.copy.done_one": "Copied 1 block.",
 	"buildingplanner.copy.done": "Copied %s blocks.",
 	"buildingplanner.paste.nothing": "Nothing to paste. Use Copy first.",
-	"buildingplanner.paste.unreadable": "That copy couldn't be read.",
+	"buildingplanner.paste.unreadable": "That copy couldn't be read, so it was removed.",
 	"buildingplanner.delete.done_one": "Erased 1 ghost block.",
 	"buildingplanner.delete.done": "Erased %s ghost blocks.",
 	"buildingplanner.place.short": "Nothing was placed (not enough blocks)",

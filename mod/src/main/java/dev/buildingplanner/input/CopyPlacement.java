@@ -92,6 +92,18 @@ public final class CopyPlacement {
 	}
 
 	/**
+	 * The box of a copy, {@code size} blocks once turned, where it shows while the player aims at no block (1464 Q1 A):
+	 * on the level of the player's feet {@code feet}, its near side two blocks in front of them in the horizontal
+	 * direction {@code facing} the player faces, and the middle of its width across that direction in line with the
+	 * feet, as a copy against a face has its middle on the block beside the face. It never covers the player's feet or
+	 * the block in front of them, whichever way the player faces.
+	 */
+	public static Spot inFront(BlockPos feet, Direction facing, Vec3i size) {
+		BlockPos min = againstFace(feet.relative(facing), facing, size).min();
+		return new Spot(min.atY(feet.getY()), size);
+	}
+
+	/**
 	 * The box of a copy turned or mirrored from {@code before} to {@code size} blocks, keeping the middle block where it
 	 * was, so it spins in place.
 	 */

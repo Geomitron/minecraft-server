@@ -283,6 +283,12 @@ public final class Driver implements ClientModInitializer {
 			case "copy" -> {
 				return copy();
 			}
+			case "feet" -> {
+				// feet: the block at the player's feet and the horizontal way they face, as "x y z north".
+				BlockPos feet = mc.player.blockPosition();
+				return feet.getX() + " " + feet.getY() + " " + feet.getZ() + " "
+					+ mc.player.getDirection().getSerializedName();
+			}
 			case "copymode" -> {
 				// copymode: the copy's mode, OFF, LINE, WALL or FLOOR.
 				return ClientSession.copyMode().name();

@@ -67,6 +67,7 @@ These are the keys for planning. You can change any of them in Controls, under t
 | H | "Lock or unlock" | Lock where your next click goes, or lock the copy in place. |
 | Arrow keys, Page Up, Page Down | "Nudge forward", "Nudge back", "Nudge left", "Nudge right", "Nudge up", "Nudge down" | Move what's locked by one block. |
 | R | "Change copy mode" | Switch the copy between Off, Line, Wall, and Floor. |
+| V | "Saved copies" | Open your saved copies. |
 | Ctrl+Z | "Undo" | Undo your newest change to the ghost blocks. |
 | Ctrl+Y | "Redo" | Redo the change you undid. |
 | F4 | "Toggle Freecam" | Fly the camera away from your character. |
@@ -179,7 +180,13 @@ With the copy at your aim:
 
 The copy snaps flush to the sides of your recent pastes. Hold Left Control to keep it in line with your latest paste. Its box shows blue where it will paste, yellow where it would replace ghost blocks (it still pastes), and red where it can't paste, with the reason above the hotbar.
 
-Choosing a build mode or another planning tool, showing or hiding ghost blocks, leaving the server, or changing dimension puts the copy away. Choose "Paste" in the radial menu to bring your latest copy back. It stays until you close the game, so you can copy on one server and paste on another.
+Choosing a build mode or another planning tool, showing or hiding ghost blocks, leaving the server, or changing dimension puts the copy away. Choose "Paste" in the radial menu to bring your latest copy back, on any server and after you restart the game.
+
+### Saved Copies
+
+Building Planner also saves each copy you make, so you can paste it again later, on any server or in your own worlds. It keeps your 10 most recent copies and deletes older ones. A copy you rename stays until you delete it, and doesn't count among the 10.
+
+Press V to open "Saved copies", which lists your copies, newest first, each named by the date and time you made it. "Paste" brings a copy to your aim, and "Rename" gives it a name of your own and keeps it. Your computer stores your saved copies, so another computer doesn't have them.
 
 ### Real Blocks
 

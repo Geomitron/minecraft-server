@@ -1451,9 +1451,10 @@ right hand pastes.
 **The screen.** "Saved copies" is laid out as "Saved lists" (`SavedListsScreen`): the title; under it the line "Your 10
 most recent copies stay here. Rename a copy to keep it.", wrapped in a window too narrow for it; and a row for each
 saved copy, newest first, with its name, under the name its size and its number of blocks ("12 × 5 × 8 · 120 blocks",
-or "1 × 1 × 1 · 1 block"), and the buttons "Paste", "Rename" and "Delete". With none, it says "No saved copies yet." Each row is as high as its two lines of text and its buttons, with
-the three buttons 50 wide at its right, in a width of up to 400. The mouse wheel scrolls the rows, and "Close" at the
-bottom right, like Escape, goes back to the game.
+"1 × 1 × 1 · 1 block", or with a comma from 1,000 on, "64 × 20 × 64 · 81,920 blocks"), and the buttons "Paste",
+"Rename" and "Delete". With none, it says "No saved copies yet." Each row is as high as its two lines of text and its
+buttons, with the three buttons 50 wide at its right, in a width of up to 400. The mouse wheel scrolls the rows, and
+"Close" at the bottom right, like Escape, goes back to the game.
 
 - "Paste" closes the screen and brings that copy to the aim as the radial menu's Paste button brings the most recent
   copy: it ends any mouse mode, and the copy comes unlocked, in the copy mode the player last set, turned and mirrored
@@ -1465,7 +1466,7 @@ bottom right, like Escape, goes back to the game.
 - "Delete" asks again ("Delete the copy "Hut"?", with "Delete" and "Cancel"), deletes the copy's files, and comes back
   to "Saved copies" either way. A copy at the aim stays there until the player puts it away or brings another.
 
-The screen's texts and the control are in the wording Geo approves in 0.11.0's texts step.
+The screen's texts and the control are in the wording Geo approved (1464).
 
 **After a restart.** The copy stays while the game runs (1375 Q1 A), and the saved copies outlast it: with no copy
 since the game started, the radial menu's Paste button brings the newest saved copy to the aim, as it was copied, and
@@ -1486,15 +1487,17 @@ which only the game's thread may do. `index.dat` is gzip-compressed NBT (`CopyIn
   milliseconds since 1970), `kept` (1 once it's renamed, and 0 before), `size` (x, y and z) and `blocks`.
 
 One background thread reads and writes the files, in order, each write through a temporary file and a rename: a copy's
-file as Copy makes it, the index after each change, and the file of a copy that's dropped or deleted removed
-once the index without them is written. It reads the index as the game starts, and a copy's file when the player picks
-it, which then comes to the aim, starting two blocks in front of the player's feet until the aim reaches a block. The
-next copy's file takes a number past every copy's file in the folder, so a copy whose index was lost isn't written
-over. A file that can't be read is logged as an error and renamed with `.unreadable` at its end: for the index, the
-game starts with no saved copies and leaves the copies' files in place; for a copy, it drops from the list, and the
-player gets the message "That copy couldn't be read.". A copy has at most the block cap's blocks (200,000 for an
-edit), since Copy refuses more, and its file is about the size of Litematica's own file of the same box. A copy that
-can't be written is logged as an error and isn't saved.
+file as Copy makes it, the index after each change, and the file of a copy that's dropped or deleted removed once the
+index without them is written. It reads the index as the game starts, and a copy's file when the player picks it, which
+then comes to the aim. Until the aim reaches a block, it shows on the player's level, its near side two blocks in front
+of their feet and the middle of its width in line with them, whichever way they face, so it never covers the spot where
+they stand (1464 Q1 A; `CopyPlacement.inFront`). The next copy's file takes a number past every copy's file in the
+folder, so a copy whose index was lost isn't written over. A file that can't be read is logged as an error and renamed
+with `.unreadable` at its end: for the index, the game starts with no saved copies and leaves the copies' files in
+place; for a copy, it drops from the list, and the player gets the message "That copy couldn't be read, so it was
+removed.". A copy has at most the block cap's blocks (200,000 for an edit), since Copy refuses more, and its file is
+about the size of Litematica's own file of the same box. A copy that can't be written is logged as an error and isn't
+saved.
 
 `SavedCopies` (client) owns the list and the background thread, outside the session, so the list stays across
 servers as the copy does. `SavedCopiesScreen` and `RenameCopyScreen` are the two screens, and `ControlsLine.copy` adds
@@ -3550,8 +3553,10 @@ listed (one past the longest path the system takes) failing the read, which leav
 `RadialLineTest` covers the radial menu line's row on screens 240, 256, 257 and 270 high.
 
 The copy's placement has unit tests as pure functions. `CopyPlacementTest` covers the copy against each of the six
-faces, with sides of odd and even lengths, the origin for each turn and mirror filling the turned box, and a turn or
-mirror keeping the middle block. `PasteBoxesTest` covers snapping: flush against each face of a paste's box at the
+faces, with sides of odd and even lengths, the origin for each turn and mirror filling the turned box, a turn or
+mirror keeping the middle block, and a saved copy shown while the aim reaches no block on the player's level, its near
+side two blocks in front of their feet, facing each way, never covering their feet, the block above them or the block
+before them. `PasteBoxesTest` covers snapping: flush against each face of a paste's box at the
 corner nearest the aim, the most recent paste winning, only 16 kept, each copy of a row a paste of its own, and the guide line along a row and a column on the
 latest paste's level.
 
@@ -3577,8 +3582,8 @@ only then.
 `saved.sh`, saved copies, on the dev server, with the server restarted without the add-on for the check between
 servers, through Planner1's own presses and clicks on the screens. The driver reads the game's list (`savedcopies`),
 the open screen's rows (`copyrows`), `index.dat` as plain NBT (`copyindex`), the copies' folder (`copyfiles`) and a
-copy's file through Litematica's own reader (`copyschematic`); it copies a box as Copy's third click does (`copybox`),
-and its `bindkey` rebinds the key:
+copy's file through Litematica's own reader (`copyschematic`) and the player's feet and facing (`feet`); it copies a
+box as Copy's third click does (`copybox`), and its `bindkey` rebinds the key:
 
 - A copy of a hut's corner of oak planks, with a door and a wall torch, made with the radial menu's Copy button and
   three real left clicks, puts `1.litematic` and `index.dat` in `building-planner/copies/<Planner1's UUID>/`, the index
@@ -3599,10 +3604,12 @@ and its `bindkey` rebinds the key:
   the aim, unlocked and unturned, still in Line; a right click in Off pastes it, its door and torch facing as copied,
   and Planner2 sees its blocks; Escape puts it away, and the radial menu's Paste button then brings the hut back. The
   pick, the turn and the paste change no saved copy.
+- With Planner1 looking up at the sky, facing south, west, north and east in turn, "Paste" on the Hut's row shows it
+  on Planner1's level, its near side two blocks in front of their feet and the middle of its width in line with them.
 - "Delete" on the Hut's row asks "Delete the copy "Hut"?"; "Cancel" leaves it, and "Delete" removes its row and its
-  file, and the copy at the aim stays. A copy's `.litematic` cut short drops from the list and the index when "Paste"
-  on its row picks it, with the message "That copy couldn't be read.", and is renamed with `.unreadable`, the game
-  logging an error.
+  file, and the copy at the aim stays. A copy's `.litematic` cut short drops from the list and the index when "Paste" on
+  its row picks it, with the message "That copy couldn't be read, so it was removed.", and is renamed with
+  `.unreadable`, the game logging an error.
 - V during a box for Copy opens the screen, "Close" goes back to the game with the box still drawn, and "Paste" on
   the newest row ends the box and brings that copy to the aim.
 - After Planner1's game restarts, the rows come back, and with no copy since the game started, the radial menu's Paste
@@ -3610,13 +3617,14 @@ and its `bindkey` rebinds the key:
 - With the server restarted without the add-on, Planner1's local session shows the same rows, and a saved copy pasted
   from the screen there pastes as a ghost block and no real block.
 - With the game stopped, an unreadable `index.dat` is renamed with `.unreadable` at the next start, which has no saved
-  copies, the screen saying "No saved copies yet.", and leaves the copies' files, logging an error; the next copy's
-  file takes 13, past the files in the folder. With the folder emptied, the radial menu's Paste button says "Nothing to
-  paste. Use Copy first.".
+  copies, the screen saying "No saved copies yet.", and leaves the copies' files, logging an error; the next copy's file
+  takes 13, past the files in the folder, and a copy of the ground, 20 by 3 by 20, reads "20 × 3 × 20 · 1,200 blocks".
+  With the folder emptied, the radial menu's Paste button says "Nothing to paste. Use Copy first.".
 - Shots at 854 by 480 and 1920 by 1080, GUI scale 2, and 1920 by 1080, GUI scale 4: the copy's controls line with the
   key, "Rename copy", "Saved copies" with 11 rows scrolled to its top and its end, the delete question, the message
-  "That copy couldn't be read." and the empty screen. Each `.boxes` file has a `change` line outlining the change: the
-  key's control in the line, the screen's texts and widgets, or where the chat differs from a shot just before it.
+  "That copy couldn't be read, so it was removed." and the empty screen. Each `.boxes` file has a `change` line
+  outlining the change: the key's control in the line, the screen's texts and widgets, or where the chat differs from a
+  shot just before it.
 
 `CopyHistoryTest` covers the rule for which copies stay: a new copy at the top, named by its time; the 11th copy not
 renamed dropping the oldest one not renamed, the renamed ones not counting; a renamed copy kept through any number of

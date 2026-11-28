@@ -2,8 +2,9 @@
 # it; the copy's controls line naming "Saved copies" (V) as bound; the "Saved copies" screen V opens, its "Paste",
 # "Rename" and "Delete" clicked as Planner1 clicks them, with "Rename copy" and the delete question; a rename kept
 # outside the 10 most recent, and the 11th copy dropping the oldest with its file; a pick bringing a copy to the aim as
-# the radial menu's Paste button brings one; a delete; a copy's file and the index made unreadable; the copies after
-# Planner1's game restarts, and on the server restarted without the add-on. The driver copies boxes as Copy's third
+# the radial menu's Paste button brings one, and a pick while Planner1 aims at the sky, facing each way; a delete; a
+# copy's file and the index made unreadable; the copies after Planner1's game restarts, and on the server restarted
+# without the add-on; a copy's count of blocks from 1,000 on with a comma. The driver copies boxes as Copy's third
 # click does, and reads the index and the folder from disk. Sourced by inside.sh, which provides drv, val, check, keys,
 # xdo, click, use_click, attack_click, client_said, start_server, stop_server, start_client, stop_client and $ADDON.
 # Players stand on the flat world's grass, whose top is at y -61.
@@ -261,7 +262,7 @@ shots() {
 	done
 	drv 1 "window 854 480 2" "wait 20" > /dev/null
 }
-copies_texts='^(Saved copies|Your 10 most recent copies stay here[.] Rename a copy to keep it[.]|No saved copies yet[.]|Hut|[A-Z][a-z][a-z] [0-9]+, [0-9]+:[0-9][0-9] [AP]M|[0-9]+ × [0-9]+ × [0-9]+ · [0-9]+ blocks?)$'
+copies_texts='^(Saved copies|Your 10 most recent copies stay here[.] Rename a copy to keep it[.]|No saved copies yet[.]|Hut|[A-Z][a-z][a-z] [0-9]+, [0-9]+:[0-9][0-9] [AP]M|[0-9]+ × [0-9]+ × [0-9]+ · [0-9,]+ blocks?)$'
 copies_box() {
 	screen_box "$1" "$copies_texts"
 }
@@ -458,6 +459,37 @@ check "and the radial menu's Paste button brings the Hut back" copy_is 1 "^at .*
 settled
 check "a pick, a turn and a paste change no saved copy" eval '[[ $(val 1 copyindex) == "$before_pick" ]]'
 
+# A saved copy picked while Planner1 aims at the sky shows on their level, its near side two blocks in front of their
+# feet and the middle of its width in line with them, whichever way they face (1464 Q1 A), so the Hut, 4 by 3 by 3,
+# never covers the spot where Planner1 stands. The copy is put away first, so that the pick's is the one that comes.
+# The pointer stays in the window's middle, where the screen puts it as it opens, since a pointer elsewhere turns the
+# view as the screen closes: the mouse wheel scrolls to the end there, and Shift+Tab three times, from the last widget,
+# the Hut's "Delete", focuses its "Paste", which Enter presses.
+# in_front <x y z facing>: the box, as the driver's copy gives it, of the unturned Hut in front of feet at x y z.
+in_front() {
+	case $4 in
+	south) echo "$(($1 - 1)),$2,$(($3 + 2))..$(($1 + 2)),$(($2 + 2)),$(($3 + 4))" ;;
+	north) echo "$(($1 - 1)),$2,$(($3 - 4))..$(($1 + 2)),$(($2 + 2)),$(($3 - 2))" ;;
+	east) echo "$(($1 + 2)),$2,$(($3 - 1))..$(($1 + 5)),$(($2 + 2)),$(($3 + 1))" ;;
+	west) echo "$(($1 - 5)),$2,$(($3 - 1))..$(($1 - 2)),$(($2 + 2)),$(($3 + 1))" ;;
+	esac
+}
+for facing in "south 0" "west 90" "north 180" "east -90"; do
+	read -r want yaw <<< "$facing"
+	press 1 Escape
+	drv 1 "cmd tp @s 61.5 -56 36.5 $yaw -60" "wait 20" > /dev/null
+	saved_open
+	xdo 1 click --repeat 12 --delay 30 5 > /dev/null
+	drv 1 "wait 5" > /dev/null
+	[[ $(shown) == "5 6" ]] && keys 1 key --delay 50 shift+Tab shift+Tab shift+Tab && drv 1 "wait 5" > /dev/null &&
+		keys 1 key Return
+	check "facing $want at the sky, Paste on the Hut's row shows it on Planner1's level, its near side two blocks in front" \
+		eval 'drv 1 "await noscreen" > /dev/null && settled && drv 1 "await copy at" "wait 20" > /dev/null &&
+		read -r fx fy fz now <<< "$(val 1 feet)" && [[ $now == "$want" ]] && echo "  feet $fx $fy $fz $now" >> /out/checks.log &&
+		copy_is 1 "^at $(in_front "$fx" "$fy" "$fz" "$want") NONE NONE unselected 15 blocks$"'
+done
+drv 1 "cmd tp @s 61.5 -56 36.5 0 30" "wait 20" > /dev/null
+
 # "Delete" on the Hut's row asks again; "Cancel" leaves it, and "Delete" removes the row and the file. The copy at the
 # aim stays.
 saved_open
@@ -486,7 +518,7 @@ check "and the copy at the aim stays" copy_is 1 "^at .* 15 blocks$"
 
 # A copy's file cut short: "Paste" on its row drops it from the list, with a message, and renames it.
 head -c 40 "$folder1/7.litematic" > "$folder1/7.cut" && mv "$folder1/7.cut" "$folder1/7.litematic"
-unreadable_lines=$(chat_count 1 "That copy couldn't be read.")
+unreadable_lines=$(chat_count 1 "That copy couldn't be read, so it was removed.")
 # The pointer goes back to the window's middle as the screen closes, which turns the view, so the player looks at the
 # same point before and after, for the shots to differ only in the chat.
 aim 1 60 -60 40
@@ -494,8 +526,8 @@ paste_7() {
 	saved_open && row_button Paste "$(row_of 7)" && drv 1 "await noscreen" > /dev/null && aim 1 60 -60 40
 }
 check "Paste on a copy whose file is cut short shows a message" eval \
-	'chat_shots copy-unreadable "That copy couldn'"'"'t be read." paste_7 &&
-	said_once_more 1 "That copy couldn'"'"'t be read." "$unreadable_lines"'
+	'chat_shots copy-unreadable "That copy couldn'"'"'t be read, so it was removed." paste_7 &&
+	said_once_more 1 "That copy couldn'"'"'t be read, so it was removed." "$unreadable_lines"'
 settled
 check "and drops it from the list and the index" eval 'no_row 7 &&
 	[[ $(index_rows) == "version 1 next 13: $(rows)" ]]'
@@ -588,6 +620,16 @@ drv 1 "close" "wait 5" "cmd setblock 85 -60 80 minecraft:stone" "await real 85 -
 settled
 check "the next copy takes the number past the files in the folder, 13" eval \
 	'[[ $(index_rows) =~ ^version\ 1\ next\ 14:\ 13:$time_name:recent:1x1x1:1$ ]] && [[ -s $folder1/13.litematic ]]'
+
+# A copy of the ground under Planner1, its grass and two layers of dirt, 20 by 3 by 20: its row writes the count of
+# 1,200 blocks with a comma.
+drv 1 "copybox 76 -63 66 95 -61 85" > /dev/null
+settled
+expected="^$time_name / 20 × 3 × 20 · 1,200 blocks ; $time_name / 1 × 1 × 1 · 1 block$"
+saved_open
+check "Saved copies writes a count from 1,000 on with a comma: 20 × 3 × 20 · 1,200 blocks" eval \
+	'[[ $(copy_rows) =~ $expected ]]'
+drv 1 "close" "wait 5" > /dev/null
 
 # With the folder emptied, the Paste button says there's nothing to paste.
 stop_client 1
