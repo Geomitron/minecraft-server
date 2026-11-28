@@ -47,8 +47,8 @@ public final class ClickRule {
 	 * hand and which aims through an entity at the block behind it, is left out, so the hand aims as without mods.
 	 */
 	public static void pick(Runnable pick) {
-		vanillaPick = BuildingPlannerClient.ownsShapes() && (BuildingPlannerClient.mouseModeOn()
-			|| !holdsPlaceable() && BuildPipelineClient.getBuildState() == null);
+		vanillaPick = BuildingPlannerClient.mouseModeOn()
+			|| !holdsPlaceable() && BuildPipelineClient.getBuildState() == null;
 		try {
 			pick.run();
 		} finally {

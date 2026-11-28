@@ -12,7 +12,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
  * Hook S1: every change to a block in a loaded chunk goes through {@code setBlockState}, whatever makes it (a player, a
- * command, a piston, flowing water, a growing plant). It returns the block it replaced, or null when nothing changed.
+ * command, a piston, flowing water, a growing plant). It returns the block it replaced, or null when nothing changed. It
+ * acts for a server's levels alone, a dedicated server's or the game's own server's in the player's own world.
  */
 @Mixin(LevelChunk.class)
 abstract class LevelChunkMixin {

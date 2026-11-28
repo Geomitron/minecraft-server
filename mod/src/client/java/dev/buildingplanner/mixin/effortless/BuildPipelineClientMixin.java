@@ -50,13 +50,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 abstract class BuildPipelineClientMixin {
 	/**
 	 * Hook E1: the finished shape goes into the layer, not to the server as real blocks, or while "Place real blocks"
-	 * acts, to the server as a {@code place}; with Building Planner off on a server, it goes nowhere.
+	 * acts, to the server as a {@code place}; with Building Planner off, it goes nowhere.
 	 */
 	@WrapWithCondition(method = "handleClick", at = @At(value = "INVOKE",
 		target = "Lnl/requios/effortlessbuilding/network/PacketHandler;sendToServer(Lnl/requios/effortlessbuilding/network/PlaceBuildModePacket;)V"))
 	private static boolean buildingplanner$place(PlaceBuildModePacket packet, @Local BlockSet blocks) {
 		if (!BuildingPlannerClient.active()) {
-			return !BuildingPlannerClient.off();
+			return false;
 		}
 		if (RealShape.places()) {
 			RealShape.place(blocks, BuildPipelineClient.getFirstClickHit());
@@ -83,7 +83,7 @@ abstract class BuildPipelineClientMixin {
 		target = "Lnl/requios/effortlessbuilding/network/PacketHandler;sendToServer(Lnl/requios/effortlessbuilding/network/BreakBuildModePacket;)V"))
 	private static boolean buildingplanner$erase(BreakBuildModePacket packet, @Local BlockSet blocks) {
 		if (!BuildingPlannerClient.active()) {
-			return !BuildingPlannerClient.off();
+			return false;
 		}
 		EffortlessShapes.erase(blocks);
 		return false;
@@ -122,8 +122,8 @@ abstract class BuildPipelineClientMixin {
 	}
 
 	private static boolean onlyWithPlaceables() {
-		return !BuildingPlannerClient.mouseTaken() && (!BuildingPlannerClient.ownsShapes()
-			|| BuildPipelineClient.getBuildState() != null || ClickRule.holdsPlaceable());
+		return !BuildingPlannerClient.mouseTaken()
+			&& (BuildPipelineClient.getBuildState() != null || ClickRule.holdsPlaceable());
 	}
 
 	/**

@@ -7,6 +7,7 @@ import dev.buildingplanner.plan.LitematicFormat;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongSet;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -68,6 +69,8 @@ public final class LayerFiles implements AutoCloseable {
 	/**
 	 * Reads every area file into one layer for each dimension that has one. A file that can't be read adds nothing,
 	 * and its area is never written; a file whose name or folder isn't an area's is logged and left alone.
+	 *
+	 * @throws IOException if a folder of the layer's can't be listed
 	 */
 	public Map<Identifier, Layer> readAll() throws IOException {
 		Map<Identifier, Layer> layers = new HashMap<>();
@@ -78,6 +81,9 @@ public final class LayerFiles implements AutoCloseable {
 		try (Stream<Path> walk = Files.walk(root)) {
 			files = walk.filter(path -> path.getFileName().toString().endsWith(EXTENSION) && Files.isRegularFile(path))
 				.sorted().toList();
+		} catch (UncheckedIOException e) {
+			// The walk reports a folder below the root it can't list this way.
+			throw e.getCause();
 		}
 		for (Path file : files) {
 			Path relative = root.relativize(file);

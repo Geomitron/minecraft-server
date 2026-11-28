@@ -243,7 +243,7 @@ Effortless Building, under `common/src/main/java/nl/requios/effortlessbuilding/`
 | E10 | `buildpipeline/BuildPipelineClient.java`, public static `handleRightClick` and `handleLeftClick`, with `shouldInterceptPlacing`, `shouldInterceptBreaking` and `getBuildState`; `buildpipeline/BuildPipeline.java`, `isBuildTriggerItem`; `buildmode/BuildModes.java`, `getBuildMode`; the click checks copy `fabric/.../EffortlessBuildingClient.java`'s client tick | No mixin: Building Planner's own `END_CLIENT_TICK` calls the two public methods again while a button stays down | Hold to repeat in Single mode (see "The client"). Effortless Building's own tick acts only when a button goes down (`rightJustPressed`, `leftJustPressed`). |
 | E11 | `screen/RadialMenu.java`, `init()` | `@Inject` at tail, calling `Screen.addRenderableWidget` | Add Building Planner's buttons and sliders to the radial menu each time it opens (Minecraft clears a screen's widgets and calls `init` on each open). They're children of the screen, so `RadialMenu.mouseClicked`, which calls `super.mouseClicked` after its own `performAction`, routes clicks and drags to them. |
 | E12 | `screen/RadialMenu.java`, `extractRenderState(GuiGraphicsExtractor, int, int, float)` | `@Inject` before its call to `drawTexts` | Place those widgets for the opening animation (E20) and draw them: the method draws the menu itself and never calls `Screen`'s own drawing, which would draw them. Each frame, the sliders and their headings show only while the mode is Single (`BuildModes.CLIENT.getBuildMode() == BuildModeEnum.SINGLE`), so choosing another mode in the open menu hides them at once. Drawn before the menu's texts, they leave a hovered mode's name on top. |
-| E13 | `buildpipeline/BuildPipeline.java`, `isBuildTriggerItem` | `@ModifyReturnValue` | On a server (with a session, or with Building Planner off), an item starts shapes only if it places a block (`ClickRule.placeable`: Minecraft's `BlockItem`, the same test as the mix's; `ClickRule` uses none of Litematica's classes, so these hooks can ask it while Building Planner is off). Effortless Building's own rule also takes buckets and tools with a `TOOL` component, and leaves out doors, beds and tall plants. |
+| E13 | `buildpipeline/BuildPipeline.java`, `isBuildTriggerItem` | `@ModifyReturnValue` | Wherever the game plays (with a session, or with Building Planner off), an item starts shapes only if it places a block (`ClickRule.placeable`: Minecraft's `BlockItem`, the same test as the mix's; `ClickRule` uses none of Litematica's classes, so these hooks can ask it while Building Planner is off). Effortless Building's own rule also takes buckets and tools with a `TOOL` component, and leaves out doors, beds and tall plants. |
 | E14 | `buildpipeline/BuildPipelineClient.java`, `shouldInterceptPlacing` and `shouldInterceptBreaking` | `@ModifyReturnValue` | While the player draws a box or the copy is at the aim (`MouseMode`), neither click is Effortless Building's in any mode, so hooks M1 to M5 take them. With the same rule as E13, while the main hand holds no item that places a block and no shape is under way (`getBuildState()` null), neither click is Effortless Building's either: its client tick, its `AttackBlockCallback`, and its cancelling of vanilla's `startUseItem`, `startAttack` and `continueAttack` all ask these first, and so does hold to repeat, so both clicks and holding them are vanilla's. A shape under way still takes the click that finishes or cancels it. In every build mode, a click on a locked position stays Effortless Building's, and hook E32 hands it the locked position (see "Locking and the first click"). |
 | E15 | `Minecraft.pick(float)`, into which Effortless Building's `MixinGameRenderer` adds, at its tail, a reach of 32 for an empty hand, aiming through entities; `buildmode/BuildModes.java`, `getBuildMode` | `@WrapMethod` on `pick`; `@ModifyReturnValue` on `getBuildMode` | While the main hand holds no item that places a block and no shape is under way, or while a box is drawn or the copy is at the aim, `getBuildMode` reads Disable during the pick, which that code skips, so the hand aims as without mods, at an entity before the block behind it. |
 | E16 | `screen/RadialMenu.java`, `onClose()` | `@Inject` at head, finding the button under the pointer, and at tail, acting | Let Building Planner's buttons act when the menu closes, as the menu's own do: its `tick` calls `onClose` once its key is let go (Escape calls it too), and `onClose` acts on the menu's button under the pointer unless a click acted since the menu opened (`performedActionUsingMouse`). Building Planner's button is found as `onClose` begins, before closing grabs the mouse and moves the pointer to the window's middle, and acts after the menu has closed, like the menu's own, so "Block mix" can open its screen. |
@@ -2367,11 +2367,10 @@ keeps to the same limits itself, so a player never meets them, and they have no 
 
 Each server with Building Planner keeps its own lists, so a player starts with none on another such server, and their
 lists and panel come back when they return. On a server with another protocol version, Building Planner stays off
-(see "When the server lacks the mod"): the panel doesn't show, and the radial menu's buttons do nothing. A singleplayer
-world runs no server side, so it has no lists either. On a server that takes none of Building Planner's payloads, the
-game starts a local session (see "Servers without Building Planner"), which keeps the player's lists on their
-computer for that server; as proposed for 0.10.0, in the player's own world, the game saves them in the world's
-folder, as this server does (see "The player's own worlds").
+(see "When the server lacks the mod"): the panel doesn't show, and the radial menu's buttons do nothing. On a server
+that takes none of Building Planner's payloads, the game starts a local session (see "Servers without Building
+Planner"), which keeps the player's lists on their computer for that server, and in the player's own world, the game
+saves them in the world's folder, as this server does (see "The player's own worlds").
 
 A game on another version than the server's, such as a 0.5.0 game on the 0.6.0 server, has Building Planner off with
 no message, as on a server without it: no ghost blocks, no lists, and Effortless Building's shapes draw nothing. One
@@ -2494,9 +2493,7 @@ packets (E4) aren't sent, so a server that runs Effortless Building never change
 Left Ctrl, the wheel and the middle click work as in Minecraft, and every real block places as Minecraft places it
 (see "Turning real blocks in Disable"). A `hello` with another protocol version leaves it off the same way, ending a
 local session if one runs, so a player whose game still has Building Planner 0.5.0 (protocol version 4) sees no ghost
-blocks and no lists on a server with 0.6.0 until their next launch updates it. A singleplayer world, or a LAN host's
-own world, runs no server side, and Effortless Building works there as it does without Building Planner. The server
-sends nothing to a player who can't receive it (`ServerPlayNetworking.canSend`), so players without the add-on, or
+blocks and no lists on a server with 0.6.0 until their next launch updates it. The server sends nothing to a player who can't receive it (`ServerPlayNetworking.canSend`), so players without the add-on, or
 without any mods, join and play as before. It sends `hello` only to a game that also takes `columns`, since Building
 Planner 0.2 takes a `hello` of another layout under the same name.
 
@@ -2505,9 +2502,10 @@ As proposed for 0.10.0, in the player's own world, Building Planner's server par
 
 ### Servers without Building Planner
 
-Proposed for 0.10.0. Built so far (build steps 1 to 5): which servers start a local session, the local server, the
+Proposed for 0.10.0. Built so far (build steps 1 to 6): which servers start a local session, the local server, the
 files, undo and redo, ghost blocks a real block fills, what needs a server that runs Building Planner, Litematica's
-extra blocks, the material lists on the computer, and the copy between servers; the rest is proposed. Geo wants Building Planner to work as a client-side mod on other servers, where other
+extra blocks, the material lists on the computer, the copy between servers, and the player's own worlds; the rest
+(the radial menu's line) is proposed. Geo wants Building Planner to work as a client-side mod on other servers, where other
 people don't need to see the player's ghost blocks (comment c4 on 1359), and picked "Yes, in a later version: there,
 your ghost blocks are saved on your computer and only you see them, and this server still shares them." (1368 Q1 A).
 Shapes place real blocks only on servers that run Building Planner (1368 Q2 A). For the player's own worlds, Geo picked
@@ -2627,10 +2625,14 @@ on this server, its server part running inside the game (1374 Q4 C, 1381 Q2 A):
   A LAN guest's game runs it as on a server.
 - If the server part can't list a world's layer files, it logs an error and stays off in that world, sending no
   `hello`, so the world opens with Building Planner off, as on a server with another version. A dedicated server
-  still refuses to start.
+  still refuses to start. Minecraft lists every folder of a world before it opens it (its check for links,
+  `DirectoryValidator`) and refuses a world with a folder it can't list, so this happens only when the layer's folder
+  changes between that check and the server part's start; no in-game check reaches it.
 - The server part doesn't check any permission, so a world with cheats off works the same.
-- `BuildingPlannerClient`'s `off`, `ownsShapes` and `undo` make no exception for the game's own world: they ask only
-  whether a session runs, so Building Planner is off there from joining until the `hello` arrives, as on this server.
+- Building Planner makes no exception for the game's own world: wherever the game plays, it decides what Effortless
+  Building's shapes do (hooks E13 to E15) and keeps Effortless Building's packets that change real blocks from going
+  out (E1, E2 and E4), drawing ghost blocks during a session and nothing without one, so Building Planner is off there
+  from joining until the `hello` arrives, as on this server.
 - Effortless Building's shapes draw ghost blocks there: hooks E1, E2 and E4 keep its packets from going out, so its own
   server part, which the game also runs, places nothing for them. With "Place real blocks" on, shapes and pastes place
   real blocks through Building Planner's server part by the rules of "Place real blocks": at most 2,000 blocks a shape
@@ -3515,24 +3517,31 @@ The checks proposed for the later build steps of 0.10.0 (the checks follow the o
   server restarted with Building Planner, it doesn't show.
 - Shots at 854 by 480 and 1920 by 1080: the radial menu with its line, at GUI scale 4 too.
 
-`own.sh`, the player's own worlds (proposed for 0.10.0; the checks follow the options the request recommends), with
-the dev server stopped: Planner1's game opens a copy of the dev server's world from its `saves` folder
-(`--quickPlaySingleplayer`), then opens it to LAN with the driver's `lan` command (`IntegratedServer.publishServer`),
-and Planner2's game joins it at that port.
+`own.sh`, the player's own worlds (0.10.0), with the dev server stopped: Planner1's game opens a copy of the dev
+server's world from its `saves` folder (`start_client 1 "" "" --quickPlaySingleplayer own`), then opens it to LAN
+with the driver's `lan` command (`IntegratedServer.publishServer`, at a free port it gives, with the world taking
+players without checking their accounts, since the dev clients' players have none), and Planner2's game joins it at
+that port. The copy has cheats off, as a dedicated server makes a world, so in the game's own world the driver's `cmd`
+runs its command on the game's own server, with an operator's permissions; what the world holds is checked there
+with the script's `world_has`, whose `/execute if block` answers in Planner1's log. It checks:
 
-- Planner1's game starts a session from the world's `hello`, and its radial menu doesn't show the line above
-  "Building Planner".
+- Planner1's game starts a session from the world's `hello`.
 - A Line of 4 oak planks draws 4 ghost blocks and places no real block; Ctrl+Z takes them back, and Ctrl+Y draws them
-  again.
-- With "Place real blocks" on, a Line of 4 oak planks places 4 real ones.
-- A real oak plank Planner1 places into a ghost oak plank removes it.
+  again; no place, break, undo or redo packet of Effortless Building's leaves the game.
+- With "Place real blocks" on, a Line of 4 oak planks places 4 real ones and no ghost block.
+- A real oak plank Planner1 places by hand into a ghost oak plank, in Disable, removes it.
+- With the world open to LAN, Planner2's game starts a session and shows Planner1's ghost blocks, and a Line Planner2
+  draws reaches Planner1 glowing with Planner2's name.
 - After Planner1 leaves the world, the area's file is in
-  `saves/<world>/building-planner/layer/minecraft/overworld/`, the ghost blocks show again when the world opens again,
-  and Planner1's game folder has no `config/buildingplanner.properties`.
-- A Litematica placement of a file in `schematics/Building Planner/` stays in Planner1's world once the session starts.
-- With the world open to LAN, Planner2's game starts a session and shows Planner1's ghost blocks, a shape Planner2
-  draws reaches Planner1 glowing with Planner2's name, and Planner2's radial menu doesn't show the line.
-- Shots at 1920 by 1080: Planner1's ghost blocks in its own world, and Planner2 beside them in the LAN world.
+  `saves/own/building-planner/layer/minecraft/overworld/`, Planner1's game folder has no
+  `config/buildingplanner.properties`, and when the world opens again, its ghost blocks show and the placements of two
+  old plans' files laid before the leave (the driver's `oldplans`), in `schematics/sync/` and
+  `schematics/Building Planner/`, stay.
+- Shots at 854 by 480 and 1920 by 1080, GUI scale 2, from a few blocks back in Disable: Planner1's ghost blocks in its
+  own world, and with Planner2's Line beside them in the LAN world, each with its screen box in `checks.log`.
+
+The checks proposed for build step 7: Planner1's radial menu in its own world, and Planner2's in the LAN world, don't
+show the line above "Building Planner".
 
 `JoinRuleTest` covers the rule at joining: a server that takes none of the ten payloads (a local session), the game's
 own world and a server that takes some or all of them (waiting for `hello`), a `hello` of this version whatever runs
@@ -3546,7 +3555,8 @@ replaces) at the end of the tick with no undo step, one filled while its chunk w
 position awaiting the server's answer waiting for it, a refused one keeping its ghost block, the material lists and
 the current list following the `hello`, none at first, and a list saved and a counted current list with the panel
 on kept in the player's folder and read back at the next join, where the saved list opens. `LocalFoldersTest` covers the folders: each `:` turned into `_`, a Realm, an address that can't be a
-folder's name, and two players' UUIDs in two folders.
+folder's name, and two players' UUIDs in two folders. `LayerFilesTest` covers a layer with a folder that can't be
+listed (one past the longest path the system takes) failing the read, which leaves the server part off.
 As proposed, `RadialLineTest` covers the radial menu line's row on screens 240, 256, 257 and 270 high.
 
 The copy's placement has unit tests as pure functions. `CopyPlacementTest` covers the copy against each of the six
@@ -3742,7 +3752,6 @@ other in the game's own copy of the layer, again after a restart, which doesn't 
   faster than the server's answers come back; the checks use creative mode, a held block and a local server.
 - A client without any mods joining a server with the add-on; the checks use a Fabric client without the add-on.
 - A real server running another protocol version; the check hands the client a made-up `hello`.
-- That Effortless Building places real blocks as usual in singleplayer and in a LAN host's own world.
 - Mirror in the game for a player facing east or west; the unit tests cover it.
 - The import on the server's real plans: the unit tests and `import.sh` use files the writers' own code makes in a
   test, not files from players' sessions.

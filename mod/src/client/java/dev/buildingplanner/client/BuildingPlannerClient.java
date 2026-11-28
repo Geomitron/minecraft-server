@@ -1013,24 +1013,6 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		return placements.stream().filter(placement -> !isOurs(placement)).toList();
 	}
 
-	/**
-	 * Whether Building Planner is off on a server (the player isn't in a singleplayer or LAN host's own world and has no
-	 * session), so Effortless Building's packets that change real blocks must not be sent: its shapes edit only ghost
-	 * blocks.
-	 */
-	public static boolean off() {
-		return session == null && !Minecraft.getInstance().isLocalServer();
-	}
-
-	/**
-	 * Whether Building Planner decides what Effortless Building's shapes do: on a server, with a session (ghost blocks)
-	 * or without one (nothing). A singleplayer world or a LAN host's own world without a session leaves Effortless
-	 * Building as it is.
-	 */
-	public static boolean ownsShapes() {
-		return session != null || !Minecraft.getInstance().isLocalServer();
-	}
-
 	/** Whether the player's mix is on, with a session. Hooks E5 and E6 also ask {@code EffortlessShapes.mixApplies}. */
 	public static boolean mixOn() {
 		return session != null && MIX.isOn();
@@ -1048,24 +1030,17 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		}
 	}
 
-	/**
-	 * Hook E4: undoes the player's newest edit to the layer. Returns whether Effortless Building's own undo packet is
-	 * held back: always while Building Planner is on or off on a server, never in a singleplayer world without it.
-	 */
-	public static boolean undo() {
-		if (session == null) {
-			return off();
+	/** Hook E4: undoes the player's newest edit to the layer, during a session. */
+	public static void undo() {
+		if (session != null) {
+			session.undo();
 		}
-		session.undo();
-		return true;
 	}
 
-	/** Hook E4: redoes the player's newest undone edit; returns whether the packet is held back, as for undo. */
-	public static boolean redo() {
-		if (session == null) {
-			return off();
+	/** Hook E4: redoes the player's newest undone edit, during a session. */
+	public static void redo() {
+		if (session != null) {
+			session.redo();
 		}
-		session.redo();
-		return true;
 	}
 }

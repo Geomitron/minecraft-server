@@ -111,7 +111,8 @@ final class ClientSession {
 	/**
 	 * Whether to remove old plans' placements at the next tick: at the start of a session with a server that runs
 	 * Building Planner, and after each change of level, since Litematica restores each dimension's saved placements when
-	 * the player enters it. A local session leaves the player's placements on other servers as they are.
+	 * the player enters it. A local session leaves the player's placements on other servers as they are, and the
+	 * player's own world leaves its own.
 	 */
 	private boolean removeOldPlans;
 	/** The player's settings, which keep the show or hide switch. */
@@ -131,7 +132,7 @@ final class ClientSession {
 		this.maxEditBlocks = maxEditBlocks;
 		this.link = link;
 		this.lists = new ListSync(link);
-		this.removeOldPlans = !link.local();
+		this.removeOldPlans = removesOldPlans(link);
 		this.box = new BoxDraw();
 		this.marks = new DeleteMarks(maxEditBlocks);
 		this.glow = glow;
@@ -186,6 +187,11 @@ final class ClientSession {
 		replica.chunkUnloaded(chunkX, chunkZ);
 	}
 
+	/** Whether a session removes old plans' placements: one with a server that runs Building Planner, not the game's own. */
+	private static boolean removesOldPlans(SessionLink link) {
+		return !link.local() && !Minecraft.getInstance().isLocalServer();
+	}
+
 	/** Where the session's payloads go. */
 	SessionLink link() {
 		return link;
@@ -195,7 +201,7 @@ final class ClientSession {
 	 * The game's level changed; Litematica clears every placement then, the tiles among them, so the copy is put away.
 	 */
 	void levelChanged(Identifier dimension) {
-		removeOldPlans = !link.local();
+		removeOldPlans = removesOldPlans(link);
 		replica.levelChanged(dimension);
 		check.clear();
 		box.end();

@@ -44,6 +44,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import net.fabricmc.api.ClientModInitializer;
@@ -61,13 +62,18 @@ import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.multiplayer.resolver.ServerAddress;
 import net.minecraft.client.multiplayer.PlayerInfo;
+import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.commands.arguments.EntityAnchorArgument;
 import net.minecraft.commands.arguments.blocks.BlockStateParser;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.permissions.LevelBasedPermissionSet;
 import net.minecraft.server.permissions.Permissions;
+import net.minecraft.util.HttpUtil;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
@@ -227,8 +233,31 @@ public final class Driver implements ClientModInitializer {
 				return "ok";
 			}
 			case "cmd" -> {
-				mc.player.connection.sendCommand(line.substring(4));
+				// cmd <command>: runs a command as the player. In the game's own world, the game's server runs it with an
+				// operator's permissions, so a world with cheats off, as a dedicated server makes one, takes it too.
+				String command = line.substring(4);
+				IntegratedServer own = mc.getSingleplayerServer();
+				if (own == null) {
+					mc.player.connection.sendCommand(command);
+				} else {
+					UUID id = mc.player.getUUID();
+					own.execute(() -> {
+						ServerPlayer player = own.getPlayerList().getPlayer(id);
+						if (player != null) {
+							own.getCommands().performPrefixedCommand(
+								player.createCommandSourceStack().withPermission(LevelBasedPermissionSet.OWNER), command);
+						}
+					});
+				}
 				return "ok";
+			}
+			case "lan" -> {
+				// lan: opens the game's own world to LAN, as "Open to LAN" does, at a free port, which it gives, or failed.
+				// The world takes players without checking their accounts, since the dev clients' players have none.
+				IntegratedServer own = mc.getSingleplayerServer();
+				int port = HttpUtil.getAvailablePort();
+				own.setUsesAuthentication(false);
+				return own.publishServer(MinecraftServer.MultiplayerScope.LAN, port) ? Integer.toString(port) : "failed";
 			}
 			case "selmode" -> {
 				return DataManager.getSelectionManager().getSelectionMode().name();

@@ -19,6 +19,7 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.fabricmc.api.EnvType;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
@@ -41,8 +42,9 @@ import net.minecraft.world.level.storage.LevelResource;
  * per running server, fed by the payload handlers (which Fabric runs on the server thread) and sending only to players
  * who can receive Building Planner's payloads. The layer lives in
  * {@code <world>/building-planner/layer/}; before that folder exists, the server builds it from the plans Syncmatica
- * shared ({@link PlanImport}). The lists live in {@code <world>/building-planner/material-lists/}. Runs only on a
- * dedicated server.
+ * shared ({@link PlanImport}), on a dedicated server alone. The lists live in
+ * {@code <world>/building-planner/material-lists/}. Runs on a dedicated server, and in the game for the player's own
+ * worlds, singleplayer or opened to LAN, with the default cap and no config file.
  */
 public final class ServerSync {
 	private static LayerSync layer;
@@ -56,16 +58,12 @@ public final class ServerSync {
 	}
 
 	public static void register() {
-		SyncLimits limits;
-		try {
-			limits = ServerConfig.load(FabricLoader.getInstance().getConfigDir().resolve("buildingplanner.properties"));
-		} catch (IOException e) {
-			throw new UncheckedIOException("Couldn't read Building Planner's config file", e);
-		}
+		SyncLimits limits = limits();
 		ServerLifecycleEvents.SERVER_STARTING.register(server -> {
 			Path worldDir = server.getWorldPath(LevelResource.ROOT).normalize();
 			Path layerRoot = worldDir.resolve("building-planner").resolve("layer");
-			if (!Files.exists(layerRoot)) {
+			// Only this server's world held the plans Syncmatica shared.
+			if (!Files.exists(layerRoot) && server.isDedicatedServer()) {
 				try {
 					PlanImport.run(worldDir, FabricLoader.getInstance().getGameDir(), layerRoot);
 				} catch (IOException e) {
@@ -78,8 +76,16 @@ public final class ServerSync {
 			try {
 				layers = layerStore.load();
 			} catch (IOException e) {
-				// Starting without the layer would let edits overwrite its files.
-				throw new UncheckedIOException("Couldn't list Building Planner's layer files", e);
+				// Starting without the layer would let edits overwrite its files. A dedicated server refuses to start; the
+				// player's own world opens with the server part off, sending no hello, as on a server with another
+				// version.
+				if (server.isDedicatedServer()) {
+					throw new UncheckedIOException("Couldn't list Building Planner's layer files", e);
+				}
+				BuildingPlanner.LOGGER.error("Couldn't list Building Planner's layer files, so it stays off in this world", e);
+				layerStore.close();
+				layerStore = null;
+				return;
 			}
 			layer = new LayerSync(limits.maxEditBlocks(), layers, (player, payload) -> send(server, player, payload),
 				world(server));
@@ -133,6 +139,9 @@ public final class ServerSync {
 		});
 
 		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
+			if (layer == null) {
+				return;
+			}
 			// Building Planner 0.2 takes a hello of another layout under the same name, so the layer's hello goes only
 			// to a game that also takes the layer's columns.
 			if (ServerPlayNetworking.canSend(handler, Payloads.Hello.TYPE)
@@ -230,6 +239,21 @@ public final class ServerSync {
 	 * Hook S1: a real block changed in one of the server's loaded chunks ({@code LevelChunkMixin}). Changes made off the
 	 * server thread are left to the check at chunk load.
 	 */
+	/**
+	 * The cap on edits: on a dedicated server, from its config file, which it writes with the default when it's missing;
+	 * in the game, the default, with no config file.
+	 */
+	private static SyncLimits limits() {
+		if (FabricLoader.getInstance().getEnvironmentType() != EnvType.SERVER) {
+			return SyncLimits.DEFAULT;
+		}
+		try {
+			return ServerConfig.load(FabricLoader.getInstance().getConfigDir().resolve("buildingplanner.properties"));
+		} catch (IOException e) {
+			throw new UncheckedIOException("Couldn't read Building Planner's config file", e);
+		}
+	}
+
 	public static void realChanged(ServerLevel level, BlockPos pos, BlockState state) {
 		if (layer != null && level.getServer().isSameThread()) {
 			layer.realChanged(level.dimension().identifier(), pos, state);

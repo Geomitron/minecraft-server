@@ -3,6 +3,7 @@ package dev.buildingplanner.layer;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.buildingplanner.plan.LitematicFormat;
@@ -195,6 +196,35 @@ class LayerFilesTest {
 	@Test
 	void noFolderReadsAsAnEmptyLayer() throws IOException {
 		assertTrue(new LayerFiles(root).readAll().isEmpty());
+	}
+
+	@Test
+	void aFolderThatCantBeListedFailsTheRead() throws IOException {
+		// A dimension's folder holding folders past the longest path the system takes, which no user can list, not even
+		// one every folder is open to; each move that builds it, and that takes it apart after, has a short path.
+		Path deep = world.resolve("deep");
+		Path parent = world.resolve("parent");
+		String name = "d".repeat(200);
+		int levels = 25;
+		Files.createDirectory(deep);
+		for (int level = 0; level < levels; level++) {
+			Files.createDirectory(parent);
+			Files.move(deep, parent.resolve(name));
+			Files.move(parent, deep);
+		}
+		Path dimension = root.resolve("minecraft").resolve("overworld");
+		Files.createDirectories(dimension.getParent());
+		Files.move(deep, dimension);
+		try {
+			assertThrows(IOException.class, () -> new LayerFiles(root).readAll());
+		} finally {
+			Files.move(dimension, deep);
+			for (int level = 0; level < levels; level++) {
+				Files.move(deep, parent);
+				Files.move(parent.resolve(name), deep);
+				Files.delete(parent);
+			}
+		}
 	}
 
 	private static Layer layerOf(Map<BlockPos, BlockState> blocks) {

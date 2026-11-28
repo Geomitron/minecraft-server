@@ -5,9 +5,7 @@
 	"plugin": "dev.buildingplanner.BuildingPlannerMixinPlugin",
 	"compatibilityLevel": "JAVA_25",
 	"mixins": [
-		"minecraft.BlockItemMixin"
-	],
-	"server": [
+		"minecraft.BlockItemMixin",
 		"minecraft.LevelChunkMixin"
 	],
 	"client": [

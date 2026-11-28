@@ -5,7 +5,6 @@ import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
 import dev.buildingplanner.client.Aim;
-import dev.buildingplanner.client.BuildingPlannerClient;
 import dev.buildingplanner.client.ClickRule;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
@@ -16,8 +15,8 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 
 /**
- * Hook E13: on a server, where Building Planner decides what Effortless Building's shapes do, an item starts shapes
- * only if it places a block ({@link ClickRule#placeable}). Effortless Building's own rule also takes buckets
+ * Hook E13: Building Planner decides what Effortless Building's shapes do, so an item starts shapes only if it places
+ * a block ({@link ClickRule#placeable}), with Building Planner on or off. Effortless Building's own rule also takes buckets
  * and tools, and leaves out doors, beds and tall plants. Hook E25: the modes' later clicks follow the camera's look
  * while Freecam's is on.
  */
@@ -25,7 +24,7 @@ import org.spongepowered.asm.mixin.injection.At;
 abstract class BuildPipelineMixin {
 	@ModifyReturnValue(method = "isBuildTriggerItem", at = @At("RETURN"))
 	private static boolean buildingplanner$onlyPlaceables(boolean trigger, @Local(argsOnly = true) ItemStack stack) {
-		return BuildingPlannerClient.ownsShapes() ? ClickRule.placeable(stack) : trigger;
+		return ClickRule.placeable(stack);
 	}
 
 	/** Hook E25: the look the modes' later clicks follow, the camera's while Freecam's is on ({@link Aim}). */
