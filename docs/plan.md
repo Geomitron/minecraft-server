@@ -738,6 +738,13 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
 
   Asked in 1473 ("Release Building Planner 0.11.0"), Geo approved the release (Q1 A) and the server taking 0.11.0
   too (Q2 A: "Yes, update the server too").
+- **Tutorial messages in chat** (Geo's comment [c1] on the trial of 0.10.0, 1462: "Effortless builder seems to print
+  some chat messages for first-time users in chat with tutorial hints; I'd like to review and possibly remove some of
+  these, and also review when exactly these print"). Asked in 1479 ("Tutorial messages in chat"), Geo picked, for
+  Effortless Building's welcome message ("Thank you for using Effortless Building! To get started, hold Left Alt to
+  open the build menu."), "Remove it everywhere." (Q1 C); for its build mode hint ("You have activated a build
+  mode! …"), "Remove it everywhere." (Q2 C); and for Building Planner's "Ghost blocks shown again. Press N to hide
+  them.", "Keep it, once each time a player joins." (Q3 A). Built as 0.11.1 (below).
 - The shared layer replaces the decisions above that concern separate plans: named plans that move and turn as a whole
   (411 Q1), plan growth (411 Q2), who deletes a plan (411 Q3, 420 Q9), starting a plan with N (420 Q1, 469 Q1), hiding
   a plan with Litematica or Syncmatica (420 Q2, 469 Q2), the paste's target plan (485 Q3), Litematica's Edit Schematic
@@ -948,6 +955,12 @@ on step 3's last build, before the release. The in-game checks of saved copies a
 4. **The release** (done, Geo's approval in 1473): the GitHub release `building-planner-0.11.0`, not latest, from the
    build on which the full set passed, where `overlap.sh`, `filled.sh`, `import.sh` and the unit tests passed again, run
    by the server (1473 Q2 A) and the pack (see "Current setup"), with the guide's new sentences in Geo's wording.
+
+**Building Planner 0.11.1** (the bullet "Tutorial messages in chat" in "Decisions" above). Effortless Building's welcome
+message and build mode hint stop reaching chat, in the player's own worlds, for LAN guests, and on other servers that
+run Effortless Building; Building Planner's "Ghost blocks shown again" line stays as it is. 0.11.1 keeps protocol
+version 5 and changes nothing the server does. One step builds it, sets the version, runs the full set and drafts the
+release request; the release follows Geo's approval, as for 0.11.0.
 
 ## Design work: Building Planner
 
