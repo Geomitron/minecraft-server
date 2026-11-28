@@ -1,7 +1,8 @@
 # Step 8's in-game checks: clients without the add-on, or without Litematica and MaLiLib, on a server with it; clients
-# with the add-on on the same server with Building Planner left out; and a hello with protocol version 4, as Building
-# Planner 0.5.0 sends, after which Left Ctrl doesn't turn the block in hand. Sourced by inside.sh, which provides drv, val, check, xdo, keys, use_click, attack_click, wait_for, start_server, stop_server,
-# start_client, stop_client, no_planner_message, $ADDON and $DRIVER.
+# with the add-on on the same server with Building Planner left out, each starting a local session; and a hello with
+# protocol version 4, as Building Planner 0.5.0 sends, which ends that session, after which Left Ctrl doesn't turn the
+# block in hand. Sourced by inside.sh, which provides drv, val, check, xdo, click, keys, use_click, attack_click,
+# wait_for, start_server, stop_server, start_client, stop_client, no_planner_message, $ADDON and $DRIVER.
 
 # said_since <line> <text>: returns when the server log, after that line, has a line containing the text.
 said_since() {
@@ -75,7 +76,7 @@ check "and it stays connected, with no mixin error" eval 'stayed_since "$joined"
 		/out/client2.log'
 cp /out/client2.log /out/client2-without-litematica.log
 
-# The same server with Building Planner left out; both clients have the add-on.
+# The same server with Building Planner left out; both clients have the add-on, and each starts a local session.
 stop_client 1
 stop_client 2
 cp /out/client1.log /out/client1-with-addon.log
@@ -85,19 +86,25 @@ check "the server starts without Building Planner" eval 'start_server "$ADDON" s
 start_client 1
 start_client 2
 # The loading screen swallows key presses, so wait for it to close.
-check "client 1 starts no session" drv 1 "await noscreen" "wait 40" "await nosession"
-check "client 2 starts no session" drv 2 "await noscreen" "wait 40" "await nosession"
+check "client 1 starts a local session" eval 'drv 1 "await noscreen" "await session" > /dev/null &&
+	[[ $(val 1 sessionkind) == local ]]'
+check "client 2 starts a local session" eval 'drv 2 "await noscreen" "await session" > /dev/null &&
+	[[ $(val 2 sessionkind) == local ]]'
 keys 1 key b
-check "the block mix key opens nothing" drv 1 "wait 20" "await noscreen"
-drv 1 "wait 20" "notoasts" "wait 5" "shot off-not-on-server" > /dev/null
+check "the block mix key opens the mix screen" drv 1 "await screen Block mix"
+read -r x y < <(val 1 "widget 0 Cancel")
+click 1 "$x" "$y"
+drv 1 "await noscreen" > /dev/null
 
-# Effortless Building's shapes place nothing: four oak planks from 4 -60 5 eastward add no ghost blocks and no real
-# ones, and the player stays connected.
+# Effortless Building's shapes draw ghost blocks on Planner1's client alone: four oak planks from 4 -60 5 eastward add
+# ghost blocks there, none on Planner2's client and no real ones, and the player stays connected.
 drv 1 "cmd clear @s" "cmd item replace entity @s weapon.mainhand with minecraft:oak_planks" "ebmode SINGLE" \
 	"ebarray 3 1 0 0" "cmd tp @s 4 -55 5 0 90" "wait 40" > /dev/null
 use_click 1
-check "a shape adds no ghost blocks" eval 'drv 1 "wait 60" > /dev/null && [[ $(val 1 "get 4 -60 5") == minecraft:air &&
-	$(val 1 "get 7 -60 5") == minecraft:air ]]'
+check "a shape adds ghost blocks on Planner1's client" eval 'drv 1 "await block 7 -60 5 minecraft:oak_planks" > /dev/null &&
+	[[ $(val 1 "countblocks 4 7 -60 5 minecraft:oak_planks") == 4 ]]'
+check "and none on Planner2's" eval 'drv 2 "wait 20" > /dev/null &&
+	[[ $(val 2 "countblocks 4 7 -60 5 minecraft:oak_planks") == 0 ]]'
 check "and places no real blocks" \
 	eval '[[ $(val 1 "real 4 -60 5") == minecraft:air && $(val 1 "real 7 -60 5") == minecraft:air ]]'
 check "and the player stays connected" \
@@ -112,9 +119,10 @@ check "no place, break, undo or redo packet of Effortless Building leaves the cl
 	eval '! val 1 "ebsent" | grep -qE "place_build_mode|break_build_mode|undo|redo"'
 drv 1 "ebarray 0" > /dev/null
 
-# A hello with protocol version 4, as the server with Building Planner 0.5.0 sends, starts no session.
+# A hello with protocol version 4, as the server with Building Planner 0.5.0 sends, ends the local session and starts
+# none.
 drv 1 "cmd tp @s 5 -60 -3 0 10" "wait 20" "hello 4" > /dev/null
-check "a hello with protocol version 4 starts no session" drv 1 "wait 20" "await nosession"
+check "a hello with protocol version 4 ends the local session and starts none" drv 1 "wait 20" "await nosession"
 # The screenshot is written after the command returns; wait for it before inside.sh copies it.
 drv 1 "notoasts" "wait 5" "shot off-other-version" "wait 20" > /dev/null
 # Without a session, Left Ctrl doesn't turn the block in hand (step 18): in Effortless Building's Disable, with oak

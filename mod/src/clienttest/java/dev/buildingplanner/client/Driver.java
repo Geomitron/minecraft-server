@@ -53,7 +53,11 @@ import net.minecraft.client.Screenshot;
 import net.minecraft.client.tutorial.TutorialSteps;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.events.GuiEventListener;
+import net.minecraft.client.gui.screens.ConnectScreen;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.TitleScreen;
+import net.minecraft.client.multiplayer.ServerData;
+import net.minecraft.client.multiplayer.resolver.ServerAddress;
 import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.commands.arguments.EntityAnchorArgument;
 import net.minecraft.commands.arguments.blocks.BlockStateParser;
@@ -603,6 +607,22 @@ public final class Driver implements ClientModInitializer {
 			case "ebsent" -> {
 				// ebsent: the kinds of Effortless Building packet this client has sent, comma-separated, or "none".
 				return SentPackets.effortless();
+			}
+			case "bpsent" -> {
+				// bpsent: the kinds of Building Planner payload this client has sent over the network since it started,
+				// comma-separated, or "none".
+				return SentPackets.planner();
+			}
+			case "leave" -> {
+				// leave: leaves the server for the title screen, as the pause menu's "Disconnect" does.
+				mc.disconnectFromWorld(Component.literal("Left by the driver"));
+				return "ok";
+			}
+			case "join" -> {
+				// join <address>: joins that server from the title screen, as a server list entry does.
+				ConnectScreen.startConnecting(new TitleScreen(), mc, ServerAddress.parseString(a[1]),
+					new ServerData("Server", a[1], ServerData.Type.OTHER), false, null);
+				return "ok";
 			}
 			case "holdreset" -> {
 				// holdreset: starts the hold log again, and disarms quickclick.
@@ -1376,6 +1396,11 @@ public final class Driver implements ClientModInitializer {
 				mc.resizeGui();
 				return mc.getWindow().getWidth() + "x" + mc.getWindow().getHeight() + " at "
 					+ mc.getWindow().getGuiScale();
+			}
+			case "sessionkind" -> {
+				// sessionkind: none, local (the server doesn't run Building Planner) or server.
+				ClientSession session = session();
+				return session == null ? "none" : session.link().local() ? "local" : "server";
 			}
 			case "hello" -> {
 				// hello <version>: handles a server hello with that protocol version, as one from another release would be.

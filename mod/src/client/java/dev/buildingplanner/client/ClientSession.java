@@ -35,7 +35,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
@@ -51,9 +50,10 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
 
 /**
- * Building Planner on one connection to a server that has it: the player's copy of the layer, kept equal to the
- * server's in the columns the game has loaded, drawn through Litematica's tiles. Everything runs on the client's main
- * thread, where Fabric runs the payload handlers.
+ * Building Planner on one connection to a server: the player's copy of the layer, kept equal to the server's in the
+ * columns the game has loaded, drawn through Litematica's tiles. The server is one that runs Building Planner, over the
+ * network, or the player's own {@link LocalSession} on one that doesn't; {@link SessionLink} says which. Everything
+ * runs on the client's main thread, where Fabric runs the payload handlers.
  */
 final class ClientSession {
 	/**
@@ -62,6 +62,8 @@ final class ClientSession {
 	 */
 	private static CopyMode copyMode = CopyMode.OFF;
 	private final int maxEditBlocks;
+	/** Where the session's payloads go. */
+	private final SessionLink link;
 	private final EditGlow glow;
 	private final Tiles tiles;
 	private final SelfCheck check;
@@ -99,13 +101,14 @@ final class ClientSession {
 	private long marksVersion;
 	/** Delete's hold of the left button that erases the marks. */
 	private final EraseHold hold = new EraseHold();
-	private final ListSync lists = new ListSync();
+	private final ListSync lists;
 	private int clientSeq;
 	/**
-	 * Whether to remove old plans' placements at the next tick: at the session's start, and after each change of level,
-	 * since Litematica restores each dimension's saved placements when the player enters it.
+	 * Whether to remove old plans' placements at the next tick: at the start of a session with a server that runs
+	 * Building Planner, and after each change of level, since Litematica restores each dimension's saved placements when
+	 * the player enters it. A local session leaves the player's placements on other servers as they are.
 	 */
-	private boolean removeOldPlans = true;
+	private boolean removeOldPlans;
 	/** The player's settings, which keep the show or hide switch. */
 	private final ClientConfig config;
 	/** The show or hide key's name, for the message when drawing shows ghost blocks again. */
@@ -114,13 +117,16 @@ final class ClientSession {
 	private boolean toldShownAgain;
 
 	/**
-	 * {@code dimension} is the game's dimension now (null before it has a level), and {@code loadedChunks} the chunks of
-	 * its level already loaded, by {@code Layer.key}. Ghost blocks show or stay hidden as {@code config} keeps the
-	 * switch.
+	 * {@code link} is where the session's payloads go, {@code dimension} the game's dimension now (null before it has a
+	 * level), and {@code loadedChunks} the chunks of its level already loaded, by {@code Layer.key}. Ghost blocks show or
+	 * stay hidden as {@code config} keeps the switch.
 	 */
-	ClientSession(int maxEditBlocks, EditGlow glow, Identifier dimension, LongSet loadedChunks, ClientConfig config,
-		Supplier<String> showHideKey) {
+	ClientSession(int maxEditBlocks, SessionLink link, EditGlow glow, Identifier dimension, LongSet loadedChunks,
+		ClientConfig config, Supplier<String> showHideKey) {
 		this.maxEditBlocks = maxEditBlocks;
+		this.link = link;
+		this.lists = new ListSync(link);
+		this.removeOldPlans = !link.local();
 		this.box = new BoxDraw();
 		this.marks = new DeleteMarks(maxEditBlocks);
 		this.glow = glow;
@@ -175,9 +181,14 @@ final class ClientSession {
 		replica.chunkUnloaded(chunkX, chunkZ);
 	}
 
+	/** Where the session's payloads go. */
+	SessionLink link() {
+		return link;
+	}
+
 	/** The game's level changed; Litematica clears every placement then, the tiles among them. */
 	void levelChanged(Identifier dimension) {
-		removeOldPlans = true;
+		removeOldPlans = !link.local();
 		replica.levelChanged(dimension);
 		check.clear();
 		box.end();
@@ -584,16 +595,16 @@ final class ClientSession {
 		blocks.forEach((pos, state) -> changes.add(new LayerChange(pos.immutable(), state)));
 		// Columns loaded this tick are asked for first, as the server checks an edit's columns are watched.
 		sendWatches();
-		ClientPlayNetworking.send(new Payloads.Edit(replica.dimension(), ++clientSeq, kind, changes));
+		link.send(new Payloads.Edit(replica.dimension(), ++clientSeq, kind, changes));
 		return true;
 	}
 
 	void undo() {
-		ClientPlayNetworking.send(new Payloads.Undo());
+		link.send(new Payloads.Undo());
 	}
 
 	void redo() {
-		ClientPlayNetworking.send(new Payloads.Redo());
+		link.send(new Payloads.Redo());
 	}
 
 	/**
@@ -729,7 +740,7 @@ final class ClientSession {
 		}
 		List<LayerChange> changes = new ArrayList<>(blocks.size());
 		blocks.forEach((pos, state) -> changes.add(new LayerChange(pos.immutable(), state)));
-		ClientPlayNetworking.send(new Payloads.Place(replica.dimension(), Direction.UP,
+		link.send(new Payloads.Place(replica.dimension(), Direction.UP,
 			Vec3.atBottomCenterOf(changes.getFirst().pos()), true, changes));
 		return true;
 	}
@@ -886,7 +897,7 @@ final class ClientSession {
 
 	private void sendWatches() {
 		for (CustomPacketPayload message : replica.takeMessages()) {
-			ClientPlayNetworking.send(message);
+			link.send(message);
 		}
 	}
 

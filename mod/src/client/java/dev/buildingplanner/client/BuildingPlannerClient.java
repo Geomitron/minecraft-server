@@ -23,6 +23,7 @@ import dev.buildingplanner.look.GhostsShown;
 import dev.buildingplanner.look.PanelRoom;
 import dev.buildingplanner.server.PlaceTurns;
 import dev.buildingplanner.sync.EditKind;
+import dev.buildingplanner.sync.JoinRule;
 import dev.buildingplanner.sync.Payloads;
 import dev.buildingplanner.sync.PlayerMessage;
 import fi.dy.masa.litematica.schematic.container.LitematicaBlockStateContainer;
@@ -33,9 +34,11 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.function.Predicate;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientChunkEvents;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLevelEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
@@ -61,8 +64,10 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 
 /**
- * The client side: a session for each connection to a server with Building Planner, started by the server's
- * {@code hello}, and the hooks' way into it. On any other server Building Planner stays off, silently.
+ * The client side: a session for each connection to a server, and the hooks' way into it. A server that runs
+ * Building Planner starts the session with its {@code hello}; on a server that takes none of a session's payloads,
+ * the game starts a local session, its server part running on the player's computer ({@link LocalSession}); on a
+ * server with another version of Building Planner, it stays off, silently ({@link JoinRule}).
  */
 public final class BuildingPlannerClient implements ClientModInitializer {
 	private static final KeyMapping.Category CATEGORY =
@@ -88,10 +93,12 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		Payloads.DeleteList.TYPE, Payloads.OpenList.TYPE, Payloads.CurrentList.TYPE, Payloads.PlaceTurn.TYPE);
 
 	/**
-	 * Null while not connected to a server with Building Planner: on any other server, Building Planner is off, so
-	 * Effortless Building's shapes and undo send nothing.
+	 * Null while Building Planner is off: until a server's {@code hello}, or the local session's, and on a server with
+	 * another version of Building Planner; Effortless Building's shapes and undo then send nothing.
 	 */
 	private static ClientSession session;
+	/** The local session's server part, on a server that doesn't run Building Planner; null on any other. */
+	private static LocalSession local;
 	/** The chunks of the game's level loaded now, by {@link Layer#key}, which a session watches from its start. */
 	private static final LongSet LOADED = new LongOpenHashSet();
 
@@ -171,48 +178,26 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 			() -> mixPanel == null ? null : mixPanel.guiBox(), modeHud::controlsTop);
 		HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(BuildingPlanner.MOD_ID, "click_panel"), clickPanel);
 		ClientPlayNetworking.registerGlobalReceiver(Payloads.Hello.TYPE, (hello, context) -> hello(hello));
-		// A singleplayer or LAN host's own world runs no server side.
-		ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
-			if (!client.isLocalServer() && !SERVERBOUND.stream().allMatch(ClientPlayNetworking::canSend)) {
-				BuildingPlanner.LOGGER.info("The server doesn't run Building Planner, so it's off");
-			}
-		});
-		ClientPlayNetworking.registerGlobalReceiver(Payloads.Columns.TYPE, (payload, context) -> {
-			if (session != null) {
-				session.receive(payload);
-			}
-		});
-		ClientPlayNetworking.registerGlobalReceiver(Payloads.Applied.TYPE, (payload, context) -> {
-			if (session != null) {
-				session.receive(payload);
-			}
-		});
-		ClientPlayNetworking.registerGlobalReceiver(Payloads.Rejected.TYPE, (payload, context) -> {
-			if (session != null) {
-				ClientSession.show(payload.reason());
-			}
-		});
-		ClientPlayNetworking.registerGlobalReceiver(Payloads.Notice.TYPE, (payload, context) -> {
-			if (session != null) {
-				ClientSession.show(payload.message());
-			}
-		});
-		ClientPlayNetworking.registerGlobalReceiver(Payloads.Lists.TYPE, (payload, context) -> {
-			if (session != null) {
-				session.lists().receive(payload);
-			}
-		});
-		ClientPlayNetworking.registerGlobalReceiver(Payloads.OpenedList.TYPE, (payload, context) -> {
-			if (session != null) {
-				session.lists().receive(payload);
-			}
-		});
-		ClientPlayNetworking.registerGlobalReceiver(Payloads.Current.TYPE, (payload, context) -> {
-			if (session != null) {
-				session.lists().receive(payload);
+		ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> joined(client,
+			handler.getLocalGameProfile().id()));
+		ClientPlayNetworking.registerGlobalReceiver(Payloads.Columns.TYPE, (payload, context) -> fromServer(payload));
+		ClientPlayNetworking.registerGlobalReceiver(Payloads.Applied.TYPE, (payload, context) -> fromServer(payload));
+		ClientPlayNetworking.registerGlobalReceiver(Payloads.Rejected.TYPE, (payload, context) -> fromServer(payload));
+		ClientPlayNetworking.registerGlobalReceiver(Payloads.Notice.TYPE, (payload, context) -> fromServer(payload));
+		ClientPlayNetworking.registerGlobalReceiver(Payloads.Lists.TYPE, (payload, context) -> fromServer(payload));
+		ClientPlayNetworking.registerGlobalReceiver(Payloads.OpenedList.TYPE, (payload, context) -> fromServer(payload));
+		ClientPlayNetworking.registerGlobalReceiver(Payloads.Current.TYPE, (payload, context) -> fromServer(payload));
+		// The local session's payloads arrive at the start of the tick after it queued them, as a server's would.
+		ClientTickEvents.START_CLIENT_TICK.register(client -> {
+			if (local != null) {
+				LocalSession from = local;
+				for (CustomPacketPayload payload : from.startTick()) {
+					fromLocal(from, payload);
+				}
 			}
 		});
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> endSession());
+		ClientLifecycleEvents.CLIENT_STOPPING.register(client -> endSession());
 		// Litematica draws only in loaded chunks, so the game watches the columns of the chunks it has loaded. Events
 		// from a level the game has left are ignored.
 		ClientChunkEvents.CHUNK_LOAD.register((level, chunk) -> {
@@ -229,6 +214,9 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		});
 		ClientLevelEvents.AFTER_CLIENT_LEVEL_CHANGE.register((client, level) -> {
 			LOADED.clear();
+			if (local != null) {
+				local.levelChanged();
+			}
 			if (session != null) {
 				session.levelChanged(dimension(level));
 			}
@@ -271,17 +259,70 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	}
 
 	/**
-	 * The server's {@code hello}: starts a session when the server speaks this client's protocol version, and otherwise
-	 * leaves Building Planner off.
+	 * The game joined a server: on one that takes none of a session's payloads, starts the local session, whose
+	 * {@code hello} starts the session at the next tick; on any other, Building Planner waits for the server's.
+	 */
+	private static void joined(Minecraft client, UUID player) {
+		int taken = (int) SERVERBOUND.stream().filter(ClientPlayNetworking::canSend).count();
+		if (JoinRule.atJoin(client.isLocalServer(), taken) == JoinRule.Session.LOCAL) {
+			endSession();
+			local = LocalSession.start(client, player);
+		} else if (!client.isLocalServer() && taken < SERVERBOUND.size()) {
+			BuildingPlanner.LOGGER.info("The server runs another version of Building Planner, so it's off");
+		}
+	}
+
+	/**
+	 * The server's {@code hello}: ends any local session, writing its files, and starts the server's session when the
+	 * server speaks this client's protocol version, leaving Building Planner off otherwise.
 	 */
 	static void hello(Payloads.Hello hello) {
 		endSession();
-		if (hello.protocolVersion() == Payloads.PROTOCOL_VERSION) {
-			session = new ClientSession(hello.maxEditBlocks(), glow, dimension(Minecraft.getInstance().level), LOADED,
-				config, () -> SHOW_HIDE.getTranslatedKeyMessage().getString());
+		start(hello, SessionLink.NETWORK);
+	}
+
+	/** A payload from a server that runs Building Planner; ignored outside a session with it. */
+	private static void fromServer(CustomPacketPayload payload) {
+		if (session != null && !session.link().local()) {
+			handle(payload);
+		}
+	}
+
+	/** A payload the local session queued, while it's still the game's: its {@code hello} starts the session. */
+	private static void fromLocal(LocalSession from, CustomPacketPayload payload) {
+		if (from != local) {
+			return;
+		}
+		if (payload instanceof Payloads.Hello hello) {
+			start(hello, from);
+		} else if (session != null && session.link() == from) {
+			handle(payload);
+		}
+	}
+
+	private static void start(Payloads.Hello hello, SessionLink link) {
+		closeSession();
+		if (JoinRule.atHello(hello.protocolVersion()) == JoinRule.Session.SERVER) {
+			session = new ClientSession(hello.maxEditBlocks(), link, glow, dimension(Minecraft.getInstance().level),
+				LOADED, config, () -> SHOW_HIDE.getTranslatedKeyMessage().getString());
 		} else {
 			BuildingPlanner.LOGGER.warn("The server runs Building Planner protocol {}, this client {}",
 				hello.protocolVersion(), Payloads.PROTOCOL_VERSION);
+		}
+	}
+
+	/** A payload to the session, from whichever server it has. */
+	private static void handle(CustomPacketPayload payload) {
+		switch (payload) {
+			case Payloads.Columns p -> session.receive(p);
+			case Payloads.Applied p -> session.receive(p);
+			case Payloads.Rejected p -> ClientSession.show(p.reason());
+			case Payloads.Notice p -> ClientSession.show(p.message());
+			case Payloads.Lists p -> session.lists().receive(p);
+			case Payloads.OpenedList p -> session.lists().receive(p);
+			case Payloads.Current p -> session.lists().receive(p);
+			default -> {
+			}
 		}
 	}
 
@@ -308,7 +349,16 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		return RealPlace.acts(placeReal(), session != null, ClientPlayNetworking.canSend(Payloads.Place.TYPE));
 	}
 
+	/** Ends the session and any local session, whose files it writes. */
 	private static void endSession() {
+		closeSession();
+		if (local != null) {
+			local.stop();
+			local = null;
+		}
+	}
+
+	private static void closeSession() {
 		if (session != null) {
 			session.close();
 			session = null;
@@ -625,7 +675,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 			now = EffortlessShapes.clickTurn(hit, now);
 		}
 		if (DisableTurn.sends(PlaceTurns.local(), now)) {
-			ClientPlayNetworking.send(new Payloads.PlaceTurn(Optional.ofNullable(now.item()), PlaceTurn.properties(now)));
+			session.link().send(new Payloads.PlaceTurn(Optional.ofNullable(now.item()), PlaceTurn.properties(now)));
 			PlaceTurns.sentLocally(now);
 		}
 	}

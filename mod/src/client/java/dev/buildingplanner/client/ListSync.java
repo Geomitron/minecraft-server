@@ -10,10 +10,10 @@ import fi.dy.masa.litematica.materials.MaterialListBase;
 import fi.dy.masa.malilib.gui.GuiBase;
 import java.util.List;
 import java.util.Optional;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 
 /**
- * The game's side of the material list messages on one connection: it keeps the server's index of the player's lists,
+ * The game's side of the material list messages on one connection, sent through its session's {@link SessionLink}: it
+ * keeps the server's index of the player's lists,
  * makes the {@code current} list the server sends at join the current list, and sends {@code current_list} when the
  * current list, its counts or the panel's switch change, at most every {@link #SEND_INTERVAL_MILLIS}, with the latest
  * state. It keeps to the server's limits ({@link ListLimits}), so the player never meets them. Runs on the client's
@@ -29,6 +29,7 @@ final class ListSync {
 	/** While the panel is on, the current list is counted again this often, as Litematica's own Info HUD counts. */
 	static final long RECOUNT_INTERVAL_MILLIS = 2_000;
 
+	private final SessionLink link;
 	private Payloads.Lists index = new Payloads.Lists(Optional.empty(), List.of());
 	/** Whether the server's {@code current} has arrived; until then the game sends no {@code current_list}. */
 	private boolean started;
@@ -44,6 +45,10 @@ final class ListSync {
 	private long lastRecountMillis = Long.MIN_VALUE / 2;
 	/** The name of the list "Open" asked the server for ("" for "Last counted"), until its answer arrives, or null. */
 	private String opening;
+
+	ListSync(SessionLink link) {
+		this.link = link;
+	}
 
 	/** The server's index of the player's lists, with "Last counted" kept up to date as the game counts. */
 	Payloads.Lists index() {
@@ -114,13 +119,13 @@ final class ListSync {
 	/** Keeps the list under the name on the server, replacing a kept list of that name. */
 	void save(String name, ListData list) {
 		if (ListLimits.nameProblem(name).isEmpty() && fits(list)) {
-			ClientPlayNetworking.send(new Payloads.SaveList(name, list));
+			link.send(new Payloads.SaveList(name, list));
 		}
 	}
 
 	void delete(String name) {
 		if (ListLimits.nameProblem(name).isEmpty()) {
-			ClientPlayNetworking.send(new Payloads.DeleteList(name));
+			link.send(new Payloads.DeleteList(name));
 		}
 	}
 
@@ -130,7 +135,7 @@ final class ListSync {
 	 */
 	void open(String name) {
 		if (name.isEmpty() || ListLimits.nameProblem(name).isEmpty()) {
-			ClientPlayNetworking.send(new Payloads.OpenList(name));
+			link.send(new Payloads.OpenList(name));
 			opening = name;
 		}
 	}
@@ -166,7 +171,7 @@ final class ListSync {
 				+ "doesn't keep it", ListLimits.MAX_LIST_BYTES);
 			data = Optional.empty();
 		}
-		ClientPlayNetworking.send(new Payloads.CurrentList(data, counted && data.isPresent(), panel));
+		link.send(new Payloads.CurrentList(data, counted && data.isPresent(), panel));
 		lastSendMillis = nowMillis;
 		sentList = list == null ? Optional.empty() : Optional.of(list.data());
 		sentPanel = panel;

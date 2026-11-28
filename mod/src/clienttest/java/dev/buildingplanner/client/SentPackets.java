@@ -17,6 +17,8 @@ import net.minecraft.core.BlockPos;
  */
 public final class SentPackets {
 	private static final Set<String> EFFORTLESS = new ConcurrentSkipListSet<>();
+	/** The paths of Building Planner's payloads sent so far, for the driver's {@code bpsent}. */
+	private static final Set<String> PLANNER = new ConcurrentSkipListSet<>();
 	private static final List<Integer> EDITS = new ArrayList<>();
 	/** The number of blocks each {@code place} sent since the hold log started carried, in order. */
 	private static final List<Integer> PLACES = new ArrayList<>();
@@ -33,6 +35,9 @@ public final class SentPackets {
 
 	/** A packet with this namespace and path went out on the connection. */
 	public static void sent(String namespace, String path, List<LayerChange> changes) {
+		if (namespace.equals("buildingplanner")) {
+			PLANNER.add(path);
+		}
 		if (namespace.equals("effortlessbuilding")) {
 			EFFORTLESS.add(path);
 		} else if (namespace.equals("buildingplanner") && path.equals("edit")) {
@@ -115,6 +120,11 @@ public final class SentPackets {
 			return "use=" + useDown + " attack=" + attackDown + " edits=" + EDITS.size() + " blocks=" + CHANGED.size()
 				+ " gaps=" + String.join(",", gaps);
 		}
+	}
+
+	/** The paths of Building Planner's payloads sent so far, comma-separated and sorted, or "none". */
+	static String planner() {
+		return PLANNER.isEmpty() ? "none" : String.join(",", PLANNER);
 	}
 
 	/** The paths of Effortless Building's packets sent so far, comma-separated and sorted, or "none". */

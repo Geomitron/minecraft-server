@@ -90,16 +90,27 @@ public final class LayerSync {
 	private final Map<Identifier, Layer> layers;
 	/** Each player's watched columns, by {@link Layer#key}, all in the dimension they were in when they watched. */
 	private final Map<UUID, Watched> watched = new HashMap<>();
-	private final UndoHistory<Step> history = new UndoHistory<>();
+	private final UndoHistory<Step> history;
 	/** Positions, by {@link BlockPos#asLong}, whose ghost block a real block filled this tick, by dimension. */
 	private final Map<Identifier, LongSet> filled = new LinkedHashMap<>();
 
+	/** Each player's undo steps, which a local session keeps while the game runs, across its sessions with a server. */
+	public static final class History {
+		private final UndoHistory<Step> steps = new UndoHistory<>();
+	}
+
 	/** {@code layers} are the layers read from the files, by dimension; the sync owns them from here. */
 	public LayerSync(int maxEditBlocks, Map<Identifier, Layer> layers, Outbox outbox, World world) {
+		this(maxEditBlocks, layers, outbox, world, new History());
+	}
+
+	/** As above, with undo steps kept from an earlier sync of the same layer's files. */
+	public LayerSync(int maxEditBlocks, Map<Identifier, Layer> layers, Outbox outbox, World world, History history) {
 		this.maxEditBlocks = maxEditBlocks;
 		this.layers = new HashMap<>(layers);
 		this.outbox = outbox;
 		this.world = world;
+		this.history = history.steps;
 	}
 
 	/** Every dimension's layer, for saving. */

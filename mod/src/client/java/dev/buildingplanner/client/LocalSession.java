@@ -1,0 +1,134 @@
+package dev.buildingplanner.client;
+
+import dev.buildingplanner.BuildingPlanner;
+import dev.buildingplanner.server.LayerSync;
+import dev.buildingplanner.server.LocalFolders;
+import dev.buildingplanner.server.LocalServer;
+import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.multiplayer.ServerData;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.level.chunk.status.ChunkStatus;
+
+/**
+ * A local session's server part, wired to the game: the {@link LocalServer} for the player's folder for the server
+ * they joined ({@link LocalFolders}), answering from the game's own level, and the link the session sends through.
+ * The game hands the server's queued payloads to the session at the start of each client tick.
+ */
+final class LocalSession implements SessionLink {
+	/** Each folder's undo steps, kept while the game runs, so they survive leaving and rejoining the server. */
+	private static final Map<Path, LayerSync.History> HISTORIES = new HashMap<>();
+
+	private final LocalServer server;
+
+	private LocalSession(LocalServer server) {
+		this.server = server;
+	}
+
+	/**
+	 * Starts the server part for the player on the server the game just joined; null, with the reason logged, when
+	 * the server has no folder name or its files can't be listed, so Building Planner stays off there.
+	 */
+	static LocalSession start(Minecraft mc, UUID player) {
+		ServerData data = mc.getCurrentServer();
+		Optional<String> name = data == null ? Optional.empty() : LocalFolders.server(data.ip, data.isRealm());
+		if (name.isEmpty()) {
+			BuildingPlanner.LOGGER.error("Building Planner has no folder for this server ({}), so it's off here",
+				data == null ? "no server address" : data.ip);
+			return null;
+		}
+		Path gameDir = mc.gameDirectory.toPath().toAbsolutePath().normalize();
+		Path folder = LocalFolders.player(gameDir, name.get(), player);
+		LocalServer server = LocalServer.start(folder, player, world(mc, player),
+			HISTORIES.computeIfAbsent(folder, key -> new LayerSync.History()), System.currentTimeMillis());
+		if (server == null) {
+			return null;
+		}
+		BuildingPlanner.LOGGER.info("The server doesn't run Building Planner, so your ghost blocks here are kept on "
+			+ "this computer, in {}", gameDir.relativize(folder));
+		return new LocalSession(server);
+	}
+
+	@Override
+	public void send(CustomPacketPayload payload) {
+		server.receive(payload);
+	}
+
+	@Override
+	public boolean local() {
+		return true;
+	}
+
+	/** At the start of each client tick: the server part's own tick, then the payloads it queued, in order. */
+	List<CustomPacketPayload> startTick() {
+		server.tick(System.currentTimeMillis());
+		return server.takeMessages();
+	}
+
+	/** The game's level changed: the player's game dropped every column it watched. */
+	void levelChanged() {
+		server.changedDimension();
+	}
+
+	/** The player left the server, or the game is closing: writes every change. */
+	void stop() {
+		server.stop();
+	}
+
+	/**
+	 * The game as the layer sees it: the player's dimension and column, the radius of the chunks the game keeps
+	 * loaded, its level's build height and world border, and a real block only in a chunk the game has loaded.
+	 */
+	private static LayerSync.World world(Minecraft mc, UUID player) {
+		return new LayerSync.World() {
+			@Override
+			public Optional<LayerSync.Place> place(UUID id) {
+				if (!id.equals(player) || mc.level == null || mc.player == null) {
+					return Optional.empty();
+				}
+				return Optional.of(new LayerSync.Place(mc.level.dimension().identifier(), mc.player.chunkPosition()));
+			}
+
+			@Override
+			public int viewDistance() {
+				// The game keeps chunks this far out (ClientChunkCache.calculateStorageRange).
+				return Math.max(2, mc.options.renderDistance().get()) + 3;
+			}
+
+			@Override
+			public boolean inBuildHeight(Identifier dimension, int y) {
+				ClientLevel level = level(dimension);
+				return level != null && !level.isOutsideBuildHeight(y);
+			}
+
+			@Override
+			public boolean insideBorder(Identifier dimension, BlockPos pos) {
+				ClientLevel level = level(dimension);
+				return level != null && level.getWorldBorder().isWithinBounds(pos);
+			}
+
+			@Override
+			public BlockState realBlock(Identifier dimension, BlockPos pos) {
+				ClientLevel level = level(dimension);
+				LevelChunk chunk = level == null ? null : (LevelChunk) level.getChunkSource().getChunk(pos.getX() >> 4,
+					pos.getZ() >> 4, ChunkStatus.FULL, false);
+				return chunk == null ? null : chunk.getBlockState(pos);
+			}
+
+			private ClientLevel level(Identifier dimension) {
+				ClientLevel level = mc.level;
+				return level != null && level.dimension().identifier().equals(dimension) ? level : null;
+			}
+		};
+	}
+}
