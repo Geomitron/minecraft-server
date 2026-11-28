@@ -729,6 +729,11 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
   - for what a row shows, "No picture: the name, size, and number of blocks only." (Q4 A), so the design takes no
     picture of the player's view;
   - for a restart, "Bring back the newest saved copy." (Q5 A).
+
+  Asked in 1464 ("Building Planner 0.11.0: the texts for saved copies"), Geo approved every text and the guide's
+  sentences as proposed (commas in block counts, "That copy couldn't be read, so it was removed.", a "Keys" row for V,
+  the section "Saved Copies" and "Copy and Paste"'s paragraph), and, for a picked copy while you aim at no block, "On
+  your level, starting two blocks in front of you." (Q1 A).
 - The shared layer replaces the decisions above that concern separate plans: named plans that move and turn as a whole
   (411 Q1), plan growth (411 Q2), who deletes a plan (411 Q3, 420 Q9), starting a plan with N (420 Q1, 469 Q1), hiding
   a plan with Litematica or Syncmatica (420 Q2, 469 Q2), the paste's target plan (485 Q3), Litematica's Edit Schematic
