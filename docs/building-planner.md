@@ -1483,8 +1483,9 @@ buttons, with the three buttons 50 wide at its right, in a width of up to 400. T
   as it was copied. It becomes the copy that the Paste button brings back, and its place in the list stays.
 - "Rename" opens "Rename copy", laid out as "Save list": a field "Name" filled in with the copy's name, which the player
   may type over, and "Save" and "Cancel". The field accepts at most 64 characters, "Save" is greyed out while the name
-  is empty or only spaces, and spaces at either end are dropped. "Save" makes the copy stay until it's deleted, under the new name or
-  the same one; two copies may have the same name. Both buttons, and Escape, go back to "Saved copies".
+  is empty or only spaces, and spaces at either end are dropped. Enter, and the keypad's Enter, in the "Name" field does
+  what "Save" does, and nothing while "Save" is greyed out. "Save" makes the copy stay until it's deleted, under the new
+  name or the same one; two copies may have the same name. Both buttons, and Escape, go back to "Saved copies".
 - "Delete" asks again ("Delete the copy "Hut"?", with "Delete" and "Cancel"), deletes the copy's files, and comes back
   to "Saved copies" either way. A copy at the aim stays there until the player puts it away or brings another.
 
@@ -2307,7 +2308,8 @@ they save (786 Q2 A).
 "Save list" opens a small screen titled "Save list" with a name field labelled "Name", filled in to start with the date
 and time ("Nov 19, 6:21 PM", the pattern `MMM d, h:mm a` kept in the language file), which the player may type over
 (786 Q3 A), and "Save" and "Cancel". The field accepts at most 64 characters, and "Save" is greyed out while the name
-is empty or only spaces; spaces at either end are dropped. Saving with the name of a kept list replaces it. "Saved
+is empty or only spaces; spaces at either end are dropped. Enter, and the keypad's Enter, in the "Name" field does what
+"Save" does, and nothing while "Save" is greyed out. Saving with the name of a kept list replaces it. "Saved
 lists" opens a screen listing the kept lists, newest first, with "Last counted" at the top whenever the player has
 one: each row shows its name, then under it when it was saved and its box's size ("Nov 19, 6:21 PM · 12 × 5 × 8"), with
 "Open" and, except on "Last counted", "Delete". "Delete" asks again ("Delete the list "Planks"?", with "Delete" and
@@ -2941,7 +2943,8 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
 - "Save list" with the name "Planks" keeps the list; "Saved lists" shows "Last counted" first, then "Planks", with
   their sizes, and "Close" at the bottom right, below the rows, which goes back to the list's screen, as Escape does.
   A new box replaces "Last counted" and leaves "Planks"; opening "Planks" doesn't change "Last counted". "Delete" asks
-  again, then removes it. A name of 65 characters can't be typed, and "Save" is greyed out with an empty name.
+  again, then removes it. A name of 65 characters can't be typed, and "Save" is greyed out with an empty name, where
+  Enter in the field does nothing. With Enter in the field, " Old list  " is kept as "Old list", as "Save" keeps it.
 - A box Planner1 counts is in `run/server/world/building-planner/material-lists/<Planner1's UUID>.dat` as
   `last_counted` within 30 seconds, and after the server and Planner1's game restart, Planner1's game has it as the
   current list (read by a driver probe).
@@ -3631,6 +3634,8 @@ box as Copy's third click does (`copybox`), and its `bindkey` rebinds the key:
   the game with the copy at the aim. V does nothing with the inventory open.
 - "Rename" on the hut's row shows its name in the field; an empty name or only spaces greys "Save" out, the field
   accepts no 65th character, "Cancel" renames nothing, and "Hut " saves as "Hut", kept in the index too.
+  Enter in the field saves the name "Via Enter " as "Via Enter", as "Save" does; with the name empty, Enter does
+  nothing; and the keypad's Enter saves "Hut" again.
 - Eleven more copies, of one block each and each of another block, leave 11 rows, "Hut" and the 10 newest: the first
   of the 11 is gone, and its file is deleted. At 854 by 480, GUI scale 2, six rows show, and the mouse wheel scrolls
   to the last six.

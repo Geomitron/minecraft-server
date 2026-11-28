@@ -4009,6 +4009,10 @@ check "with the name empty, Save is greyed out" eval '[[ $(val 1 widgets) == "fi
 type_name "   "
 check "and with only spaces" eval '[[ $(val 1 widgets) == "field=   : "*" | Save (greyed out): "* ]]'
 both_sizes_shot save-list-empty
+keys 1 key Return
+drv 1 "wait 10" > /dev/null
+check "Enter with the name empty does nothing: Save list stays open, Save greyed out" eval \
+	'[[ $(val 1 widgets) == "field=   : "*" | Save (greyed out): "* ]]'
 type_name "$(printf 'N%.0s' {1..65})"
 check "a name of 65 characters can't be typed: the field holds 64" \
 	eval '[[ $(val 1 widgets) == "field=$(printf "N%.0s" {1..64}): "* ]]'
@@ -4040,7 +4044,14 @@ check "and no file in Planner1's game folder holds them" eval '! grep -rlF -e "P
 	--exclude=driver-in.txt --exclude=driver-out.txt --exclude-dir=logs --exclude-dir=screenshots run/client1'
 
 # "Saved lists": "Last counted" first, then the saved lists, newest first, each with when it was saved and its size.
-save_as "Old list"
+# "Old list" is saved with Enter in the name field, as Save does, with the spaces around the name dropped.
+mat_click "Save list"
+drv 1 "await screen Save list" > /dev/null
+type_name " Old list  "
+keys 1 key Return
+check "Enter in the name field of Save list saves the name \" Old list  \" as Save does, back to the list's screen" eval \
+	'drv 1 "await screen Material list for the blocks in the box" "wait 20" > /dev/null &&
+	[[ $(val 1 listindex) == "last counted 10x2x1 | Old list 10x2x1 | Row 10x2x1 | Planks 10x2x3" ]]'
 mat_click "Saved lists"
 rows_re='^Last counted / .+ · 10 × 2 × 1 \| Old list / .+ · 10 × 2 × 1 \| Row / .+ · 10 × 2 × 1 \| Planks / .+ · 10 × 2 × 3$'
 check "Saved lists shows Last counted first, then the saved lists, newest first, with their sizes" eval \

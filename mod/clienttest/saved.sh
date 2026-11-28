@@ -374,6 +374,31 @@ check "Save with the name \"Hut \" goes back to Saved copies, the row named Hut"
 	drv 1 "wait 5" > /dev/null && [[ $(copy_rows) == "Hut / 4 × 3 × 3 · 15 blocks" ]]'
 check "and the rename keeps the copy, in the index too" eval '[[ $(rows) == "1:Hut:kept:4x3x3:15" ]] &&
 	[[ $(index_rows) == "version 1 next 2: 1:Hut:kept:4x3x3:15" ]]'
+
+# Enter in the name field saves the name as "Save" does, and so does the keypad's Enter; with the name empty, Enter
+# does nothing, as the greyed-out "Save" does.
+row_button Rename 0
+drv 1 "await screen Rename copy" "wait 5" > /dev/null
+type_name "Via Enter "
+keys 1 key Return
+check "Enter in the name field of Rename copy saves the name \"Via Enter \" as Save does, back to Saved copies" eval \
+	'drv 1 "await screenclass $screen" "wait 5" > /dev/null && settled &&
+	drv 1 "wait 5" > /dev/null && [[ $(copy_rows) == "Via Enter / 4 × 3 × 3 · 15 blocks" ]] &&
+	[[ $(rows) == "1:Via Enter:kept:4x3x3:15" ]] && [[ $(index_rows) == "version 1 next 2: 1:Via Enter:kept:4x3x3:15" ]]'
+row_button Rename 0
+drv 1 "await screen Rename copy" "wait 5" > /dev/null
+type_name ""
+keys 1 key Return
+drv 1 "wait 10" > /dev/null
+check "Enter with the name empty does nothing: Rename copy stays open, Save greyed out" eval \
+	'[[ $(val 1 screenclass) == dev.buildingplanner.client.RenameCopyScreen ]] &&
+	[[ $(val 1 widgets) == "field=: "*" | Save (greyed out): "* ]]'
+type_name "Hut"
+keys 1 key KP_Enter
+check "the keypad's Enter saves the name Hut, back to Saved copies" eval \
+	'drv 1 "await screenclass $screen" "wait 5" > /dev/null && settled &&
+	drv 1 "wait 5" > /dev/null && [[ $(copy_rows) == "Hut / 4 × 3 × 3 · 15 blocks" ]] &&
+	[[ $(rows) == "1:Hut:kept:4x3x3:15" ]]'
 widget_click 0 Close
 check "Close goes back to the game" drv 1 "await noscreen"
 

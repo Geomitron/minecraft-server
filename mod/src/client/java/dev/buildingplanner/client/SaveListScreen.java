@@ -8,13 +8,15 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.network.chat.Component;
 
 /**
  * "Save list": a name field, filled in to start with the date and time, which the player may type over, and "Save" and
  * "Cancel". The field takes at most {@value ListLimits#MAX_NAME_LENGTH} characters, and "Save" is greyed out while the
- * name is empty or only spaces; spaces at either end are dropped. Saving with the name of a kept list replaces it. Both
- * buttons, and Escape, go back to the list's screen.
+ * name is empty or only spaces; spaces at either end are dropped. Enter and the keypad's Enter in the name field do
+ * what "Save" does. Saving with the name of a kept list replaces it. Both buttons, and Escape, go back to the list's
+ * screen.
  */
 final class SaveListScreen extends Screen {
 	private static final int TEXT = 0xFFFFFFFF;
@@ -23,6 +25,7 @@ final class SaveListScreen extends Screen {
 	private final GuiMaterialList parent;
 	private final GhostMaterialList list;
 	private String name;
+	private EditBox field;
 	private Button save;
 
 	private SaveListScreen(GuiMaterialList parent, GhostMaterialList list) {
@@ -43,7 +46,7 @@ final class SaveListScreen extends Screen {
 	protected void init() {
 		int left = (width - WIDTH) / 2;
 		int top = height / 2 - 30;
-		EditBox field = new EditBox(font, left, top + 12, WIDTH, 20,
+		field = new EditBox(font, left, top + 12, WIDTH, 20,
 			Component.translatable("buildingplanner.ui.save_list.name"));
 		field.setMaxLength(ListLimits.MAX_NAME_LENGTH);
 		field.setValue(name);
@@ -59,6 +62,18 @@ final class SaveListScreen extends Screen {
 		addRenderableWidget(Button.builder(Component.translatable("buildingplanner.ui.save_list.cancel"),
 			button -> onClose()).bounds(left + buttonWidth + 4, top + 40, buttonWidth, 20).build());
 		setInitialFocus(field);
+	}
+
+	/** Enter and the keypad's Enter in the name field do what "Save" does, and nothing while "Save" is greyed out. */
+	@Override
+	public boolean keyPressed(KeyEvent event) {
+		if (getFocused() == field && event.isConfirmation()) {
+			if (save.active) {
+				save();
+			}
+			return true;
+		}
+		return super.keyPressed(event);
 	}
 
 	private void save() {
