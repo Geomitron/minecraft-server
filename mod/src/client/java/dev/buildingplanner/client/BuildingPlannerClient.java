@@ -154,6 +154,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		KeyMappingHelper.registerKeyMapping(BLOCK_MIX);
 		KeyMappingHelper.registerKeyMapping(SHOW_HIDE);
 		CopyKeys.register();
+		ClientLifecycleEvents.CLIENT_STARTED.register(SavedCopies::start);
 		copyKeys = new CopyKeys();
 		glow = EditGlow.registered();
 		BoxOutline.registered(BuildingPlannerClient::boxShown);
@@ -201,7 +202,13 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		// through Minecraft.disconnect drops the queued end with the game's other tasks, so hook M10 ends it there.
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) ->
 			client.execute(BuildingPlannerClient::endSession));
-		ClientLifecycleEvents.CLIENT_STOPPING.register(client -> endSession());
+		ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
+			endSession();
+			// A game that stops before it has started has no saved copies.
+			if (SavedCopies.get() != null) {
+				SavedCopies.get().close();
+			}
+		});
 		// Litematica draws only in loaded chunks, so the game watches the columns of the chunks it has loaded. Events
 		// from a level the game has left are ignored.
 		ClientChunkEvents.CHUNK_LOAD.register((level, chunk) -> {
@@ -571,8 +578,8 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 
 	/**
 	 * The radial menu's Paste button: brings the most recent copy back to the aim, ending a box and dropping a shape
-	 * under way, whose clicks the copy now takes; with no copy, says so. Only the radial menu, which is Effortless
-	 * Building's, calls it.
+	 * under way, whose clicks the copy now takes; with no copy since the game started, the newest saved copy, or with
+	 * none, says so. Only the radial menu, which is Effortless Building's, calls it.
 	 */
 	static void paste() {
 		if (session == null) {
@@ -585,6 +592,23 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		if (session.bringBackCopy()) {
 			modeStarted();
 		}
+	}
+
+	/**
+	 * A saved copy the player picked, read from its file ({@link SavedCopies#pick}): brings it to the aim in place of any
+	 * copy, as the Paste button brings the copy, ending any mouse mode and dropping a shape under way. Ignored once
+	 * Building Planner is off.
+	 */
+	static void pasteSaved(Map<BlockPos, BlockState> blocks) {
+		if (session == null) {
+			return;
+		}
+		session.modeAction(MouseMode.Action.PASTE_BUTTON);
+		if (effortless) {
+			ClickRule.cancelShape();
+		}
+		session.bringSaved(blocks);
+		modeStarted();
 	}
 
 	/** Whether a box is drawn for that purpose, whose radial menu button then shows selected. */

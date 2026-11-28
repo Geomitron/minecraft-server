@@ -31,12 +31,14 @@ import fi.dy.masa.malilib.gui.GuiBase;
 import it.unimi.dsi.fastutil.longs.LongSet;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
@@ -626,7 +628,7 @@ final class ClientSession {
 	 * ({@link CopyRules#blocks}), while ghost blocks are hidden only the real blocks. The copy then shows at the aim. A
 	 * box with nothing to copy, or more blocks than the server's cap for an edit, which its paste would exceed, leaves
 	 * any earlier copy, with a message; the blocks are counted ({@link BoxCount}) before any is taken, so a large box
-	 * over the cap takes none.
+	 * over the cap takes none. The copy is saved at once as the newest saved copy ({@link SavedCopies#add}).
 	 */
 	void copy(BlockPos min, BlockPos max) {
 		ClientLevel level = Minecraft.getInstance().level;
@@ -645,7 +647,25 @@ final class ClientSession {
 		followAim();
 		if (clipboard.atAim()) {
 			show(PlayerMessage.copied(blocks.size()));
+			SavedCopies.get().add(blocks, clipboard.size());
 		}
+	}
+
+	/**
+	 * Brings a saved copy to the aim, unlocked, as it was copied, in the copy's mode, in place of any copy: {@code blocks}
+	 * by their position from its lowest corner. It starts two blocks in front of the player's feet, where it stays until
+	 * the aim reaches a block.
+	 */
+	void bringSaved(Map<BlockPos, BlockState> blocks) {
+		LocalPlayer player = Minecraft.getInstance().player;
+		if (player == null) {
+			return;
+		}
+		BlockPos start = player.blockPosition().relative(player.getDirection(), 2);
+		Map<BlockPos, BlockState> placed = new LinkedHashMap<>();
+		blocks.forEach((pos, state) -> placed.put(pos.offset(start), state));
+		clipboard.place(placed);
+		followAim();
 	}
 
 	/**
@@ -855,11 +875,12 @@ final class ClientSession {
 
 	/**
 	 * Brings the most recent copy back to the aim, as it was turned and mirrored; returns whether there was one. With
-	 * none since the player joined, says so.
+	 * none since the game started, picks the newest saved copy, which comes to the aim once it's read, or says there's
+	 * none ({@link SavedCopies#pickNewest}).
 	 */
 	boolean bringBackCopy() {
 		if (!clipboard.exists()) {
-			show(PlayerMessage.nothingToPaste());
+			SavedCopies.get().pickNewest();
 			return false;
 		}
 		clipboard.bringBack();

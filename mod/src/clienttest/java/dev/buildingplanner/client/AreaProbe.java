@@ -81,6 +81,40 @@ final class AreaProbe {
 		return count(folder, first, second, true);
 	}
 
+	/**
+	 * The window box (left top right bottom) around the pixels of the lower half of two screenshots of the same view
+	 * that differ by more than 60 across their three colour channels together, where the chat shows a new message, or
+	 * none.
+	 */
+	static String chatChange(Path folder, String first, String second) throws IOException {
+		BufferedImage a = ImageIO.read(folder.resolve(first + ".png").toFile());
+		BufferedImage b = ImageIO.read(folder.resolve(second + ".png").toFile());
+		if (a.getWidth() != b.getWidth() || a.getHeight() != b.getHeight()) {
+			return "sizes differ";
+		}
+		int left = Integer.MAX_VALUE;
+		int top = Integer.MAX_VALUE;
+		int right = -1;
+		int bottom = -1;
+		for (int y = a.getHeight() / 2; y < a.getHeight(); y++) {
+			for (int x = 0; x < a.getWidth(); x++) {
+				int p = a.getRGB(x, y);
+				int q = b.getRGB(x, y);
+				int distance = 0;
+				for (int shift = 0; shift < 24; shift += 8) {
+					distance += Math.abs((q >> shift & 0xFF) - (p >> shift & 0xFF));
+				}
+				if (distance > 60) {
+					left = Math.min(left, x);
+					top = Math.min(top, y);
+					right = Math.max(right, x + 1);
+					bottom = Math.max(bottom, y + 1);
+				}
+			}
+		}
+		return right < 0 ? "none" : left + " " + top + " " + right + " " + bottom;
+	}
+
 	private static String count(Path folder, String first, String second, boolean darker) throws IOException {
 		BufferedImage a = ImageIO.read(folder.resolve(first + ".png").toFile());
 		BufferedImage b = ImageIO.read(folder.resolve(second + ".png").toFile());

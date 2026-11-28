@@ -38,6 +38,7 @@ public enum MouseMode {
 		COPY_BUTTON,
 		DELETE_BUTTON,
 		MATERIAL_LIST_BUTTON,
+		/** The radial menu's Paste button, or "Paste" in "Saved copies". */
 		PASTE_BUTTON,
 		/** The block mix key, or the radial menu's "Block mix" button. */
 		BLOCK_MIX,

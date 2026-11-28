@@ -95,9 +95,14 @@ public record PlayerMessage(String key, List<String> args) {
 		return new PlayerMessage(PREFIX + "ghosts.shown_again", List.of(key));
 	}
 
-	/** The player pressed Paste with no copy since they joined. */
+	/** The player pressed Paste with no copy since the game started and no saved copy. */
 	public static PlayerMessage nothingToPaste() {
 		return new PlayerMessage(PREFIX + "paste.nothing", List.of());
+	}
+
+	/** The saved copy the player picked couldn't be read, so it dropped from the list. */
+	public static PlayerMessage copyUnreadable() {
+		return new PlayerMessage(PREFIX + "paste.unreadable", List.of());
 	}
 
 	/** The player's Delete erased {@code blocks} ghost blocks, the count written with digit grouping ("16,001"). */

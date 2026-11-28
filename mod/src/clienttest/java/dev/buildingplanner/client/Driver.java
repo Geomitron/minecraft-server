@@ -398,6 +398,47 @@ public final class Driver implements ClientModInitializer {
 				SavedListsScreen.open(null);
 				return "ok";
 			}
+			case "copybox" -> {
+				// copybox x1 y1 z1 x2 y2 z2: copies the box as Copy's third click does, which saves the copy, and gives
+				// the copy as the driver's copy describes it.
+				session().copy(pos(a, 1), pos(a, 4));
+				return copy();
+			}
+			case "savedcopies" -> {
+				// savedcopies: the saved copies the game shows (see CopiesProbe).
+				return CopiesProbe.list();
+			}
+			case "copyindex" -> {
+				// copyindex: the saved copies' index.dat as it is on disk.
+				return CopiesProbe.index();
+			}
+			case "copyfiles" -> {
+				// copyfiles: the names of the files in the player's copies folder.
+				return CopiesProbe.files();
+			}
+			case "copyfolder" -> {
+				// copyfolder: the player's copies folder from the game folder.
+				return CopiesProbe.folder();
+			}
+			case "copyschematic" -> {
+				// copyschematic <file>: that copy's file as Litematica's own reader finds it.
+				return CopiesProbe.schematic(Integer.parseInt(a[1]));
+			}
+			case "renamecopy" -> {
+				// renamecopy <file> <name>: renames the copy as "Rename copy"'s "Save" does with that name.
+				SavedCopies.get().rename(Integer.parseInt(a[1]), line.substring(a[0].length() + a[1].length() + 2));
+				return "ok";
+			}
+			case "pickcopy" -> {
+				// pickcopy <file>: picks the copy as "Paste" on its row does.
+				SavedCopies.get().pick(Integer.parseInt(a[1]));
+				return "ok";
+			}
+			case "deletecopy" -> {
+				// deletecopy <file>: deletes the copy as the delete question's "Delete" does.
+				SavedCopies.get().delete(Integer.parseInt(a[1]));
+				return "ok";
+			}
 			case "available" -> {
 				// available: each entry of the current material list as its item and its "Available" count.
 				return DataManager.getMaterialList().getMaterialsAll().stream()
@@ -940,6 +981,11 @@ public final class Driver implements ClientModInitializer {
 				// shotdiff <shot> <shot>: how many pixels of the two screenshots' upper 6 tenths (the view, not the chat
 				// and the lines of text below it) differ by more than a little.
 				return AreaProbe.shotDifference(mc.gameDirectory.toPath().resolve("screenshots"), a[1], a[2]);
+			}
+			case "chatchange" -> {
+				// chatchange <shot> <shot>: the window box where the second screenshot's chat differs from the first's,
+				// a message it shows that the first doesn't, for outlining it.
+				return AreaProbe.chatChange(mc.gameDirectory.toPath().resolve("screenshots"), a[1], a[2]);
 			}
 			case "real" -> {
 				return realBlockId(pos(a, 1));
@@ -1582,6 +1628,8 @@ public final class Driver implements ClientModInitializer {
 					ChunkStatus.FULL, false) != null;
 			case "layer" -> LayerProbe.matches(mc.gameDirectory.toPath().resolve(a[1]));
 			case "listfile" -> ListProbe.fileHasCurrent(mc.gameDirectory.toPath().resolve(a[1]));
+			// copiessettled: the saved copies' background thread has done every change given to it.
+			case "copiessettled" -> SavedCopies.get().settled();
 			default -> throw new IllegalArgumentException(what);
 		};
 	}
