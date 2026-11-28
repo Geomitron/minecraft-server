@@ -2368,9 +2368,9 @@ Each server with Building Planner keeps its own lists, so a player starts with n
 lists and panel come back when they return. On a server with another protocol version, Building Planner stays off
 (see "When the server lacks the mod"): the panel doesn't show, and the radial menu's buttons do nothing. A singleplayer
 world runs no server side, so it has no lists either. On a server that takes none of Building Planner's payloads, the
-game starts a local session (see "Servers without Building Planner"), which keeps no lists yet: as proposed for
-0.10.0, it saves the player's lists on their computer (build step 4), and in the player's own world, the game saves
-them in the world's folder, as this server does (see "The player's own worlds").
+game starts a local session (see "Servers without Building Planner"), which keeps the player's lists on their
+computer for that server; as proposed for 0.10.0, in the player's own world, the game saves them in the world's
+folder, as this server does (see "The player's own worlds").
 
 A game on another version than the server's, such as a 0.5.0 game on the 0.6.0 server, has Building Planner off with
 no message, as on a server without it: no ghost blocks, no lists, and Effortless Building's shapes draw nothing. One
@@ -2504,9 +2504,9 @@ As proposed for 0.10.0, in the player's own world, Building Planner's server par
 
 ### Servers without Building Planner
 
-Proposed for 0.10.0. Built so far (build steps 1 to 3): which servers start a local session, the local server, the
-files, undo and redo, ghost blocks a real block fills, what needs a server that runs Building Planner, and
-Litematica's extra blocks; the rest is proposed. Geo wants Building Planner to work as a client-side mod on other servers, where other
+Proposed for 0.10.0. Built so far (build steps 1 to 4): which servers start a local session, the local server, the
+files, undo and redo, ghost blocks a real block fills, what needs a server that runs Building Planner, Litematica's
+extra blocks, and the material lists on the computer; the rest is proposed. Geo wants Building Planner to work as a client-side mod on other servers, where other
 people don't need to see the player's ghost blocks (comment c4 on 1359), and picked "Yes, in a later version: there,
 your ghost blocks are saved on your computer and only you see them, and this server still shares them." (1368 Q1 A).
 Shapes place real blocks only on servers that run Building Planner (1368 Q2 A). For the player's own worlds, Geo picked
@@ -2526,14 +2526,16 @@ A LAN guest's game shares the ghost blocks of a world whose host's game runs Bui
 session in a world whose host's game doesn't.
 
 **The local server.** `LocalServer` runs, for one player, the classes the dedicated server runs from the common source
-set: `LayerSync` for the layer, its checks and undo, `LayerStore` for the layer's files, and, as proposed for build
-step 4, `MaterialLists` with `ListFiles` for the material lists. It is in the common source set too, so its unit tests
+set: `LayerSync` for the layer, its checks and undo, `LayerStore` for the layer's files, and `MaterialLists` with
+`ListFiles` for the material lists, which follow the `hello` (`lists`, then `current`) and take a list's dimension
+only when the server told the game of it (`ClientPacketListener.levels`). It is in the common source set too, so its
+unit tests
 run it, and the client's `LocalSession` wires it to the game. Its `LayerSync.World` answers from the game itself: the
 player's dimension and chunk column, the radius of the chunks the game keeps loaded (the render distance, at least 2,
 plus 3) as the view distance, the level's build height and world border, and a real block only in a chunk the game
 has loaded (`ClientLevel`). Its `Outbox` queues each payload for the player, and the game handles the queue in order
-at the start of its next tick (`START_CLIENT_TICK`), as it handles a server's packets; the payloads a server's
-session alone handles (the lists, the place, the turn) it drops. `ClientSession` and `ListSync` send through a
+at the start of its next tick (`START_CLIENT_TICK`), as it handles a server's packets; the payloads that act on real
+blocks (the place, the turn) it drops. `ClientSession` and `ListSync` send through a
 `SessionLink`, the network on a server that runs Building Planner and `LocalSession` elsewhere, so the session, its
 replica (`LayerReplica`) and the tiles work as they do on this server. The local `hello` has protocol version 5 and the
 block cap of 200,000 blocks an edit (`SyncLimits.DEFAULT`).
@@ -2942,8 +2944,8 @@ they're teleported; xdotool sends the wheel and the middle button (`xdo` clicks 
   orange one-block box in the view, which is shot. After the next start, the option is off,
   `area-selection-off-applied=true` is written, the selection and its origin are still in Litematica's data, and
   neither shows in the same view.
-- On the same server with Building Planner left out, N makes no message and leaves ghost blocks shown, the mouse
-  works as without the add-on, and the material list panel doesn't show; with Building Planner back, the panel shows
+- On the same server with Building Planner left out, Planner1's game starts a local session, and the material list
+  panel doesn't show, the computer's lists for that server having none; with Building Planner back, the panel shows
   again with the same list.
 - Delete, marking by sweeping ("Delete"): the Delete button starts Delete (the driver's `mousemode`), R does nothing
   in it, and after Planner1's game restarts the Delete button starts Delete again. Facing a ghost wall of 10 by 5 stone
@@ -3485,6 +3487,11 @@ Real blocks are checked on the server with the script's `server_has`. It checks:
   oak stair placed into a ghost oak stair facing east faces south, as Minecraft places it, on the server, and leaves
   the ghost stair; and with "Place real blocks" on, a Line of 4 oak planks draws 4 ghost blocks and places no real
   block. Both settings are turned off again.
+- The material lists on the computer: a box around the first Line's 4 ghost oak planks, started with the radial
+  menu's "Material list" button and drawn with three clicks, opens its list (4 oak planks, all missing), saved as
+  "Line" on its screen with real clicks and key presses, and its Info HUD button turns the panel on; after Planner1
+  leaves, the lists' file is in `material-lists/` in Planner1's folder for the server, and after a rejoin the game has
+  the counted list as its current one, the panel shows it again, and "Last counted" and "Line" are its lists.
 - Litematica's extra blocks (hook L7, the driver's `overlay`): two placements of Planner1's own, empty plans of 3 by 3
   laid on the ground (the driver's `oldplans`), mark the real grass in them as extra, and the ground under the Lines'
   ghost blocks, in a tile's box alone, isn't marked.
@@ -3497,7 +3504,6 @@ The checks proposed for the later build steps of 0.10.0 (the checks follow the o
 - With the radial menu open, the line above "Building Planner" shows at the row E42 records: one row above the name at
   1920 by 1080, GUI scales 2 and 4, and a row above a hovered mode's description at 854 by 480, GUI scale 2. With the
   server restarted with Building Planner, it doesn't show.
-- A box counted, then saved as a list, and the material list panel come back after a rejoin.
 - A copy of ghost blocks and real blocks taken on the server with Building Planner pastes as ghost blocks on Planner1's
   client after the server restarts without it, and the copy stays through a change of dimension.
 - With the server restarted with Building Planner, Planner1 sees the shared ghost blocks without its own local ones;
@@ -3532,8 +3538,9 @@ edit outside the watched columns refused, the steps kept across a rejoin and a c
 at leaving and every 30 seconds and read back at the next session, an unreadable file left out and never written over,
 nothing taken after the stop, a ghost block a real block fills at a change (and not one a block that doesn't fill it
 replaces) at the end of the tick with no undo step, one filled while its chunk wasn't loaded at chunk load, a
-position awaiting the server's answer waiting for it, and a refused one keeping its ghost block; build step 4 adds the
-lists kept. `LocalFoldersTest` covers the folders: each `:` turned into `_`, a Realm, an address that can't be a
+position awaiting the server's answer waiting for it, a refused one keeping its ghost block, the material lists and
+the current list following the `hello`, none at first, and a list saved and a counted current list with the panel
+on kept in the player's folder and read back at the next join, where the saved list opens. `LocalFoldersTest` covers the folders: each `:` turned into `_`, a Realm, an address that can't be a
 folder's name, and two players' UUIDs in two folders.
 As proposed, `RadialLineTest` covers the radial menu line's row on screens 240, 256, 257 and 270 high.
 

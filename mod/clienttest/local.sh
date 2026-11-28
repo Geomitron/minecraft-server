@@ -7,9 +7,10 @@
 # made unreadable stays as it was, and its ghost blocks don't show. What needs a server that runs Building Planner
 # doesn't act: in Disable, Left Ctrl with the wheel changes the hotbar slot, a stair placed into a ghost stair with
 # "Match ghost blocks" on faces as Minecraft places it, and with "Place real blocks" on a Line draws ghost blocks; and a
-# Litematica placement of Planner1's own marks extra blocks, while the tiles mark none. Real blocks are checked on the
-# server with server_has. Sourced by inside.sh, which provides drv, val, check, xdo, click, keys, use_click,
-# attack_click, client_said, wait_for, start_server, stop_server, start_client, stop_client and $ADDON.
+# Litematica placement of Planner1's own marks extra blocks, while the tiles mark none; a box counted for a material
+# list, saved, with the panel on, comes back after a rejoin. Real blocks are checked on the server with server_has.
+# Sourced by inside.sh, which provides drv, val, check, xdo, click, keys, use_click, attack_click, client_said,
+# wait_for, start_server, stop_server, start_client, stop_client and $ADDON.
 
 server_log=/out/server-without-addon.log
 planner1=527e7f9d-ae90-3a44-aa88-30a47a9cdf34
@@ -257,3 +258,78 @@ check "a Litematica placement of Planner1's own marks a real block where it hold
 check "while no real block in a tile's box alone is marked" eval \
 	'[[ $(val 1 "overlay 20 -61 20") == NONE && $(val 1 "overlay 41 -61 46") == NONE ]]'
 shots 1 local-placement-extra-blocks "screenbox 60 -61 60 66 -61 62"
+
+# The material lists on the computer, in Planner1's folder for the server: a box around the first Line's 4 ghost oak
+# planks, started with the radial menu's "Material list" button and drawn with three clicks, opens its list, which is
+# saved as "Line" on its screen, and its Info HUD button turns the panel on. After a rejoin, the game has the list as
+# its current one, the panel shows it, and "Line" and "Last counted" are among its lists.
+lists_file=$folder1/material-lists/$planner1.dat
+# radial_button <name>: a real click on the radial menu's button of that name, the menu's key (left Alt) held.
+radial_button() {
+	local x y
+	xdo 1 keydown Alt_L
+	drv 1 "await screen Build Modes" "wait 10" > /dev/null
+	read -r x y < <(val 1 "widget 0 $1")
+	xdo 1 mousemove --window %w "$x" "$y"
+	drv 1 "wait 5" > /dev/null
+	xdo 1 click 1
+	drv 1 "wait 5" > /dev/null
+	xdo 1 keyup Alt_L
+	drv 1 "await noscreen" "wait 5" > /dev/null
+}
+# list_box <ax ay az> <y1> <x2 z2> <y3>: box's clicks for a material list, the last one a press and a release that the
+# list's screen, which it opens, takes from the game.
+list_box() {
+	drv 1 "lookat $1 $2 $3" "wait 5" > /dev/null
+	attack_click 1
+	drv 1 "lookat $(half "$5") $4 $(half "$6")" "wait 5" > /dev/null
+	attack_click 1
+	drv 1 "lookat $(half "$5") $(half "$7") $(half "$6")" "wait 10" > /dev/null
+	xdo 1 mousedown 1
+	drv 1 "wait 10" > /dev/null
+	xdo 1 mouseup 1
+	drv 1 "wait 10" > /dev/null
+}
+# mat_click <label>: a real click on the button of the open material list screen whose label starts with the text.
+mat_click() {
+	local pos
+	pos=$(val 1 "malilibbutton $1")
+	[[ $pos != none ]] && click 1 $pos
+}
+# save_as <name>: "Save list" on the open material list screen, the name typed over the date with real key presses,
+# and "Save", which returns to the list's screen.
+save_as() {
+	local x y
+	mat_click "Save list"
+	drv 1 "await screen Save list" > /dev/null
+	keys 1 key ctrl+a BackSpace
+	keys 1 type --delay 20 -- "$1"
+	drv 1 "wait 5" > /dev/null
+	read -r x y < <(val 1 "widget 0 Save")
+	click 1 "$x" "$y"
+	drv 1 "await screen Material list for the blocks in the box" "wait 20" > /dev/null
+}
+drv 1 "ebmode SINGLE" "cmd tp @s 21.5 -60 16.5 0 30" "wait 20" > /dev/null
+radial_button "Material list"
+list_box 20.5 -59 20.5 -59 23 20 -60
+check "a box around the first Line's ghost blocks opens its material list: 4 oak planks, all missing" eval \
+	'drv 1 "await screen Material list for the blocks in the box" "wait 10" > /dev/null &&
+	[[ $(val 1 currentlist) == *" | minecraft:oak_planks 4/4/0"* ]]'
+counted_list=$(val 1 currentlist)
+echo "  the counted list: $counted_list" >> /out/checks.log
+save_as Line
+mat_click "Info HUD"
+drv 1 "close" "wait 10" > /dev/null
+panel=$(val 1 matpanel)
+echo "  the panel: $panel" >> /out/checks.log
+check "saved as \"Line\", with its Info HUD on, the panel shows it" eval \
+	'[[ $panel == "Material list | All Hold Need | "* && $(val 1 listindex) == *"Line "* ]]'
+check "after Planner1 leaves, the lists' file is in Planner1's folder for the server" eval \
+	'drv 1 "leave" "wait 40" > /dev/null && [[ -s $lists_file ]]'
+drv 1 "join localhost:25565" > /dev/null
+check "and after a rejoin, the game has the counted list as its current one" eval \
+	'drv 1 "await session" "await noscreen" "wait 20" > /dev/null && [[ $(val 1 currentlist) == "$counted_list" ]]'
+check "the panel shows it again" eval '[[ $(val 1 matpanel) == "$panel" ]]'
+check "and \"Line\" and \"Last counted\" are among the lists" eval \
+	'[[ $(val 1 listindex) == "last counted 4x2x1 | Line 4x2x1" ]]'
+echo "  the lists after the rejoin: $(val 1 listindex)" >> /out/checks.log

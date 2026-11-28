@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import dev.buildingplanner.layer.LayerFiles;
 import dev.buildingplanner.sync.EditKind;
 import dev.buildingplanner.sync.LayerChange;
+import dev.buildingplanner.sync.ListData;
 import dev.buildingplanner.sync.LayerReplica;
 import dev.buildingplanner.sync.Payloads;
 import dev.buildingplanner.sync.PlayerMessage;
@@ -44,7 +45,7 @@ import org.junit.jupiter.api.io.TempDir;
  * the next tick ({@link #tick}). The world is LayerNetwork's: the overworld and the Nether, a view distance of 4, and
  * every chunk loaded with only air unless the test says otherwise; the game's real blocks reach the local server as
  * hook C1 and the check at chunk load hand them over, and {@code awaiting} holds the blocks the game placed that the
- * server hasn't answered for yet.
+ * server hasn't answered for yet. The server has the world's two dimensions for the material lists.
  */
 class LocalServerTest {
 	private static final UUID PLAYER = UUID.fromString("527e7f9d-ae90-3a44-aa88-30a47a9cdf34");
@@ -67,6 +68,7 @@ class LocalServerTest {
 	private LayerReplica replica;
 	private final List<CustomPacketPayload> received = new ArrayList<>();
 	private int clientSeq;
+	private long now = 1_000_000;
 
 	@BeforeAll
 	static void bootstrap() {
@@ -93,7 +95,7 @@ class LocalServerTest {
 
 	/** The player joins the server: the local server starts, its hello arrives, and the game watches columns -1 to 1. */
 	private void join() {
-		server = LocalServer.start(folder(), PLAYER, world(), history, 0);
+		server = LocalServer.start(folder(), PLAYER, "Player", world(), LocalServerTest::hasDimension, history, now);
 		assertTrue(server != null);
 		replica = new LayerReplica(dimension, (chunkX, chunkZ, column, changed) -> {
 		});
@@ -112,8 +114,25 @@ class LocalServerTest {
 		server.stop();
 	}
 
+	private static boolean hasDimension(Identifier id) {
+		return id.equals(OVERWORLD) || id.equals(NETHER);
+	}
+
 	private void send(List<CustomPacketPayload> payloads) {
-		payloads.forEach(server::receive);
+		payloads.forEach(this::receive);
+	}
+
+	/** A payload from the game, a second after the one before. */
+	private void receive(CustomPacketPayload payload) {
+		now += 1_000;
+		server.receive(payload, now);
+	}
+
+	/** The one payload of that kind the game read since it joined. */
+	private <T extends CustomPacketPayload> T only(Class<T> kind) {
+		List<T> found = received.stream().filter(kind::isInstance).map(kind::cast).toList();
+		assertEquals(1, found.size(), kind.getSimpleName());
+		return found.getFirst();
 	}
 
 	/** The start of the game's next tick: it reads every payload the local server queued, in order. */
@@ -130,18 +149,18 @@ class LocalServerTest {
 	}
 
 	private void edit(BlockState state, BlockPos... positions) {
-		server.receive(new Payloads.Edit(dimension, ++clientSeq, state.isAir() ? EditKind.ERASE : EditKind.SHAPE,
+		receive(new Payloads.Edit(dimension, ++clientSeq, state.isAir() ? EditKind.ERASE : EditKind.SHAPE,
 			List.of(positions).stream().map(pos -> new LayerChange(pos, state)).toList()));
 		tick();
 	}
 
 	private void undo() {
-		server.receive(new Payloads.Undo());
+		receive(new Payloads.Undo());
 		tick();
 	}
 
 	private void redo() {
-		server.receive(new Payloads.Redo());
+		receive(new Payloads.Redo());
 		tick();
 	}
 
@@ -156,15 +175,58 @@ class LocalServerTest {
 
 	@Test
 	void theFirstPayloadIsAHelloOfThisVersionWithTheDefaultCap() {
-		LocalServer fresh = LocalServer.start(game.resolve("other"), PLAYER, world(), new LayerSync.History(), 0);
+		LocalServer fresh = LocalServer.start(game.resolve("other"), PLAYER, "Player", world(),
+			LocalServerTest::hasDimension, new LayerSync.History(), now);
 
 		assertEquals(new Payloads.Hello(Payloads.PROTOCOL_VERSION, SyncLimits.DEFAULT.maxEditBlocks()),
 			fresh.takeMessages().getFirst());
 	}
 
 	@Test
+	void afterTheHelloComeTheMaterialListsAndTheCurrentListNoneAtFirst() {
+		LocalServer fresh = LocalServer.start(game.resolve("other"), PLAYER, "Player", world(),
+			LocalServerTest::hasDimension, new LayerSync.History(), now);
+
+		List<CustomPacketPayload> first = fresh.takeMessages();
+		assertEquals(List.of(Payloads.Hello.class, Payloads.Lists.class, Payloads.Current.class),
+			first.stream().map(Object::getClass).toList());
+		assertEquals(new Payloads.Lists(Optional.empty(), List.of()), first.get(1));
+		assertEquals(new Payloads.Current(Optional.empty(), false), first.get(2));
+	}
+
+	@Test
+	void theMaterialListsAreKeptInThePlayersFolderAndComeBackAtTheNextJoin() {
+		ListData counted = ListFilesTest.list(10);
+		receive(new Payloads.SaveList("Planks", counted, false));
+		receive(new Payloads.CurrentList(Optional.of(counted), true, true, false));
+		tick();
+		leave();
+
+		assertTrue(Files.exists(LocalFolders.materialLists(folder()).resolve(PLAYER + ".dat")));
+		join();
+		Payloads.Lists lists = only(Payloads.Lists.class);
+		assertEquals(List.of("Planks"), lists.saved().stream().map(Payloads.ListSummary::name).toList());
+		assertEquals(counted.size(), lists.lastCounted().orElseThrow().size());
+		Payloads.Current current = only(Payloads.Current.class);
+		assertTrue(current.panel());
+		assertEquals(counted.rows(), current.list().orElseThrow().rows());
+		receive(new Payloads.OpenList("Planks"));
+		tick();
+		assertEquals(counted.rows(), only(Payloads.OpenedList.class).list().rows());
+	}
+
+	@Test
+	void aListMessageAfterTheStopIsntKept() {
+		leave();
+		receive(new Payloads.SaveList("Planks", ListFilesTest.list(10), false));
+
+		assertFalse(Files.exists(LocalFolders.materialLists(folder()).resolve(PLAYER + ".dat")));
+		assertEquals(List.of(), server.takeMessages());
+	}
+
+	@Test
 	void anEditReachesTheGamesCopyAtItsNextTick() {
-		server.receive(new Payloads.Edit(dimension, ++clientSeq, EditKind.SHAPE, List.of(new LayerChange(A, stone))));
+		receive(new Payloads.Edit(dimension, ++clientSeq, EditKind.SHAPE, List.of(new LayerChange(A, stone))));
 
 		assertEquals(air, at(A));
 		tick();
@@ -363,7 +425,7 @@ class LocalServerTest {
 	void afterStoppingItTakesNothingMore() {
 		leave();
 
-		server.receive(new Payloads.Edit(dimension, ++clientSeq, EditKind.SHAPE, List.of(new LayerChange(A, stone))));
+		receive(new Payloads.Edit(dimension, ++clientSeq, EditKind.SHAPE, List.of(new LayerChange(A, stone))));
 
 		assertEquals(List.of(), server.takeMessages());
 		assertEquals(air, server.layer().get(OVERWORLD, A));

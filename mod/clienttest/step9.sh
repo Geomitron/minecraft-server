@@ -4,10 +4,10 @@
 # aim worked by the mouse and its keys, its Line, Wall and Floor, the copy's colours, Delete's marking by sweeping and
 # with a box, with what its marks cost, its erasing and its lines, the material list, the counted list kept on the server
 # across restarts, the list screen's buttons, saving, opening and deleting lists, the lists
-# across restarts and on another computer, a damaged lists file, the server's limits, Refresh far from the box, and N on
-# a server without Building Planner. Sourced by inside.sh, which provides drv, val,
-# check, keys, xdo, click, use_click, attack_click, client_said, start_server, stop_server, start_client, stop_client,
-# no_planner_message and $ADDON. Players stand on the flat world's grass, whose top is at y -61.
+# across restarts and on another computer, a damaged lists file, the server's limits, Refresh far from the box, and the
+# panel on a server without Building Planner, where a local session starts. Sourced by inside.sh, which provides drv,
+# val, check, keys, xdo, click, use_click, attack_click, client_said, start_server, stop_server, start_client,
+# stop_client and $ADDON. Players stand on the flat world's grass, whose top is at y -61.
 
 check "client 1 starts a session on hello" drv 1 "await session" "await noscreen"
 check "client 2 starts a session on hello" drv 2 "await session" "await noscreen"
@@ -4300,8 +4300,9 @@ drv 1 "close" "wait 100" > /dev/null
 before_panel=$(val 1 matpanel)
 echo "  the panel before the server without Building Planner: $before_panel" >> /out/checks.log
 
-# On the same server with Building Planner left out, N does nothing, and the material list panel doesn't show; with
-# Building Planner back, the panel shows again with the same list.
+# On the same server with Building Planner left out, the game starts a local session, whose material lists, kept on
+# the computer for that server, have none yet, so the panel doesn't show; with Building Planner back, the panel shows
+# again with the same list.
 stop_client 1
 stop_client 2
 cp /out/client1.log /out/client1-with-addon.log
@@ -4310,15 +4311,11 @@ stop_server "$lists_log"
 check "the server starts without Building Planner" eval 'start_server "$ADDON" server-without-addon &&
 	! grep -qF "Building Planner loaded" /out/server-without-addon.log'
 start_client 1
-# The loading screen swallows key presses, so wait for it to close.
-check "client 1 starts no session" drv 1 "await noscreen" "wait 40" "await nosession"
+check "client 1 starts a local session" eval 'drv 1 "await noscreen" "await session" > /dev/null &&
+	[[ $(val 1 sessionkind) == local ]]'
 drv 1 "cmd tp @s 5 -60 -3 0 10" "wait 20" > /dev/null
-press 1 n
-check "N opens nothing and leaves ghost blocks shown" eval 'drv 1 "wait 20" "await noscreen" > /dev/null &&
-	grep -q "^ghost-blocks-shown=true" "$config"'
-check "and shows no Building Planner message" no_planner_message 1
-shot 1 keys-not-on-server
-check "and the material list panel doesn't show" eval '[[ $(val 1 matpanel) == hidden ]]'
+check "and the material list panel doesn't show, the computer's lists for the server having none" eval \
+	'drv 1 "wait 20" > /dev/null && [[ $(val 1 matpanel) == hidden ]]'
 stop_client 1
 stop_server server-without-addon
 start_server "" server-addon-back

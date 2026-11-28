@@ -16,15 +16,18 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
 
 /**
  * A local session's server part, wired to the game: the {@link LocalServer} for the player's folder for the server
- * they joined ({@link LocalFolders}), answering from the game's own level, and the link the session sends through.
+ * they joined ({@link LocalFolders}), answering from the game's own level and the dimensions the server told the game
+ * of, and the link the session and its material lists send through.
  * The game hands the server's queued payloads to the session at the start of each client tick, and its real blocks'
  * changes (hook C1) and loaded chunks to the server, which removes the ghost blocks they fill at the end of the tick.
  */
@@ -52,7 +55,9 @@ final class LocalSession implements SessionLink {
 		}
 		Path gameDir = mc.gameDirectory.toPath().toAbsolutePath().normalize();
 		Path folder = LocalFolders.player(gameDir, name.get(), player);
-		LocalServer server = LocalServer.start(folder, player, world(mc, player),
+		LocalServer server = LocalServer.start(folder, player, mc.getUser().getName(), world(mc, player),
+			dimension -> mc.getConnection() != null
+				&& mc.getConnection().levels().contains(ResourceKey.create(Registries.DIMENSION, dimension)),
 			HISTORIES.computeIfAbsent(folder, key -> new LayerSync.History()), System.currentTimeMillis());
 		if (server == null) {
 			return null;
@@ -64,7 +69,7 @@ final class LocalSession implements SessionLink {
 
 	@Override
 	public void send(CustomPacketPayload payload) {
-		server.receive(payload);
+		server.receive(payload, System.currentTimeMillis());
 	}
 
 	@Override
