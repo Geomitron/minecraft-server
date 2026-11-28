@@ -26,7 +26,6 @@ import fi.dy.masa.litematica.schematic.LitematicaSchematic;
 import fi.dy.masa.litematica.schematic.placement.SchematicPlacement;
 import fi.dy.masa.litematica.selection.AreaSelection;
 import fi.dy.masa.litematica.selection.Box;
-import fi.dy.masa.litematica.util.OverlayType;
 import fi.dy.masa.litematica.util.SchematicUtils;
 import fi.dy.masa.litematica.world.SchematicWorldHandler;
 import fi.dy.masa.malilib.gui.GuiBase;
@@ -591,8 +590,7 @@ public final class Driver implements ClientModInitializer {
 				return describe(((Map<?, ?>) placements.get(OverlayRenderer.getInstance())).keySet());
 			}
 			case "overlay" -> {
-				// overlay x y z: the mark Litematica's chunk renderer gives the real block there against its ghost block, as
-				// hook L7 passes it on.
+				// overlay x y z: the mark Litematica's chunk renderer gives the real block there against its ghost block.
 				Object renderer = LitematicaRenderer.getInstance().getWorldRenderer();
 				Field infos = renderer.getClass().getDeclaredField("renderInfos");
 				infos.setAccessible(true);
@@ -603,9 +601,8 @@ public final class Driver implements ClientModInitializer {
 				Method overlay = chunks.getFirst().getClass().getDeclaredMethod("getOverlayType", BlockState.class,
 					BlockState.class);
 				overlay.setAccessible(true);
-				return String.valueOf(BuildingPlannerClient.overlayType((OverlayType) overlay.invoke(chunks.getFirst(),
-					SchematicWorldHandler.getSchematicWorld().getBlockState(pos(a, 1)), mc.level.getBlockState(pos(a, 1))),
-					pos(a, 1)));
+				return String.valueOf(overlay.invoke(chunks.getFirst(),
+					SchematicWorldHandler.getSchematicWorld().getBlockState(pos(a, 1)), mc.level.getBlockState(pos(a, 1))));
 			}
 			case "oldplans" -> {
 				// oldplans x y z: an empty plan's file each in Syncmatica's client folder and in "Start a plan"'s, with a

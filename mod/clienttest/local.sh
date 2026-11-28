@@ -6,9 +6,8 @@
 # area's file is in the game folder, and the ghost blocks show again after a rejoin and after the game restarts; a file
 # made unreadable stays as it was, and its ghost blocks don't show. What needs a server that runs Building Planner
 # doesn't act: in Disable, Left Ctrl with the wheel changes the hotbar slot, a stair placed into a ghost stair with
-# "Match ghost blocks" on faces as Minecraft places it, and with "Place real blocks" on a Line draws ghost blocks; and a
-# Litematica placement of Planner1's own marks extra blocks, while the tiles mark none; a box counted for a material
-# list, saved, with the panel on, comes back after a rejoin. With the server restarted with Building Planner, Planner1
+# "Match ghost blocks" on faces as Minecraft places it, and with "Place real blocks" on a Line draws ghost blocks; a
+# box counted for a material list, saved, with the panel on, comes back after a rejoin. With the server restarted with Building Planner, Planner1
 # sees the shared ghost blocks without its local ones and no line above "Building Planner" in the radial menu, and a
 # copy there of ghost and real blocks stays through a trip to the Nether and, with the server restarted without it
 # again, pastes as ghost blocks where the local ghost blocks show again. There, the radial menu's line "(client only)"
@@ -258,17 +257,6 @@ switch_setting 1 "Place real blocks"
 switch_setting 1 "Match ghost blocks"
 check "both settings are off again, as \"Settings\" saved them" eval \
 	'grep -q "^place-real-blocks=false" "$client_config" && grep -q "^match-ghost-turn=false" "$client_config"'
-
-# Litematica's extra blocks (hook L7): placements of Planner1's own, two empty plans of 3 by 3 laid on the ground at
-# 60 -61 60 and 64 -61 60 (the driver's oldplans, whose placements stay during a local session), mark the real grass
-# in them as extra, as Litematica does; the ground under the Lines' ghost blocks, in a tile's box alone, isn't marked.
-drv 1 "ebmode DISABLED" "cmd tp @s 63.5 -60 56.5 0 25" "await loaded minecraft:overworld 60 60" "wait 20" \
-	"oldplans 60 -61 60" "wait 40" > /dev/null
-check "a Litematica placement of Planner1's own marks a real block where it holds air as extra" eval \
-	'[[ $(val 1 "overlay 61 -61 61") == EXTRA && $(val 1 "overlay 65 -61 61") == EXTRA ]]'
-check "while no real block in a tile's box alone is marked" eval \
-	'[[ $(val 1 "overlay 20 -61 20") == NONE && $(val 1 "overlay 41 -61 46") == NONE ]]'
-shots 1 local-placement-extra-blocks "screenbox 60 -61 60 66 -61 62"
 
 # The material lists on the computer, in Planner1's folder for the server: a box around the first Line's 4 ghost oak
 # planks, started with the radial menu's "Material list" button and drawn with three clicks, opens its list, which is

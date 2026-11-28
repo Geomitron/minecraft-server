@@ -876,11 +876,10 @@ checks that need both kinds of server. Those of the player's own worlds are in `
 2. **Ghost blocks a real block fills** (in "What works there"). Hook C1, the wait for the server's answer, and the
    check at chunk load. Done when `LocalServerTest` covers them, `local.sh`'s checks of filled ghost blocks pass, the
    refused placement's included, and `filled.sh` passes unchanged.
-3. **What needs a server that runs Building Planner, and Litematica's extra blocks** ("What works there", "Litematica's
-   extra blocks"). "Place real blocks", Disable's turn and "Match ghost blocks" acting only with such a server, and
-   hook L7. Done when `DisableTurnTest` covers no turn during a local session, `local.sh`'s checks of Disable, "Place
-   real blocks" and a placement's extra block pass, and `step10.sh`'s Disable checks, `filled.sh` and `real.sh` pass
-   unchanged.
+3. **What needs a server that runs Building Planner** (in "What works there"). "Place real blocks", Disable's turn and
+   "Match ghost blocks" acting only with such a server. Done when `DisableTurnTest` covers no turn during a local
+   session, `local.sh`'s checks of Disable and "Place real blocks" pass, and `step10.sh`'s Disable checks, `filled.sh`
+   and `real.sh` pass unchanged.
 4. **Material lists on the computer** (in "What works there"). Done when `LocalServerTest` covers the lists kept and
    read back, `local.sh`'s list checks pass, and `step9.sh`'s list checks pass unchanged.
 5. **The copy between servers** ("Between servers"). The copy

@@ -304,7 +304,7 @@ Litematica, under `src/main/java/fi/dy/masa/litematica/`:
 | L4 | `schematic/placement/SchematicPlacementManager.java`, `setSelectedSchematicPlacement(SchematicPlacement)` | `@Inject` at head, cancellable | A tile or the copy is never selected: selecting one leaves the selection as it was, since selecting none would also clear Litematica's material list. Covers `addSchematicPlacement`, which selects a new placement when none is selected, `removeSchematicPlacement`, which then selects the first placement, selection by aim, and the placement list. Tiles and the copy are known as theirs before they're added. |
 | L5 | `gui/widgets/WidgetListSchematicPlacements.java`, `getAllEntries()` | `@ModifyReturnValue` | Leave tiles and the copy out of Litematica's placement list. |
 | L6 | `render/OverlayRenderer.java`, `updatePlacementCache()` | `@WrapOperation` on `SchematicPlacementManager.getAllSchematicsPlacements()` | Leave tiles, the copy and its set out of the boxes and origin markers `renderBoxes` draws; Building Planner draws the copy's box itself, in its colours (see "Copy and paste"). This leaves Litematica's own switch for those boxes (`enablePlacementBoxesRendering`) as the player set it. |
-| L7 | `render/schematic/ChunkRendererSchematicVbo.java`, the three calls to `getOverlayType(BlockState, BlockState)`, which has no position: one in `renderBlocksAndOverlay`, for the block, and two in `renderOverlay`, for its neighbours, whose marks decide the sides and edges drawn between marks | `@WrapOperation`, with the block's position (`@Local`: `renderBlocksAndOverlay`'s `BlockPos` argument, and the second `BlockPos.MutableBlockPos` in `renderOverlay`, the neighbour's, at both calls) | While Building Planner has a session, turn `EXTRA` into `NONE` outside the box of every placement that isn't a tile or the copy or one of its set's (`BuildingPlannerClient.overlayType`, from Litematica's `getPlacementPartsInChunk`). Litematica marks a real block as extra wherever a placement's box holds air there (`schematicOverlayTypeExtra`, on by default), and a tile's box is a whole chunk column's sections, so every real block in it would be marked; the layer holds only blocks to place. The player's own placements keep Litematica's extra marks, on any server. Missing and wrong blocks keep their colours. Runs on Litematica's rebuild threads. |
+| L7 | `render/schematic/ChunkRendererSchematicVbo.java`, `getOverlayType(BlockState, BlockState)` | `@ModifyReturnValue` | While Building Planner has a session, turn `EXTRA` into `NONE`. Litematica marks a real block as extra wherever a placement's box holds air there (`schematicOverlayTypeExtra`, on by default), and a tile's box is a whole chunk column's sections, so every real block in it would be marked. The layer holds only blocks to place, so no real block is extra. The player's own Litematica placements show no extra marks during a session either, on any server (1453 Q2 B). Missing and wrong blocks keep their colours. |
 | L8 | `schematic/placement/PlacementManagerTaskRebuild.java`, `run()`; `PlacementManagerTask.java`'s constructors | `@WrapMethod`; a number for each task, in the order they're made (`RebuildOrder`) | Run the rebuilds of one chunk column one at a time. Litematica's background threads (at least two) rebuild a column from its placements' blocks as they are when the rebuild runs, so two rebuilds of one column at once could end with the older one's result, read before an edit's blocks were written. It also notes when each rebuild begins and ends, for the self-check ("Overlapping shapes"). |
 | L9 | `schematic/placement/PlacementManagerDaemonHandler.java`, `removeRebuildTasksFor` and `removeDeferredTasksFor` | `@WrapMethod` | A running rebuild drops from the queue only the rebuilds of its column made before it began, whose edits it reads. Litematica's rebuild drops every queued rebuild of its column as it ends, and as it unloads a column with no placements, including one queued for an edit written after it read the column, which would leave that edit undrawn. Elsewhere (a new rebuild replacing the queued ones, an unload) every queued rebuild of the column still goes. |
 | L10 | `gui/GuiMaterialList.java`, private `createButtons()` and `createButton(int, int, ButtonListener.Type)` | `@WrapOperation` on `addButton` in `createButton`, which adds "Save list" or "Saved lists" in place of the `EXPORT` or `EXPORT_TYPE` button, telling them by the listener's `type` (read by reflection, since `ButtonListener.Type` is private); `@WrapOperation` on `addButton` in `createButtons`, the call that adds the `ButtonListenerChangeMenu` | For Building Planner's list only (`GhostMaterialList`): no "Export" button, no export type button ("Write to file", which cycles), and no "Litematica menu" button, which `createButtons` adds at the bottom right; "Save list" and "Saved lists" go where "Export" and the export type were, in the same row, which the method moves to the bottom left when the screen is narrow (`isNarrow`), and "Close" goes where "Litematica menu" was. Other material lists keep their buttons. |
@@ -2503,8 +2503,8 @@ As proposed for 0.10.0, in the player's own world, Building Planner's server par
 ### Servers without Building Planner
 
 Proposed for 0.10.0, and built (build steps 1 to 7): which servers start a local session, the local server, the
-files, undo and redo, ghost blocks a real block fills, what needs a server that runs Building Planner, Litematica's
-extra blocks, the material lists on the computer, the copy between servers, the player's own worlds, and the radial
+files, undo and redo, ghost blocks a real block fills, what needs a server that runs Building Planner, the material
+lists on the computer, the copy between servers, the player's own worlds, and the radial
 menu's line, whose wording Geo approves in build step 8. Geo wants Building Planner to work as a client-side mod on other servers, where other
 people don't need to see the player's ghost blocks (comment c4 on 1359), and picked "Yes, in a later version: there,
 your ghost blocks are saved on your computer and only you see them, and this server still shares them." (1368 Q1 A).
@@ -2639,10 +2639,6 @@ on this server, its server part running inside the game (1374 Q4 C, 1381 Q2 A):
   and a second, within 64 blocks of the player's eyes, from the inventory in survival, and Ctrl+Z undoes only ghost
   blocks (1372 Q5 B) (1381 Q3 A). Disable's turn and
   "Match ghost blocks" work there as on this server.
-
-**Litematica's extra blocks.** Hook L7 (in "Hooks") shows Litematica's colour for an extra block inside the box of a
-placement of the player's own that holds air there, on any server, so the player's own placements show extra blocks
-as Litematica does without Building Planner. The layer's tiles mark none.
 
 | # | File, method | Hook | Purpose |
 |---|---|---|---|
@@ -3496,9 +3492,6 @@ Real blocks are checked on the server with the script's `server_has`. It checks:
   "Line" on its screen with real clicks and key presses, and its Info HUD button turns the panel on; after Planner1
   leaves, the lists' file is in `material-lists/` in Planner1's folder for the server, and after a rejoin the game has
   the counted list as its current one, the panel shows it again, and "Last counted" and "Line" are its lists.
-- Litematica's extra blocks (hook L7, the driver's `overlay`): two placements of Planner1's own, empty plans of 3 by 3
-  laid on the ground (the driver's `oldplans`), mark the real grass in them as extra, and the ground under the Lines'
-  ghost blocks, in a tile's box alone, isn't marked.
 - The copy between servers, with Planner1's game running throughout and the server stopping under it: before the
   first restart, Planner1 draws a ghost oak plank in the shared layer of the server with Building Planner. With the
   server restarted with Building Planner, Planner1 sees that plank without its local ghost blocks; a copy there, with
@@ -3513,9 +3506,9 @@ Real blocks are checked on the server with the script's `server_has`. It checks:
   at 1920 by 1080, GUI scales 2 (row 520) and 4 (row 250), and at 854 by 480, GUI scale 2, a row above the description
   of "Single" under the pointer (row 210).
 - Shots at 854 by 480 and 1920 by 1080, GUI scale 2, from a few blocks back in Disable: Planner1's ghost blocks on the
-  server without the add-on, and Planner1's two placements with their extra blocks marked, each with its screen box
-  (the driver's `screenbox`) in `checks.log`; and the radial menu with its line at 1920 by 1080, GUI scales 2 and 4,
-  and at 854 by 480 with "Single" under the pointer, the line's window box in `checks.log`.
+  server without the add-on, with their screen box (the driver's `screenbox`) in `checks.log`; and the radial menu with
+  its line at 1920 by 1080, GUI scales 2 and 4, and at 854 by 480 with "Single" under the pointer, the line's window
+  box in `checks.log`.
 
 `own.sh`, the player's own worlds (0.10.0), with the dev server stopped: Planner1's game opens a copy of the dev
 server's world from its `saves` folder (`start_client 1 "" "" --quickPlaySingleplayer own`), then opens it to LAN
@@ -3851,9 +3844,6 @@ debug line; 115 and 168 ms in two earlier runs that placed 1,998 and 1,995 of th
   - MaLiLib's `StringUtils.getWorldOrServerName` read in its source (`sakura-ryoko/malilib`, branch `26.3`), which
     `LocalFolders` follows; run for `localhost:25565` (`local.sh`), not for a Realm or a LAN world. Behind a proxy that joins several servers under one address (Velocity, BungeeCord), all
     of them share one folder, and whether the game sees a new join at each switch isn't known.
-  - That hook L7's two wraps in `renderOverlay` read the neighbour's position: the second `BlockPos.MutableBlockPos`
-    is the neighbour's at both calls in the local variable table of Litematica's jar; `local.sh` reads a block's own
-    mark through the driver's `overlay`, which applies the same rule, and its shots show the marks drawn.
 - How Freecam 1.5.1 stops a right click while "Allow interaction" is off, and that `Aim` can read the option by
   reflection, as it reads "Player control"; its source wasn't read for either.
 - That every orientation property `BlockTurn` stores is a separate property from the one a two-part block uses for its

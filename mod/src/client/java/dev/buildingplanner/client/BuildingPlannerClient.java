@@ -26,11 +26,8 @@ import dev.buildingplanner.sync.EditKind;
 import dev.buildingplanner.sync.JoinRule;
 import dev.buildingplanner.sync.Payloads;
 import dev.buildingplanner.sync.PlayerMessage;
-import fi.dy.masa.litematica.data.DataManager;
 import fi.dy.masa.litematica.schematic.container.LitematicaBlockStateContainer;
 import fi.dy.masa.litematica.schematic.placement.SchematicPlacement;
-import fi.dy.masa.litematica.schematic.placement.SchematicPlacementManager;
-import fi.dy.masa.litematica.util.OverlayType;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongSet;
 import java.util.Collection;
@@ -54,7 +51,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.SectionPos;
 import net.minecraft.core.Vec3i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -977,27 +973,6 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 	 */
 	public static boolean isOurs(SchematicPlacement placement) {
 		return session != null && (session.tiles().holds(placement) || session.clipboard().holds(placement));
-	}
-
-	/**
-	 * Hook L7: the mark Litematica's chunk renderer gives the real block at {@code pos}, from the one Litematica would
-	 * give it ({@code type}). With a session, a real block is marked as extra only inside the box of a placement that
-	 * isn't a tile or the copy or one of its set's, so the player's own placements mark extra blocks as Litematica
-	 * does, and the tiles, whose boxes cover whole sections of a chunk column, mark none. Runs on Litematica's rebuild
-	 * threads.
-	 */
-	public static OverlayType overlayType(OverlayType type, BlockPos pos) {
-		if (type != OverlayType.EXTRA || session == null) {
-			return type;
-		}
-		for (SchematicPlacementManager.PlacementPart part : DataManager.getSchematicPlacementManager()
-			.getPlacementPartsInChunk(SectionPos.blockToSectionCoord(pos.getX()),
-				SectionPos.blockToSectionCoord(pos.getZ()))) {
-			if (part.getBox().contains(pos) && !isOurs(part.getPlacement())) {
-				return type;
-			}
-		}
-		return OverlayType.NONE;
 	}
 
 	/** Hook L1: whether Litematica's block container is a tile's. */
