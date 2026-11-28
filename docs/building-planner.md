@@ -335,7 +335,9 @@ Fabric API: `PayloadTypeRegistry` (`registerLarge` for column snapshots), `Serve
 `ClientChunkEvents` (`CHUNK_LOAD`, `CHUNK_UNLOAD`), `ClientLevelEvents.AFTER_CLIENT_LEVEL_CHANGE`,
 `ServerEntityLevelChangeEvents.AFTER_PLAYER_CHANGE_LEVEL`, `HudElementRegistry` (the mix panel) and
 `KeyMappingHelper`. Both sides' payload handlers run on the main thread (server thread, render thread), which the
-ordering below relies on. Fabric splits a payload registered with `registerLarge` into packets of at most 1 MiB to
+ordering below relies on. `ClientPlayConnectionEvents.DISCONNECT` runs on the network thread when the server closes
+the connection (Fabric API's mixin at the head of `Connection.channelInactive`), so the game ends the session on the
+render thread (`Minecraft.execute`), which reads it every frame. Fabric splits a payload registered with `registerLarge` into packets of at most 1 MiB to
 players and joins them on arrival.
 
 ### Tiles: how Litematica draws the layer

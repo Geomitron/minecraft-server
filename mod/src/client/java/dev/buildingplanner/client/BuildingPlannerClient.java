@@ -196,7 +196,11 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 				}
 			}
 		});
-		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> endSession());
+		// Fabric API fires DISCONNECT on the network thread when the server closes the connection (at the head of
+		// Connection.channelInactive), so the session ends on the render thread, which reads it every frame; a leave on
+		// the render thread ends it at once.
+		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) ->
+			client.execute(BuildingPlannerClient::endSession));
 		ClientLifecycleEvents.CLIENT_STOPPING.register(client -> endSession());
 		// Litematica draws only in loaded chunks, so the game watches the columns of the chunks it has loaded. Events
 		// from a level the game has left are ignored.
