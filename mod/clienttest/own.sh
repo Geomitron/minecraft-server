@@ -6,7 +6,9 @@
 # Planner2's game, which starts a session, shows no line in its radial menu and Planner1's ghost blocks, and draws a
 # shape Planner1 sees glowing with Planner2's name. After Planner1 leaves, the area's file is in the world's folder, the
 # game folder has no config file of the server part's, and when the world opens again its ghost blocks show and
-# placements of old plans' files stay. Sourced by inside.sh, which provides drv, val, check, xdo, click, keys,
+# placements of old plans' files stay. Effortless Building's welcome message at each player's first join and its build
+# mode hint at their first choice of a mode in the radial menu reach neither player's chat, the LAN guest's read from
+# the connection as from a dedicated server. Sourced by inside.sh, which provides drv, val, check, xdo, click, keys,
 # use_click, attack_click, client_said, wait_for, start_server, stop_server, start_client, stop_client and $ADDON.
 
 world=run/client1/saves/own
@@ -54,6 +56,33 @@ radial_texts() {
 	drv "$1" "await noscreen" "wait 5" > /dev/null
 }
 
+# choose_in_menu <client> <mode>: chooses that build mode as a player does, with a click on its segment of the radial
+# menu (left Alt held), then lets the menu go with the pointer in the window's corner. The click asks Effortless
+# Building's server part for its build mode hint.
+choose_in_menu() {
+	local x y
+	xdo "$1" keydown Alt_L
+	drv "$1" "await screen Build Modes" "wait 10" > /dev/null
+	read -r x y < <(val "$1" "ringat $2")
+	xdo "$1" mousemove --window %w "$x" "$y"
+	drv "$1" "wait 5" > /dev/null
+	xdo "$1" click 1
+	drv "$1" "wait 5" > /dev/null
+	xdo "$1" mousemove --window %w 5 5
+	xdo "$1" keyup Alt_L
+	drv "$1" "await noscreen" "wait 5" > /dev/null
+}
+
+# kept_out <client> <key> <text>: a game message of that translation key reached the client and was kept out of its
+# chat (the driver's droppedchat), and the client's log has no chat line starting with the message's text.
+kept_out() {
+	drv "$1" "await droppedchat $2" > /dev/null && ! grep -qF -- "[CHAT] $3" "/out/client$1.log"
+}
+welcome=effortlessbuilding.message.welcome_message
+welcome_text="Thank you for using Effortless Building!"
+hint=effortlessbuilding.message.build_mode_hint
+hint_text="You have activated a build mode!"
+
 tags=0
 # world_has <x y z> <block>: the world's own copy has that block there, as /execute if block finds it; the game's own
 # server, which logs to the game's log, says a word no line of that log has yet when it has, and another once it has
@@ -92,10 +121,20 @@ check "Planner1's game starts a session from its own world's hello" eval \
 	'drv 1 "await noscreen" "await session" > /dev/null && [[ $(val 1 sessionkind) == server ]]'
 check "and its radial menu doesn't show the line above \"Building Planner\"" eval \
 	'[[ $(radial_texts 1) == "none || Building Planner | "* ]]'
+# Effortless Building's server part, which the game runs, sends its welcome message at a player's first join of the
+# world, and its build mode hint at their first choice of a mode in the radial menu; neither reaches chat.
+check "Effortless Building's welcome message reaches Planner1's game and stays out of its chat" kept_out 1 "$welcome" \
+	"$welcome_text"
 
-# A Line of 4 oak planks from 20 -60 20 eastward, drawn by Planner1 standing north of it.
-drv 1 "window 854 480 2" "cmd clear @s" "cmd item replace entity @s weapon.mainhand with minecraft:oak_planks 64" \
-	"cmd tp @s 21.5 -60 16.5 0 30" "ebmode LINE" "wait 40" "await loaded minecraft:overworld 20 20" > /dev/null
+# A Line of 4 oak planks from 20 -60 20 eastward, drawn by Planner1 standing north of it, in Line chosen in the radial
+# menu.
+drv 1 "window 854 480 2" "ebmode SINGLE" "wait 10" > /dev/null
+choose_in_menu 1 LINE
+check "Planner1 chooses Line in its radial menu" eval '[[ $(val 1 ebmode) == LINE ]]'
+check "and Effortless Building's build mode hint reaches its game and stays out of its chat" kept_out 1 "$hint" \
+	"$hint_text"
+drv 1 "cmd clear @s" "cmd item replace entity @s weapon.mainhand with minecraft:oak_planks 64" \
+	"cmd tp @s 21.5 -60 16.5 0 30" "wait 40" "await loaded minecraft:overworld 20 20" > /dev/null
 draw 1 20 -60 20 23 -60 20
 check "a Line of 4 oak planks draws 4 ghost blocks" eval 'drv 1 "await block 23 -60 20 minecraft:oak_planks" > /dev/null &&
 	[[ $(val 1 "countblocks 20 23 -60 20 minecraft:oak_planks") == 4 ]]'
@@ -146,13 +185,20 @@ check "Planner2's game starts a session from the world's hello" eval \
 	'drv 2 "await noscreen" "await session" > /dev/null && [[ $(val 2 sessionkind) == server ]]'
 check "and its radial menu doesn't show the line above \"Building Planner\"" eval \
 	'[[ $(radial_texts 2) == "none || Building Planner | "* ]]'
+# Planner2's game reads both messages from the LAN connection, encoded as a dedicated server sends them.
+check "Effortless Building's welcome message reaches Planner2's game and stays out of its chat" kept_out 2 "$welcome" \
+	"$welcome_text"
+drv 2 "window 854 480 2" "ebmode SINGLE" "wait 10" > /dev/null
+choose_in_menu 2 LINE
+check "Planner2 chooses Line in its radial menu" eval '[[ $(val 2 ebmode) == LINE ]]'
+check "and Effortless Building's build mode hint reaches its game and stays out of its chat" kept_out 2 "$hint" \
+	"$hint_text"
 drv 1 "ebmode LINE" "cmd tp @s 21.5 -60 16.5 0 30" "cmd tp Planner2 24.5 -60 16.5 0 30" "wait 40" > /dev/null
 check "and shows Planner1's ghost blocks" eval 'drv 2 "await loaded minecraft:overworld 20 20" \
 	"await block 23 -60 20 minecraft:oak_planks" > /dev/null &&
 	[[ $(val 2 "countblocks 20 23 -60 20 minecraft:oak_planks") == 4 ]]'
 # Planner2's Line of stone bricks from 20 -60 18 eastward, between the players and Planner1's Line, since an aim
 # through ghost blocks lands on them. A LAN guest may not run commands, so the host gives Planner2 its blocks.
-drv 2 "window 854 480 2" "ebmode LINE" > /dev/null
 drv 1 "cmd clear Planner2" "cmd item replace entity Planner2 weapon.mainhand with minecraft:stone_bricks 64" "wait 20" \
 	> /dev/null
 draw 2 20 -60 18 23 -60 18

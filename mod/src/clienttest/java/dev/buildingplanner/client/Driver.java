@@ -44,11 +44,13 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
@@ -68,6 +70,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.LevelBasedPermissionSet;
@@ -113,10 +116,18 @@ public final class Driver implements ClientModInitializer {
 	 */
 	private static int inGameTicks;
 	private static int statusPanelTicks;
+	/**
+	 * The game messages kept out of chat since the game started ({@code ClientReceiveMessageEvents.GAME_CANCELED}), in
+	 * order, each by its translation key, or by its text for one that isn't a translation.
+	 */
+	private static final List<String> DROPPED_CHAT = new CopyOnWriteArrayList<>();
 
 	@Override
 	public void onInitializeClient() {
 		PageProbe.register();
+		ClientReceiveMessageEvents.GAME_CANCELED.register((message, overlay) -> DROPPED_CHAT.add(
+			message.getContents() instanceof TranslatableContents translation ? translation.getKey()
+				: message.getString()));
 		ClientTickEvents.START_CLIENT_TICK.register(mc -> {
 			SentPackets.startTick();
 			if (release != null) {
@@ -674,6 +685,11 @@ public final class Driver implements ClientModInitializer {
 				// the player's feet; ebarray 0 clears it.
 				EffortlessDriver.mirror(Double.parseDouble(a[1]), mc.player.getY(), mc.player.getZ());
 				return "ok";
+			}
+			case "droppedchat" -> {
+				// droppedchat: the game messages kept out of chat since the game started, in order, each by its
+				// translation key (or its text), comma-separated, or "none".
+				return DROPPED_CHAT.isEmpty() ? "none" : String.join(",", DROPPED_CHAT);
 			}
 			case "ebsent" -> {
 				// ebsent: the kinds of Effortless Building packet this client has sent, comma-separated, or "none".
@@ -1631,6 +1647,8 @@ public final class Driver implements ClientModInitializer {
 			case "listfile" -> ListProbe.fileHasCurrent(mc.gameDirectory.toPath().resolve(a[1]));
 			// copiessettled: the saved copies' background thread has done every change given to it.
 			case "copiessettled" -> SavedCopies.get().settled();
+			// droppedchat <key>: a game message of that translation key has been kept out of chat.
+			case "droppedchat" -> DROPPED_CHAT.contains(a[1]);
 			default -> throw new IllegalArgumentException(what);
 		};
 	}
@@ -1654,6 +1672,7 @@ public final class Driver implements ClientModInitializer {
 				case "listfile" -> "file " + ListProbe.lastCounted(Minecraft.getInstance().gameDirectory.toPath()
 					.resolve(a[2])) + ", game " + ListProbe.current();
 				case "screen", "noscreen" -> String.valueOf(Minecraft.getInstance().gui.screen());
+				case "droppedchat" -> String.valueOf(DROPPED_CHAT);
 				case "screenclass" -> screenClass();
 				case "held" -> "screen " + Minecraft.getInstance().gui.screen() + ", use down "
 					+ Minecraft.getInstance().options.keyUse.isDown() + ", attack down "

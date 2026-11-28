@@ -21,6 +21,7 @@ import dev.buildingplanner.layer.ThroughWalls;
 import dev.buildingplanner.look.ControlsLine;
 import dev.buildingplanner.look.GhostsShown;
 import dev.buildingplanner.look.PanelRoom;
+import dev.buildingplanner.look.TutorialMessages;
 import dev.buildingplanner.server.PlaceTurns;
 import dev.buildingplanner.sync.EditKind;
 import dev.buildingplanner.sync.JoinRule;
@@ -42,6 +43,7 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLevelEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
+import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
@@ -148,6 +150,8 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 			BuildingPlanner.LOGGER.info("Litematica or MaLiLib is missing, so Building Planner is off");
 			return;
 		}
+		// Effortless Building's welcome message and build mode hint, from its server part wherever that runs.
+		ClientReceiveMessageEvents.ALLOW_GAME.register((message, overlay) -> !TutorialMessages.dropped(message));
 		if (loader.isModLoaded("effortlessbuilding")) {
 			effortless = true;
 			heldClicks = new HeldClicks(config);

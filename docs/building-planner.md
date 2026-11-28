@@ -5,8 +5,11 @@ ghost blocks that everyone on the server sees and edits live, then builds them b
 Building; Litematica draws the ghost blocks, out of sight. It hooks into unchanged copies of both. Geo's decisions
 behind it are in [plan.md](plan.md) ("Decisions").
 
-**What's built.** The server and the player pack run Building Planner 0.11.0, which has everything this spec
-describes. `OPEN:` marks a choice still Geo's, with the inbox request that asks it.
+**What's built.** The server and the player pack run Building Planner 0.11.0, which has everything this spec describes
+except the change below. `OPEN:` marks a choice still Geo's, with the inbox request that asks it.
+
+**Built, not released.** Effortless Building's welcome message and build mode hint stay out of players' chat
+everywhere (1479 Q1 C, Q2 C), as "Effortless Building's tutorial messages" in "The client" describes.
 
 ## What players get
 
@@ -152,7 +155,8 @@ describes. `OPEN:` marks a choice still Geo's, with the inbox request that asks 
   This happens whether or not the player joins a server with Building Planner.
 - **Messages.** Building Planner's messages show in the player's chat. Every text players see (messages, key names,
   button and slider labels, the panel) is in the wording Geo approved, which this spec quotes (0.7.0's in 1313,
-  0.8.0's in 1391).
+  0.8.0's in 1391). Effortless Building's welcome message and its build mode hint never show, wherever the player
+  plays (see "The client").
 - **Other servers.** On a server that doesn't run Building Planner, Building Planner works
   from the player's computer alone: their ghost blocks are saved on their computer for that server, and only they see
   them. This server still shares its ghost blocks (see "Servers without Building Planner"). In the player's own world,
@@ -193,7 +197,8 @@ menus, so it adds nothing to the registries Fabric API syncs at login, and playe
   (`ShapeLock`), Esc's steps (`EscSteps`), Disable's turn and its preview (`DisableTurn`, `DisablePreview`), the
   "Match ghost blocks" row and its rule (`GhostMatch`), the ghost blocks drawn through walls
   (`ThroughWalls`), Delete, the material list with its panel and saved lists, the edit glow, the settings it changes
-  once, and the check for a server without the add-on.
+  once, the check for a server without the add-on, and the rule that keeps Effortless Building's two tutorial
+  messages out of chat (`TutorialMessages`).
 
 `fabric.mod.json` depends on Fabric API, which both sides run. Litematica, MaLiLib and Effortless Building run only on
 players' computers, so the add-on lists them under `suggests` (Fabric Loader warns at start about a missing
@@ -235,7 +240,7 @@ Effortless Building, under `common/src/main/java/nl/requios/effortlessbuilding/`
 | E14 | `buildpipeline/BuildPipelineClient.java`, `shouldInterceptPlacing` and `shouldInterceptBreaking` | `@ModifyReturnValue` | While the player draws a box or the copy is at the aim (`MouseMode`), neither click is Effortless Building's in any mode, so hooks M1 to M5 take them. With the same rule as E13, while the main hand holds no item that places a block and no shape is under way (`getBuildState()` null), neither click is Effortless Building's either: its client tick, its `AttackBlockCallback`, and its cancelling of vanilla's `startUseItem`, `startAttack` and `continueAttack` all ask these first, and so does hold to repeat, so both clicks and holding them are vanilla's. A shape under way still takes the click that finishes or cancels it. In every build mode, a click on a locked position stays Effortless Building's, and hook E32 hands it the locked position (see "Locking and the first click"). |
 | E15 | `Minecraft.pick(float)`, into which Effortless Building's `MixinGameRenderer` adds, at its tail, a reach of 32 for an empty hand, aiming through entities; `buildmode/BuildModes.java`, `getBuildMode` | `@WrapMethod` on `pick`; `@ModifyReturnValue` on `getBuildMode` | While the main hand holds no item that places a block and no shape is under way, or while a box is drawn or the copy is at the aim, `getBuildMode` reads Disable during the pick, which that code skips, so the hand aims as without mods, at an entity before the block behind it. |
 | E16 | `screen/RadialMenu.java`, `onClose()` | `@Inject` at head, finding the button under the pointer, and at tail, acting | Let Building Planner's buttons act when the menu closes, as the menu's own do: its `tick` calls `onClose` once its key is let go (Escape calls it too), and `onClose` acts on the menu's button under the pointer unless a click acted since the menu opened (`performedActionUsingMouse`). Building Planner's button is found as `onClose` begins, before closing grabs the mouse and moves the pointer to the window's middle, and acts after the menu has closed, like the menu's own, so "Block mix" can open its screen. |
-| E18 | `screen/RadialMenu.java`, `drawTexts` | `@ModifyConstant` on the string `"Effortless Building"` | The menu's corner text, which the method draws right-aligned from the string's width, reads "Building Planner" (`buildingplanner.ui.radial.credits`). It is the only place the game shows Effortless Building's name to a player on this server: its welcome message and its build mode hint come from its server side (`config/WelcomeMessageStorage.java`, `config/BuildModeHintStorage.java`), which the server doesn't run, and its screens' titles ("Build Modes", "Modifier Settings") don't name it. |
+| E18 | `screen/RadialMenu.java`, `drawTexts` | `@ModifyConstant` on the string `"Effortless Building"` | The menu's corner text, which the method draws right-aligned from the string's width, reads "Building Planner" (`buildingplanner.ui.radial.credits`). It is the only place the game shows Effortless Building's name to a player on this server: its welcome message, which names it, comes from its server part, which the server doesn't run, and never reaches chat anywhere (see "The client"), and its screens' titles ("Build Modes", "Modifier Settings") don't name it. |
 | E19 | `screen/RadialMenu.java`, `drawRadialButtonBackgrounds` | `@ModifyExpressionValue` on `BuildModeEnum.ordinal()` | While a box is drawn or the copy is at the aim, no mode segment shows selected (the method compares each segment's index with the mode's `ordinal()`), since the player is in Building Planner's mode, whose button shows selected instead. |
 | E20 | `screen/RadialMenu.java`, private field `visibility` | `@Shadow`, read by E12 | The menu's opening animation: `extractRenderState` adds 0.4 × the frame's partial tick to `visibility` each frame, up to 1, and places its ring and its buttons at 0.8 + 0.2 × `visibility` of their distance and size from the middle, while the screen darkens. E12 places and sizes Building Planner's widgets by the same factor before drawing them. |
 | E21 | `buildmode/BuildModes.java`, `setBuildMode` | `@Inject` at head | Choosing a mode (the radial menu's `performAction` is its only caller outside `BuildModes`) ends a box and puts the copy away, even when the player chooses the mode they had. |
@@ -321,6 +326,7 @@ Minecraft 26.3 it is 16, not GLFW's 77, which is `KEY_END`).
 
 Fabric API: `PayloadTypeRegistry` (`registerLarge` for column snapshots), `ServerPlayNetworking`,
 `ClientPlayNetworking` (`canSend`), `ServerPlayConnectionEvents`, `ClientPlayConnectionEvents`, `ClientTickEvents`,
+`ClientReceiveMessageEvents.ALLOW_GAME`,
 `ClientChunkEvents` (`CHUNK_LOAD`, `CHUNK_UNLOAD`), `ClientLevelEvents.AFTER_CLIENT_LEVEL_CHANGE`,
 `ServerEntityLevelChangeEvents.AFTER_PLAYER_CHANGE_LEVEL`, `HudElementRegistry` (the mix panel) and
 `KeyMappingHelper`. Both sides' payload handlers run on the main thread (server thread, render thread), which the
@@ -648,6 +654,25 @@ the author is someone else and ghost blocks are showing, the changed blocks glow
 and a translucent fill on each block, or one translucent box around them for an edit of more than 512 blocks, with the
 editor's name (from the player list) above them, drawn through MaLiLib's renderer. Messages from the server show in
 the player's chat.
+
+**Effortless Building's tutorial messages.** Its welcome message ("Thank you for using Effortless Building! To get
+started, hold Left Alt to open the build menu.", `effortlessbuilding.message.welcome_message`) and its build mode hint
+("You have activated a build mode! With a block in hand, right-click to pick the starting position. Aim somewhere
+else, then right-click again to build the shape. To deactivate, hold Left Alt and select Disable.",
+`effortlessbuilding.message.build_mode_hint`) never reach chat, wherever the player plays (1479 Q1 C, Q2 C).
+Effortless Building's server part sends each once to each player of a world: the welcome message at their first join
+(`config/WelcomeMessageStorage.java`, from `ServerPlayConnectionEvents.JOIN`), and the hint the first time they choose
+a mode other than Disable in the radial menu, which asks for it (`screen/RadialMenu.java`, `performAction`, sending
+`BuildModeHintC2SPacket`; `config/BuildModeHintStorage.java`). Each goes out through `ServerPlayer.sendSystemMessage`
+as a translation of its key, with the radial menu's key as the argument. That part runs in the player's own worlds,
+for the host and each LAN guest, and on other servers that run Effortless Building, not on this server. As the client
+starts, it registers a listener on Fabric API's `ClientReceiveMessageEvents.ALLOW_GAME`, which Fabric API asks in
+`ChatListener.handleSystemMessage` before a game message reaches chat; the listener refuses a translation of either
+key (`TutorialMessages`), on every server and with or without a session. The key reaches the game from any server: a
+system message travels in a `ClientboundSystemChatPacket`, whose codec (`ComponentSerialization.TRUSTED_STREAM_CODEC`)
+writes a translation as its `translate` key and its arguments, and only the player's game translates it.
+Effortless Building's other messages, in the action bar or in answer to the player's own action, show as it sends them,
+and Building Planner's "Ghost blocks shown again" line shows as "Show or hide" describes (1479 Q3 A).
 
 Hold to repeat (E10): while Building Planner has a session, Effortless Building is loaded and its mode is Single, the
 client tick counts how many ticks each of the use and attack buttons has been down, with no screen open. After the
@@ -2635,6 +2660,8 @@ on this server, its server part running inside the game (1374 Q4 C, 1381 Q2 A):
   and a second, within 64 blocks of the player's eyes, from the inventory in survival, and Ctrl+Z undoes only ghost
   blocks (1372 Q5 B) (1381 Q3 A). Disable's turn and
   "Match ghost blocks" work there as on this server.
+- Effortless Building's server part also sends its welcome message and its build mode hint there, to the host and to
+  each LAN guest; neither reaches their chat (see "Effortless Building's tutorial messages" in "The client").
 
 | # | File, method | Hook | Purpose |
 |---|---|---|---|
@@ -3516,6 +3543,10 @@ with the script's `world_has`, whose `/execute if block` answers in Planner1's l
 
 - Planner1's game starts a session from the world's `hello`, and its radial menu shows "Building Planner" in its
   corner and no line above it.
+- Effortless Building's welcome message, which its server part sends at Planner1's first join of the world, reaches
+  Planner1's game and stays out of its chat: the driver's `droppedchat`, the game messages kept out of chat
+  (`ClientReceiveMessageEvents.GAME_CANCELED`), has its key, and the game's log has no chat line of it. After
+  Planner1 chooses Line with a click on its segment of the radial menu, so does its build mode hint.
 - A Line of 4 oak planks draws 4 ghost blocks and places no real block; Ctrl+Z takes them back, and Ctrl+Y draws them
   again; no place, break, undo or redo packet of Effortless Building's leaves the game.
 - With "Place real blocks" on, a Line of 4 oak planks places 4 real ones and no ghost block.
@@ -3523,6 +3554,9 @@ with the script's `world_has`, whose `/execute if block` answers in Planner1's l
 - With the world open to LAN, Planner2's game starts a session, its radial menu shows no line above "Building
   Planner", and it shows Planner1's ghost blocks; a Line Planner2 draws, between the players and Planner1's Line (an
   aim through ghost blocks lands on them), reaches Planner1 glowing with Planner2's name.
+- Planner2's game gets the welcome message at joining, and the build mode hint after Planner2 chooses Line in the
+  radial menu, from the LAN connection, which encodes them as a dedicated server does; both stay out of its chat, as
+  for Planner1.
 - After Planner1 leaves the world, the area's file is in
   `saves/own/building-planner/layer/minecraft/overworld/`, Planner1's game folder has no
   `config/buildingplanner.properties`, and when the world opens again, its ghost blocks show and the placements of two
@@ -3545,7 +3579,10 @@ the current list following the `hello`, none at first, and a list saved and a co
 on kept in the player's folder and read back at the next join, where the saved list opens. `LocalFoldersTest` covers the folders: each `:` turned into `_`, a Realm, an address that can't be a
 folder's name, and two players' UUIDs in two folders. `LayerFilesTest` covers a layer with a folder that can't be
 listed (one past the longest path the system takes) failing the read, which leaves the server part off.
-`RadialLineTest` covers the radial menu line's row on screens 240, 256, 257 and 270 high.
+`RadialLineTest` covers the radial menu line's row on screens 240, 256, 257 and 270 high. `TutorialMessagesTest`
+covers Effortless Building's welcome message and build mode hint, as its server part makes them, refused, also after
+they pass through the system chat packet's codec; and Building Planner's "Ghost blocks shown again" line before and
+after it, two other messages of Effortless Building's, and a plain text of the welcome message's words let through.
 
 The copy's placement has unit tests as pure functions. `CopyPlacementTest` covers the copy against each of the six
 faces, with sides of odd and even lengths, the origin for each turn and mirror filling the turned box, a turn or
@@ -3877,3 +3914,7 @@ debug line; 115 and 168 ms in two earlier runs that placed 1,998 and 1,995 of th
   changed, as in a frame of a sweep, took 0.6 ms on average, and at most 14 ms for marks that touch no other. Frames
   over 200,000 ghost blocks took 86 ms on average with none marked and 90 ms with all of them marked, times that
   software drawing sets. With a graphics card, expected well under a frame; not measured.
+- Effortless Building's tutorial messages from a dedicated server that runs Effortless Building, not run: `own.sh`
+  checks both in the player's own world and for a LAN guest, whose game reads them from the connection, encoded by the
+  codec a dedicated server uses (read in the 26.3 jar's bytecode, and run in `TutorialMessagesTest`). A server with a
+  mod that translates messages before sending them would send them without their keys, and they would show there.
