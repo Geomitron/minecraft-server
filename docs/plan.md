@@ -3,7 +3,7 @@
 ## Current setup
 
 **Server.** Minecraft 26.3 on Fabric (loader 0.20.1, server launcher 1.1.2) with Fabric API 0.166.2+26.3 and
-Building Planner 0.11.0 from the release `building-planner-0.11.0` (`/home/minecraft/mods/`), on Geo's VPS, with
+Building Planner 0.11.1 from the release `building-planner-0.11.1` (`/home/minecraft/mods/`), on Geo's VPS, with
 `max-edit-blocks=200000` in `config/buildingplanner.properties`. The systemd unit `minecraft.service` runs it under its
 own account, `minecraft`, from `/home/minecraft`:
 `/usr/lib/jvm/java-25-openjdk-amd64/bin/java -Xmx6G -Xms1G -jar fabric-server-mc.26.3-loader.0.20.1-launcher.1.1.2.jar nogui`,
@@ -22,7 +22,8 @@ in `world/building-planner/material-lists/`, a folder it creates once a player c
 plans found none (Syncmatica's list in `world/syncmatica/placements.json` was empty), so the ghost blocks started
 empty; Syncmatica's files, `world/syncmatica/` and `syncmatics/`, stay as they were.
 Archives sit beside it, readable only by root (mode 600):
-`minecraft-backup-2026-11-28-pre-building-planner-0.11.0.tar.gz` (the world and `syncmatics/` just before
+`minecraft-backup-2026-11-28-pre-building-planner-0.11.1.tar.gz` (the world and `syncmatics/` just before
+Building Planner 0.11.1 was installed, 1.5 GB), `minecraft-backup-2026-11-28-pre-building-planner-0.11.0.tar.gz` (the world and `syncmatics/` just before
 Building Planner 0.11.0 was installed, 1.5 GB), `minecraft-backup-2026-11-28-pre-building-planner-0.10.0.tar.gz` (the world and `syncmatics/` just before
 Building Planner 0.10.0 was installed, 1.5 GB), `minecraft-backup-2026-11-28-pre-building-planner-0.9.0.tar.gz` (the world and `syncmatics/` just before
 Building Planner 0.9.0 was installed, 1.5 GB), `minecraft-backup-2026-11-27-pre-own-account.tar.gz` (the world and `syncmatics/` just before the server first ran
@@ -37,8 +38,8 @@ just before Building Planner 0.4.0 was installed, 1.5 GB), `minecraft-backup-202
 Building Planner 0.1.0 was installed, 1.5 GB), `minecraft-backup-2026-11-14-pre-fabric.tar.gz` (the world just before
 the switch to Fabric, 1.5 GB), `minecraft-archive-2026-10-29-1.21.11.tar.gz` and `minecraft-backup-2025-12-12.tar.gz`.
 To take Building Planner off the server, remove
-`mods/building-planner-0.11.0.jar` and run
-`systemctl restart minecraft.service`. To go back to 0.10.0 instead, put `/root/bp-0.11.0-stage/building-planner-0.10.0.jar`
+`mods/building-planner-0.11.1.jar` and run
+`systemctl restart minecraft.service`. To go back to 0.11.0 instead, put `/root/bp-0.11.1-stage/building-planner-0.11.0.jar`
 in its place, `chown minecraft:minecraft` it, and restart.
 The vanilla `server.jar` stays in place: to switch back, change the jar in `ExecStart` to `server.jar`, then run
 `systemctl daemon-reload` and `systemctl restart minecraft.service`. The VPS has 30 GB of RAM (about 16 GB available) and
@@ -55,10 +56,10 @@ an inbox notice, carrying only the error's id, kind and source.
 
 **Player pack.** This repository is public at https://github.com/Geomitron/minecraft-server. `pack/` is the packwiz
 pack "Server Pack": Minecraft 26.3 and Fabric loader 0.20.1 with Litematica, MaLiLib, Freecam, Fabric API, Building
-Planner 0.11.0 (downloaded from its release `building-planner-0.11.0`), and Effortless Building 4.3, served from `main`
+Planner 0.11.1 (downloaded from its release `building-planner-0.11.1`), and Effortless Building 4.3, served from `main`
 at https://raw.githubusercontent.com/Geomitron/minecraft-server/main/pack/pack.toml, so a push to `main` changes what
-players get at their next launch. The pack and the server both run Building Planner 0.11.0, protocol version 5, which
-0.6.0, 0.7.0, 0.8.0, 0.9.0 and 0.10.0 use too, so a game with any of them works with the server; a game with a pack older than 0.6.0 still joins, and
+players get at their next launch. The pack and the server both run Building Planner 0.11.1, protocol version 5, which
+0.6.0, 0.7.0, 0.8.0, 0.9.0, 0.10.0 and 0.11.0 use too, so a game with any of them works with the server; a game with a pack older than 0.6.0 still joins, and
 Building Planner does nothing in it. `instance/` is the Prism Launcher instance "Server
 Pack", which runs `packwiz-installer-bootstrap.jar` against that URL before each launch. Players import it from
 https://github.com/Geomitron/minecraft-server/releases/latest/download/prism-instance.zip, a zip of `instance/` in the
@@ -967,8 +968,12 @@ message and build mode hint stop reaching chat, in the player's own worlds, for 
 run Effortless Building; Building Planner's "Ghost blocks shown again" line stays as it is. Enter in the name field
 of "Rename copy" and "Save list" saves the name, as their "Save" button does. 0.11.1 keeps protocol
 version 5 and changes nothing the server does. One step builds it, sets the version, runs the full set and drafts the
-release request; the release, approved by Geo in 1497, follows as for 0.11.0, from `3fe476d`, the build on which
-the unit tests, `saved.sh`, `step9.sh` and `step7.sh` passed after Enter was added.
+release request, and the release follows as for 0.11.0.
+
+1. **The release** (done, Geo's approval in 1497): the GitHub release `building-planner-0.11.1`, not latest, from
+   `3fe476d`, the build on which the unit tests, `saved.sh`, `step9.sh` and `step7.sh` passed after Enter was added,
+   and where `overlap.sh`, `filled.sh`, `import.sh` and the unit tests passed again, run by the server (1497 Q2 A)
+   and the pack (see "Current setup").
 
 ## Design work: Building Planner
 

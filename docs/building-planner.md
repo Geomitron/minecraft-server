@@ -5,13 +5,8 @@ ghost blocks that everyone on the server sees and edits live, then builds them b
 Building; Litematica draws the ghost blocks, out of sight. It hooks into unchanged copies of both. Geo's decisions
 behind it are in [plan.md](plan.md) ("Decisions").
 
-**What's built.** The server and the player pack run Building Planner 0.11.0, which has everything this spec describes
-except 0.11.1's change, below. `OPEN:` marks a choice still Geo's, with the inbox request that asks it.
-
-**Built for 0.11.1, not released.** Effortless Building's welcome message and build mode hint stay out of players'
-chat everywhere (1479 Q1 C, Q2 C), as "Effortless Building's tutorial messages" in "The client" describes, in version
-0.11.1, which isn't released yet. It changes nothing the server does and keeps protocol version 5. Its release is the
-last of its steps in [plan.md](plan.md).
+**What's built.** The server and the player pack run Building Planner 0.11.1, which has everything this spec
+describes. `OPEN:` marks a choice still Geo's, with the inbox request that asks it.
 
 ## What players get
 
