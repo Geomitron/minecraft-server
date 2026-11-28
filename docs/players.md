@@ -179,7 +179,7 @@ With the copy at your aim:
 
 The copy snaps flush to the sides of your recent pastes. Hold Left Control to keep it in line with your latest paste. Its box shows blue where it will paste, yellow where it would replace ghost blocks (it still pastes), and red where it can't paste, with the reason above the hotbar.
 
-Choosing a build mode or another planning tool, or showing or hiding ghost blocks, puts the copy away. Choose "Paste" in the radial menu to bring your latest copy back. Leaving the server or changing dimension forgets it.
+Choosing a build mode or another planning tool, showing or hiding ghost blocks, leaving the server, or changing dimension puts the copy away. Choose "Paste" in the radial menu to bring your latest copy back. It stays until you close the game, so you can copy on one server and paste on another.
 
 ### Real Blocks
 
@@ -234,3 +234,13 @@ Freecam moves the camera away from your character, so you can look at a build fr
 3. Press F4 again to go back to your character.
 
 While the camera is away, shapes, boxes, the copy, and Delete aim from the camera, as if you stood there, and the nudge keys go by the way the camera faces. With Freecam's settings as they start, clicks on real blocks don't reach the world from the camera, so go back to your character to build for real. Ghost blocks show and change only near your character, where your game has loaded the world.
+
+### Other Servers
+
+Building Planner also works on other servers, but there, only you see your ghost blocks. The radial menu shows "(client only)" in the bottom-right corner of the screen while you play on one. Your computer saves your ghost blocks and material lists for each server, and they come back when you rejoin it.
+
+On other servers, shapes and pastes place only ghost blocks, even with "Place real blocks" on. In "Disable", Left Control doesn't turn real blocks, and "Match ghost blocks" doesn't turn them either, so real blocks face the way Minecraft places them.
+
+### Your Own Worlds
+
+Building Planner works in your own worlds as it does on this server, "Place real blocks" included. Each world saves its own ghost blocks and material lists. When you open a world to LAN, friends who join it from their "Server Pack" instance see and edit the same ghost blocks.
