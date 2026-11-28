@@ -698,6 +698,9 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
   (Q1 A); and for Litematica's magenta marks of extra blocks in the player's own placements, "No, keep them hidden, as
   in 0.9.0" (Q2 B).
 
+  Asked in 1461 ("Release Building Planner 0.10.0"), Geo approved the release (Q1 A) and the server taking 0.10.0
+  too (Q2 A: "Yes, update the server too").
+
 - **Saved copies** is a feature Geo asked for in a comment on 1375 Q1: "I'd like to add a feature to save previously
   copied regions, like saved materials lists. Instead of a button next to the radial menu, you would access it as a
   new keyboard press that's displayed while you're pasting. It would have a menu like the saved materials lists.
