@@ -14,6 +14,8 @@ import net.minecraft.core.Vec3i;
 public record CopyHistory(int next, List<Saved> copies) {
 	/** How many of the copies the player hasn't renamed stay. */
 	public static final int RECENT = 10;
+	/** The most characters a name the player gives a copy may have, as for a kept list. */
+	public static final int MAX_NAME_LENGTH = 64;
 	public static final CopyHistory EMPTY = new CopyHistory(1, List.of());
 
 	public CopyHistory {

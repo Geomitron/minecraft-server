@@ -8,10 +8,10 @@ behind it are in [plan.md](plan.md) ("Decisions").
 **What's built.** The server and the player pack run Building Planner 0.10.0, which has everything this spec describes
 except saved copies, 0.11.0's, below. `OPEN:` marks a choice still Geo's, with the inbox request that asks it.
 
-**Proposed for 0.11.0.** Saved copies, which keep each player's recent and renamed copies on their computer and open
-with a key the copy's controls line shows (Geo's comment on 1375 Q1), are designed in "Saved copies" and built in part
-(build step 1, listed there); every part of this spec that mentions a part not built yet is marked as proposed for
-0.11.0. Their build steps follow 0.10.0's in [plan.md](plan.md).
+**Built for 0.11.0, not released.** Saved copies, which keep each player's recent and renamed copies on their computer
+and open with a key the copy's controls line shows (Geo's comment on 1375 Q1), are designed in "Saved copies" and
+built (build steps 1 and 2); their texts wait for Geo's wording (build step 3). Their build steps follow 0.10.0's in
+[plan.md](plan.md).
 
 ## What players get
 
@@ -123,8 +123,8 @@ with a key the copy's controls line shows (Geo's comment on 1375 Q1), are design
   click pastes real blocks from the player's inventory instead, by the same rules as a shape (see "Place real
   blocks").
 - **Saved copies.** Each copy is saved on the player's computer as Copy makes it, the same on every server, and after
-  the game restarts, the radial menu's Paste button brings back the newest. As proposed for 0.11.0, V, which the
-  copy's controls line shows, opens "Saved copies", listing the 10 most recent copies and every copy the player renamed,
+  the game restarts, the radial menu's Paste button brings back the newest. V, which the copy's controls line shows,
+  opens "Saved copies", listing the 10 most recent copies and every copy the player renamed,
   each with "Paste", "Rename" and "Delete"; a renamed copy stays until the player deletes it (see "Saved copies").
 - **Material list.** The player presses the "Material list" button in the radial menu and draws a box: Litematica's
   material list screen opens for the blocks inside, ghost blocks and real blocks alike, with how many of each block the
@@ -734,7 +734,7 @@ mode: it acts only while no mouse mode is on. A mode ends when the player:
 - presses Esc, one step at a time (see "Esc");
 - chooses a mode in the radial menu (E21), even the one they had;
 - shows or hides ghost blocks;
-- presses "Paste" in "Saved copies" (proposed for 0.11.0), which then brings that copy to the aim;
+- presses "Paste" in "Saved copies", which then brings that copy to the aim;
 - presses the radial menu's Copy, Delete, "Material list", Paste or "Block mix" button, or the block mix
   key, each of which then does its own action (Copy and "Material list" start or switch a box, Delete starts or ends
   Delete, Paste brings the copy back);
@@ -789,8 +789,8 @@ left click (1238 Q2 A):
   nudges and "[H: Lock (On)]";
 - after the player's first paste in the dimension, "[Hold Left Control: line up]" goes after "[Middle-click: mirror]"
   in the lines of a copy that follows the aim. A locked copy doesn't line up, so no locked line has it;
-- as proposed for 0.11.0, "[V: saved copies]" goes before "[Esc/Left-click: close]" or "[Esc/Left-click: cancel]" in
-  every line of the copy at the aim (see "Saved copies");
+- "[V: saved copies]" goes before "[Esc/Left-click: close]" or "[Esc/Left-click: cancel]" in every line of the copy
+  at the aim (see "Saved copies");
 - while the copy is red, "[Right-click: paste]" (or the set's paste) gives way to the reason, in red: "[Can't paste:
   part of the copy is outside the world]" (the build height or the border) or "[Can't paste: too many blocks]". In
   Line, Wall and Floor before the first click the reason goes in the same place, before "[Right-click: set the
@@ -1119,11 +1119,11 @@ unlike a tool such as the pickaxe, which would suggest breaking real blocks.
 
 ### Keys
 
-Building Planner's keys, each changeable in Controls under the heading "Building Planner": "Block mix" (B) and "Show or
-hide ghost blocks" (N). Neither is a default key, or part of a default key combination, of Minecraft 26.3, Litematica,
-MaLiLib, Effortless Building 4.3 or Freecam 1.5.1. Copy, Delete, the material list, Paste and the material lists have
-buttons in the radial menu and no keys. As proposed for 0.11.0, a third key, "Saved copies" (V), opens the "Saved
-copies" screen, which has no button (see "Saved copies").
+Building Planner's keys, each changeable in Controls under the heading "Building Planner": "Block mix" (B), "Show or
+hide ghost blocks" (N) and "Saved copies" (V). None is a default key, or part of a default key combination, of
+Minecraft 26.3, Litematica, MaLiLib, Effortless Building 4.3 or Freecam 1.5.1. Copy, Delete, the material list, Paste
+and the material lists have buttons in the radial menu and no keys; "Saved copies" has its key and no button (see
+"Saved copies").
 
 The copy at the aim is worked by the mouse and by eight keys of its own, under the same heading: "Lock or unlock"
 (H), "Nudge forward" (Up), "Nudge back" (Down), "Nudge left" (Left), "Nudge right" (Right), "Nudge up" (Page Up),
@@ -1185,8 +1185,7 @@ heading `key.category.effortlessbuilding.keybindings`: Minecraft 26.3 names a ke
 `key.categories.effortlessbuilding` instead. Hook E23 moves them under the "Building Planner" heading. Controls
 sorts the keys of one heading by their names (`KeyMapping.compareTo`), so the heading lists "Block mix", "Change copy
 mode", "Lock or unlock", the six "Nudge" keys (back, down, forward, left, right and up), "Open Modifier
-Settings", "Open Radial Menu", "Redo", "Show or hide ghost blocks" and "Undo", with "Saved copies" after "Redo" as
-proposed for 0.11.0.
+Settings", "Open Radial Menu", "Redo", "Saved copies", "Show or hide ghost blocks" and "Undo".
 
 ### The block mix and its panel
 
@@ -1418,9 +1417,7 @@ the key held.
 
 #### Saved copies
 
-Proposed for 0.11.0. Built so far (build step 1): which copies stay, where they're kept, the files, and the newest
-copy after a restart; the key and the screens are proposed (build step 2), and until then only the in-game checks'
-driver renames, picks and deletes copies. Geo asked for it in a comment on 1375 Q1: "I'd like to add a feature to save
+Built for 0.11.0 (build steps 1 and 2), not released. Geo asked for it in a comment on 1375 Q1: "I'd like to add a feature to save
 previously copied regions, like saved materials lists. Instead of a button next to the radial menu, you would access it
 as a new keyboard press that's displayed while you're pasting. It would have a menu like the saved materials lists.
 Copies would save automatically, with the most recent 10, but you can view any of those copies in that menu and rename
@@ -1452,9 +1449,9 @@ default hotkey is "A,C" for its settings), Effortless Building 4.3 (`utilities/K
 right hand pastes.
 
 **The screen.** "Saved copies" is laid out as "Saved lists" (`SavedListsScreen`): the title; under it the line "Your 10
-most recent copies stay here. Rename a copy to keep it."; and a row for each saved copy, newest first, with its name,
-under the name its size and its number of blocks ("12 × 5 × 8 · 120 blocks"), and the buttons "Paste", "Rename" and
-"Delete". With none, it says "No saved copies yet." Each row is as high as its two lines of text and its buttons, with
+most recent copies stay here. Rename a copy to keep it.", wrapped in a window too narrow for it; and a row for each
+saved copy, newest first, with its name, under the name its size and its number of blocks ("12 × 5 × 8 · 120 blocks",
+or "1 × 1 × 1 · 1 block"), and the buttons "Paste", "Rename" and "Delete". With none, it says "No saved copies yet." Each row is as high as its two lines of text and its buttons, with
 the three buttons 50 wide at its right, in a width of up to 400. The mouse wheel scrolls the rows, and "Close" at the
 bottom right, like Escape, goes back to the game.
 
@@ -1500,8 +1497,8 @@ edit), since Copy refuses more, and its file is about the size of Litematica's o
 can't be written is logged as an error and isn't saved.
 
 `SavedCopies` (client) owns the list and the background thread, outside the session, so the list stays across
-servers as the copy does. As proposed for build step 2, `SavedCopiesScreen` and `RenameCopyScreen` are the two screens,
-and `ControlsLine.copy` adds the key's control.
+servers as the copy does. `SavedCopiesScreen` and `RenameCopyScreen` are the two screens, and `ControlsLine.copy` adds
+the key's control.
 
 ### Locking and the first click
 
@@ -3578,51 +3575,48 @@ blocks read only while no red check fails. `LayerTest` covers the layer's versio
 only then.
 
 `saved.sh`, saved copies, on the dev server, with the server restarted without the add-on for the check between
-servers. The driver reads the game's list (`savedcopies`), `index.dat` as plain NBT (`copyindex`), the copies' folder
-(`copyfiles`) and a copy's file through Litematica's own reader (`copyschematic`); it copies a box as Copy's third
-click does (`copybox`), and, until build step 2's screen, renames, picks and deletes copies with commands of its own
-(`renamecopy`, `pickcopy` and `deletecopy`):
+servers, through Planner1's own presses and clicks on the screens. The driver reads the game's list (`savedcopies`),
+the open screen's rows (`copyrows`), `index.dat` as plain NBT (`copyindex`), the copies' folder (`copyfiles`) and a
+copy's file through Litematica's own reader (`copyschematic`); it copies a box as Copy's third click does (`copybox`),
+and its `bindkey` rebinds the key:
 
 - A copy of a hut's corner of oak planks, with a door and a wall torch, made with the radial menu's Copy button and
   three real left clicks, puts `1.litematic` and `index.dat` in `building-planner/copies/<Planner1's UUID>/`, the index
   naming it by its time, not kept, with the hut's size (4 by 3 by 3) and block count (15); Litematica's reader finds the
   region "Copy" of that size with 15 blocks. Planner2's game has no saved copy. A box with nothing to copy saves
   nothing.
-- A rename to "Hut" keeps the copy, in the index too. Eleven more copies, of one block each and each of another block,
-  leave 11 rows, "Hut" and the 10 newest: the first of the 11 is gone, and its file is deleted.
-- With a copy at the aim turned, locked and in Line, a pick of "Hut" brings the hut to the aim, unlocked and unturned,
-  still in Line; a right click in Off pastes it, its door and torch facing as copied, and Planner2 sees its blocks;
-  Escape puts it away, and the radial menu's Paste button then brings the hut back. The pick, the turn and the paste
-  change no saved copy.
-- A delete of "Hut" removes its row and its file, and the copy at the aim stays. A copy's `.litematic` cut short drops
-  from the list and the index when it's picked, with the message "That copy couldn't be read.", and is renamed with
-  `.unreadable`, the game logging an error.
-- After Planner1's game restarts, the rows come back, and with no copy since the game started, the radial menu's Paste
-  button brings the newest copy, the emerald block, to the aim.
-- With the server restarted without the add-on, Planner1's local session shows the same rows, and a saved copy pastes
-  there as a ghost block and no real block.
-- With the game stopped, an unreadable `index.dat` is renamed with `.unreadable` at the next start, which has no saved
-  copies and leaves the copies' files, logging an error; the next copy's file takes 13, past the files in the folder.
-  With the folder emptied, the radial menu's Paste button says "Nothing to paste. Use Copy first.".
-- Shots at 854 by 480 and 1920 by 1080, GUI scale 2, and 1920 by 1080, GUI scale 4, of the message "That copy couldn't
-  be read.", each `.boxes` file with a `change` line outlining where the chat differs from a shot just before it.
-
-As proposed for build step 2, `saved.sh` also checks the screen and the key through Planner1's own presses and clicks,
-and its `bindkey` rebinds the key:
-
 - With the copy at the aim, its controls line ends with "[V: saved copies][Esc/Left-click: close]", and during a Line
   set with "[V: saved copies][Esc/Left-click: cancel]"; with the key unbound, the control is gone and V opens nothing;
-  rebound to K, the line names K.
-- V opens "Saved copies" with the hut's row: its time as its name, and its size and block count. V does nothing with
-  the inventory open. V during a box for Copy opens the screen, "Close" goes back to the game with the box still drawn,
-  and "Paste" on a row ends the box and brings that copy to the aim.
+  rebound to K, the line names K, which opens the screen.
+- V opens "Saved copies" with the hut's row: its time as its name, and its size and block count; Escape goes back to
+  the game with the copy at the aim. V does nothing with the inventory open.
 - "Rename" on the hut's row shows its name in the field; an empty name or only spaces greys "Save" out, the field
-  accepts no 65th character, and "Hut " saves as "Hut", kept in the index.
-- "Paste", "Rename" and "Delete" on the screen's rows do what the driver's commands do above; "Delete" on "Hut" asks
-  "Delete the copy "Hut"?", and "Cancel" leaves it. With an unreadable `index.dat`, the screen says "No saved copies
-  yet.".
-- Shots at 854 by 480 and 1920 by 1080, GUI scales 2 and 4: "Saved copies" with 11 rows scrolled to its top and its
-  end, "Rename copy", the delete question, the empty screen, and the copy's controls line with the key.
+  accepts no 65th character, "Cancel" renames nothing, and "Hut " saves as "Hut", kept in the index too.
+- Eleven more copies, of one block each and each of another block, leave 11 rows, "Hut" and the 10 newest: the first
+  of the 11 is gone, and its file is deleted. At 854 by 480, GUI scale 2, six rows show, and the mouse wheel scrolls
+  to the last six.
+- With a copy at the aim turned, locked and in Line, "Paste" on the Hut's row closes the screen and brings the hut to
+  the aim, unlocked and unturned, still in Line; a right click in Off pastes it, its door and torch facing as copied,
+  and Planner2 sees its blocks; Escape puts it away, and the radial menu's Paste button then brings the hut back. The
+  pick, the turn and the paste change no saved copy.
+- "Delete" on the Hut's row asks "Delete the copy "Hut"?"; "Cancel" leaves it, and "Delete" removes its row and its
+  file, and the copy at the aim stays. A copy's `.litematic` cut short drops from the list and the index when "Paste"
+  on its row picks it, with the message "That copy couldn't be read.", and is renamed with `.unreadable`, the game
+  logging an error.
+- V during a box for Copy opens the screen, "Close" goes back to the game with the box still drawn, and "Paste" on
+  the newest row ends the box and brings that copy to the aim.
+- After Planner1's game restarts, the rows come back, and with no copy since the game started, the radial menu's Paste
+  button brings the newest copy, the emerald block, to the aim.
+- With the server restarted without the add-on, Planner1's local session shows the same rows, and a saved copy pasted
+  from the screen there pastes as a ghost block and no real block.
+- With the game stopped, an unreadable `index.dat` is renamed with `.unreadable` at the next start, which has no saved
+  copies, the screen saying "No saved copies yet.", and leaves the copies' files, logging an error; the next copy's
+  file takes 13, past the files in the folder. With the folder emptied, the radial menu's Paste button says "Nothing to
+  paste. Use Copy first.".
+- Shots at 854 by 480 and 1920 by 1080, GUI scale 2, and 1920 by 1080, GUI scale 4: the copy's controls line with the
+  key, "Rename copy", "Saved copies" with 11 rows scrolled to its top and its end, the delete question, the message
+  "That copy couldn't be read." and the empty screen. Each `.boxes` file has a `change` line outlining the change: the
+  key's control in the line, the screen's texts and widgets, or where the chat differs from a shot just before it.
 
 `CopyHistoryTest` covers the rule for which copies stay: a new copy at the top, named by its time; the 11th copy not
 renamed dropping the oldest one not renamed, the renamed ones not counting; a renamed copy kept through any number of
@@ -3632,9 +3626,9 @@ read back, none at first, an unreadable one starting an empty list and renamed w
 and each rule a damaged index breaks (another version, no `next`, a file number not below it or used twice, an empty
 name, a side of 0, a negative block count, no `kept`). `CopyFileTest` covers a copy's file written and read back from
 its lowest corner through a temporary file, Litematica's own reader finding its planks, its door and its torch facing
-as copied, its structure void in the empty space and its block count, and a file cut short failing the read. As proposed
-for build step 2, `ControlsLineTest` covers the key's control in each of the copy's lines, and its absence while the
-key is unbound.
+as copied, its structure void in the empty space and its block count, and a file cut short failing the read.
+`ControlsLineTest` covers the key's control just before the close or cancel in each of the copy's lines, named as
+bound, and its absence while the key is unbound.
 
 The controls lines have unit tests as a pure function too. `ControlsLineTest` reads each line in English from
 `en_us.json`: Off before and after the first paste, locked with and without a paste to line up with (no "line up",

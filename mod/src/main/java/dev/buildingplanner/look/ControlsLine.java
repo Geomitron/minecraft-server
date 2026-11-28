@@ -81,11 +81,11 @@ public final class ControlsLine {
 	/**
 	 * The copy's keys, each by its name as the game gives it, or null while it has no key: "Lock or unlock", "Change
 	 * copy mode", the four nudges along the ground (forward, back, left and right), whether those four are on
-	 * the arrow keys (Up, Down, Left and Right in that order), the nudges up and down, and Minecraft's sprint key, which
-	 * lines the copy up.
+	 * the arrow keys (Up, Down, Left and Right in that order), the nudges up and down, Minecraft's sprint key, which
+	 * lines the copy up, and "Saved copies".
 	 */
 	public record Keys(String lock, String mode, List<String> nudges, boolean nudgesOnArrows, String up, String down,
-		String sprint) {
+		String sprint, String saved) {
 	}
 
 	/**
@@ -327,8 +327,8 @@ public final class ControlsLine {
 	 * after it the set's paste with its count), with the reason in red
 	 * in the paste's place, or before setting the start, while the copy is red; the nudge keys while it's locked; the wheel; the middle click; the sprint key while
 	 * the copy follows the aim and there's a paste to line up with (a locked copy, and a set's fixed first copy, don't
-	 * line up); the lock key with the lock's state; the mode key with the mode; and Esc and the left click, which close
-	 * the copy, or cancel the set after its first click. A key with no key bound is left out.
+	 * line up); the lock key with the lock's state; the mode key with the mode; the key for "Saved copies"; and Esc and
+	 * the left click, which close the copy, or cancel the set after its first click. A key with no key bound is left out.
 	 */
 	public static Line copy(CopyState state, Keys keys) {
 		List<Text> rects = new ArrayList<>();
@@ -362,6 +362,9 @@ public final class ControlsLine {
 		}
 		if (keys.mode() != null) {
 			rects.add(hint(new Literal(keys.mode()), COPY + ".mode_" + state.mode().name().toLowerCase(Locale.ROOT)));
+		}
+		if (keys.saved() != null) {
+			rects.add(hint(new Literal(keys.saved()), COPY + ".saved_copies"));
 		}
 		rects.add(hint(ESC_LEFT, set ? COPY + ".cancel" : COPY + ".put_away"));
 		return new Line(null, List.copyOf(rects));

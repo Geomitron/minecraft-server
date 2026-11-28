@@ -1,15 +1,18 @@
 # Saved copies (0.11.0): each copy saved on Planner1's computer as Copy makes it, in its own file with the index beside
-# it; a rename kept outside the 10 most recent, and the 11th copy dropping the oldest with its file; a pick bringing a
-# copy to the aim as the radial menu's Paste button brings one; a delete; a copy's file and the index made unreadable;
-# the copies after Planner1's game restarts, and on the server restarted without the add-on. The driver renames, picks
-# and deletes copies with commands of its own, and reads the index and the folder from disk. Sourced by inside.sh,
-# which provides drv, val, check, keys, xdo, click, use_click, attack_click, client_said, start_server, stop_server,
-# start_client, stop_client and $ADDON. Players stand on the flat world's grass, whose top is at y -61.
+# it; the copy's controls line naming "Saved copies" (V) as bound; the "Saved copies" screen V opens, its "Paste",
+# "Rename" and "Delete" clicked as Planner1 clicks them, with "Rename copy" and the delete question; a rename kept
+# outside the 10 most recent, and the 11th copy dropping the oldest with its file; a pick bringing a copy to the aim as
+# the radial menu's Paste button brings one; a delete; a copy's file and the index made unreadable; the copies after
+# Planner1's game restarts, and on the server restarted without the add-on. The driver copies boxes as Copy's third
+# click does, and reads the index and the folder from disk. Sourced by inside.sh, which provides drv, val, check, keys,
+# xdo, click, use_click, attack_click, client_said, start_server, stop_server, start_client, stop_client and $ADDON.
+# Players stand on the flat world's grass, whose top is at y -61.
 
 planner1=527e7f9d-ae90-3a44-aa88-30a47a9cdf34
 folder1=run/client1/building-planner/copies/$planner1
 # A copy's name as the game gives it, its time, as "Nov 19, 6:21 PM".
 time_name='[A-Z][a-z]{2} [0-9]{1,2}, [0-9]{1,2}:[0-9]{2} [AP]M'
+screen=dev.buildingplanner.client.SavedCopiesScreen
 
 check "client 1 starts a session on hello" drv 1 "await session" "await noscreen"
 check "client 2 starts a session on hello" drv 2 "await session" "await noscreen"
@@ -102,7 +105,7 @@ settled() {
 	drv 1 "await copiessettled" > /dev/null
 }
 
-# rows: Planner1's saved copies as the game shows them; index_rows: the index on disk, without the times.
+# rows: Planner1's saved copies as the game keeps them; index_rows: the index on disk, without the times.
 rows() {
 	val 1 savedcopies
 }
@@ -113,16 +116,78 @@ index_rows() {
 no_row() {
 	! grep -qE "(^| ; )$1:" <<< "$(rows)"
 }
+# row_of <file>: the row (from 0, newest first) of the saved copy with that file.
+row_of() {
+	rows | awk -v f="$1:" -F ' ; ' '{ for (i = 1; i <= NF; i++) if (index($i, f) == 1) { print i - 1; exit } }'
+}
 
 # copy_min: the lowest corner of Planner1's copy at the aim, as x y z.
 copy_min() {
 	val 1 copy | sed -E 's/^at (-?[0-9]+),(-?[0-9]+),(-?[0-9]+)\.\..*$/\1 \2 \3/'
 }
 
-# chat_shots <name> <text> <command>: Planner1's screen at 854 by 480 and 1920 by 1080 at GUI scale 2, and 1920 by
-# 1080 at GUI scale 4, before and after the driver command shows the text in chat, as <name>-<size>-gui<scale>, each
-# .boxes with a "change" line outlining the message where the chat differs; the window is 854 by 480 again after.
+# saved_open: V, pressed by Planner1, opens "Saved copies".
+saved_open() {
+	press 1 v
+	drv 1 "await screenclass $screen" "wait 5" > /dev/null
+}
+# copy_rows: the open "Saved copies" screen's rows as "name / size · blocks", joined by " ; "; shown: the first row in
+# view and how many are.
+copy_rows() {
+	val 1 copyrows | sed -E 's/ \| shown [0-9]+ [0-9]+$//'
+}
+shown() {
+	val 1 copyrows | sed -E 's/^.*\| shown ([0-9]+ [0-9]+)$/\1/'
+}
+# widget_click <n> <text>: a real click on the nth shown widget (from 0) of the open screen whose text starts with the
+# text.
+widget_click() {
+	local pos
+	pos=$(val 1 "widget $1 $2")
+	[[ $pos != none ]] && click 1 $pos && drv 1 "wait 5" > /dev/null
+}
+# wheel <button> <times>: the mouse wheel turned on the open screen, up (4) or down (5), the pointer in the window's
+# corner, clear of every widget.
+wheel() {
+	xdo 1 mousemove --window %w 5 5 click --repeat "$2" --delay 30 "$1" > /dev/null
+	drv 1 "wait 5" > /dev/null
+}
+scroll_top() {
+	wheel 4 12
+}
+scroll_end() {
+	wheel 5 12
+}
+# row_button <label> <row>: a real click on that button of the row (from 0, newest first) of the open "Saved copies",
+# the mouse wheel first scrolling the row into view.
+row_button() {
+	local first count i
+	for i in $(seq 20); do
+		read -r first count <<< "$(shown)"
+		if (($2 < first)); then
+			wheel 4 1
+		elif (($2 >= first + count)); then
+			wheel 5 1
+		else
+			widget_click $(($2 - first)) "$1"
+			return
+		fi
+	done
+	return 1
+}
+# type_name <text>: empties the focused text field and types the text with real key presses.
+type_name() {
+	keys 1 key ctrl+a BackSpace
+	[[ -z $1 ]] || keys 1 type --delay 20 -- "$1"
+	drv 1 "wait 5" > /dev/null
+}
+
 sizes=("854 480 2" "1920 1080 2" "1920 1080 4")
+
+# chat_shots <name> <text> <command>: Planner1's screen at 854 by 480 and 1920 by 1080 at GUI scale 2, and 1920 by
+# 1080 at GUI scale 4, before and after the command (a function of this script) shows the text in chat, as
+# <name>-<size>-gui<scale>, each .boxes with a "change" line outlining the message where the chat differs; the window
+# is 854 by 480 again after.
 chat_shots() {
 	local size w h s shot box shots=()
 	drv 1 "wait 210" > /dev/null
@@ -132,7 +197,7 @@ chat_shots() {
 		shots+=("$shot")
 		drv 1 "window $w $h $s" "wait 20" "notoasts" "wait 5" "shot before-$shot" "wait 20" > /dev/null || return 1
 	done
-	drv 1 "$3" > /dev/null || return 1
+	"$3" || return 1
 	for size in "${sizes[@]}"; do
 		read -r w h s <<< "$size"
 		shot=$1-${w}x$h-gui$s
@@ -146,6 +211,65 @@ chat_shots() {
 		echo "  $shot: change $box $2" >> /out/checks.log
 		rm "run/client1/screenshots/before-$shot.png" "run/client1/screenshots/before-$shot.boxes"
 	done
+}
+
+# screen_box <.boxes file> <text pattern>: the window box (left top right bottom) around the open screen's widgets and
+# the texts the shot drew that match the pattern (an awk regular expression), which leaves out the HUD's.
+screen_box() {
+	awk -v re="$2" '
+		BEGIN { L = T = 1e9; R = B = -1 }
+		function add(l, t, r, b) { if (l < L) L = l; if (t < T) T = t; if (r > R) R = r; if (b > B) B = b }
+		/^widgets: / {
+			line = $0
+			sub(/^widgets: /, "", line)
+			k = split(line, parts, / \| /)
+			for (i = 1; i <= k; i++) {
+				m = split(parts[i], f, " ")
+				if (m >= 4) add(f[m - 3] + 0, f[m - 2] + 0, f[m - 3] + f[m - 1], f[m - 2] + f[m])
+			}
+		}
+		/^(text|component) / {
+			t = $0
+			sub(/^[a-z]+ -?[0-9]+ -?[0-9]+ -?[0-9]+ -?[0-9]+ /, "", t)
+			if (t ~ re) add($2 + 0, $3 + 0, $4 + 0, $5 + 0)
+		}
+		END { if (R >= 0) print L, T, R, B }' "$1"
+}
+# line_box <.boxes file>: the window box of the controls line's "[V: saved copies]".
+line_box() {
+	sed -n 's/^moderects: //p' "$1" | sed 's# / # | #g' | tr '|' '\n' |
+		sed -nE 's/^ *([0-9]+ [0-9]+ [0-9]+ [0-9]+) \[V: saved copies\] *$/\1/p'
+}
+# shots <name> <label> <box command> [<prepare>]: Planner1's screen at each of the three sizes as
+# <name>-<size>-gui<scale>, after the function <prepare>, if any, once the window has its size, with the pointer in
+# the window's corner; each .boxes with a "change" line outlining the label's change, the box command's box for that
+# .boxes file. The window is 854 by 480 again after.
+shots() {
+	local size w h s shot file box
+	for size in "${sizes[@]}"; do
+		read -r w h s <<< "$size"
+		shot=$1-${w}x$h-gui$s
+		file=run/client1/screenshots/$shot.boxes
+		drv 1 "window $w $h $s" "wait 20" > /dev/null || return 1
+		[[ -z ${4:-} ]] || "$4" || return 1
+		xdo 1 mousemove --window %w 5 5 > /dev/null
+		drv 1 "wait 5" "notoasts" "wait 5" "shot $shot" "wait 20" > /dev/null || return 1
+		box=$($3 "$file")
+		[[ $box =~ ^[0-9]+\ [0-9]+\ [0-9]+\ [0-9]+$ ]] || return 1
+		echo "change $box $2" >> "$file"
+		echo "  $shot: change $box $2 | rows $(val 1 copyrows)" >> /out/checks.log
+	done
+	drv 1 "window 854 480 2" "wait 20" > /dev/null
+}
+copies_texts='^(Saved copies|Your 10 most recent copies stay here[.] Rename a copy to keep it[.]|No saved copies yet[.]|Hut|[A-Z][a-z][a-z] [0-9]+, [0-9]+:[0-9][0-9] [AP]M|[0-9]+ × [0-9]+ × [0-9]+ · [0-9]+ blocks?)$'
+copies_box() {
+	screen_box "$1" "$copies_texts"
+}
+rename_box() {
+	screen_box "$1" '^(Rename copy|Name)$'
+}
+question_box() {
+	screen_box "$1" '^Delete the copy "Hut"[?]$'
 }
 
 # A hut's corner of ghost blocks in the shared layer: a floor of oak planks, a door facing south on it, and a wall
@@ -182,17 +306,75 @@ check "Litematica's own reader reads its file: the region Copy, 4 by 3 by 3, wit
 	'[[ $(val 1 "copyschematic 1") == "$name: Copy 4x3x3, 15 blocks" ]]'
 check "Planner2's game has no saved copy" eval '[[ $(val 2 savedcopies) == none ]] && [[ $(val 2 copyfiles) == nofolder ]]'
 
+# The copy at the aim's controls line names "Saved copies" before the close, as the key is bound; unbound, the control
+# is gone and V opens nothing; rebound to K, the line names K, which opens the screen.
+check "the copy's controls line ends with [V: saved copies][Esc/Left-click: close]" eval '[[ $(val 1 modehud) == \
+	"[Right-click: paste][Scroll: turn][Middle-click: mirror][H: Lock (Off)][R: Mode (Off)][V: saved copies][Esc/Left-click: close]" ]]'
+check "shots of the controls line with the key" shots copy-line-saved-copies "[V: saved copies]" line_box
+drv 1 "bindkey key.buildingplanner.saved_copies key.keyboard.unknown" "wait 2" > /dev/null
+check "with the key unbound, the line leaves the control out" eval '[[ $(val 1 modehud) == \
+	"[Right-click: paste][Scroll: turn][Middle-click: mirror][H: Lock (Off)][R: Mode (Off)][Esc/Left-click: close]" ]]'
+press 1 v
+check "and V opens nothing" eval 'drv 1 "wait 10" > /dev/null && [[ $(val 1 screenclass) == none ]]'
+drv 1 "bindkey key.buildingplanner.saved_copies key.keyboard.k" "wait 2" > /dev/null
+check "rebound to K, the line names K" eval '[[ $(val 1 modehud) == *"[R: Mode (Off)][K: saved copies][Esc/Left-click: close]" ]]'
+press 1 k
+check "and K opens Saved copies" drv 1 "await screenclass $screen"
+drv 1 "close" "wait 5" "bindkey key.buildingplanner.saved_copies key.keyboard.v" "wait 2" > /dev/null
+check "bound to V again, the line names V" eval '[[ $(val 1 modehud) == *"[V: saved copies][Esc/Left-click: close]" ]]'
+
+# V opens "Saved copies" with the hut's row; Escape goes back to the game with the copy still at the aim. V does
+# nothing with the inventory open.
+saved_open
+check "V opens Saved copies with the hut's row: its time as its name, its size and block count" eval \
+	'[[ $(val 1 copyrows) == "$name / 4 × 3 × 3 · 15 blocks | shown 0 1" ]]'
+keys 1 key Escape
+check "Escape goes back to the game, the copy still at the aim" eval 'drv 1 "await noscreen" "wait 5" > /dev/null &&
+	copy_is 1 "^at .* 15 blocks$"'
+press 1 e
+drv 1 "wait 10" > /dev/null
+inventory=$(val 1 screenclass)
+keys 1 key v
+check "V does nothing with the inventory open" eval 'drv 1 "wait 10" > /dev/null && [[ $inventory != none ]] &&
+	[[ $(val 1 screenclass) == "$inventory" ]]'
+drv 1 "close" "wait 5" > /dev/null
+
 # A box Copy refuses saves nothing.
 drv 1 "copybox 60 -50 60 61 -50 61" > /dev/null
 settled
 check "a box with nothing to copy saves nothing" eval '[[ $(rows) == "1:$name:recent:4x3x3:15" ]] &&
 	[[ $(val 1 copyfiles) == "1.litematic index.dat" ]]'
 
-# A rename keeps the copy outside the 10 most recent.
-drv 1 "renamecopy 1 Hut" > /dev/null
-settled
-check "a rename keeps the copy, under its new name" eval '[[ $(rows) == "1:Hut:kept:4x3x3:15" ]] &&
+# "Rename" on the hut's row opens "Rename copy" with its name in the field. An empty name or only spaces greys "Save"
+# out, and the field takes 64 characters, not 65. "Cancel" goes back, renaming nothing; "Hut " saves as "Hut", which
+# keeps the copy outside the 10 most recent.
+saved_open
+row_button Rename 0
+check "Rename on the hut's row opens Rename copy with the copy's name in the field" eval \
+	'drv 1 "await screen Rename copy" "wait 5" > /dev/null &&
+	[[ $(val 1 widgets) == "field=$name: "*" | Save: "*" | Cancel: "* ]]'
+check "shots of Rename copy" shots rename-copy "Rename copy" rename_box
+type_name ""
+check "with the name empty, Save is greyed out" eval '[[ $(val 1 widgets) == "field=: "*" | Save (greyed out): "* ]]'
+type_name "   "
+check "and with only spaces" eval '[[ $(val 1 widgets) == "field=   : "*" | Save (greyed out): "* ]]'
+type_name "$(printf 'N%.0s' {1..65})"
+check "a name of 65 characters can't be typed: the field holds 64" \
+	eval '[[ $(val 1 widgets) == "field=$(printf "N%.0s" {1..64}): "* ]]'
+widget_click 0 Cancel
+check "Cancel goes back to Saved copies, renaming nothing" eval 'drv 1 "await screenclass $screen" "wait 5" > /dev/null &&
+	settled && [[ $(copy_rows) == "$name / 4 × 3 × 3 · 15 blocks" ]] && [[ $(rows) == "1:$name:recent:4x3x3:15" ]]'
+row_button Rename 0
+drv 1 "await screen Rename copy" "wait 5" > /dev/null
+type_name "Hut "
+widget_click 0 Save
+check "Save with the name \"Hut \" goes back to Saved copies, the row named Hut" eval \
+	'drv 1 "await screenclass $screen" "wait 5" > /dev/null && settled &&
+	drv 1 "wait 5" > /dev/null && [[ $(copy_rows) == "Hut / 4 × 3 × 3 · 15 blocks" ]]'
+check "and the rename keeps the copy, in the index too" eval '[[ $(rows) == "1:Hut:kept:4x3x3:15" ]] &&
 	[[ $(index_rows) == "version 1 next 2: 1:Hut:kept:4x3x3:15" ]]'
+widget_click 0 Close
+check "Close goes back to the game" drv 1 "await noscreen"
 
 # Eleven more copies, of one block each, each of another block: the first of them drops with its file, and the Hut
 # stays.
@@ -213,7 +395,24 @@ check "and the index on disk lists the same, its next number 13" eval \
 check "and Litematica reads each one's file" eval '[[ $(val 1 "copyschematic 12") == *": Copy 1x1x1, 1 blocks" ]] &&
 	[[ $(val 1 "copyschematic 3") == *": Copy 1x1x1, 1 blocks" ]]'
 
-# Picking the Hut brings it to the aim unlocked and unturned, in the copy's mode, in place of a turned and locked copy.
+# The screen's 11 rows, newest first; at 854 by 480, GUI scale 2, six show, and the mouse wheel scrolls to the rest.
+screen_rows=()
+for i in $(seq 10); do
+	screen_rows+=("$time_name / 1 × 1 × 1 · 1 block")
+done
+expected="^$(IFS=';'; echo "${screen_rows[*]}" | sed 's/;/ ; /g') ; Hut / 4 × 3 × 3 · 15 blocks$"
+saved_open
+check "Saved copies shows the 11 rows, newest first, each one block's \"1 × 1 × 1 · 1 block\"" eval \
+	'[[ $(copy_rows) =~ $expected ]]'
+check "at 854 by 480, the first six in view" eval '[[ $(shown) == "0 6" ]]'
+scroll_end
+check "and the mouse wheel scrolls to the last six" eval '[[ $(shown) == "5 6" ]]'
+check "shots of Saved copies scrolled to its top" shots saved-copies-top "Saved copies" copies_box scroll_top
+check "and to its end" shots saved-copies-end "Saved copies" copies_box scroll_end
+drv 1 "close" "wait 5" > /dev/null
+
+# "Paste" on the Hut's row brings the Hut to the aim unlocked and unturned, in the copy's mode, in place of a turned
+# and locked copy, the screen closed.
 drv 1 "cmd tp @s 61.5 -56 36.5 0 30" "wait 20" > /dev/null
 aim 1 60 -60 40
 xdo 1 click 4
@@ -223,11 +422,21 @@ press 1 r
 check "the copy at the aim is turned, locked and in Line" eval \
 	'copy_is 1 "^at .* NONE CLOCKWISE_90 " && [[ $(val 1 copylock) == locked ]] && [[ $(val 1 copymode) == LINE ]]'
 before_pick=$(val 1 copyindex)
-drv 1 "pickcopy 1" > /dev/null
+saved_open
+row_button Paste 10
+check "Paste on the Hut's row closes the screen" drv 1 "await noscreen"
 settled
-check "picking the Hut brings it to the aim, unlocked and unturned" eval 'drv 1 "await copy at" "wait 5" > /dev/null &&
+check "and brings the Hut to the aim, unlocked and unturned" eval 'drv 1 "await copy at" "wait 5" > /dev/null &&
 	copy_is 1 "^at .* NONE NONE unselected 15 blocks$" && [[ $(val 1 copylock) == unlocked ]]'
 check "in the copy mode last set, Line" eval '[[ $(val 1 copymode) == LINE ]]'
+# During a Line set, the line ends with the key before the cancel; Escape drops the set.
+aim 1 60 -60 40
+use_click 1
+check "after Line's first click, the line ends with [V: saved copies][Esc/Left-click: cancel]" eval \
+	'drv 1 "wait 5" > /dev/null && [[ $(val 1 copyset) != none ]] &&
+	[[ $(val 1 modehud) == *"[R: Mode (Line)][V: saved copies][Esc/Left-click: cancel]" ]]'
+press 1 Escape
+check "Escape drops the set, the copy still at the aim" eval '[[ $(val 1 copyset) == none ]] && copy_is 1 "^at "'
 press 1 r
 press 1 r
 press 1 r
@@ -249,20 +458,43 @@ check "and the radial menu's Paste button brings the Hut back" copy_is 1 "^at .*
 settled
 check "a pick, a turn and a paste change no saved copy" eval '[[ $(val 1 copyindex) == "$before_pick" ]]'
 
-# Delete removes the row and the file; the copy at the aim stays.
-drv 1 "deletecopy 1" > /dev/null
-settled
+# "Delete" on the Hut's row asks again; "Cancel" leaves it, and "Delete" removes the row and the file. The copy at the
+# aim stays.
+saved_open
+row_button Delete 10
+check "Delete on the Hut's row asks: Delete the copy \"Hut\"?" eval \
+	'drv 1 "await screen Delete the copy \"Hut\"?" "wait 5" > /dev/null &&
+	[[ $(val 1 widgets) == *"Delete: "*" | Cancel: "* ]]'
+check "shots of the delete question" shots delete-copy-question "Delete the copy \"Hut\"?" question_box
+widget_click 0 Cancel
+check "Cancel goes back to Saved copies, the Hut still there" eval \
+	'drv 1 "await screenclass $screen" "wait 5" > /dev/null && settled && [[ $(copy_rows) == *" ; Hut / 4 × 3 × 3 · 15 blocks" ]] &&
+	[[ $(rows) == *" ; 1:Hut:kept:4x3x3:15" ]]'
+row_button Delete 10
+drv 1 "await screen Delete the copy \"Hut\"?" "wait 5" > /dev/null
+# The question is itself the question screen's first widget whose text starts with "Delete"; the button is the second.
+widget_click 1 Delete
+check "Delete goes back to Saved copies, without the Hut's row" eval \
+	'drv 1 "await screenclass $screen" "wait 5" > /dev/null && settled && drv 1 "wait 5" > /dev/null &&
+	[[ $(copy_rows) != *Hut* ]] && [[ $(shown) == "4 6" ]]'
+drv 1 "close" "wait 5" > /dev/null
 check "a delete removes the Hut's row and its file" eval 'no_row 1 && [[ $(rows) == 12:* ]] &&
 	[[ $(val 1 copyfiles) == "10.litematic 11.litematic 12.litematic 3.litematic 4.litematic 5.litematic \
 6.litematic 7.litematic 8.litematic 9.litematic index.dat" ]]'
 check "and the index without it" eval '[[ $(index_rows) == "version 1 next 13: $(rows)" ]]'
 check "and the copy at the aim stays" copy_is 1 "^at .* 15 blocks$"
 
-# A copy's file cut short: picking it drops it from the list, with a message, and renames it.
+# A copy's file cut short: "Paste" on its row drops it from the list, with a message, and renames it.
 head -c 40 "$folder1/7.litematic" > "$folder1/7.cut" && mv "$folder1/7.cut" "$folder1/7.litematic"
 unreadable_lines=$(chat_count 1 "That copy couldn't be read.")
-check "picking a copy whose file is cut short shows a message" eval \
-	'chat_shots copy-unreadable "That copy couldn'"'"'t be read." "pickcopy 7" &&
+# The pointer goes back to the window's middle as the screen closes, which turns the view, so the player looks at the
+# same point before and after, for the shots to differ only in the chat.
+aim 1 60 -60 40
+paste_7() {
+	saved_open && row_button Paste "$(row_of 7)" && drv 1 "await noscreen" > /dev/null && aim 1 60 -60 40
+}
+check "Paste on a copy whose file is cut short shows a message" eval \
+	'chat_shots copy-unreadable "That copy couldn'"'"'t be read." paste_7 &&
 	said_once_more 1 "That copy couldn'"'"'t be read." "$unreadable_lines"'
 settled
 check "and drops it from the list and the index" eval 'no_row 7 &&
@@ -270,6 +502,26 @@ check "and drops it from the list and the index" eval 'no_row 7 &&
 check "and renames its file with .unreadable" eval '[[ -s $folder1/7.litematic.unreadable && ! -e $folder1/7.litematic ]]'
 check "and logs an error" grep -qF "couldn't read the saved copy" /out/client1.log
 check "and the copy at the aim stays" copy_is 1 "^at .* 15 blocks$"
+
+# V during a box for Copy opens the screen; "Close" goes back with the box still drawn, and "Paste" on a row ends the
+# box and brings that copy, the newest, to the aim.
+copy_button
+drv 1 "lookat 57.5 -61 45.5" "wait 5" > /dev/null
+attack_click 1
+check "a box for Copy with its first corner" eval '[[ $(val 1 drawbox) == "COPY 1 "* ]]'
+saved_open
+widget_click 0 Close
+check "V during the box opens Saved copies, and Close goes back with the box still drawn" eval \
+	'drv 1 "await noscreen" "wait 5" > /dev/null && [[ $(val 1 mousemode) == BOX ]] && [[ $(val 1 drawbox) == "COPY 1 "* ]]'
+saved_open
+row_button Paste 0
+check "Paste on the newest row then ends the box and brings that copy to the aim" eval \
+	'drv 1 "await noscreen" > /dev/null && settled && drv 1 "await copy at" "wait 5" > /dev/null &&
+	[[ $(val 1 mousemode) == COPY_AT_AIM ]] && copy_is 1 "^at .* 1 blocks$"'
+aim 1 58 -60 44
+read -r px py pz < <(copy_min)
+use_click 1
+check "the newest, the emerald block" drv 1 "await block $px $py $pz minecraft:emerald_block"
 
 # After the game restarts, the rows come back, and the Paste button brings the newest copy.
 saved_rows=$(rows)
@@ -302,9 +554,10 @@ check "client 1 starts a local session" eval 'drv 1 "await noscreen" "await sess
 check "which shows the same saved copies" eval 'settled && [[ $(rows) == "$saved_rows" ]]'
 drv 1 "window 854 480 2" "ebmode SINGLE" "cmd tp @s 81.5 -56 76.5 0 30" "wait 40" "fly true" \
 	"await loaded minecraft:overworld 80 80" > /dev/null
-drv 1 "pickcopy 3" > /dev/null
-check "a saved copy picked there comes to the aim" eval 'settled && drv 1 "await copy at" "wait 5" > /dev/null &&
-	copy_is 1 "^at .* 1 blocks$"'
+saved_open
+row_button Paste "$(row_of 3)"
+check "Paste on a saved copy's row there brings it to the aim" eval 'drv 1 "await noscreen" > /dev/null && settled &&
+	drv 1 "await copy at" "wait 5" > /dev/null && copy_is 1 "^at .* 1 blocks$"'
 aim 1 80 -60 80
 read -r px py pz < <(copy_min)
 use_click 1
@@ -312,8 +565,8 @@ check "and pastes as a ghost block, the granite of the second copy, and no real 
 	'drv 1 "await block $px $py $pz minecraft:granite" "wait 20" > /dev/null &&
 	[[ $(val 1 "real $px $py $pz") == minecraft:air ]]'
 
-# An unreadable index: the game starts with no saved copies and renames it, leaving the copies' files; the next copy,
-# of a real block, takes a number past theirs.
+# An unreadable index: the game starts with no saved copies, which the screen says, and renames it, leaving the
+# copies' files; the next copy, of a real block, takes a number past theirs.
 settled
 stop_client 1
 printf 'not an index' > "$folder1/index.dat"
@@ -325,8 +578,13 @@ check "and is renamed with .unreadable, the copies' files staying" eval \
 	[[ -s $folder1/12.litematic && -s $folder1/3.litematic ]]'
 check "and logs an error" grep -qF "it's renamed to index.dat.unreadable" /out/client1.log
 drv 1 "window 854 480 2" "cmd tp @s 81.5 -56 76.5 0 30" "wait 40" "fly true" \
-	"await loaded minecraft:overworld 80 80" "cmd setblock 85 -60 80 minecraft:stone" \
-	"await real 85 -60 80 minecraft:stone" "copybox 85 -60 80 85 -60 80" > /dev/null
+	"await loaded minecraft:overworld 80 80" > /dev/null
+saved_open
+check "Saved copies then has no rows, and says No saved copies yet." eval \
+	'[[ $(val 1 copyrows) == "none | shown 0 0" ]] && [[ $(val 1 drawntexts) == *"No saved copies yet."* ]]'
+check "shots of the empty Saved copies" shots saved-copies-empty "Saved copies, empty" copies_box
+drv 1 "close" "wait 5" "cmd setblock 85 -60 80 minecraft:stone" "await real 85 -60 80 minecraft:stone" \
+	"copybox 85 -60 80 85 -60 80" > /dev/null
 settled
 check "the next copy takes the number past the files in the folder, 13" eval \
 	'[[ $(index_rows) =~ ^version\ 1\ next\ 14:\ 13:$time_name:recent:1x1x1:1$ ]] && [[ -s $folder1/13.litematic ]]'

@@ -328,16 +328,16 @@ check "the menu shows the show or hide button alone there too" under_wrench
 drv 2 "cmd op Planner1" "wait 10" "cmd deop Planner2" "wait 20" > /dev/null
 check "and Planner2 makes Planner1 an operator again" eval '[[ $(val 1 operator) == operator ]]'
 
-# Controls: Building Planner's keys, the eight of the copy and the one ghost block among them, and Effortless Building's
-# four show under the "Building Planner" heading, in the order Controls sorts them, and no raw key name. The driver's
-# own Page Up key, under a heading of its own, is unbound first, so Controls shows no clash with "Nudge up". The list is
-# scrolled to the heading and shot at 854 by 480 and 1920 by 1080, GUI scale 2, and at 1920 by 1080, GUI scale 4, with
-# the heading's, the keys' and each key row's window boxes (left top right bottom) in the log.
+# Controls: Building Planner's keys, the eight of the copy, the one ghost block and "Saved copies" among them, and
+# Effortless Building's four show under the "Building Planner" heading, in the order Controls sorts them, and no raw
+# key name. The driver's own Page Up key, under a heading of its own, is unbound first, so Controls shows no clash with
+# "Nudge up". The list is scrolled to the heading and shot at 854 by 480 and 1920 by 1080, GUI scale 2, and at 1920 by
+# 1080, GUI scale 4, with the heading's, the keys' and each key row's window boxes (left top right bottom) in the log.
 drv 1 "unbindprobe" "keybinds" "wait 10" > /dev/null
 echo "  controls: $(val 1 keybindlist)" >> /out/checks.log
 planner_keys="Block mix, Change copy mode, Lock or unlock, Nudge back, Nudge down, Nudge forward, Nudge left, \
-Nudge right, Nudge up, Open Modifier Settings, Open Radial Menu, Redo, Show or hide ghost blocks, Undo"
-check "Controls shows the eight keys of the copy and the one ghost block, and Effortless Building's four under \"Building Planner\", with its own" \
+Nudge right, Nudge up, Open Modifier Settings, Open Radial Menu, Redo, Saved copies, Show or hide ghost blocks, Undo"
+check "Controls shows the eight keys of the copy, the one ghost block and Saved copies, and Effortless Building's four under \"Building Planner\", with its own" \
 	eval '[[ $(val 1 keybindlist) == *"Building Planner: $planner_keys ; "* ]]'
 check "under one heading" eval '(($(val 1 keybindlist | grep -o "Building Planner: " | wc -l) == 1))'
 check "with no raw key name" eval '[[ $(val 1 keybindlist) != *"key."* ]]'
@@ -413,32 +413,32 @@ drv 2 "wait 5" "fly true" > /dev/null
 # The copy at the aim's controls lines, with the copy's keys as bound by default, and a box's controls for each click.
 # Before the player's first paste, the copy's line in Off; after it, with the sprint key, which lines the copy up
 # while the copy follows the aim; a locked copy and a set don't line up, so their lines leave the sprint key out. H
-# names the lock's state and R the copy's mode, in every line.
+# names the lock's state and R the copy's mode, and V opens "Saved copies", in every line.
 turn_mirror="[Scroll: turn][Middle-click: mirror]"
 lock_off="[H: Lock (Off)]"
 lock_on="[H: Lock (On)]"
-controls="[Right-click: paste]$turn_mirror$lock_off[R: Mode (Off)][Esc/Left-click: close]"
+controls="[Right-click: paste]$turn_mirror$lock_off[R: Mode (Off)][V: saved copies][Esc/Left-click: close]"
 line_up="[Hold Left Control: line up]"
-controls_ctrl="[Right-click: paste]$turn_mirror$line_up$lock_off[R: Mode (Off)][Esc/Left-click: close]"
+controls_ctrl="[Right-click: paste]$turn_mirror$line_up$lock_off[R: Mode (Off)][V: saved copies][Esc/Left-click: close]"
 nudges="[Arrow keys + Page Up/Down: nudge]"
-locked_line="[Right-click: paste]$nudges$turn_mirror$lock_on[R: Mode (Off)][Esc/Left-click: close]"
+locked_line="[Right-click: paste]$nudges$turn_mirror$lock_on[R: Mode (Off)][V: saved copies][Esc/Left-click: close]"
 outside="[Can't paste: part of the copy is outside the world]"
-locked_red="$outside$nudges$turn_mirror$lock_on[R: Mode (Off)][Esc/Left-click: close]"
+locked_red="$outside$nudges$turn_mirror$lock_on[R: Mode (Off)][V: saved copies][Esc/Left-click: close]"
 # start_line <Mode> [locked] [<reason>]: the copy's line in Line, Wall or Floor before the first click, locked or not,
 # with the reason before setting the start while the copy is red.
 start_line() {
 	if [[ ${2:-} == locked ]]; then
-		echo "${3:-}[Right-click: set the start]$nudges$turn_mirror$lock_on[R: Mode ($1)][Esc/Left-click: close]"
+		echo "${3:-}[Right-click: set the start]$nudges$turn_mirror$lock_on[R: Mode ($1)][V: saved copies][Esc/Left-click: close]"
 	else
-		echo "[Right-click: set the start]$turn_mirror$line_up$lock_off[R: Mode ($1)][Esc/Left-click: close]"
+		echo "[Right-click: set the start]$turn_mirror$line_up$lock_off[R: Mode ($1)][V: saved copies][Esc/Left-click: close]"
 	fi
 }
 # set_line <Mode> <paste> [locked]: the copy's line after the first click, with the paste (or the reason) given.
 set_line() {
 	if [[ ${3:-} == locked ]]; then
-		echo "$2$nudges$turn_mirror$lock_on[R: Mode ($1)][Esc/Left-click: cancel]"
+		echo "$2$nudges$turn_mirror$lock_on[R: Mode ($1)][V: saved copies][Esc/Left-click: cancel]"
 	else
-		echo "$2$turn_mirror$lock_off[R: Mode ($1)][Esc/Left-click: cancel]"
+		echo "$2$turn_mirror$lock_off[R: Mode ($1)][V: saved copies][Esc/Left-click: cancel]"
 	fi
 }
 first_line="[Left-click: set the first corner][Esc/Right-click: cancel]"
@@ -893,11 +893,11 @@ drv 1 "lookat -24.5 -60 33.5" > /dev/null
 shots copy-red-border
 line_shot line-locked-red
 check "the reason's rectangle is red, and the controls' white" eval \
-	'[[ $(val 1 modecolours) == "red white white white white white white" ]]'
+	'[[ $(val 1 modecolours) == "red white white white white white white white" ]]'
 line_shot line-locked-red-854x480-gui2 854 480 2
 line_shot line-locked-red-1920x1080-gui2 1920 1080 2
 check "at 854 by 480, GUI scale 2, the locked line goes on in a row below, moving whole rectangles" eval \
-	'[[ $(val 1 modewrap) == "$outside"*"] / ["*"[Esc/Left-click: close]" ]] && rects_ok 854 2'
+	'[[ $(val 1 modewrap) == "$outside"*"] / ["*"[V: saved copies][Esc/Left-click: close]" ]] && rects_ok 854 2'
 # R changes a locked copy's mode, and a red copy in Line, Wall or Floor before its first click says why before
 # "Right-click: set the start", since that click still fixes the first copy; R at Floor is back to Off.
 for mode in Line Wall Floor; do
@@ -924,11 +924,11 @@ rebind() {
 }
 rebind key.keyboard.k key.keyboard.g key.keyboard.i key.keyboard.right.control
 check "with the keys rebound, the controls line names them as bound" eval '[[ $(val 1 modehud) == \
-	"[Right-click: paste]$turn_mirror[Hold Right Control: line up][K: Lock (Off)][G: Mode (Off)][Esc/Left-click: close]" ]]'
+	"[Right-click: paste]$turn_mirror[Hold Right Control: line up][K: Lock (Off)][G: Mode (Off)][V: saved copies][Esc/Left-click: close]" ]]'
 line_shot line-rebound
 press 1 k
 check "K then locks the copy, and the locked line names the nudge keys one by one" eval \
-	'[[ $(val 1 copylock) == locked ]] && [[ $(val 1 modehud) == "[Right-click: paste][I/Down Arrow/Left Arrow/Right Arrow + Page Up/Down: nudge]$turn_mirror[K: Lock (On)][G: Mode (Off)][Esc/Left-click: close]" ]]'
+	'[[ $(val 1 copylock) == locked ]] && [[ $(val 1 modehud) == "[Right-click: paste][I/Down Arrow/Left Arrow/Right Arrow + Page Up/Down: nudge]$turn_mirror[K: Lock (On)][G: Mode (Off)][V: saved copies][Esc/Left-click: close]" ]]'
 press 1 k
 rebind key.keyboard.h key.keyboard.r key.keyboard.up key.keyboard.left.control
 check "and with the keys back, K has unlocked it and the line names H and R again" eval \

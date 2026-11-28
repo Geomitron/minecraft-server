@@ -76,6 +76,9 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		new KeyMapping("key.buildingplanner.block_mix", InputConstants.KEY_B, CATEGORY);
 	static final KeyMapping SHOW_HIDE =
 		new KeyMapping("key.buildingplanner.show_hide", InputConstants.KEY_N, CATEGORY);
+	/** Opens "Saved copies" (see "Saved copies"). */
+	static final KeyMapping SAVED_COPIES =
+		new KeyMapping("key.buildingplanner.saved_copies", InputConstants.KEY_V, CATEGORY);
 	/**
 	 * The edit glow, drawn through MaLiLib; null while Building Planner is off for want of Litematica or MaLiLib, so this
 	 * class never loads their classes then.
@@ -153,6 +156,7 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 		}
 		KeyMappingHelper.registerKeyMapping(BLOCK_MIX);
 		KeyMappingHelper.registerKeyMapping(SHOW_HIDE);
+		KeyMappingHelper.registerKeyMapping(SAVED_COPIES);
 		CopyKeys.register();
 		ClientLifecycleEvents.CLIENT_STARTED.register(SavedCopies::start);
 		copyKeys = new CopyKeys();
@@ -245,6 +249,9 @@ public final class BuildingPlannerClient implements ClientModInitializer {
 			}
 			while (SHOW_HIDE.consumeClick()) {
 				toggleGhosts();
+			}
+			while (SAVED_COPIES.consumeClick()) {
+				SavedCopiesScreen.open();
 			}
 			if (!client.options.keyUse.isDown()) {
 				useHeld = false;

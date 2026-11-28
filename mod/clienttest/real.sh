@@ -1015,7 +1015,7 @@ drv 1 "cmd tp @s 122.5 -60 70.5 180 30" "cmd setblock 112 -56 68 minecraft:air" 
 	"wait 5" > /dev/null
 check "the copy rests on the ground east of the hut, from 120 -60 60 to 124 -57 64" \
 	drv 1 "await copy at 120,-60,60..124,-57,64"
-copy_end="[Scroll: turn][Middle-click: mirror][H: Lock (Off)][R: Mode (Off)][Esc/Left-click: close]"
+copy_end="[Scroll: turn][Middle-click: mirror][H: Lock (Off)][R: Mode (Off)][V: saved copies][Esc/Left-click: close]"
 check "with every item the paste uses, the copy is yellow, for the water no item places" \
 	drv 1 "await copycolour YELLOW"
 check "and the controls line reads \"[Right-click: paste]\", as with the setting off (1411 [c2])" eval \
@@ -1078,7 +1078,7 @@ hut_stock 78
 check "the copy rests from 130 -60 60 to 134 -57 64" drv 1 "await copy at 130,-60,60..134,-57,64"
 check "yellow, for the water and the stone in its way" drv 1 "await copycolour YELLOW"
 check "and after a paste, its controls line has \"[Hold Left Control: line up]\"" eval \
-	'[[ $(val 1 modehud) == "[Right-click: paste][Scroll: turn][Middle-click: mirror][Hold Left Control: line up][H: Lock (Off)][R: Mode (Off)][Esc/Left-click: close]" ]]'
+	'[[ $(val 1 modehud) == "[Right-click: paste][Scroll: turn][Middle-click: mirror][Hold Left Control: line up][H: Lock (Off)][R: Mode (Off)][V: saved copies][Esc/Left-click: close]" ]]'
 place_click 1
 check "the click places all but the stone's block and the water, and the stone stays, as both clients show" eval \
 	'arrive 134 -57 64 minecraft:cobblestone && arrive 132 -58 62 minecraft:lantern &&
@@ -1100,7 +1100,7 @@ use_click 1
 drv 1 "lookat 172.5 -59 42.5" "wait 5" > /dev/null
 echo "  the Floor: $(val 1 copyset | cut -c 1-80)" >> /out/checks.log
 check "a Floor of 25 copies" drv 1 "await set 25 copies"
-too_many="[Can't paste: too many blocks][Scroll: turn][Middle-click: mirror][H: Lock (Off)][R: Mode (Floor)][Esc/Left-click: cancel]"
+too_many="[Can't paste: too many blocks][Scroll: turn][Middle-click: mirror][H: Lock (Off)][R: Mode (Floor)][V: saved copies][Esc/Left-click: cancel]"
 check "over 2,000 blocks, it's red" drv 1 "await copycolour RED TOO_MANY_BLOCKS"
 check "and the controls line reads \"[Can't paste: too many blocks]\"" eval '[[ $(val 1 modehud) == "$too_many" ]]'
 check "and the click's panel doesn't show, since the server refuses so many before it counts any item" eval \
@@ -1134,7 +1134,7 @@ check "after it, the whole Line: 12" eval \
 	'[[ $(val 1 clickpanel) == "$panel_head | minecraft:oak_planks 12 12 0 green" ]]'
 check "blue, with the controls line reading \"[Right-click: paste 3 copies]\"" eval \
 	'drv 1 "await copycolour BLUE" > /dev/null &&
-	[[ $(val 1 modehud) == "[Right-click: paste 3 copies][Scroll: turn][Middle-click: mirror][H: Lock (Off)][R: Mode (Line)][Esc/Left-click: cancel]" ]]'
+	[[ $(val 1 modehud) == "[Right-click: paste 3 copies][Scroll: turn][Middle-click: mirror][H: Lock (Off)][R: Mode (Line)][V: saved copies][Esc/Left-click: cancel]" ]]'
 shots 1 real-copies-line
 place_click 1
 check "the second click sends one place of the 3 copies' 12 blocks" eval '[[ $(val 1 placesent) == 12 ]]'
@@ -1341,7 +1341,7 @@ check "a box around the real Line copies its 5 blocks" client_said 1 "Copied 5 b
 drv 1 "lookat 102.5 -60 48.5" "wait 5" > /dev/null
 check "the copy rests from 100 -60 48 to 104 -60 48" drv 1 "await copy at 100,-60,48..104,-60,48"
 check "with its controls line reading \"[Right-click: paste]\", as with the setting on" eval \
-	'[[ $(val 1 modehud) == "[Right-click: paste][Scroll: turn][Middle-click: mirror][H: Lock (Off)][R: Mode (Off)][Esc/Left-click: close]" ]]'
+	'[[ $(val 1 modehud) == "[Right-click: paste][Scroll: turn][Middle-click: mirror][H: Lock (Off)][R: Mode (Off)][V: saved copies][Esc/Left-click: close]" ]]'
 check "and no click's panel" eval '[[ $(val 1 clickpanel) == hidden ]]'
 place_click 1
 check "the paste writes ghost oak planks on both clients, sending an edit and no place" eval \

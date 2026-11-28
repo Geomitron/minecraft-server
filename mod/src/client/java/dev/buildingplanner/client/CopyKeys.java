@@ -55,7 +55,8 @@ final class CopyKeys {
 
 	/**
 	 * The copy's keys by their names as the game gives them (as Controls shows them), for its controls line, with
-	 * Minecraft's sprint key, which lines the copy up; a key with no key bound has no name.
+	 * Minecraft's sprint key, which lines the copy up, and the key for "Saved copies"; a key with no key bound has no
+	 * name.
 	 */
 	static ControlsLine.Keys names(Minecraft mc) {
 		List<CopyNudge> along = List.of(CopyNudge.FORWARD, CopyNudge.BACK, CopyNudge.LEFT, CopyNudge.RIGHT);
@@ -68,7 +69,7 @@ final class CopyKeys {
 			nudges.add(name(key));
 		}
 		return new ControlsLine.Keys(name(LOCK), name(MODE), nudges, onArrows, name(NUDGES.get(CopyNudge.UP)),
-			name(NUDGES.get(CopyNudge.DOWN)), name(mc.options.keySprint));
+			name(NUDGES.get(CopyNudge.DOWN)), name(mc.options.keySprint), name(BuildingPlannerClient.SAVED_COPIES));
 	}
 
 	private static String name(KeyMapping key) {

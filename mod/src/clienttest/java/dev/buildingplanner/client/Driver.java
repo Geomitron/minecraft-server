@@ -408,6 +408,15 @@ public final class Driver implements ClientModInitializer {
 				// savedcopies: the saved copies the game shows (see CopiesProbe).
 				return CopiesProbe.list();
 			}
+			case "copyrows" -> {
+				// copyrows: the open "Saved copies" screen's rows, each as "name / size · blocks", joined by " ; ", or
+				// none, then "| shown <first> <count>": the first row in view and how many are; or not open.
+				if (!(mc.gui.screen() instanceof SavedCopiesScreen screen)) {
+					return "not open";
+				}
+				List<String> rows = screen.rowTexts();
+				return (rows.isEmpty() ? "none" : String.join(" ; ", rows)) + " | shown " + screen.scrolled();
+			}
 			case "copyindex" -> {
 				// copyindex: the saved copies' index.dat as it is on disk.
 				return CopiesProbe.index();
@@ -423,21 +432,6 @@ public final class Driver implements ClientModInitializer {
 			case "copyschematic" -> {
 				// copyschematic <file>: that copy's file as Litematica's own reader finds it.
 				return CopiesProbe.schematic(Integer.parseInt(a[1]));
-			}
-			case "renamecopy" -> {
-				// renamecopy <file> <name>: renames the copy as "Rename copy"'s "Save" does with that name.
-				SavedCopies.get().rename(Integer.parseInt(a[1]), line.substring(a[0].length() + a[1].length() + 2));
-				return "ok";
-			}
-			case "pickcopy" -> {
-				// pickcopy <file>: picks the copy as "Paste" on its row does.
-				SavedCopies.get().pick(Integer.parseInt(a[1]));
-				return "ok";
-			}
-			case "deletecopy" -> {
-				// deletecopy <file>: deletes the copy as the delete question's "Delete" does.
-				SavedCopies.get().delete(Integer.parseInt(a[1]));
-				return "ok";
 			}
 			case "available" -> {
 				// available: each entry of the current material list as its item and its "Available" count.
@@ -1503,7 +1497,8 @@ public final class Driver implements ClientModInitializer {
 	/** The driver's reads written beside each shot, for outlining what the shot shows. */
 	private static final List<String> SHOT_READS = List.of("moderects", "eblinerects", "erasebar", "modebox", "buttons",
 		"widgets", "malilibbuttons", "infoicon", "drawbox", "markbox", "marks", "preview", "previewred", "copy",
-		"copyset", "lock", "throughwalls", "matpanelbox", "clickpanelbox", "mixpanelbox", "stacksbox", "linesbox");
+		"copyset", "lock", "throughwalls", "matpanelbox", "clickpanelbox", "mixpanelbox", "stacksbox", "linesbox",
+		"copyrows");
 	private static final java.util.regex.Pattern POSITION = java.util.regex.Pattern.compile("(-?\\d+),(-?\\d+),(-?\\d+)");
 
 	/**
