@@ -745,6 +745,9 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
   open the build menu."), "Remove it everywhere." (Q1 C); for its build mode hint ("You have activated a build
   mode! …"), "Remove it everywhere." (Q2 C); and for Building Planner's "Ghost blocks shown again. Press N to hide
   them.", "Keep it, once each time a player joins." (Q3 A). Built as 0.11.1 (below).
+- **Enter saves a name**: in Geo's trial of 0.11.0 (1481 [c1], on "Rename"): "pressing enter while typing the name
+  should save the name, too". Built in 0.11.1, in "Rename copy" and, since it has the same field and button, in
+  "Save list" (the agent's choice, shown to Geo in 0.11.1's release request).
 - The shared layer replaces the decisions above that concern separate plans: named plans that move and turn as a whole
   (411 Q1), plan growth (411 Q2), who deletes a plan (411 Q3, 420 Q9), starting a plan with N (420 Q1, 469 Q1), hiding
   a plan with Litematica or Syncmatica (420 Q2, 469 Q2), the paste's target plan (485 Q3), Litematica's Edit Schematic
@@ -958,7 +961,8 @@ on step 3's last build, before the release. The in-game checks of saved copies a
 
 **Building Planner 0.11.1** (the bullet "Tutorial messages in chat" in "Decisions" above). Effortless Building's welcome
 message and build mode hint stop reaching chat, in the player's own worlds, for LAN guests, and on other servers that
-run Effortless Building; Building Planner's "Ghost blocks shown again" line stays as it is. 0.11.1 keeps protocol
+run Effortless Building; Building Planner's "Ghost blocks shown again" line stays as it is. Enter in the name field
+of "Rename copy" and "Save list" saves the name, as their "Save" button does. 0.11.1 keeps protocol
 version 5 and changes nothing the server does. One step builds it, sets the version, runs the full set and drafts the
 release request; the release follows Geo's approval, as for 0.11.0.
 
