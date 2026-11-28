@@ -748,6 +748,9 @@ From Geo's walkthrough (inbox request 608) and requests 669 to 709 after it:
 - **Enter saves a name**: in Geo's trial of 0.11.0 (1481 [c1], on "Rename"): "pressing enter while typing the name
   should save the name, too". Built in 0.11.1, in "Rename copy" and, since it has the same field and button, in
   "Save list" (the agent's choice, shown to Geo in 0.11.1's release request).
+
+  Asked in 1497 ("Release Building Planner 0.11.1"), Geo approved the release (Q1 A) and the server taking 0.11.1
+  too (Q2 A: "Yes, update the server too"), with no comment against Enter in "Save list".
 - The shared layer replaces the decisions above that concern separate plans: named plans that move and turn as a whole
   (411 Q1), plan growth (411 Q2), who deletes a plan (411 Q3, 420 Q9), starting a plan with N (420 Q1, 469 Q1), hiding
   a plan with Litematica or Syncmatica (420 Q2, 469 Q2), the paste's target plan (485 Q3), Litematica's Edit Schematic
@@ -964,7 +967,8 @@ message and build mode hint stop reaching chat, in the player's own worlds, for 
 run Effortless Building; Building Planner's "Ghost blocks shown again" line stays as it is. Enter in the name field
 of "Rename copy" and "Save list" saves the name, as their "Save" button does. 0.11.1 keeps protocol
 version 5 and changes nothing the server does. One step builds it, sets the version, runs the full set and drafts the
-release request; the release follows Geo's approval, as for 0.11.0.
+release request; the release, approved by Geo in 1497, follows as for 0.11.0, from `3fe476d`, the build on which
+the unit tests, `saved.sh`, `step9.sh` and `step7.sh` passed after Enter was added.
 
 ## Design work: Building Planner
 
